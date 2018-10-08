@@ -1,0 +1,127 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.folio</groupId>
+  <artifactId>mod-oai-pmh</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <name>OAI-PMH Repository Business Logic</name>
+  <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
+  <url>https://github.com/folio-org/mod-oai-pmh</url>
+  <inceptionYear>2018</inceptionYear>
+
+  <organization>
+    <name>The Open Library Foundation</name>
+    <url>https://dev.folio.org</url>
+  </organization>
+
+  <scm>
+    <url>https://github.com/folio-org/mod-oai-pmh.git</url>
+    <connection>scm:git:git://github.com/folio-org/mod-oai-pmh.git</connection>
+    <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>https://issues.folio.org/browse/MODOAIPMH</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>https://jenkins-aws.indexdata.com/job/folio-org/job/mod-oai-pmh</url>
+  </ciManagement>
+
+  <licenses>
+    <license>
+      <name>Apache License 2.0</name>
+      <url>https://spdx.org/licenses/Apache-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <properties>
+    <module_name>mod-oai-pmh</module_name>
+    <aspectj.version>1.8.9</aspectj.version>
+    <jaxb2.version>2.2</jaxb2.version>
+    <http.port>8081</http.port>
+    <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
+    <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
+    <raml-module-builder.version>21.0.4</raml-module-builder.version>
+    <vertx.version>3.5.4</vertx.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven Repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </repository>
+  </repositories>
+
+  <distributionManagement>
+    <repository>
+      <id>folio-nexus</id>
+      <name>FOLIO Release Repository</name>
+      <url>https://repository.folio.org/repository/maven-releases/</url>
+      <uniqueVersion>false</uniqueVersion>
+      <layout>default</layout>
+    </repository>
+    <snapshotRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Snapshot Repository</name>
+      <uniqueVersion>true</uniqueVersion>
+      <url>https://repository.folio.org/repository/maven-snapshots/</url>
+      <layout>default</layout>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+    <!-- test dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-unit</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+      <type>jar</type>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5.3</version>
+        <configuration>
+          <preparationGoals>clean verify</preparationGoals>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
+          <pushChanges>false</pushChanges>
+          <localCheckout>true</localCheckout>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
