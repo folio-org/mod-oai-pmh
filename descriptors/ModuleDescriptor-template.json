@@ -1,0 +1,124 @@
+{
+  "id": "${artifactId}-${version}",
+  "name": "Real Time Availability Check Module",
+  "provides": [
+    {
+      "id": "${artifactId}",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/records",
+          "permissionsRequired": ["oai-pmh.records.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.items.collection.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/records/{id}",
+          "permissionsRequired": ["oai-pmh.records.item.get"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.get",
+            "inventory-storage.items.item.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/repository_info",
+          "permissionsRequired": ["oai-pmh.identify.get"],
+          "modulePermissions": []
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oia/identifiers",
+          "permissionsRequired": ["oai-pmh.identifiers.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/metadata_formats",
+          "permissionsRequired": ["oai-pmh.metadata-formats.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.items.collection.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/sets",
+          "permissionsRequired": ["oai-pmh.set.collection.get"],
+          "modulePermissions": []
+        }
+      ]
+    }
+  ],
+  "requires": [
+    {
+      "id": "item-storage",
+      "version": "6.0"
+    },
+    {
+      "id": "instance-storage",
+      "version": "5.0"
+    }
+  ],
+  "permissionSets": [
+    {
+      "permissionName": "oai-pmh.records.item.get",
+      "displayName": "OAI-PMH - retrieve individual record",
+      "description": "Retrieve an individual metadata record"
+    },
+    {
+      "permissionName": "oai-pmh.identify.get",
+      "displayName": "OAI-PMH - get information about a repository",
+      "description": "Get information about a repository"
+    },
+    {
+      "permissionName": "oai-pmh.identifiers.collection.get",
+      "displayName": "OAI-PMH - get headers list",
+      "description": "Get headers list of record in specific format"
+    },
+    {
+      "permissionName": "oai-pmh.metadata-formats.collection.get",
+      "displayName": "OAI-PMH - get metadata formats available from a repository",
+      "description": "Get metadata formats available from a repository"
+    },
+    {
+      "permissionName": "oai-pmh.records.collection.get",
+      "displayName": "OAI-PMH - get list of records",
+      "description": "Get records from repository"
+    },
+    {
+      "permissionName": "oai-pmh.set.collection.get",
+      "displayName": "oai-pmh - get set structure of a repository",
+      "description": "Get set structure of a repository"
+    },
+    {
+      "permissionName": "oia-pmh.all",
+      "displayName": "OAI-PMH - all permissions",
+      "description": "Entire set of permissions needed to use OAI-PMH",
+      "subPermissions": [
+        "oai-pmh.records.item.get",
+        "oai-pmh.identify.get",
+        "oai-pmh.identifiers.collection.get",
+        "oai-pmh.metadata-formats.collection.get",
+        "oai-pmh.records.collection.get",
+        "oai-pmh.set.collection.get"
+      ]
+    }
+  ],
+  "launchDescriptor": {
+    "dockerImage": "${artifactId}:${version}",
+    "dockerArgs": {
+      "HostConfig": { "PortBindings": { "8081/tcp":  [{ "HostPort": "%p" }] } }
+    },
+    "dockerPull" : false
+  }
+}
