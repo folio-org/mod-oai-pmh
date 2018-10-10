@@ -105,7 +105,7 @@
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use the inventory",
       "subPermissions": [
-        "oai-pmh.record.get",
+        "oai-pmh.records.record.get",
         "oai-pmh.identify.get",
         "oai-pmh.identifiers.collection.get",
         "oai-pmh.metadata-formats.collection.get",
