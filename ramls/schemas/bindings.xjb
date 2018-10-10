@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<jaxb:bindings xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="http://java.sun.com/xml/ns/jaxb http://java.sun.com/xml/ns/jaxb/bindingschema_2_0.xsd"
+               xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
+               xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               xmlns:annox="http://annox.dev.java.net"
+               jaxb:version="2.1">
+
+  <jaxb:globalBindings>
+    <xjc:simple/>
+  </jaxb:globalBindings>
+
+  <jaxb:bindings schemaLocation="OAI-PMH.xsd" node="//xs:schema">
+    <jaxb:bindings node="//xs:complexType[@name='OAI-PMHtype']">
+      <annox:annotatePackage>@javax.xml.bind.annotation.XmlSchema(location = "http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd")</annox:annotatePackage>
+    </jaxb:bindings>
+  </jaxb:bindings>
+</jaxb:bindings>
