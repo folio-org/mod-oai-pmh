@@ -19,7 +19,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/oai/records/{id}",
-          "permissionsRequired": ["oai-pmh.records.record.get"],
+          "permissionsRequired": ["oai-pmh.records.item.get"],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
             "inventory-storage.items.item.get"
@@ -71,7 +71,7 @@
   ],
   "permissionSets": [
     {
-      "permissionName": "oai-pmh.records.record.get",
+      "permissionName": "oai-pmh.records.item.get",
       "displayName": "OAI-PMH - retrieve individual record",
       "description": "Retrieve an individual metadata record"
     },
@@ -103,9 +103,9 @@
     {
       "permissionName": "oia-pmh.all",
       "displayName": "OAI-PMH - all permissions",
-      "description": "Entire set of permissions needed to use the inventory",
+      "description": "Entire set of permissions needed to use OAI-PMH",
       "subPermissions": [
-        "oai-pmh.records.record.get",
+        "oai-pmh.records.item.get",
         "oai-pmh.identify.get",
         "oai-pmh.identifiers.collection.get",
         "oai-pmh.metadata-formats.collection.get",
