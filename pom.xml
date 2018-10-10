@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
@@ -42,7 +43,6 @@
   <properties>
     <module_name>mod-oai-pmh</module_name>
     <aspectj.version>1.8.9</aspectj.version>
-    <jaxb2.version>2.2</jaxb2.version>
     <http.port>8081</http.port>
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
@@ -111,6 +111,93 @@
 
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <phase>process-sources</phase>
+          </execution>
+          <execution>
+            <id>build-generated-code</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.1.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Main-Class>org.folio.rest.RestLauncher</Main-Class>
+                    <Main-Verticle>org.folio.rest.RestVerticle</Main-Verticle>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+              <artifactSet/>
+              <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jvnet.jaxb2.maven2</groupId>
+        <artifactId>maven-jaxb2-plugin</artifactId>
+        <version>0.14.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <extension>true</extension>
+          <schemaDirectory>ramls/schemas</schemaDirectory>
+          <schemaIncludes>
+            <include>OAI-PMH.xsd</include>
+            <include>oai_dc.xsd</include>
+            <include>MARC21slim.xsd</include>
+          </schemaIncludes>
+          <bindingDirectory>ramls/schemas</bindingDirectory>
+          <bindingIncludes>
+            <include>bindings.xjb</include>
+          </bindingIncludes>
+          <generateDirectory>target/generated-sources/jaxb</generateDirectory>
+          <args>
+            <arg>-Xfluent-api</arg>
+            <arg>-Xannotate</arg>
+          </args>
+          <plugins>
+            <plugin>
+              <groupId>org.jvnet.jaxb2_commons</groupId>
+              <artifactId>jaxb2-fluent-api</artifactId>
+              <version>3.0</version>
+            </plugin>
+            <plugin>
+              <groupId>org.jvnet.jaxb2_commons</groupId>
+              <artifactId>jaxb2-basics-annotate</artifactId>
+              <version>1.1.0</version>
+            </plugin>
+          </plugins>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
         <version>2.5.3</version>
@@ -121,24 +208,18 @@
           <localCheckout>true</localCheckout>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <artifactSet />
-              <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>2.9.3</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>
