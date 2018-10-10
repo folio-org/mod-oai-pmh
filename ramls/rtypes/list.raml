@@ -1,0 +1,15 @@
+      description: Collection of <<resourcePathName|!singularize>>.
+      get:
+        description: Retrieve a list of <<resourcePathName|!singularize>> from repository.
+        responses:
+          200:
+            description: "Returns a list of <<resourcePathName|!singularize>> items"
+            body:
+              application/xml:
+                schema: oai-pmh
+                example: <<exampleCollection>>
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "Internal server error, contact administrator"

@@ -1,0 +1,30 @@
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/
+         http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  <responseDate>2002-02-08T14:27:19Z</responseDate>
+  <request verb="ListMetadataFormats"
+    identifier="oai:perseus.tufts.edu:Perseus:text:1999.02.0119">
+    http://www.perseus.tufts.edu/cgi-bin/pdataprov</request>
+  <ListMetadataFormats>
+   <metadataFormat>
+     <metadataPrefix>oai_dc</metadataPrefix>
+     <schema>http://www.openarchives.org/OAI/2.0/oai_dc.xsd
+       </schema>
+     <metadataNamespace>http://www.openarchives.org/OAI/2.0/oai_dc/
+       </metadataNamespace>
+   </metadataFormat>
+   <metadataFormat>
+     <metadataPrefix>olac</metadataPrefix>
+     <schema>http://www.language-archives.org/OLAC/olac-0.2.xsd</schema>
+     <metadataNamespace>http://www.language-archives.org/OLAC/0.2/
+      </metadataNamespace>
+   </metadataFormat>
+   <metadataFormat>
+     <metadataPrefix>perseus</metadataPrefix>
+     <schema>http://www.perseus.tufts.edu/persmeta.xsd</schema>
+     <metadataNamespace>http://www.perseus.tufts.edu/persmeta.dtd
+       </metadataNamespace>
+   </metadataFormat>
+ </ListMetadataFormats>
+</OAI-PMH>
