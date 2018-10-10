@@ -29,10 +29,7 @@
           "methods": ["GET"],
           "pathPattern": "/oai/repository_info",
           "permissionsRequired": ["oai-pmh.identify.get"],
-          "modulePermissions": [
-            "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
-          ]
+          "modulePermissions": []
         },
         {
           "methods": ["GET"],
@@ -57,9 +54,7 @@
           "methods": ["GET"],
           "pathPattern": "/oai/sets",
           "permissionsRequired": ["oai-pmh.set.collection.get"],
-          "modulePermissions": [
-            "inventory-storage.instances.collection.get"
-          ]
+          "modulePermissions": []
         }
       ]
     }
