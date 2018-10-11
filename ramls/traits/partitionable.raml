@@ -8,5 +8,7 @@
           description: "Bad request, e.g. malformed query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include ../examples/resumption_tocken_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include ../examples/resumption_token_error.sample

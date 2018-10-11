@@ -6,8 +6,10 @@
             description: "Returns a list of <<resourcePathName|!singularize>> items"
             body:
               application/xml:
-                schema: oai-pmh
-                example: <<exampleCollection>>
+                #schema: oai-pmh
+                example:
+                  strict: false
+                  value: <<exampleCollection>>
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:

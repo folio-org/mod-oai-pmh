@@ -8,5 +8,7 @@
           description: "The request was well-formed, but contains semantic errors"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include ../examples/metadata_format_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include ../examples/metadata_format_error.sample

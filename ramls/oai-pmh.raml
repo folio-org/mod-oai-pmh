@@ -11,8 +11,12 @@ documentation:
       an application-independent interoperability framework based on metadata harvesting.
       This module supports the OAI-PMH as a means of exposing FOLIO metadata.
 
-types:
-  oai-pmh: !include schemas/OAI-PMH.xsd
+# xsd schemas are not properly handled by RAML at the moment
+# see https://issues.folio.org/browse/RMB-270 for more details
+#types:
+#  oai-pmh:
+#    type: !include schemas/OAI-PMH.xsd#OAI-PMH
+#    description: OAI-PMH root element
 
 traits:
   partionable: !include traits/partitionable.raml
@@ -35,8 +39,10 @@ resourceTypes:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include examples/no_records_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/no_records_error.sample
 
     /{id}:
       uriParameters:
@@ -51,14 +57,18 @@ resourceTypes:
             description: "Returns item with a given ID"
             body:
               application/xml:
-                example: !include examples/record.sample
-                schema: oai-pmh
+                #schema: oai-pmh
+                example:
+                  strict: false
+                  value: !include examples/record.sample
           404:
             description: "Item with a given ID and selective harvesting params (if any) not found"
             body:
               application/xml:
-                schema: oai-pmh
-                example: !include examples/no_record_error.sample
+                #schema: oai-pmh
+                example:
+                  strict: false
+                  value: !include examples/no_record_error.sample
           500:
             description: "Internal server error, e.g. due to misconfiguration"
             body:
@@ -77,8 +87,10 @@ resourceTypes:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include examples/no_records_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/no_records_error.sample
 
   /metadata_formats:
     displayName: MetadataFormats
@@ -96,14 +108,18 @@ resourceTypes:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include examples/no_record_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/no_record_error.sample
         422:
           description: "The request was well-formed, but contains semantic errors"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include examples/no_metadata_format_error.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/no_metadata_format_error.sample
 
   /sets:
     displayName: Sets
@@ -122,8 +138,10 @@ resourceTypes:
           description: "Returns repository info"
           body:
             application/xml:
-              schema: oai-pmh
-              example: !include examples/repository_info.sample
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/repository_info.sample
         500:
           description: "Internal server error, e.g. due to misconfiguration"
           body:
