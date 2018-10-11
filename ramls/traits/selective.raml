@@ -1,0 +1,13 @@
+      queryParameters:
+        from:
+          description: 'UTC datetime value, which specifies a lower bound for datestamp-based selective harvesting'
+          type: date-only
+          required: false
+        until:
+          description: 'UTC datetime value, which specifies a upper bound for datestamp-based selective harvesting'
+          type: string
+          required: false
+        set:
+          description: 'setSpec value, which specifies set criteria for selective harvesting'
+          type: string
+          required: false

@@ -1,0 +1,14 @@
+      queryParameters:
+        resumptionToken:
+          description: 'flow control token returned by a ListIdentifiers request that issued an incomplete list'
+          type: string
+          required: false
+      responses:
+        400:
+          description: "Bad request, e.g. malformed query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+          body:
+            application/xml:
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include ../examples/resumption_token_error.sample

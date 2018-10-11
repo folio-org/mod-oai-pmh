@@ -1,0 +1,14 @@
+      queryParameters:
+        metadataPrefix:
+          description: 'metadata prefix of the format that should be included in the metadata part of the returned record'
+          type: string
+          required: true
+      responses:
+        422:
+          description: "The request was well-formed, but contains semantic errors"
+          body:
+            application/xml:
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include ../examples/metadata_format_error.sample
