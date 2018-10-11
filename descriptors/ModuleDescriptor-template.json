@@ -1,6 +1,6 @@
 {
   "id": "${artifactId}-${version}",
-  "name": "Real Time Availability Check Module",
+  "name": "OAI-PMH Repository Module",
   "provides": [
     {
       "id": "${artifactId}",
