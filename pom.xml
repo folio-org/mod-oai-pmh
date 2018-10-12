@@ -54,6 +54,7 @@
     <aspectj.version>1.8.9</aspectj.version>
     <raml-module-builder.version>21.0.4</raml-module-builder.version>
     <vertx.version>3.5.4</vertx.version>
+    <slf4j.version>1.7.25</slf4j.version>
   </properties>
 
   <repositories>
@@ -82,11 +83,7 @@
   </distributionManagement>
 
   <dependencies>
-    <dependency>
-      <groupId>org.folio</groupId>
-      <artifactId>domain-models-api-interfaces</artifactId>
-      <version>${raml-module-builder.version}</version>
-    </dependency>
+    <!-- org.folio:domain-models-api-interfaces dependency goes with org.folio:domain-models-runtime -->
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>domain-models-runtime</artifactId>
@@ -104,17 +101,11 @@
     </dependency>
 
     <!-- logging see http://www.slf4j.org/legacy.html -->
-    <!-- we use SLF4J for our logging interface -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.18</version>
-    </dependency>
-    <!-- we use log4j as our logging implementation -->
+    <!-- we use SLF4J log4j for our logging interface -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.25</version>
+      <version>${slf4j.version}</version>
     </dependency>
 
     <!-- test dependencies -->
@@ -145,6 +136,9 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.0</version>
+        <configuration>
+          <compilerArgument>-Xlint:unchecked</compilerArgument>
+        </configuration>
         <executions>
           <execution>
             <id>default-compile</id>
@@ -226,7 +220,7 @@
         </executions>
       </plugin>
 
-      <!--<plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>aspectj-maven-plugin</artifactId>
         <version>1.11</version>
@@ -267,27 +261,12 @@
             <version>${aspectj.version}</version>
           </dependency>
         </dependencies>
-      </plugin>-->
+      </plugin>
 
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.1.0</version>
         <executions>
-          <execution>
-            <id>copy-generated-code</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/generated-sources/raml-jaxrs</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>generated-src</directory>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
           <execution>
             <id>copy-resources</id>
             <phase>prepare-package</phase>
@@ -299,22 +278,9 @@
               <resources>
                 <resource>
                   <directory>${ramlfiles_path}</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-resources-2</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/classes/apidocs/raml-util</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${ramlfiles_util_path}</directory>
+                  <excludes>
+                    <exclude>**/*.xjb</exclude>
+                  </excludes>
                   <filtering>true</filtering>
                 </resource>
               </resources>
@@ -363,35 +329,6 @@
                 </fileSet>
               </fileSets>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- replace the baseuri and the protocol in the ramls that are in the
-        apidocs directory so that they can at least be used to check via the html
-        api console on IE -->
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
-        <executions>
-          <execution>
-            <phase>prepare-package</phase>
-            <configuration>
-              <target>
-                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh"
-                         value="baseUri: http://localhost:${http.port}/apis"
-                         dir="${project.build.directory}/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
-                </replace>
-                <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]"
-                         dir="${project.build.directory}/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
-                </replace>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -500,16 +437,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <!--<dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.fasterxml.jackson</groupId>
-        <artifactId>jackson-bom</artifactId>
-        <version>2.9.3</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>-->
 </project>

@@ -3,7 +3,7 @@
   "name": "OAI-PMH Repository Module",
   "provides": [
     {
-      "id": "${artifactId}",
+      "id": "oai-pmh",
       "version": "1.0",
       "handlers": [
         {
