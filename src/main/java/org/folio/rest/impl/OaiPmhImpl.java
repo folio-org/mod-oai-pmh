@@ -123,7 +123,7 @@ public class OaiPmhImpl implements Oai {
    */
   private String getErrorMessage() {
     String errorMsg = "Sorry, we can't process your request.";
-    String emails = System.getProperty("repository.adminEmails");
+    String emails = System.getProperty(REPOSITORY_ADMIN_EMAILS);
     if (emails != null && !emails.isEmpty()) {
       errorMsg += " Please contact administrator(s): " + emails;
     }
@@ -141,6 +141,6 @@ public class OaiPmhImpl implements Oai {
                         .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
                         .withRequest(objectFactory.createRequestType()
                                                   .withVerb(verb)
-                                                  .withValue(System.getProperty("repository.baseURL")));
+                                                  .withValue(System.getProperty(REPOSITORY_BASE_URL)));
   }
 }
