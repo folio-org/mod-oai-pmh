@@ -1,12 +1,16 @@
       queryParameters:
         from:
           description: 'UTC datetime value, which specifies a lower bound for datestamp-based selective harvesting'
-          type: date-only
+          type: string # using string instead of datetime to be able to validate if the passed parameter is valid to return proper OAI-PMH error
+          #pattern: \d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[1-2]\d|3[0-1])T(?:[0-1]\d|2[0-3]):[0-5]\d:[0-5]\dZ
           required: false
+          example: 2018-10-15T15:16:17Z
         until:
           description: 'UTC datetime value, which specifies a upper bound for datestamp-based selective harvesting'
-          type: string
+          type: string # using string instead of datetime to be able to validate if the passed parameter is valid to return proper OAI-PMH error
+          #pattern: \d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[1-2]\d|3[0-1])T(?:[0-1]\d|2[0-3]):[0-5]\d:[0-5]\dZ
           required: false
+          example: 2018-10-22T23:22:21Z
         set:
           description: 'setSpec value, which specifies set criteria for selective harvesting'
           type: string
