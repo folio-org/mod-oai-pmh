@@ -17,15 +17,14 @@ public class InitAPIsTest {
    */
   @Test
   public void init(TestContext context) {
-    // Check that 'test.prop' is not available as Sys property. This property is defined in the 'config/config.properties' file
-    context.assertNull(System.getProperty("test.prop"));
-
     InitAPIs initAPIs = new InitAPIs();
     Vertx vertx = Vertx.vertx();
     Future<Boolean> resultHandler = Future.future();
 
     // Specifying incorrect path to config file
     System.setProperty("configPath", "incorrectPath");
+    // Guaranty 'test.prop' is not available as Sys property. This property is defined in the 'config/config.properties' file
+    System.getProperties().remove("test.prop");
     // Verify failure case
     initAPIs.init(vertx, vertx.getOrCreateContext(), resultHandler);
     context
