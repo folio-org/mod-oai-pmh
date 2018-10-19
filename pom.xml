@@ -108,6 +108,13 @@
       <version>${slf4j.version}</version>
     </dependency>
 
+    <!-- we use marc4j for converting marcJson to marcXml -->
+    <dependency>
+      <groupId>org.marc4j</groupId>
+      <artifactId>marc4j</artifactId>
+      <version>2.8.3</version>
+    </dependency>
+
     <!-- test dependencies -->
     <dependency>
       <groupId>junit</groupId>
@@ -115,7 +122,8 @@
       <version>4.12</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
+
+     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-unit</artifactId>
       <version>${vertx.version}</version>
