@@ -33,6 +33,7 @@ public class MarcJsonToMarcXmlMapperTest {
     Node result = new MarcXmlMapper().convert(input);
     assertTrue(validateDocumentAgainstSchema(result));
   }
+
   @Test
   public void incorrectJsonConvertingValidationTest() throws IOException {
     logger.info("=== Test incorrect json file converting ===");

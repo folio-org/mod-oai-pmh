@@ -5,7 +5,7 @@ import org.w3c.dom.Node;
 /**
  * Converts MarkJson format to xml format.
  */
-public class XSLTMapper implements Mapper{
+public class XSLTMapper implements Mapper {
   /**
    * {@inheritDoc}
    * @param source String representation of MarkJson source.
