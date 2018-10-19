@@ -6,12 +6,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 public class MapperFactoryTest {
 
-  private static final Logger logger = Logger.getLogger(MarcJsonToMarcXmlMapperTest.class);
+  private static final Logger logger = Logger.getLogger(MapperFactoryTest.class);
 
   private MapperFactory mapperFactory;
 
