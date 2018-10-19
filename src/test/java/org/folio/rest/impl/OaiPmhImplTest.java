@@ -31,22 +31,22 @@ import java.time.Instant;
 import java.util.Properties;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.rest.impl.OaiPmhImpl.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.rest.impl.OaiPmhImpl.REPOSITORY_BASE_URL;
-import static org.folio.rest.impl.OaiPmhImpl.REPOSITORY_NAME;
-import static org.folio.rest.impl.OaiPmhImpl.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
+import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
+import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
-  private final static Logger logger = LoggerFactory.getLogger(OaiPmhImplTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(OaiPmhImplTest.class);
 
   // API paths
-  private final String rootPath = "/oai";
-  private final String listRecordsPath = rootPath + "/records";
-  private final String listIdentifiersPath = rootPath + "/identifiers";
-  private final String listMetadataFormatsPath = rootPath + "/metadata_formats";
-  private final String listSetsPath = rootPath + "/sets";
-  private final String identifyPath = rootPath + "/repository_info";
+  private static final String ROOT_PATH = "/oai";
+  private static final String LIST_RECORDS_PATH = ROOT_PATH + "/records";
+  private static final String LIST_IDENTIFIERS_PATH = ROOT_PATH + "/identifiers";
+  private static final String LIST_METADATA_FORMATS_PATH = ROOT_PATH + "/metadata_formats";
+  private static final String LIST_SETS_PATH = ROOT_PATH + "/sets";
+  private static final String IDENTIFY_PATH = ROOT_PATH + "/repository_info";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", "diku");
   private final Header tokenHeader = new Header("X-Okapi-Token",
@@ -54,8 +54,6 @@ public class OaiPmhImplTest {
   private final Header contentTypeHeaderXML = new Header("Content-Type", "application/xml");
 
   private static Vertx vertx;
-
-  private static int port;
 
   @BeforeClass
   public static void setUpOnce(TestContext context) {
@@ -66,7 +64,7 @@ public class OaiPmhImplTest {
     String moduleId = moduleName + "-" + moduleVersion;
     logger.info("Test setup starting for " + moduleId);
 
-    port = NetworkUtils.nextFreePort();
+    int port = NetworkUtils.nextFreePort();
 
     JsonObject conf = new JsonObject()
       .put("http.port", port)
@@ -107,7 +105,7 @@ public class OaiPmhImplTest {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test422WithXml(requestSpecification, listRecordsPath);
+    String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH);
 
     // Check that error message is returned
     context.assertNotNull(response);
@@ -130,7 +128,7 @@ public class OaiPmhImplTest {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test422WithXml(requestSpecification, listRecordsPath + "/someId");
+    String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH + "/someId");
 
     // Check that error message is returned
     context.assertNotNull(response);
@@ -154,7 +152,7 @@ public class OaiPmhImplTest {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test500WithErrorMessage(requestSpecification, listIdentifiersPath);
+    String response = test500WithErrorMessage(requestSpecification, LIST_IDENTIFIERS_PATH);
 
     // Check that error message is returned
     context.assertNotNull(response);
@@ -167,7 +165,7 @@ public class OaiPmhImplTest {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test500WithErrorMessage(requestSpecification, listMetadataFormatsPath);
+    String response = test500WithErrorMessage(requestSpecification, LIST_METADATA_FORMATS_PATH);
 
     // Check that error message is returned
     context.assertNotNull(response);
@@ -180,7 +178,7 @@ public class OaiPmhImplTest {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test500WithErrorMessage(requestSpecification, listSetsPath);
+    String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
 
     // Check that error message is returned
     context.assertNotNull(response);
@@ -223,7 +221,7 @@ public class OaiPmhImplTest {
     sysProps.remove(REPOSITORY_BASE_URL);
     sysProps.remove(REPOSITORY_ADMIN_EMAILS);
 
-    String response = test500WithErrorMessage(requestSpecification, identifyPath);
+    String response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
     // Check that error message is returned
     context.assertNotNull(response);
 
@@ -234,17 +232,17 @@ public class OaiPmhImplTest {
     String emails = "oaiAdminEmail1@folio.org,oaiAdminEmail2@folio.org";
     sysProps.setProperty(REPOSITORY_ADMIN_EMAILS, emails);
 
-    response = test500WithErrorMessage(requestSpecification, identifyPath);
+    response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
     // Check that error message is returned
     context.assertNotNull(response);
-    context.assertTrue(response.contains(emails));
+    context.assertEquals("Sorry, we can't process your request. Please contact administrator(s).", response);
 
     // Set all required system properties
     sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
 
     response = requestSpecification
       .when()
-        .get(identifyPath)
+        .get(IDENTIFY_PATH)
       .then()
         .statusCode(200)
         .contentType(ContentType.XML)

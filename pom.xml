@@ -103,6 +103,11 @@
       <artifactId>vertx-web</artifactId>
       <version>${vertx.version}</version>
     </dependency>
+    <dependency>
+      <groupId>me.escoffier.vertx</groupId>
+      <artifactId>vertx-completable-future</artifactId>
+      <version>0.1.2</version>
+    </dependency>
     <!-- Jaxb dependencies -->
     <dependency>
       <groupId>com.migesok</groupId>

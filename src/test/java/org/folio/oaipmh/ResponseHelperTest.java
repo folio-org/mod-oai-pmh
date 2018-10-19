@@ -1,5 +1,6 @@
 package org.folio.oaipmh;
 
+import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -16,13 +17,17 @@ import static org.junit.Assert.fail;
 
 public class ResponseHelperTest {
 
+  private static final Logger logger = Logger.getLogger(ResponseHelperTest.class);
+
   @Test
   public void tests() {
     try {
       ResponseHelper.getInstance().writeToString(new OAIPMH());
       fail("JAXBException is expected because validation is enabled");
+    } catch (JAXBException e) {
+      // expected behavior
     } catch (Exception e) {
-      assertTrue("JAXBException expected but was " + e.getMessage(), e instanceof JAXBException);
+      fail("JAXBException is expected, but was " + e.getMessage());
     }
 
     try {
@@ -38,15 +43,17 @@ public class ResponseHelperTest {
       OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(result);
       assertEquals(oaipmh, oaipmh1FromString);
     } catch (JAXBException e) {
-      e.printStackTrace();
+      logger.error("Failed to marshal or unmarshal OAI-PMH response", e);
       fail(e.getMessage());
     }
 
     try {
       ResponseHelper.getInstance().writeToString(null);
       fail("JAXBException is expected");
+    } catch (IllegalArgumentException e) {
+      // expected behavior
     } catch (Exception e) {
-      assertTrue("IllegalArgumentException expected but was " + e.getMessage(), e instanceof IllegalArgumentException);
+      fail("IllegalArgumentException expected but was " + e.getMessage());
     }
   }
 }

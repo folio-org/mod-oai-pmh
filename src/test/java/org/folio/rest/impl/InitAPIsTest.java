@@ -12,6 +12,8 @@ import org.junit.runner.RunWith;
 @RunWith(VertxUnitRunner.class)
 public class InitAPIsTest {
 
+  private static final String TEST_PROP = "test.prop";
+
   /**
    * Tests {@link InitAPIs#init(Vertx, Context, Handler)}
    */
@@ -23,14 +25,14 @@ public class InitAPIsTest {
 
     // Specifying incorrect path to config file
     System.setProperty("configPath", "incorrectPath");
-    // Guaranty 'test.prop' is not available as Sys property. This property is defined in the 'config/config.properties' file
-    System.getProperties().remove("test.prop");
+    // Guarantee 'test.prop' is not available as Sys property. This property is defined in the 'config/config.properties' file
+    System.getProperties().remove(TEST_PROP);
     // Verify failure case
     initAPIs.init(vertx, vertx.getOrCreateContext(), resultHandler);
     context
       .assertTrue(resultHandler.failed())
       .assertTrue(resultHandler.cause() instanceof IllegalStateException)
-      .assertNull(System.getProperty("test.prop"));
+      .assertNull(System.getProperty(TEST_PROP));
 
     // Reset to default config path
     System.getProperties().remove("configPath");
@@ -40,6 +42,6 @@ public class InitAPIsTest {
     initAPIs.init(vertx, vertx.getOrCreateContext(), resultHandler);
     context
       .assertTrue(resultHandler.result())
-      .assertEquals("Test Value", System.getProperty("test.prop"));
+      .assertEquals("Test Value", System.getProperty(TEST_PROP));
   }
 }
