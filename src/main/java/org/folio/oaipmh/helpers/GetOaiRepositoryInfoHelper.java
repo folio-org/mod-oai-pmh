@@ -8,7 +8,6 @@ import org.folio.oaipmh.ResponseHelper;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.ObjectFactory;
 import org.openarchives.oai._2.VerbType;
 
 import java.time.Instant;
@@ -21,17 +20,16 @@ import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 /**
  * Helper class that contains business logic for retrieving OAI-PMH repository info.
  */
-public class GetOaiRepositoryInfoHelper implements VerbHelper {
+public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
   private static final Logger logger = Logger.getLogger(GetOaiRepositoryInfoHelper.class);
 
   public static final String REPOSITORY_NAME = "repository.name";
-  public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
-  private ObjectFactory objectFactory = new ObjectFactory();
 
+  @Override
   public CompletableFuture<String> handle(Request request, Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
@@ -70,20 +68,6 @@ public class GetOaiRepositoryInfoHelper implements VerbHelper {
   }
 
   /**
-   * Return the repository base URL.
-   * For now, it is based on System property, but later it might be pulled from mod-configuration.
-   *
-   * @return repository base URL
-   */
-  private String getBaseURL() {
-    String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
-    if (baseUrl == null) {
-      throw new IllegalStateException("The required repository config 'repository.baseURL' is missing");
-    }
-    return baseUrl;
-  }
-
-  /**
    * Return the earliest repository datestamp.
    * For now, it always returns epoch instant, but later it might be pulled from mod-configuration.
    *
@@ -105,19 +89,5 @@ public class GetOaiRepositoryInfoHelper implements VerbHelper {
       throw new IllegalStateException("The required repository config 'repository.adminEmails' is missing");
     }
     return emails.split(",");
-  }
-
-  /**
-   * Creates basic {@link OAIPMH} with ResponseDate and Request details
-   * @param verb {@link VerbType}
-   * @return basic {@link OAIPMH}
-   */
-  private OAIPMH buildBaseResponse(VerbType verb) {
-    return objectFactory.createOAIPMH()
-      // According to spec the nanoseconds should not be used so truncate to seconds
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(objectFactory.createRequestType()
-        .withVerb(verb)
-        .withValue(getBaseURL()));
   }
 }
