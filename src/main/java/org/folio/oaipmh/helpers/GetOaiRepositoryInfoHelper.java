@@ -1,8 +1,9 @@
-package org.folio.rest.impl;
+package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
@@ -17,32 +18,26 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
-public class GetOaiRepositoryInfoHelper {
+/**
+ * Helper class that contains business logic for retrieving OAI-PMH repository info.
+ */
+public class GetOaiRepositoryInfoHelper implements VerbHelper {
 
   private static final Logger logger = Logger.getLogger(GetOaiRepositoryInfoHelper.class);
 
-  static final String REPOSITORY_NAME = "repository.name";
-  static final String REPOSITORY_BASE_URL = "repository.baseURL";
-  static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
-  static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
-
-  private final Context ctx;
-  private final Map<String, String> okapiHeaders;
+  public static final String REPOSITORY_NAME = "repository.name";
+  public static final String REPOSITORY_BASE_URL = "repository.baseURL";
+  public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
+  public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
   private ObjectFactory objectFactory = new ObjectFactory();
 
-
-  public GetOaiRepositoryInfoHelper(Map<String, String> okapiHeaders, Context ctx) {
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-  }
-
-  public CompletableFuture<String> retrieveRepositoryInfo() {
+  public CompletableFuture<String> handle(Request request, Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
       OAIPMH oai = buildBaseResponse(VerbType.IDENTIFY)
         .withIdentify(objectFactory.createIdentifyType()
-          .withRepositoryName(getRepositoryName(okapiHeaders))
+          .withRepositoryName(getRepositoryName(request.getOkapiHeaders()))
           .withBaseURL(getBaseURL())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())

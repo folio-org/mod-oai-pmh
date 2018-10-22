@@ -5,7 +5,10 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
+import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
@@ -15,9 +18,11 @@ import org.openarchives.oai._2.VerbType;
 import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
 import java.util.Map;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger("mod-oai-pmh");
@@ -26,6 +31,13 @@ public class OaiPmhImpl implements Oai {
   private static final String ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
 
   private ObjectFactory objectFactory = new ObjectFactory();
+
+  /** Map containing OAI-PMH verb and corresponding helper instance. */
+  private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
+  static {
+    HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
+    // other verb implementations to be added here
+  }
 
   @Override
   public void getOaiRecords(String resumptionToken, String from, String until, String set, String metadataPrefix,
@@ -88,9 +100,10 @@ public class OaiPmhImpl implements Oai {
   public void getOaiRepositoryInfo(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                    Context vertxContext) {
 
-    GetOaiRepositoryInfoHelper helper = new GetOaiRepositoryInfoHelper(okapiHeaders, vertxContext);
+    Request request = Request.builder().okapiHeaders(okapiHeaders).build();
 
-    helper.retrieveRepositoryInfo()
+    VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
+    getRepositoryInfoHelper.handle(request, vertxContext)
       .thenAccept(oai -> {
           logger.info("Successfully retrieved repository info: " + oai);
           asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(oai)));
@@ -98,7 +111,6 @@ public class OaiPmhImpl implements Oai {
         asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(ERROR_MESSAGE)));
         return null;
       });
-
   }
 
   /**
