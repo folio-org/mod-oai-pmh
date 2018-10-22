@@ -18,6 +18,12 @@ The following schemas used:
  + XML Schema for Dublin Core without qualification: [oai_dc.xsd](http://www.openarchives.org/OAI/2.0/oai_dc.xsd) (please refer to [OAI-PMH specification](http://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore) for more dtails)
  + MARC 21 XML Schema: [MARC21slim.xsd](http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd) (please refer to [MARC 21 XML Schema](http://www.loc.gov/standards/marcxml/) for more details)
 
+### Configuration
+The default configuration properties are defined in [config.properties](src/main/resources/config/config.properties). The following  properties control response output:
++ `jaxb.marshaller.enableValidation` - boolean value which defines if the response content should be validated against xsd schemas. Enabled by default. Can be disabled by passing `-Djaxb.marshaller.enableValidation=false` JVM argument.
++ `jaxb.marshaller.formattedOutput` - boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation. Disabled by default. Can be enabled by passing `-Djaxb.marshaller.formattedOutput=true` JVM argument.
+
+Note: another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader
 
 ### Issue tracker
 
