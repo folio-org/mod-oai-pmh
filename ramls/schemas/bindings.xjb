@@ -5,10 +5,15 @@
                xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
                xmlns:xs="http://www.w3.org/2001/XMLSchema"
                xmlns:annox="http://annox.dev.java.net"
+               xmlns:oai="http://www.openarchives.org/OAI/2.0/"
                jaxb:version="2.1">
 
   <jaxb:globalBindings>
     <xjc:simple/>
+    <xjc:javaType name="java.time.Instant" xmlType="xs:dateTime"
+                  adapter="com.migesok.jaxb.adapter.javatime.InstantXmlAdapter"/>
+    <xjc:javaType name="java.time.Instant" xmlType="oai:UTCdatetimeType"
+                  adapter="com.migesok.jaxb.adapter.javatime.InstantXmlAdapter"/>
   </jaxb:globalBindings>
 
   <jaxb:bindings schemaLocation="OAI-PMH.xsd" node="//xs:schema">
