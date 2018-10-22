@@ -1,6 +1,7 @@
 package org.folio.rest.utils;
 
 import org.apache.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
 import org.junit.Test;
 
 import static org.junit.Assert.assertSame;

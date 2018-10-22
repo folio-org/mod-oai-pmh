@@ -1,4 +1,4 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh.mappers;
 
 import org.w3c.dom.Node;
 

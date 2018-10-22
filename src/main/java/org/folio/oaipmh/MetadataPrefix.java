@@ -1,10 +1,13 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.folio.oaipmh.mappers.Mapper;
+import org.folio.oaipmh.mappers.MarcXmlMapper;
+import org.folio.oaipmh.mappers.XSLTMapper;
 import org.w3c.dom.Node;
 
 
