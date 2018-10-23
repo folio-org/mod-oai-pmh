@@ -1,7 +1,6 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh.mappers;
 
 import org.apache.log4j.Logger;
-import org.folio.oaipmh.mappers.MarcXmlMapper;
 import org.junit.Test;
 import org.w3c.dom.Node;
 

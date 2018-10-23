@@ -13,6 +13,7 @@ import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamSource;
 
+import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 
@@ -60,7 +61,7 @@ public class XSLTMapper extends AbstractMapper {
     DOMResult result = new DOMResult(documentBuilder.newDocument());
     try {
       transformer.transform(domSource, result);
-      return result.getNode();
+      return ((Document) result.getNode()).getDocumentElement();
     } catch (TransformerException e) {
       throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
     }

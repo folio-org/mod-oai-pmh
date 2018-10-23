@@ -1,13 +1,13 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh.mappers;
 
 import org.apache.log4j.Logger;
-import org.folio.oaipmh.mappers.XSLTMapper;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -33,8 +33,9 @@ public class XSLTMapperTest {
     logger.info("=== Test incorrect json file converting to Dublin Core ===");
     String input = MapperTestHelper.getStringFromFile(StaticTestRecords.RESOURCES_INCORRECT_JSON_MARC);
     Node result = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
-    String titleValue = ((Document) result).getElementsByTagName("dc:title").item(0)
-      .getNodeValue();
+    String nodeName = result.getFirstChild().getLocalName();
+    assertEquals("title", nodeName);
+    String titleValue =  result.getFirstChild().getNodeValue();
     assertNull(titleValue);
   }
 
