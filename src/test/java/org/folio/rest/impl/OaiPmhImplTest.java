@@ -31,10 +31,10 @@ import java.time.Instant;
 import java.util.Properties;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
-import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
-import static org.folio.rest.impl.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {

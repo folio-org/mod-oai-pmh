@@ -1,13 +1,13 @@
-package org.folio.rest.impl;
+package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.ObjectFactory;
 import org.openarchives.oai._2.VerbType;
 
 import java.time.Instant;
@@ -17,32 +17,25 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 
-public class GetOaiRepositoryInfoHelper {
+/**
+ * Helper class that contains business logic for retrieving OAI-PMH repository info.
+ */
+public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
   private static final Logger logger = Logger.getLogger(GetOaiRepositoryInfoHelper.class);
 
-  static final String REPOSITORY_NAME = "repository.name";
-  static final String REPOSITORY_BASE_URL = "repository.baseURL";
-  static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
-  static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
-
-  private final Context ctx;
-  private final Map<String, String> okapiHeaders;
-
-  private ObjectFactory objectFactory = new ObjectFactory();
+  public static final String REPOSITORY_NAME = "repository.name";
+  public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
+  public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
 
-  public GetOaiRepositoryInfoHelper(Map<String, String> okapiHeaders, Context ctx) {
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-  }
-
-  public CompletableFuture<String> retrieveRepositoryInfo() {
+  @Override
+  public CompletableFuture<String> handle(Request request, Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
       OAIPMH oai = buildBaseResponse(VerbType.IDENTIFY)
         .withIdentify(objectFactory.createIdentifyType()
-          .withRepositoryName(getRepositoryName(okapiHeaders))
+          .withRepositoryName(getRepositoryName(request.getOkapiHeaders()))
           .withBaseURL(getBaseURL())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())
@@ -75,20 +68,6 @@ public class GetOaiRepositoryInfoHelper {
   }
 
   /**
-   * Return the repository base URL.
-   * For now, it is based on System property, but later it might be pulled from mod-configuration.
-   *
-   * @return repository base URL
-   */
-  private String getBaseURL() {
-    String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
-    if (baseUrl == null) {
-      throw new IllegalStateException("The required repository config 'repository.baseURL' is missing");
-    }
-    return baseUrl;
-  }
-
-  /**
    * Return the earliest repository datestamp.
    * For now, it always returns epoch instant, but later it might be pulled from mod-configuration.
    *
@@ -110,19 +89,5 @@ public class GetOaiRepositoryInfoHelper {
       throw new IllegalStateException("The required repository config 'repository.adminEmails' is missing");
     }
     return emails.split(",");
-  }
-
-  /**
-   * Creates basic {@link OAIPMH} with ResponseDate and Request details
-   * @param verb {@link VerbType}
-   * @return basic {@link OAIPMH}
-   */
-  private OAIPMH buildBaseResponse(VerbType verb) {
-    return objectFactory.createOAIPMH()
-      // According to spec the nanoseconds should not be used so truncate to seconds
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(objectFactory.createRequestType()
-        .withVerb(verb)
-        .withValue(getBaseURL()));
   }
 }
