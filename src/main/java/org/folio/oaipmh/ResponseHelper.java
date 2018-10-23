@@ -48,8 +48,8 @@ public class ResponseHelper {
     jaxbMarshaller = jaxbContext.createMarshaller();
     jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 
-    // Specifying OAI-PMH schema to validate response if the validation is enabled
-    if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation"))) {
+    // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
+    if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
       Schema oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
                                          .newSchema(new StreamSource(this.getClass()
                                                                          .getClassLoader()

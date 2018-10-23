@@ -503,7 +503,8 @@
         </configuration>
       </plugin>
 
-      <!-- Enable jaxb validation for unit tests by default -->
+      <!-- Enable jaxb validation for unit tests by default. The implementation by default enables validation.
+           Setting here as well just in case because apparently the default behavior might be changed. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
