@@ -17,7 +17,13 @@ import org.w3c.dom.Node;
 
 public abstract class AbstractMapper implements Mapper {
 
-  protected Node templateConvert(String source) {
+  /**
+   * Convert MarcJson to MarcXML.
+   *
+   * @param source String representation of MarkJson source.
+   * @return
+   */
+  public Node convert(String source) {
     try (InputStream inputStream
            = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
       MarcReader marcJsonReader = new MarcJsonReader(inputStream);
@@ -28,10 +34,20 @@ public abstract class AbstractMapper implements Mapper {
         marcXmlWriter.write(record);
       }
       marcXmlWriter.close();
-      return domResult.getNode().getFirstChild().getFirstChild();
+      return postProcess(domResult.getNode().getFirstChild().getFirstChild());
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
     }
+  }
+
+  /**
+   * Post-process result of converting.
+   *
+   * @param source Node DOM representation of MarcXml result.
+   * @return {@inheritDoc}
+   */
+  public Node postProcess(Node source) {
+    return source;
   }
 
 }

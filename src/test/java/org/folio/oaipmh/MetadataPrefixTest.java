@@ -20,7 +20,7 @@ public class MetadataPrefixTest {
 
   @Test(expected = UnsupportedOperationException.class)
   public void testUnmodifiableFormats() {
-    MetadataPrefix.getSupportedMetadataFormats().add("new_format");
+    MetadataPrefix.getAllMetadataFormats().add("new_format");
   }
 
 }

@@ -40,7 +40,7 @@ public enum MetadataPrefix {
     return CONSTANTS.get(name);
   }
 
-  public static Set<String> getSupportedMetadataFormats() {
+  public static Set<String> getAllMetadataFormats() {
     return FORMATS;
   }
 
