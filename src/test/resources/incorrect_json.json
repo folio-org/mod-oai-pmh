@@ -1,456 +1,380 @@
-
 {
-  "leader": "01741nam a2200373 cb4500",
-  "fields": [
+  "leader":"01471cjm a2200349 a 4500",
+  "fields":
+  [
     {
-      "001123124": "101073931fvsf wefX"
+      "001":"5674874"
     },
     {
-      "003": "DE-6adfsa01"
+      "005":"20030305110405.0"
     },
     {
-      "005": "20180416162657.0"
+      "007":"sdubsmennmplu"
     },
     {
-      "008": "180111s2018\\\\\\\\sz\\\\\\\\\\\\\\\\\\\\\\\\000\\0\\eng\\d"
+      "008":"930331s1963    nyuppn              eng d"
     },
     {
-      "020": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "035":
+      {
+        "subfields":
+        [
           {
-            "a": "3319643991"
-          },
-          {
-            "9": "3-319-64399-1"
+            "9":"(DLC)   93707283"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "020": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "906":
+      {
+        "subfields":
+        [
           {
-            "a": "9783319643991"
+            "a":"7"
           },
           {
-            "9": "978-3-319-64399-1"
+            "b":"cbc"
+          },
+          {
+            "c":"copycat"
+          },
+          {
+            "d":"4"
+          },
+          {
+            "e":"ncip"
+          },
+          {
+            "f":"19"
+          },
+          {
+            "v":"y-soundrec"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "020": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "010":
+      {
+        "subfields":
+        [
           {
-            "a": "9783319644004 (electronic)"
-          },
-          {
-            "9": "978-3-319-64400-4"
+            "a":"   93707283 "
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "035": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "028":
+      {
+        "subfields":
+        [
           {
-            "a": "(OCoLC)ocn992783736"
+            "a":"CS 8786"
+          },
+          {
+            "b":"Columbia"
           }
-        ]
+        ],
+        "ind1":"0",
+        "ind2":"2"
       }
     },
     {
-      "035": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "035":
+      {
+        "subfields":
+        [
           {
-            "a": "(OCoLC)992783736"
+            "a":"(OCoLC)13083787"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "035": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "040":
+      {
+        "subfields":
+        [
           {
-            "a": "(DE-599)GBV101073931X"
+            "a":"OClU"
+          },
+          {
+            "c":"DLC"
+          },
+          {
+            "d":"DLC"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "040": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "041":
+      {
+        "subfields":
+        [
           {
-            "b": "ger"
+            "d":"eng"
           },
           {
-            "c": "GBVCP"
-          },
-          {
-            "e": "rda"
+            "g":"eng"
           }
-        ]
+        ],
+        "ind1":"0",
+        "ind2":" "
       }
     },
     {
-      "041": {
-        "ind1": "0",
-        "ind2": "\\",
-        "subfields": [
+      "042":
+      {
+        "subfields":
+        [
           {
-            "a": "eng"
+            "a":"lccopycat"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "245": {
-        "ind1": "0",
-        "ind2": "0",
-        "subfields": [
+      "050":
+      {
+        "subfields":
+        [
           {
-            "a": "Futures, biometrics and neuroscience research"
-          },
-          {
-            "c": "Luiz Moutinho, Mladen Sokele, editors"
+            "a":"Columbia CS 8786"
           }
-        ]
+        ],
+        "ind1":"0",
+        "ind2":"0"
       }
     },
     {
-      "264": {
-        "ind1": "3",
-        "ind2": "1",
-        "subfields": [
+      "100":
+      {
+        "subfields":
+        [
           {
-            "a": "Cham"
+            "a":"Dylan, Bob,"
           },
           {
-            "b": "Palgrave Macmillan"
-          },
-          {
-            "c": "[2018]"
+            "d":"1941-"
           }
-        ]
+        ],
+        "ind1":"1",
+        "ind2":" "
       }
     },
     {
-      "300": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "245":
+      {
+        "subfieldes":
+        [
           {
-            "a": "xxix, 224 Seiten"
+            "a":"The freewheelin' Bob Dylan"
           },
           {
-            "b": "Illustrationen"
+            "h":"[sound recording]."
           }
-        ]
+        ],
+        "ind1":"1",
+        "ind2":"4"
       }
     },
     {
-      "336": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "260":
+      {
+        "subfields":
+        [
           {
-            "a": "Text"
+            "a":"[New York, N.Y.] :"
           },
           {
-            "b": "txt"
+            "b":"Columbia,"
           },
           {
-            "2": "rdacontent"
+            "c":"[1963]"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "337": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "300":
+      {
+        "subfields":
+        [
           {
-            "a": "ohne Hilfsmittel zu benutzen"
+            "a":"1 sound disc :"
           },
           {
-            "b": "n"
+            "b":"analog, 33 1/3 rpm, stereo. ;"
           },
           {
-            "2": "rdamedia"
+            "c":"12 in."
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "338": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "500":
+      {
+        "subfields":
+        [
           {
-            "a": "Band"
-          },
-          {
-            "b": "nc"
-          },
-          {
-            "2": "rdacarrier"
+            "a":"Songs."
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "490": {
-        "ind1": "0",
-        "ind2": "\\",
-        "subfields": [
+      "511":
+      {
+        "subfields":
+        [
           {
-            "a": "Innovative research methodologies in management"
-          },
-          {
-            "v": " \/ Luiz Moutinho, Mladen Sokele ; Volume 2"
+            "a":"The composer accompanying himself on the guitar ; in part with instrumental ensemble."
           }
-        ]
+        ],
+        "ind1":"0",
+        "ind2":" "
       }
     },
     {
-      "500": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
+      "500":
+      {
+        "subfields":
+        [
           {
-            "a": "Enthält 9 Beiträge"
+            "a":"Program notes by Nat Hentoff on container."
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "650": {
-        "ind1": "\\",
-        "ind2": "7",
-        "subfields": [
+      "505":
+      {
+        "subfields":
+        [
           {
-            "8": "1.1\\x"
-          },
-          {
-            "a": "Betriebswirtschaftslehre"
-          },
-          {
-            "0": "(DE-601)091351391"
-          },
-          {
-            "0": "(DE-STW)12041-5"
-          },
-          {
-            "2": "stw"
+            "a":"Blowin' in the wind -- Girl from the north country -- Masters of war -- Down the highway -- Bob Dylan's blues -- A hard rain's a-gonna fall -- Don't think twice, it's all right -- Bob Dylan's dream -- Oxford town -- Talking World War III blues -- Corrina, Corrina -- Honey, just allow me one more chance -- I shall be free."
           }
-        ]
+        ],
+        "ind1":"0",
+        "ind2":" "
       }
     },
     {
-      "650": {
-        "ind1": "\\",
-        "ind2": "7",
-        "subfields": [
+      "650":
+      {
+        "subfields":
+        [
           {
-            "8": "1.2\\x"
+            "a":"Popular music"
           },
           {
-            "a": "Management"
-          },
-          {
-            "0": "(DE-601)091376173"
-          },
-          {
-            "0": "(DE-STW)12085-6"
-          },
-          {
-            "2": "stw"
+            "y":"1961-1970."
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":"0"
       }
     },
     {
-      "650": {
-        "ind1": "\\",
-        "ind2": "7",
-        "subfields": [
+      "650":
+      {
+        "subfields":
+        [
           {
-            "8": "1.3\\x"
+            "a":"Blues (Music)"
           },
           {
-            "a": "Wissenschaftliche Methode"
-          },
-          {
-            "0": "(DE-601)091401445"
-          },
-          {
-            "0": "(DE-STW)16727-0"
-          },
-          {
-            "2": "stw"
+            "y":"1961-1970."
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":"0"
       }
     },
     {
-      "700": {
-        "ind1": "1",
-        "ind2": "\\",
-        "subfields": [
+      "856":
+      {
+        "subfields":
+        [
           {
-            "a": "Moutinho, Luiz"
+            "3":"Preservation copy (limited access)"
           },
           {
-            "e": "HerausgeberIn"
-          },
-          {
-            "4": "edt"
-          },
-          {
-            "0": "(DE-601)509450954"
-          },
-          {
-            "0": "(DE-588)131450204"
+            "u":"http://hdl.loc.gov/loc.mbrsrs/lp0001.dyln"
           }
-        ]
+        ],
+        "ind1":"4",
+        "ind2":"1"
       }
     },
     {
-      "700": {
-        "ind1": "1",
-        "ind2": "\\",
-        "subfields": [
+      "952":
+      {
+        "subfields":
+        [
           {
-            "a": "Sokele, Mladen"
-          },
-          {
-            "e": "HerausgeberIn"
-          },
-          {
-            "4": "edt"
+            "a":"New"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "830": {
-        "ind1": "\\",
-        "ind2": "0",
-        "subfields": [
+      "953":
+      {
+        "subfields":
+        [
           {
-            "a": "Innovative research methodologies in management"
-          },
-          {
-            "b": " \/ Luiz Moutinho, Mladen Sokele"
-          },
-          {
-            "v": "Volume 2"
-          },
-          {
-            "9": "2.2018"
-          },
-          {
-            "w": "(DE-601)1011380293"
+            "a":"TA28"
           }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     },
     {
-      "856": {
-        "ind1": "4",
-        "ind2": "2",
-        "subfields": [
+      "991":
+      {
+        "subfields":
+        [
           {
-            "y": "Inhaltsverzeichnis"
+            "b":"c-RecSound"
           },
           {
-            "u": "http:\/\/www.gbv.de\/dms\/zbw\/101073931X.pdf"
+            "h":"Columbia CS 8786"
           },
           {
-            "m": "V:DE-601;B:DE-206"
-          },
-          {
-            "q": "application\/pdf"
-          },
-          {
-            "3": "Inhaltsverzeichnis"
+            "w":"MUSIC"
           }
-        ]
-      }
-    },
-    {
-      "900": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
-          {
-            "a": "GBV"
-          },
-          {
-            "b": "ZBW Kiel <206>"
-          },
-          {
-            "d": "!H:! A18-1775"
-          },
-          {
-            "x": "L"
-          },
-          {
-            "z": "LC"
-          },
-          {
-            "s": "206\/1"
-          }
-        ]
-      }
-    },
-    {
-      "954": {
-        "ind1": "\\",
-        "ind2": "\\",
-        "subfields": [
-          {
-            "0": "ZBW Kiel <206>"
-          },
-          {
-            "a": "26"
-          },
-          {
-            "b": "1740761685"
-          },
-          {
-            "c": "01"
-          },
-          {
-            "f": "H:"
-          },
-          {
-            "d": "A18-1775"
-          },
-          {
-            "e": "u"
-          },
-          {
-            "x": "206\/1"
-          }
-        ]
+        ],
+        "ind1":" ",
+        "ind2":" "
       }
     }
   ]
 }
-
