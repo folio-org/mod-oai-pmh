@@ -1,34 +1,39 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
-import org.folio.oaipmh.helpers.VerbHelper;
-import org.folio.rest.jaxrs.resource.Oai;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ObjectFactory;
-import org.openarchives.oai._2.VerbType;
-
-import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
 import java.util.Map;
-
-import static io.vertx.core.Future.succeededFuture;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import javax.ws.rs.core.Response;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
+import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
+import org.folio.oaipmh.helpers.VerbHelper;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.resource.Oai;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ObjectFactory;
+import org.openarchives.oai._2.VerbType;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger("mod-oai-pmh");
 
   private static final String REPOSITORY_BASE_URL = "repository.baseURL";
   private static final String ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
+  public static final String OKAPI_HEADER_URL = "X-Okapi-Url";
 
   private ObjectFactory objectFactory = new ObjectFactory();
 
@@ -87,7 +92,19 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiMetadataFormats(String identifier, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain("The verb ListMetadataFormats is not supported yet :(")));
+
+    Request request = Request.builder().identifier(identifier).build();
+    HttpClientInterface client = getHttpClient(okapiHeaders);
+    GetOaiMetadataFormatsHelper helper = new GetOaiMetadataFormatsHelper(client, vertxContext, okapiHeaders);
+
+    helper.handle(request, vertxContext)
+      .thenAccept(oaipmh -> {
+        logger.info("Successfully retrieved ListMetadataFormats info: " + oaipmh);
+        asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(oaipmh)));
+      }).exceptionally(throwable -> {
+      asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+      return null;
+    });
   }
 
   @Override
@@ -125,5 +142,20 @@ public class OaiPmhImpl implements Oai {
       .withRequest(objectFactory.createRequestType()
         .withVerb(verb)
         .withValue(System.getProperty(REPOSITORY_BASE_URL)));
+  }
+
+  /*
+  !!! This client should be additionally investigated and probably updated for retrieving just
+  String not JSON object in case of ListMetadataFormats verb to reject unnecessary transformation JSON -> String
+  */
+  /**
+   * Creates http-client for calling other endpoints through okapi
+   * @param okapiHeaders request headers
+   * @return HTTP-client implementation
+   */
+  private static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
+    final String okapiURL = okapiHeaders.getOrDefault(OKAPI_HEADER_URL, "");
+    final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(RestVerticle.OKAPI_HEADER_TENANT));
+    return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 }
