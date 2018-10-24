@@ -17,7 +17,6 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ObjectFactory;
 import org.openarchives.oai._2.VerbType;
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
@@ -27,8 +26,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private final Context ctx;
   private final HttpClientInterface httpClient;
   private final Map<String, String> okapiHeaders;
-
-  private ObjectFactory objectFactory = new ObjectFactory();
 
   public GetOaiMetadataFormatsHelper(HttpClientInterface httpClient, Context ctx,
     Map<String, String> okapiHeaders) {
