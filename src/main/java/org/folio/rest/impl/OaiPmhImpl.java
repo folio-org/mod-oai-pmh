@@ -8,6 +8,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
+import org.folio.oaipmh.helpers.GetOaiSetsHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.OAIPMH;
@@ -23,6 +24,7 @@ import java.util.Map;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger("mod-oai-pmh");
@@ -36,6 +38,7 @@ public class OaiPmhImpl implements Oai {
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
   static {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
+    HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     // other verb implementations to be added here
   }
 
@@ -93,7 +96,21 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiSets(String resumptionToken, Map<String, String> okapiHeaders,
                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain("The verb ListSets is not supported yet :(")));
+
+    Request request = Request.builder()
+      .okapiHeaders(okapiHeaders)
+      .resumptionToken(resumptionToken)
+      .build();
+
+    VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
+    getSetsHelper.handle(request, vertxContext)
+      .thenAccept(oai -> {
+        logger.info("Successfully retrieved sets structure: " + oai);
+        asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond200WithApplicationXml(oai)));
+      }).exceptionally(throwable -> {
+      asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+      return null;
+    });
   }
 
   @Override

@@ -14,3 +14,5 @@
    The default values can be overwritten by VM arguments e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`
    Please refer to [config.properties](src/main/resources/config/config.properties) to check all the properties used.
    Also there is possibility to specify another configuration file via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader
+
+ * The initial implementation of the verb ListSets is done in scope of [MODOAIPMH-14](https://issues.folio.org/projects/MODOAIPMH/issues/MODOAIPMH-14) 
