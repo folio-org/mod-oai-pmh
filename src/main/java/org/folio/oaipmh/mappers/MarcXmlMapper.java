@@ -1,4 +1,11 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh.mappers;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import javax.xml.transform.dom.DOMResult;
 
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
@@ -7,24 +14,20 @@ import org.marc4j.MarcXmlWriter;
 import org.marc4j.marc.Record;
 import org.w3c.dom.Node;
 
-import javax.xml.transform.dom.DOMResult;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-
 /**
- * Converts MarkJson format to MarcXML format.
+ * Converts MarcJson format to MarcXML format.
  */
 public class MarcXmlMapper implements Mapper {
 
   /**
-   * {@inheritDoc}
-   * @param source String representation of MarkJson source.
-   * @return the Node object that represents result MarcXML document
+   * Convert MarcJson to MarcXML.
+   *
+   * @param source String representation of MarcJson source.
+   * @return DOM's Node representation of MarcXML
    */
-  @Override
   public Node convert(String source) {
-    try(InputStream inputStream
-          = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
+    try (InputStream inputStream
+           = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
       MarcReader marcJsonReader = new MarcJsonReader(inputStream);
       DOMResult domResult = new DOMResult();
       MarcWriter marcXmlWriter = new MarcXmlWriter(domResult);
@@ -33,11 +36,10 @@ public class MarcXmlMapper implements Mapper {
         marcXmlWriter.write(record);
       }
       marcXmlWriter.close();
-      return domResult.getNode();
+      return domResult.getNode().getFirstChild().getFirstChild();
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
     }
-
   }
 
 }
