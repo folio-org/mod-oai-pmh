@@ -11,8 +11,8 @@ public class MetadataPrefixTest {
   private MetadataPrefix[] metadataPrefixes = MetadataPrefix.values();
 
   @Test
-  public void testGetMarcXmlMapper() {
-    logger.info("=== Test get MarcXmlMapper ===");
+  public void testGetMetadataPrefixFromName() {
+    logger.info("=== Test get metadata prefix from name ===");
     for (MetadataPrefix metadataPrefix : metadataPrefixes) {
       assertSame(MetadataPrefix.fromName(metadataPrefix.getName()), metadataPrefix);
     }
@@ -20,6 +20,7 @@ public class MetadataPrefixTest {
 
   @Test(expected = UnsupportedOperationException.class)
   public void testUnmodifiableFormats() {
+    logger.info("=== Test if Set of metadata prefixes is unmodifiable ===");
     MetadataPrefix.getAllMetadataFormats().add("new_format");
   }
 
