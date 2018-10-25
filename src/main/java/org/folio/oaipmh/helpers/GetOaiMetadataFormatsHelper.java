@@ -13,7 +13,6 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
@@ -23,24 +22,14 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
   private static final Logger logger = Logger.getLogger(GetOaiMetadataFormatsHelper.class);
 
-  private final Context ctx;
-  private final HttpClientInterface httpClient;
-  private final Map<String, String> okapiHeaders;
-
-  public GetOaiMetadataFormatsHelper(HttpClientInterface httpClient, Context ctx,
-    Map<String, String> okapiHeaders) {
-    this.httpClient = httpClient;
-    this.okapiHeaders = okapiHeaders;
-    this.ctx = ctx;
-  }
-
   @Override
   public CompletableFuture<String> handle(Request request, Context ctx) {
     String identifier = request.getIdentifier();
-    if(identifier!=null) {
-      return retrieveMetadataFormats(identifier);
+    Map<String, String> okapiHeaders = request.getOkapiHeaders();
+    if (identifier != null) {
+      return retrieveMetadataFormats(identifier, ctx, okapiHeaders);
     } else {
-      return retrieveMetadataFormats();
+      return retrieveMetadataFormats(ctx);
     }
   }
 
@@ -48,10 +37,10 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request with identifier
    * @return future with {@link OAIPMH} response
    */
-  private CompletableFuture<String> retrieveMetadataFormats(String identifier) {
+  private CompletableFuture<String> retrieveMetadataFormats(String identifier, Context ctx, Map<String, String> okapiHeaders) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
-      httpClient.request(HttpMethod.GET, "/instance-storage/instances/" + identifier, okapiHeaders)
+      getHttpClient(okapiHeaders).request(HttpMethod.GET, "/instance-storage/instances/" + identifier, okapiHeaders)
         .thenApply(this::verifyAndGetOaiPmhResponse)
         .thenAccept(oaipmh -> {
           try {
@@ -75,7 +64,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request without identifier
    * @return future with {@link OAIPMH} response
    */
-  private CompletableFuture<String> retrieveMetadataFormats() {
+  private CompletableFuture<String> retrieveMetadataFormats(Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
       future
@@ -88,8 +77,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   }
 
   /**
-   * Validates inventory-mod-storage response and returns {@link OAIPMH}
-   * with populated MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
+   * Validates inventory-mod-storage response and returns {@link OAIPMH} with populated
+   * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
    * @return basic {@link OAIPMH}
    */
   private OAIPMH verifyAndGetOaiPmhResponse(Response response) {
@@ -101,14 +90,11 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
   /**
    * Creates {@link OAIPMH} with ListMetadataFormats element
+   *
    * @return basic {@link OAIPMH}
    */
   private OAIPMH buildMetadataFormatTypesResponse() {
-    return objectFactory.createOAIPMH()
-      .withListMetadataFormats(getMetadataFormatTypes())
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(objectFactory.createRequestType()
-        .withVerb(VerbType.LIST_METADATA_FORMATS));
+    return buildBaseResponse(VerbType.LIST_METADATA_FORMATS).withListMetadataFormats(getMetadataFormatTypes());
   }
 
   /**
@@ -129,14 +115,14 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return supported metadata formats
    */
   private ListMetadataFormatsType getMetadataFormatTypes() {
-    return objectFactory.createListMetadataFormatsType()
-      .withMetadataFormats(objectFactory.createMetadataFormatType()
-        .withMetadataPrefix(MetadataPrefix.DC.getName())
-        .withSchema(MetadataPrefix.DC.getSchema())
-        .withMetadataNamespace(MetadataPrefix.DC.getMetadataNamespace()))
-      .withMetadataFormats(objectFactory.createMetadataFormatType()
-        .withMetadataPrefix(MetadataPrefix.MARC_XML.getName())
-        .withSchema(MetadataPrefix.MARC_XML.getSchema())
-        .withMetadataNamespace(MetadataPrefix.MARC_XML.getMetadataNamespace()));
+
+    ListMetadataFormatsType mft = objectFactory.createListMetadataFormatsType();
+    for (MetadataPrefix mp : MetadataPrefix.values()) {
+      mft.withMetadataFormats(objectFactory.createMetadataFormatType()
+        .withMetadataPrefix(mp.getName())
+        .withSchema(mp.getSchema())
+        .withMetadataNamespace(mp.getMetadataNamespace()));
+    }
+    return mft;
   }
 }

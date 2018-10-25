@@ -1,5 +1,11 @@
 package org.folio.rest.impl;
 
+import static com.jayway.restassured.RestAssured.given;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
 import com.jayway.restassured.response.Header;
@@ -13,6 +19,9 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.time.Instant;
+import java.util.Properties;
+import javax.xml.bind.JAXBException;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.PomReader;
@@ -25,16 +34,6 @@ import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
-
-import javax.xml.bind.JAXBException;
-import java.time.Instant;
-import java.util.Properties;
-
-import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
@@ -61,14 +60,14 @@ public class OaiPmhImplTest {
   private final Header contentTypeHeaderXML = new Header("Content-Type", "application/xml");
 
   private static Vertx vertx;
-  private static InventoryStorageMock inventoryStorageMock;
+  private static OkapiMockServer okapiMockServer;
 
   @BeforeClass
   public static void setUpOnce(TestContext context) {
     vertx = Vertx.vertx();
 
-    inventoryStorageMock = new InventoryStorageMock(mockPort);
-    inventoryStorageMock.start(context);
+    okapiMockServer = new OkapiMockServer(mockPort);
+    okapiMockServer.start(context);
 
     String moduleName = PomReader.INSTANCE.getModuleName()
                                    .replaceAll("_", "-");  // RMB normalizes the dash to underscore, fix back
@@ -95,7 +94,7 @@ public class OaiPmhImplTest {
     logger.info("Cleaning up after mod-oai-pmh Test");
     Async async = context.async();
     vertx.close(context.asyncAssertSuccess(res -> async.complete()));
-    inventoryStorageMock.close();
+    okapiMockServer.close();
   }
 
   @Test
@@ -176,11 +175,8 @@ public class OaiPmhImplTest {
   public void getOaiMetadataFormats(TestContext context) throws JAXBException {
     logger.info("=== Test Metadata Formats without identifier ===");
 
-    String responseWithoutIdentifier = RestAssured
-      .with()
+    String responseWithoutIdentifier = createBaseRequest()
       .header(okapiUrlHeader)
-      .header(tenantHeader)
-      .contentType(APPLICATION_XML_TYPE)
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)
@@ -209,7 +205,7 @@ public class OaiPmhImplTest {
       .header(okapiUrlHeader)
       .header(tenantHeader)
       .contentType(APPLICATION_XML_TYPE)
-      .param(IDENTIFIER, InventoryStorageMock.EXISTING_IDENTIFIER)
+      .param(IDENTIFIER, OkapiMockServer.EXISTING_IDENTIFIER)
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)
@@ -238,7 +234,7 @@ public class OaiPmhImplTest {
       .header(okapiUrlHeader)
       .header(tenantHeader)
       .contentType(APPLICATION_XML_TYPE)
-      .param(IDENTIFIER, InventoryStorageMock.NON_EXISTING_IDENTIFIER)
+      .param(IDENTIFIER, OkapiMockServer.NON_EXISTING_IDENTIFIER)
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)

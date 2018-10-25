@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -18,11 +19,7 @@ import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
-import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.resource.Oai;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ObjectFactory;
@@ -33,7 +30,6 @@ public class OaiPmhImpl implements Oai {
 
   private static final String REPOSITORY_BASE_URL = "repository.baseURL";
   private static final String ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
-  public static final String OKAPI_HEADER_URL = "X-Okapi-Url";
 
   private ObjectFactory objectFactory = new ObjectFactory();
 
@@ -41,6 +37,7 @@ public class OaiPmhImpl implements Oai {
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
   static {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
+    HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     // other verb implementations to be added here
   }
 
@@ -93,16 +90,14 @@ public class OaiPmhImpl implements Oai {
   public void getOaiMetadataFormats(String identifier, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
-    Request request = Request.builder().identifier(identifier).build();
-    HttpClientInterface client = getHttpClient(okapiHeaders);
-    GetOaiMetadataFormatsHelper helper = new GetOaiMetadataFormatsHelper(client, vertxContext, okapiHeaders);
-
-    helper.handle(request, vertxContext)
+    Request request = Request.builder().identifier(identifier).okapiHeaders(okapiHeaders).build();
+    VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
+    getRepositoryInfoHelper.handle(request, vertxContext)
       .thenAccept(oaipmh -> {
         logger.info("Successfully retrieved ListMetadataFormats info: " + oaipmh);
-        asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(oaipmh)));
+        asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond200WithApplicationXml(oaipmh)));
       }).exceptionally(throwable -> {
-      asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+      asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
       return null;
     });
   }
@@ -142,20 +137,5 @@ public class OaiPmhImpl implements Oai {
       .withRequest(objectFactory.createRequestType()
         .withVerb(verb)
         .withValue(System.getProperty(REPOSITORY_BASE_URL)));
-  }
-
-  /*
-  !!! This client should be additionally investigated and probably updated for retrieving just
-  String not JSON object in case of ListMetadataFormats verb to reject unnecessary transformation JSON -> String
-  */
-  /**
-   * Creates http-client for calling other endpoints through okapi
-   * @param okapiHeaders request headers
-   * @return HTTP-client implementation
-   */
-  private static HttpClientInterface getHttpClient(Map<String, String> okapiHeaders) {
-    final String okapiURL = okapiHeaders.getOrDefault(OKAPI_HEADER_URL, "");
-    final String tenantId = TenantTool.calculateTenantId(okapiHeaders.get(RestVerticle.OKAPI_HEADER_TENANT));
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId);
   }
 }

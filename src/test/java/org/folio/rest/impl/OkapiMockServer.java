@@ -13,16 +13,16 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.log4j.Logger;
 
-public class InventoryStorageMock {
+public class OkapiMockServer {
 
-  private static final Logger logger = Logger.getLogger(InventoryStorageMock.class);
+  private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
 
   private final int port;
   private final Vertx vertx;
 
-  InventoryStorageMock(int port) {
+  OkapiMockServer(int port) {
     this.port = port;
     this.vertx = Vertx.vertx();
   }
