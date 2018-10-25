@@ -35,6 +35,25 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
 
+import javax.xml.bind.JAXBException;
+import java.time.Instant;
+import java.util.Properties;
+
+import static com.jayway.restassured.RestAssured.given;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertThat;
+import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
+
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhImplTest.class);
@@ -86,7 +105,10 @@ public class OaiPmhImplTest {
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
+    logger.info("mod-oai-pmh Test: setup done. Using port " + port);
+
+    Properties sysProps = System.getProperties();
+    sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
   }
 
   @AfterClass
@@ -119,18 +141,14 @@ public class OaiPmhImplTest {
     String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH);
 
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
 
     // Unmarshal string to OAIPMH and verify required data presents
     OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-    context.assertNotNull(oaipmh1FromString)
-           .assertNotNull(oaipmh1FromString.getResponseDate())
-           .assertTrue(oaipmh1FromString.getResponseDate().isBefore(Instant.now()))
-           .assertNotNull(oaipmh1FromString.getRequest())
-           .assertNotNull(oaipmh1FromString.getRequest().getValue())
-           .assertEquals(VerbType.LIST_RECORDS, oaipmh1FromString.getRequest().getVerb())
-           .assertNotNull(oaipmh1FromString.getErrors())
-           .assertEquals(1, oaipmh1FromString.getErrors().size());
+    verifyBaseResponse(oaipmh1FromString, LIST_RECORDS);
+    assertThat(oaipmh1FromString.getErrors(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getErrors(), hasSize(equalTo(1)));
+
     async.complete();
   }
 
@@ -142,18 +160,13 @@ public class OaiPmhImplTest {
     String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH + "/someId");
 
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
 
     // Unmarshal string to OAIPMH and verify required data presents
     OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-    context.assertNotNull(oaipmh1FromString)
-           .assertNotNull(oaipmh1FromString.getResponseDate())
-           .assertTrue(oaipmh1FromString.getResponseDate().isBefore(Instant.now()))
-           .assertNotNull(oaipmh1FromString.getRequest())
-           .assertNotNull(oaipmh1FromString.getRequest().getValue())
-           .assertEquals(VerbType.GET_RECORD, oaipmh1FromString.getRequest().getVerb())
-           .assertNotNull(oaipmh1FromString.getErrors())
-           .assertEquals(1, oaipmh1FromString.getErrors().size());
+    verifyBaseResponse(oaipmh1FromString, GET_RECORD);
+    assertThat(oaipmh1FromString.getErrors(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getErrors(), hasSize(equalTo(1)));
 
     async.complete();
   }
@@ -166,7 +179,7 @@ public class OaiPmhImplTest {
     String response = test500WithErrorMessage(requestSpecification, LIST_IDENTIFIERS_PATH);
 
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
 
     async.complete();
   }
@@ -229,6 +242,8 @@ public class OaiPmhImplTest {
   public void getOaiMetadataFormatsWithNonExistingIdentifier(TestContext context) throws JAXBException {
     logger.info("=== Test Metadata Formats with non-existing identifier ===");
 
+    // Check that error message is returned
+    assertThat(response, is(notNullValue()));
     String responseWithNonExistingIdentifier = RestAssured
       .with()
       .header(okapiUrlHeader)
@@ -257,14 +272,48 @@ public class OaiPmhImplTest {
   }
 
   @Test
-  public void getOaiSets(TestContext context) {
+  public void testSuccessfulGetOaiSets(TestContext context) throws JAXBException {
     Async async = context.async();
 
     RequestSpecification requestSpecification = createBaseRequest();
-    String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
+
+    String response = requestSpecification
+      .when()
+        .get(LIST_SETS_PATH)
+      .then()
+        .statusCode(200)
+        .contentType(ContentType.XML)
+        .extract()
+          .body().asString();
 
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh1FromString, LIST_SETS);
+    assertThat(oaipmh1FromString.getListSets(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getListSets().getSets(), hasSize(equalTo(1)));
+    assertThat(oaipmh1FromString.getListSets().getSets().get(0).getSetSpec(), equalTo("all"));
+    assertThat(oaipmh1FromString.getListSets().getSets().get(0).getSetName(), equalTo("All records"));
+
+    async.complete();
+  }
+
+  @Test
+  public void testGetOaiSetsMissingBaseUrlProperty(TestContext context) throws JAXBException {
+    Async async = context.async();
+    RequestSpecification requestSpecification = createBaseRequest();
+
+    // Remove required props
+    Properties sysProps = System.getProperties();
+    sysProps.remove(REPOSITORY_BASE_URL);
+
+    String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
+    // Check that error message is returned
+    assertThat(response, is(notNullValue()));
+    assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
 
     async.complete();
   }
@@ -306,7 +355,7 @@ public class OaiPmhImplTest {
 
     String response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
 
 
     // Set some required props but not all
@@ -317,8 +366,8 @@ public class OaiPmhImplTest {
 
     response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
     // Check that error message is returned
-    context.assertNotNull(response);
-    context.assertEquals("Sorry, we can't process your request. Please contact administrator(s).", response);
+    assertThat(response, is(notNullValue()));
+    assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
 
     // Set all required system properties
     sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
@@ -333,24 +382,20 @@ public class OaiPmhImplTest {
           .body()
             .asString();
     // Check that error message is returned
-    context.assertNotNull(response);
+    assertThat(response, is(notNullValue()));
 
     // Unmarshal string to OAIPMH and verify required data presents
     OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-    context.assertNotNull(oaipmh1FromString)
-           .assertNotNull(oaipmh1FromString.getResponseDate())
-           .assertTrue(oaipmh1FromString.getResponseDate().isBefore(Instant.now()))
-           .assertNotNull(oaipmh1FromString.getRequest())
-           .assertNotNull(oaipmh1FromString.getRequest().getValue())
-           .assertEquals(VerbType.IDENTIFY, oaipmh1FromString.getRequest().getVerb())
-           .assertNotNull(oaipmh1FromString.getIdentify())
-           .assertNotNull(oaipmh1FromString.getIdentify().getBaseURL())
-           .assertNotNull(oaipmh1FromString.getIdentify().getAdminEmails())
-           .assertEquals(2, oaipmh1FromString.getIdentify().getAdminEmails().size())
-           .assertNotNull(oaipmh1FromString.getIdentify().getEarliestDatestamp())
-           .assertEquals(GranularityType.YYYY_MM_DD_THH_MM_SS_Z, oaipmh1FromString.getIdentify().getGranularity())
-           .assertEquals(REPOSITORY_PROTOCOL_VERSION_2_0, oaipmh1FromString.getIdentify().getProtocolVersion())
-           .assertNotNull(oaipmh1FromString.getIdentify().getRepositoryName());
+
+    verifyBaseResponse(oaipmh1FromString, IDENTIFY);
+    assertThat(oaipmh1FromString.getIdentify(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getIdentify().getBaseURL(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getIdentify().getAdminEmails(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
+    assertThat(oaipmh1FromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
+    assertThat(oaipmh1FromString.getIdentify().getProtocolVersion(), is(equalTo(REPOSITORY_PROTOCOL_VERSION_2_0)));
+    assertThat(oaipmh1FromString.getIdentify().getRepositoryName(), is(notNullValue()));
 
     async.complete();
   }
@@ -361,5 +406,14 @@ public class OaiPmhImplTest {
         .header(tokenHeader)
         .header(tenantHeader)
         .header(contentTypeHeaderXML);
+  }
+
+  private void verifyBaseResponse(OAIPMH oaipmh1FromString, VerbType verb) {
+    assertThat(oaipmh1FromString, is(notNullValue()));
+    assertThat(oaipmh1FromString.getResponseDate(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getResponseDate().isBefore(Instant.now()), is(true));
+    assertThat(oaipmh1FromString.getRequest(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getRequest().getValue(), is(notNullValue()));
+    assertThat(oaipmh1FromString.getRequest().getVerb(), equalTo(verb));
   }
 }

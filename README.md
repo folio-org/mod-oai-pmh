@@ -9,7 +9,7 @@ Portions of this software may use XML schemas Copyright © 2011 [DCMI](http://du
 
 ## Introduction
 
-Backend Module implementing the Open Archives Initiative Protocol for Metadata Harvesting ([OAI-PMH Version 2.0](http://www.openarchives.org/OAI/openarchivesprotocol.html))
+Backend Module implementing the Open Archives Initiative Protocol for Metadata Harvesting ([OAI-PMH Version 2.0](http://www.openarchives.org/OAI/openarchivesprotocol.html)), but providing more RESTful API than described in the specification. Refer to [oai-pmh.raml](ramls/oai-pmh.raml) for the details.
 
 ## Additional information
 ### Schemas
