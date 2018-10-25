@@ -27,7 +27,7 @@ import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
-  private final Logger logger = LoggerFactory.getLogger("mod-oai-pmh");
+  private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
 
   private static final String REPOSITORY_BASE_URL = "repository.baseURL";
   private static final String ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
