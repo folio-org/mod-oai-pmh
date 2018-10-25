@@ -5,6 +5,15 @@ import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADM
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertThat;
+import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.http.ContentType;
@@ -34,25 +43,6 @@ import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
-
-import javax.xml.bind.JAXBException;
-import java.time.Instant;
-import java.util.Properties;
-
-import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
-import static org.openarchives.oai._2.VerbType.GET_RECORD;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
-import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
-import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
@@ -105,7 +95,7 @@ public class OaiPmhImplTest {
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    logger.info("mod-oai-pmh Test: setup done. Using port " + port);
+    logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
 
     Properties sysProps = System.getProperties();
     sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
@@ -243,7 +233,6 @@ public class OaiPmhImplTest {
     logger.info("=== Test Metadata Formats with non-existing identifier ===");
 
     // Check that error message is returned
-    assertThat(response, is(notNullValue()));
     String responseWithNonExistingIdentifier = RestAssured
       .with()
       .header(okapiUrlHeader)
