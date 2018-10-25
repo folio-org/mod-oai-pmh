@@ -20,7 +20,7 @@ import org.w3c.dom.Node;
 public class MarcXmlMapper implements Mapper {
 
   /**
-   * Convert MarcJson to MarcXML with post-processing.
+   * Convert MarcJson to MarcXML.
    *
    * @param source String representation of MarcJson source.
    * @return DOM's Node representation of MarcXML
@@ -36,20 +36,10 @@ public class MarcXmlMapper implements Mapper {
         marcXmlWriter.write(record);
       }
       marcXmlWriter.close();
-      return postProcess(domResult.getNode().getFirstChild().getFirstChild());
+      return domResult.getNode().getFirstChild().getFirstChild();
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
     }
-  }
-
-  /**
-   * Empty post-processing.
-   *
-   * @param source Node DOM representation of MarcXml result.
-   * @return same Node
-   */
-  public Node postProcess(Node source) {
-    return source;
   }
 
 }

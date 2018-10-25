@@ -33,7 +33,7 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/oia/identifiers",
+          "pathPattern": "/oai/identifiers",
           "permissionsRequired": ["oai-pmh.identifiers.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",

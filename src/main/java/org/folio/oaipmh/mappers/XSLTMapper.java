@@ -49,17 +49,18 @@ public class XSLTMapper extends MarcXmlMapper {
   }
 
   /**
-   * XSLT post-processing.
+   * Convert MarcJson to MarcXML with XSLT post-processing.
    *
-   * @param source Node {@inheritDoc}
+   * @param source {@inheritDoc}
    * @return Node representation of XML after XSLT transformation
    */
   @Override
-  public Node postProcess(Node source) {
+  public Node convert(String source) {
+    Node nodeSource = super.convert(source);
     try {
       DocumentBuilderFactory docbFactory = DocumentBuilderFactory.newInstance();
       DocumentBuilder documentBuilder = docbFactory.newDocumentBuilder();
-      DOMSource domSource = new DOMSource(source);
+      DOMSource domSource = new DOMSource(nodeSource);
       DOMResult result = new DOMResult(documentBuilder.newDocument());
       Transformer transformer = template.newTransformer();
       transformer.transform(domSource, result);
