@@ -17,5 +17,5 @@ public interface VerbHelper {
    * @param ctx the context
    * @return CompletableFuture containing OAI-PMH response string representation.
    */
-  CompletableFuture<String> handle(Request request, Context ctx);
+  CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx);
 }

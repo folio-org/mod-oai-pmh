@@ -1,10 +1,20 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
+import java.util.Map;
+import javax.ws.rs.core.Response;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
@@ -16,17 +26,6 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ObjectFactory;
 import org.openarchives.oai._2.VerbType;
-
-import javax.ws.rs.core.Response;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.EnumMap;
-import java.util.Map;
-
-import static io.vertx.core.Future.succeededFuture;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
-import static org.openarchives.oai._2.VerbType.LIST_SETS;
-import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
@@ -97,9 +96,9 @@ public class OaiPmhImpl implements Oai {
     Request request = Request.builder().identifier(identifier).okapiHeaders(okapiHeaders).build();
     VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
     getRepositoryInfoHelper.handle(request, vertxContext)
-      .thenAccept(oaipmh -> {
-        logger.info("Successfully retrieved ListMetadataFormats info: " + oaipmh);
-        asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond200WithApplicationXml(oaipmh)));
+      .thenAccept(response -> {
+        logger.info("Successfully retrieved ListMetadataFormats info: " + response.getEntity().toString());
+        asyncResultHandler.handle(succeededFuture(response));
       }).exceptionally(throwable -> {
       asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
       return null;
@@ -117,9 +116,9 @@ public class OaiPmhImpl implements Oai {
 
     VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
     getSetsHelper.handle(request, vertxContext)
-      .thenAccept(oai -> {
-        logger.info("Successfully retrieved sets structure: " + oai);
-        asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond200WithApplicationXml(oai)));
+      .thenAccept(response -> {
+        logger.info("Successfully retrieved sets structure: " + response.getEntity().toString());
+        asyncResultHandler.handle(succeededFuture(response));
       }).exceptionally(throwable -> {
       asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
       return null;
@@ -134,9 +133,9 @@ public class OaiPmhImpl implements Oai {
 
     VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
     getRepositoryInfoHelper.handle(request, vertxContext)
-      .thenAccept(oai -> {
-          logger.info("Successfully retrieved repository info: " + oai);
-          asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(oai)));
+      .thenAccept(response -> {
+          logger.info("Successfully retrieved repository info: " + response.getEntity().toString());
+          asyncResultHandler.handle(succeededFuture(response));
       }).exceptionally(throwable -> {
         asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(ERROR_MESSAGE)));
         return null;

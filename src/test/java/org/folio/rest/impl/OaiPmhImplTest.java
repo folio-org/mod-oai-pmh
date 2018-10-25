@@ -214,7 +214,8 @@ public class OaiPmhImplTest {
       .contentType(APPLICATION_XML_TYPE)
       .statusCode(200)
       .extract()
-      .response().asString();
+      .body()
+      .asString();
 
     logger.info("Response with request with existing identifier: " + responseWithExistingIdentifier);
 
@@ -242,9 +243,10 @@ public class OaiPmhImplTest {
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)
-      .statusCode(200)
+      .statusCode(404)
       .extract()
-      .response().asString();
+      .body()
+      .asString();
 
     logger.info("Response with request with non-existing identifier: " + responseWithNonExistingIdentifier);
 
@@ -257,7 +259,7 @@ public class OaiPmhImplTest {
       .assertNotNull(oaiPmhResponseWithNonExistingIdentifier.getErrors())
       .assertEquals(1, oaiPmhResponseWithNonExistingIdentifier.getErrors().size())
       .assertEquals(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST, oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getCode())
-      .assertEquals("404", oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getValue());
+      .assertEquals("Identifier not found", oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getValue());
   }
 
   @Test

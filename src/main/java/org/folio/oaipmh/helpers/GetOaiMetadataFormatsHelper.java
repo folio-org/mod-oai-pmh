@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.jaxrs.resource.Oai.GetOaiMetadataFormatsResponse;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -23,7 +24,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private static final Logger logger = Logger.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
-  public CompletableFuture<String> handle(Request request, Context ctx) {
+  public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
     String identifier = request.getIdentifier();
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     if (identifier != null) {
@@ -37,19 +38,12 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request with identifier
    * @return future with {@link OAIPMH} response
    */
-  private CompletableFuture<String> retrieveMetadataFormats(String identifier, Context ctx, Map<String, String> okapiHeaders) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+  private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(String identifier, Context ctx, Map<String, String> okapiHeaders) {
+    CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     try {
       getHttpClient(okapiHeaders).request(HttpMethod.GET, "/instance-storage/instances/" + identifier, okapiHeaders)
         .thenApply(this::verifyAndGetOaiPmhResponse)
-        .thenAccept(oaipmh -> {
-          try {
-            String reply = ResponseHelper.getInstance().writeToString(oaipmh);
-            future.complete(reply);
-          } catch (JAXBException e) {
-            logger.error("Error happened in OAI-PMH response marshalling", e);
-          }
-        })
+        .thenAccept(future::complete)
         .exceptionally(t -> {
           future.completeExceptionally(t);
           return null;
@@ -64,11 +58,10 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request without identifier
    * @return future with {@link OAIPMH} response
    */
-  private CompletableFuture<String> retrieveMetadataFormats(Context ctx) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+  private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(Context ctx) {
+    CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      future
-        .complete(ResponseHelper.getInstance().writeToString(buildMetadataFormatTypesResponse()));
+      future.complete(GetOaiMetadataFormatsResponse.respond200WithApplicationXml(buildMetadataFormatTypesResponse()));
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
       future.completeExceptionally(e);
@@ -81,11 +74,17 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
    * @return basic {@link OAIPMH}
    */
-  private OAIPMH verifyAndGetOaiPmhResponse(Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      return buildIdentifierNotFound();
+  private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Response response) {
+    try {
+      if (!Response.isSuccess(response.getCode())) {
+        return GetOaiMetadataFormatsResponse.respond404WithApplicationXml(buildIdentifierNotFound());
+      }
+      return GetOaiMetadataFormatsResponse.respond200WithApplicationXml(buildMetadataFormatTypesResponse());
+    } catch(JAXBException e) {
+      logger.error("Error marshalling response: " + e.getMessage());
     }
-    return buildMetadataFormatTypesResponse();
+    return null;
+
   }
 
   /**
@@ -93,21 +92,23 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    *
    * @return basic {@link OAIPMH}
    */
-  private OAIPMH buildMetadataFormatTypesResponse() {
-    return buildBaseResponse(VerbType.LIST_METADATA_FORMATS).withListMetadataFormats(getMetadataFormatTypes());
+  private String buildMetadataFormatTypesResponse() throws JAXBException {
+    return ResponseHelper.getInstance()
+      .writeToString(buildBaseResponse(VerbType.LIST_METADATA_FORMATS).withListMetadataFormats(getMetadataFormatTypes()));
   }
 
   /**
    * Creates {@link OAIPMH} with Error id-does-not-exist
    * @return basic {@link OAIPMH}
    */
-  private OAIPMH buildIdentifierNotFound() {
-    return objectFactory.createOAIPMH()
-      .withErrors(objectFactory.createOAIPMHerrorType().withValue("404")
-        .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST))
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(objectFactory.createRequestType()
-        .withVerb(VerbType.LIST_METADATA_FORMATS));
+  private String buildIdentifierNotFound() throws JAXBException {
+    return ResponseHelper.getInstance()
+      .writeToString(objectFactory.createOAIPMH()
+        .withErrors(objectFactory.createOAIPMHerrorType().withValue("Identifier not found")
+          .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST))
+        .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
+        .withRequest(objectFactory.createRequestType()
+          .withVerb(VerbType.LIST_METADATA_FORMATS)));
   }
 
   /**
@@ -115,7 +116,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return supported metadata formats
    */
   private ListMetadataFormatsType getMetadataFormatTypes() {
-
     ListMetadataFormatsType mft = objectFactory.createListMetadataFormatsType();
     for (MetadataPrefix mp : MetadataPrefix.values()) {
       mft.withMetadataFormats(objectFactory.createMetadataFormatType()
