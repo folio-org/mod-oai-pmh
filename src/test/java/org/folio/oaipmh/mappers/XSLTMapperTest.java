@@ -2,7 +2,6 @@ package org.folio.oaipmh.mappers;
 
 import org.apache.log4j.Logger;
 import org.junit.Test;
-import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import java.io.IOException;

@@ -101,7 +101,7 @@
       "description": "Get set structure of a repository"
     },
     {
-      "permissionName": "oia-pmh.all",
+      "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
       "subPermissions": [

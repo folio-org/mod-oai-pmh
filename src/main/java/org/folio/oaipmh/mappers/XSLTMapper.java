@@ -19,9 +19,9 @@ import org.w3c.dom.Node;
 
 
 /**
- * Converts MarkJson format to xml format.
+ * This class add XSLT post-processing to transform MarcXML to desired XML format.
  */
-public class XSLTMapper extends AbstractMapper {
+public class XSLTMapper extends MarcXmlMapper {
 
   private static final String MAPPER_CREATION_ERROR_MESSAGE = "Can't create mapper with provided stylesheet.";
   private static final String MAPPER_TRANSFORMATION_ERROR_MESSAGE = "Can't transform xml.";
@@ -52,7 +52,7 @@ public class XSLTMapper extends AbstractMapper {
    * XSLT post-processing.
    *
    * @param source Node {@inheritDoc}
-   * @return {@inheritDoc}
+   * @return Node representation of XML after XSLT transformation
    */
   @Override
   public Node postProcess(Node source) {
