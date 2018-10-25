@@ -1,7 +1,7 @@
 package org.folio.oaipmh;
 
 import org.apache.log4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
@@ -10,26 +10,45 @@ import org.openarchives.oai._2.RequestType;
 import javax.xml.bind.JAXBException;
 import java.time.Instant;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class ResponseHelperTest {
+
+class ResponseHelperTest {
 
   private static final Logger logger = Logger.getLogger(ResponseHelperTest.class);
 
   @Test
-  public void tests() {
+  void validationException() {
     try {
       ResponseHelper.getInstance().writeToString(new OAIPMH());
       fail("JAXBException is expected because validation is enabled");
     } catch (JAXBException e) {
       // expected behavior
     } catch (Exception e) {
+      logger.error("Unexpected error", e);
       fail("JAXBException is expected, but was " + e.getMessage());
     }
+  }
 
+  @Test
+  void validateIllegalArgumentException() {
+    try {
+      ResponseHelper.getInstance().writeToString(null);
+      fail("JAXBException is expected");
+    } catch (IllegalArgumentException e) {
+      // expected behavior
+    } catch (Exception e) {
+      logger.error("Unexpected error", e);
+      fail("IllegalArgumentException expected but was " + e.getMessage());
+    }
+  }
+
+  @Test
+  void successCase() {
     try {
       OAIPMH oaipmh = new OAIPMH()
         .withResponseDate(Instant.EPOCH)
@@ -37,23 +56,15 @@ public class ResponseHelperTest {
         .withErrors(new OAIPMHerrorType().withCode(OAIPMHerrorcodeType.BAD_VERB).withValue("error"));
 
       String result = ResponseHelper.getInstance().writeToString(oaipmh);
-      assertNotNull(result);
+      assertThat(result, not(isEmptyOrNullString()));
 
       // Unmarshal string to OAIPMH and verify that these objects equals
-      OAIPMH oaipmh1FromString = ResponseHelper.getInstance().stringToOaiPmh(result);
-      assertEquals(oaipmh, oaipmh1FromString);
+      OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(result);
+
+      assertThat(oaipmh, equalTo(oaipmhFromString));
     } catch (JAXBException e) {
       logger.error("Failed to marshal or unmarshal OAI-PMH response", e);
       fail(e.getMessage());
-    }
-
-    try {
-      ResponseHelper.getInstance().writeToString(null);
-      fail("JAXBException is expected");
-    } catch (IllegalArgumentException e) {
-      // expected behavior
-    } catch (Exception e) {
-      fail("IllegalArgumentException expected but was " + e.getMessage());
     }
   }
 }

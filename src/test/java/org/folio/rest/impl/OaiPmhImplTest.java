@@ -86,9 +86,6 @@ public class OaiPmhImplTest {
     RestAssured.port = port;
 
     logger.info("mod-oai-pmh Test: setup done. Using port " + port);
-
-    Properties sysProps = System.getProperties();
-    sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
   }
 
   @AfterClass

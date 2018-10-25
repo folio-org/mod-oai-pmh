@@ -22,7 +22,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
   public CompletableFuture<String> handle(Request request, Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(VerbType.LIST_SETS)
+      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(VerbType.LIST_SETS))
         .withListSets(new ListSetsType()
           .withSets(new SetType()
             .withSetSpec("all")

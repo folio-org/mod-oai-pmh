@@ -8,7 +8,7 @@
                xmlns:oai="http://www.openarchives.org/OAI/2.0/"
                jaxb:version="2.1">
 
-  <jaxb:globalBindings>
+  <jaxb:globalBindings fixedAttributeAsConstantProperty="true" >
     <xjc:simple/>
     <xjc:javaType name="java.time.Instant" xmlType="xs:dateTime"
                   adapter="com.migesok.jaxb.adapter.javatime.InstantXmlAdapter"/>
@@ -19,6 +19,22 @@
   <jaxb:bindings schemaLocation="OAI-PMH.xsd" node="//xs:schema">
     <jaxb:bindings node="//xs:complexType[@name='OAI-PMHtype']">
       <annox:annotatePackage>@javax.xml.bind.annotation.XmlSchema(location = "http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd")</annox:annotatePackage>
+    </jaxb:bindings>
+    <jaxb:bindings node="//xs:complexType[@name='requestType']/xs:simpleContent/xs:extension[@base='anyURI']">
+      <jaxb:bindings node="xs:attribute[@name='from']">
+        <jaxb:property>
+          <jaxb:baseType>
+            <xjc:javaType name="java.lang.String" adapter="javax.xml.bind.annotation.adapters.NormalizedStringAdapter"/>
+          </jaxb:baseType>
+        </jaxb:property>
+      </jaxb:bindings>
+      <jaxb:bindings node="xs:attribute[@name='until']">
+        <jaxb:property>
+          <jaxb:baseType>
+            <xjc:javaType name="java.lang.String" adapter="javax.xml.bind.annotation.adapters.NormalizedStringAdapter"/>
+          </jaxb:baseType>
+        </jaxb:property>
+      </jaxb:bindings>
     </jaxb:bindings>
   </jaxb:bindings>
 </jaxb:bindings>

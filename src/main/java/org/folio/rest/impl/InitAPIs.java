@@ -8,6 +8,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.rest.resource.interfaces.InitAPI;
 
 import java.io.File;
@@ -39,6 +40,9 @@ public class InitAPIs implements InitAPI {
           logger.info(String.format("The '%s' property was loaded from config file with its default value '%s'", key, value));
         }
       });
+
+      // Initialize data for helpers
+      AbstractHelper.init();
 
       // Initialize ResponseWriter and check if jaxb marshaller is ready to operate
       if (!ResponseHelper.getInstance().isJaxbInitialized()) {

@@ -1,0 +1,43 @@
+{
+  "id": "69640328-788e-43fc-9c3c-af39e243f3b7",
+  "hrid": "in000001",
+  "source": "MARC",
+  "title": "ABA Journal",
+  "alternativeTitles": [],
+  "series": [],
+  "identifiers": [
+    {
+      "value": "0747-0088",
+      "identifierTypeId": "913300b2-03ed-469a-8179-c1092c991227"
+    },
+    {
+      "value": "84641839",
+      "identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb"
+    }
+  ],
+  "contributors": [],
+  "subjects": [],
+  "classifications": [],
+  "publication": [
+    {
+      "publisher": "American Bar Association",
+      "place": "Chicago, Ill.",
+      "dateOfPublication": "1915-1983"
+    }
+  ],
+  "publicationFrequency": [],
+  "publicationRange": [],
+  "urls": [],
+  "electronicAccess": [],
+  "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+  "physicalDescriptions": [],
+  "languages": [],
+  "notes": [],
+  "statisticalCodes": [],
+  "metadata": {
+    "createdDate": "2018-09-19T02:52:22.096+0000",
+    "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+    "updatedDate": "2018-09-19T02:52:22.096+0000",
+    "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+  }
+}

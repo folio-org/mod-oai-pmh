@@ -7,15 +7,17 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.IdentifyType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.VerbType;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
+import static org.folio.okapi.common.XOkapiHeaders.TENANT;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+
 
 /**
  * Helper class that contains business logic for retrieving OAI-PMH repository info.
@@ -33,8 +35,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
   public CompletableFuture<String> handle(Request request, Context ctx) {
     CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(VerbType.IDENTIFY)
-        .withIdentify(objectFactory.createIdentifyType()
+      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(IDENTIFY))
+        .withIdentify(new IdentifyType()
           .withRepositoryName(getRepositoryName(request.getOkapiHeaders()))
           .withBaseURL(getBaseURL())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
@@ -64,7 +66,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
     if (repoName == null) {
       throw new IllegalStateException("The required repository config 'repository.name' is missing");
     }
-    return repoName + "_" + okapiHeaders.get(OKAPI_HEADER_TENANT);
+    return repoName + "_" + okapiHeaders.get(TENANT);
   }
 
   /**
