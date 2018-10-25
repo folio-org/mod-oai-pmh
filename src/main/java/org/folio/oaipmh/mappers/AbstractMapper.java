@@ -14,16 +14,14 @@ import org.marc4j.MarcXmlWriter;
 import org.marc4j.marc.Record;
 import org.w3c.dom.Node;
 
-/**
- * Converts MarcJson format to MarcXML format.
- */
-public class MarcXmlMapper implements Mapper {
+
+public abstract class AbstractMapper implements Mapper {
 
   /**
    * Convert MarcJson to MarcXML.
    *
-   * @param source String representation of MarcJson source.
-   * @return DOM's Node representation of MarcXML
+   * @param source String representation of MarkJson source.
+   * @return
    */
   public Node convert(String source) {
     try (InputStream inputStream
@@ -36,10 +34,20 @@ public class MarcXmlMapper implements Mapper {
         marcXmlWriter.write(record);
       }
       marcXmlWriter.close();
-      return domResult.getNode().getFirstChild().getFirstChild();
+      return postProcess(domResult.getNode().getFirstChild().getFirstChild());
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
     }
+  }
+
+  /**
+   * Post-process result of converting.
+   *
+   * @param source Node DOM representation of MarcXml result.
+   * @return {@inheritDoc}
+   */
+  public Node postProcess(Node source) {
+    return source;
   }
 
 }
