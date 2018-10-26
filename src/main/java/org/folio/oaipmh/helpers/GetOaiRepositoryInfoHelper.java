@@ -1,11 +1,6 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import javax.ws.rs.core.Response;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -16,6 +11,7 @@ import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.IdentifyType;
 import org.openarchives.oai._2.OAIPMH;
 
+import javax.ws.rs.core.Response;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
