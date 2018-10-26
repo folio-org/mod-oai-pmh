@@ -1,5 +1,35 @@
 package org.folio.rest.impl;
 
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.http.ContentType;
+import com.jayway.restassured.response.Header;
+import com.jayway.restassured.specification.RequestSpecification;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.tools.PomReader;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.VerbType;
+
+import javax.xml.bind.JAXBException;
+import java.time.Instant;
+import java.util.Properties;
+
 import static com.jayway.restassured.RestAssured.given;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
@@ -14,35 +44,6 @@ import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
-
-import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.http.ContentType;
-import com.jayway.restassured.response.Header;
-import com.jayway.restassured.specification.RequestSpecification;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import java.time.Instant;
-import java.util.Properties;
-import javax.xml.bind.JAXBException;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.tools.PomReader;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.VerbType;
 
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
@@ -96,9 +97,6 @@ public class OaiPmhImplTest {
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
     logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
-
-    Properties sysProps = System.getProperties();
-    sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
   }
 
   @AfterClass
@@ -293,18 +291,22 @@ public class OaiPmhImplTest {
   }
 
   @Test
-  public void testGetOaiSetsMissingBaseUrlProperty(TestContext context) throws JAXBException {
+  public void testGetOaiSetsMissingBaseUrlProperty(TestContext context) {
+
     Async async = context.async();
-    RequestSpecification requestSpecification = createBaseRequest();
+    String baseUrl = (String) System.getProperties().remove(REPOSITORY_BASE_URL);
+    try {
+      RequestSpecification requestSpecification = createBaseRequest();
 
-    // Remove required props
-    Properties sysProps = System.getProperties();
-    sysProps.remove(REPOSITORY_BASE_URL);
+      // Remove required props
 
-    String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-    assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
+      String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
+      // Check that error message is returned
+      assertThat(response, is(notNullValue()));
+      assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
+    } finally {
+      System.setProperty(REPOSITORY_BASE_URL, baseUrl);
+    }
 
     async.complete();
   }
