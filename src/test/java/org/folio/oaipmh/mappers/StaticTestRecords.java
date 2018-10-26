@@ -1,4 +1,4 @@
-package org.folio.rest.utils;
+package org.folio.oaipmh.mappers;
 
 public final class StaticTestRecords {
   public static final String RESOURCES_CORRECT_JSON_MARC = "/correct_json.json";
