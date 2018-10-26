@@ -1,7 +1,6 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
-import javax.ws.rs.core.Response;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -9,9 +8,9 @@ import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiSetsResponse;
 import org.openarchives.oai._2.ListSetsType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.VerbType;
 
+import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -26,9 +25,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
     try {
       OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(VerbType.LIST_SETS))
         .withListSets(new ListSetsType()
-          .withSets(new SetType()
-            .withSetSpec("all")
-            .withSetName("All records")));
+          .withSets(getSupportedSetTypes()));
 
       String response = ResponseHelper.getInstance().writeToString(oai);
       future.complete(GetOaiSetsResponse.respond200WithApplicationXml(response));
