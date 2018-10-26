@@ -1,10 +1,16 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import javax.ws.rs.core.Response;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.jaxrs.resource.Oai.GetOaiRepositoryInfoResponse;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.IdentifyType;
@@ -32,8 +38,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
 
   @Override
-  public CompletableFuture<String> handle(Request request, Context ctx) {
-    CompletableFuture<String> future = new VertxCompletableFuture<>(ctx);
+  public CompletableFuture<Response> handle(Request request, Context ctx) {
+    CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
       OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(IDENTIFY))
         .withIdentify(new IdentifyType()
@@ -46,7 +52,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withAdminEmails(getEmails()));
 
       String response = ResponseHelper.getInstance().writeToString(oai);
-      future.complete(response);
+      future.complete(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(response));
     } catch (Exception e) {
       logger.error("Error happened while processing Identify verb request", e);
       future.completeExceptionally(e);
