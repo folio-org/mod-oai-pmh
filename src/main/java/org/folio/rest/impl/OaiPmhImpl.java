@@ -1,22 +1,13 @@
 package org.folio.rest.impl;
 
-import static io.vertx.core.Future.succeededFuture;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
-import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
-import static org.openarchives.oai._2.VerbType.LIST_SETS;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.EnumMap;
-import java.util.Map;
-import javax.ws.rs.core.Response;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
@@ -26,6 +17,18 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ObjectFactory;
 import org.openarchives.oai._2.VerbType;
+
+import javax.ws.rs.core.Response;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.EnumMap;
+import java.util.Map;
+
+import static io.vertx.core.Future.succeededFuture;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
@@ -39,6 +42,7 @@ public class OaiPmhImpl implements Oai {
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
   static {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
+    HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     // other verb implementations to be added here
@@ -86,7 +90,20 @@ public class OaiPmhImpl implements Oai {
   public void getOaiIdentifiers(String resumptionToken, String from, String until, String set, String metadataPrefix,
                                 Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                 Context vertxContext) {
-    asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain("The verb ListIdentifiers is not supported yet :(")));
+    Request request = Request.builder()
+                             .okapiHeaders(okapiHeaders)
+                             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
+                             .build();
+
+    HELPERS.get(LIST_IDENTIFIERS)
+           .handle(request, vertxContext)
+           .thenAccept(oai -> {
+             asyncResultHandler.handle(succeededFuture(oai));
+           })
+           .exceptionally(throwable -> {
+             asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+             return null;
+           });
   }
 
   @Override

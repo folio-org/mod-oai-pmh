@@ -1,17 +1,25 @@
 package org.folio.rest.impl;
 
-import static org.junit.Assert.fail;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.log4j.Logger;
+import org.hamcrest.CoreMatchers;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
@@ -22,9 +30,9 @@ public class OkapiMockServer {
   private final int port;
   private final Vertx vertx;
 
-  OkapiMockServer(int port) {
+  OkapiMockServer(Vertx vertx, int port) {
     this.port = port;
-    this.vertx = Vertx.vertx();
+    this.vertx = vertx;
   }
 
   private Router defineRoutes() {
@@ -32,32 +40,20 @@ public class OkapiMockServer {
     router.route().handler(BodyHandler.create());
     router.route(HttpMethod.GET, "/instance-storage/instances/" + EXISTING_IDENTIFIER)
       .handler(this::handleMarcJsonRetrieved);
+    router.route(HttpMethod.GET, "/instance-storage/instances")
+          .handler(this::tenInstancesInventoryStorageResponse);
     router.route(HttpMethod.GET, "/instance-storage/instances/" + NON_EXISTING_IDENTIFIER)
       .handler(this::handleMarcJsonNotRetrieved);
     return router;
   }
 
-  public void start(TestContext context) {
+  public void start(VertxTestContext context) {
     HttpServer server = vertx.createHttpServer();
-    final Async async = context.async();
-    server.requestHandler(defineRoutes()::accept).listen(port, result -> {
-      if (result.failed()) {
-        logger.warn(result.cause());
-      }
-      context.assertTrue(result.succeeded());
-      async.complete();
-    });
-  }
 
-  public void close() {
-    vertx.close(res -> {
-      if (res.failed()) {
-        logger.error("Failed to shut down inventory storage mock", res.cause());
-        fail(res.cause().getMessage());
-      } else {
-        logger.info("Successfully shut down inventory storage mock");
-      }
-    });
+    server.requestHandler(defineRoutes()::accept).listen(port, context.succeeding(result -> {
+      logger.info("The server has started");
+      context.completeNow();
+    }));
   }
 
   private void handleMarcJsonRetrieved(RoutingContext ctx) {
@@ -74,5 +70,30 @@ public class OkapiMockServer {
       .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
       .end();
     logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+  }
+
+  private void tenInstancesInventoryStorageResponse(RoutingContext ctx) {
+    ctx.response()
+      .setStatusCode(200)
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+      .end(getJsonObjectFromFile("/instance-storage/instances/instances_10.json"));
+    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+  }
+
+  /**
+   * Creates {@link JsonObject} from the json file
+   * @param path path to json file to read
+   * @return json as string from the json file
+   */
+  private String getJsonObjectFromFile(String path) {
+    try {
+      File file = new File(OkapiMockServer.class.getResource(path).getFile());
+      byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
+      return new String(encoded, StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      logger.error("Unexpected error", e);
+      fail(e.getMessage());
+    }
+    return null;
   }
 }
