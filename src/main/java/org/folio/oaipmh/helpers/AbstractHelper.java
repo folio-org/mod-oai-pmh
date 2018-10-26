@@ -33,14 +33,14 @@ public abstract class AbstractHelper implements VerbHelper {
   /**
    * Holds instance to handle items returned
    */
-  protected static ItemsStorageHelper storageHelper;
+  protected static InstancesStorageHelper storageHelper;
 
   /**
    * Initializes data required for OAI-PMH responses
    */
   public static void init() {
     createRepositoryIdentifierPrefix();
-    storageHelper = ItemsStorageHelper.getItemsStorageHelper();
+    storageHelper = InstancesStorageHelper.getStorageHelper();
   }
 
   /**
@@ -103,12 +103,13 @@ public abstract class AbstractHelper implements VerbHelper {
   /**
    * Creates {@link HeaderType} and populates Identifier, Datestamp and Set
    *
+   * @param tenantId tenant id
    * @param instance the instance item returned by storage service
    * @return populated {@link HeaderType}
    */
-  protected HeaderType populateHeader(JsonObject instance) {
+  protected HeaderType populateHeader(String tenantId, JsonObject instance) {
     return new HeaderType()
-      .withIdentifier(getIdentifier(instance))
+      .withIdentifier(getIdentifier(tenantId, instance))
       .withDatestamp(getInstanceDate(instance))
       .withSetSpecs("all");
   }
@@ -124,10 +125,11 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
+   * @param tenantId tenant id
    * @param instance the instance item returned by storage service
    * @return oai-identifier
    */
-  private String getIdentifier(JsonObject instance) {
-    return  OAI_IDENTIFIER_PREFIX + storageHelper.getItemId(instance);
+  private String getIdentifier(String tenantId, JsonObject instance) {
+    return  OAI_IDENTIFIER_PREFIX + tenantId + "/" + storageHelper.getItemId(instance);
   }
 }

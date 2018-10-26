@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-public class InventoryStorageHelper implements ItemsStorageHelper {
+public class InventoryStorageHelper implements InstancesStorageHelper {
 
   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".

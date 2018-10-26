@@ -5,9 +5,9 @@ import io.vertx.core.json.JsonObject;
 
 import java.time.Instant;
 
-public interface ItemsStorageHelper {
+public interface InstancesStorageHelper {
 
-  static ItemsStorageHelper getItemsStorageHelper() {
+  static InstancesStorageHelper getStorageHelper() {
     // At the moment we are working with inventory storage services so creating corresponding service by default.
     return new InventoryStorageHelper();
   }
