@@ -103,12 +103,10 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    */
   private String buildIdentifierNotFound() throws JAXBException {
     return ResponseHelper.getInstance()
-      .writeToString(objectFactory.createOAIPMH()
-        .withErrors(objectFactory.createOAIPMHerrorType().withValue("Identifier not found")
-          .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST))
-        .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-        .withRequest(objectFactory.createRequestType()
-          .withVerb(VerbType.LIST_METADATA_FORMATS)));
+      .writeToString(buildBaseResponse(VerbType.LIST_METADATA_FORMATS)
+        .withErrors(objectFactory.createOAIPMHerrorType()
+          .withValue("Identifier not found")
+          .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
   }
 
   /**
