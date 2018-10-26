@@ -1,35 +1,5 @@
 package org.folio.rest.impl;
 
-import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.http.ContentType;
-import com.jayway.restassured.response.Header;
-import com.jayway.restassured.specification.RequestSpecification;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.tools.PomReader;
-import org.folio.rest.tools.client.test.HttpClientMock2;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.VerbType;
-
-import javax.xml.bind.JAXBException;
-import java.time.Instant;
-import java.util.Properties;
-
 import static com.jayway.restassured.RestAssured.given;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
@@ -45,6 +15,35 @@ import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
+import com.jayway.restassured.RestAssured;
+import com.jayway.restassured.http.ContentType;
+import com.jayway.restassured.response.Header;
+import com.jayway.restassured.specification.RequestSpecification;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.time.Instant;
+import java.util.Properties;
+import javax.xml.bind.JAXBException;
+import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.tools.PomReader;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.VerbType;
+
 @RunWith(VertxUnitRunner.class)
 public class OaiPmhImplTest {
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhImplTest.class);
@@ -57,35 +56,46 @@ public class OaiPmhImplTest {
   private static final String LIST_SETS_PATH = ROOT_PATH + "/sets";
   private static final String IDENTIFY_PATH = ROOT_PATH + "/repository_info";
 
+  private static final int okapiPort = NetworkUtils.nextFreePort();
+  private static final int mockPort = NetworkUtils.nextFreePort();
+
+  private static final String APPLICATION_XML_TYPE = "application/xml";
+  private static final String IDENTIFIER = "identifier";
+
   private final Header tenantHeader = new Header("X-Okapi-Tenant", "diku");
+  private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private final Header tokenHeader = new Header("X-Okapi-Token",
     "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWt1X2FkbWluIiwidXNlcl9pZCI6IjUwYjQyYmJmLTcwNzEtNTEwNi05NWQ2LTFkMjViZjczMjRmZiIsImlhdCI6MTUzODA0ODcyMiwidGVuYW50IjoiZGlrdSJ9.Qk3k_P9l025F-k3M-OoFJv6wPVAC7sepvgA8avEamZ8");
   private final Header contentTypeHeaderXML = new Header("Content-Type", "application/xml");
 
   private static Vertx vertx;
+  private static OkapiMockServer okapiMockServer;
 
   @BeforeClass
   public static void setUpOnce(TestContext context) {
     vertx = Vertx.vertx();
+
+    okapiMockServer = new OkapiMockServer(mockPort);
+    okapiMockServer.start(context);
+
     String moduleName = PomReader.INSTANCE.getModuleName()
                                    .replaceAll("_", "-");  // RMB normalizes the dash to underscore, fix back
     String moduleVersion = PomReader.INSTANCE.getVersion();
     String moduleId = moduleName + "-" + moduleVersion;
     logger.info("Test setup starting for " + moduleId);
 
-    int port = NetworkUtils.nextFreePort();
-
     JsonObject conf = new JsonObject()
-      .put("http.port", port)
-      .put(HttpClientMock2.MOCK_MODE, "true");
+      .put("http.port", okapiPort);
 
     logger.info(String.format("mod-oai-pmh test: Deploying %s with %s", RestVerticle.class.getName(), Json.encode(conf)));
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, context.asyncAssertSuccess());
-    RestAssured.port = port;
+    RestAssured.baseURI = "http://localhost:" + okapiPort;
+    RestAssured.port = okapiPort;
+    RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    logger.info("mod-oai-pmh Test: setup done. Using port " + port);
+    logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
 
     Properties sysProps = System.getProperties();
     sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
@@ -96,6 +106,7 @@ public class OaiPmhImplTest {
     logger.info("Cleaning up after mod-oai-pmh Test");
     Async async = context.async();
     vertx.close(context.asyncAssertSuccess(res -> async.complete()));
+    okapiMockServer.close();
   }
 
   @Test
@@ -164,16 +175,91 @@ public class OaiPmhImplTest {
   }
 
   @Test
-  public void getOaiMetadataFormats(TestContext context) {
-    Async async = context.async();
+  public void getOaiMetadataFormats(TestContext context) throws JAXBException {
+    logger.info("=== Test Metadata Formats without identifier ===");
 
-    RequestSpecification requestSpecification = createBaseRequest();
-    String response = test500WithErrorMessage(requestSpecification, LIST_METADATA_FORMATS_PATH);
+    String responseWithoutIdentifier = createBaseRequest()
+      .header(okapiUrlHeader)
+      .get(LIST_METADATA_FORMATS_PATH)
+      .then()
+      .contentType(APPLICATION_XML_TYPE)
+      .statusCode(200)
+      .extract()
+      .response().asString();
+
+    logger.info("Response with request without identifier: " + responseWithoutIdentifier);
+
+    OAIPMH oaiPmhResponseWithoutIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithoutIdentifier);
+    context.assertNotNull(responseWithoutIdentifier)
+      .assertNotNull(oaiPmhResponseWithoutIdentifier.getListMetadataFormats())
+      .assertTrue(oaiPmhResponseWithoutIdentifier.getResponseDate().isBefore(Instant.now()))
+      .assertNotNull(oaiPmhResponseWithoutIdentifier.getRequest())
+      .assertNotNull(oaiPmhResponseWithoutIdentifier.getRequest().getValue())
+      .assertEquals(0, oaiPmhResponseWithoutIdentifier.getErrors().size())
+      .assertEquals(VerbType.LIST_METADATA_FORMATS, oaiPmhResponseWithoutIdentifier.getRequest().getVerb());
+  }
+
+  @Test
+  public void getOaiMetadataFormatsWithExistingIdentifier(TestContext context) throws JAXBException {
+    logger.info("=== Test Metadata Formats with existing identifier ===");
+
+    String responseWithExistingIdentifier = RestAssured
+      .with()
+      .header(okapiUrlHeader)
+      .header(tenantHeader)
+      .contentType(APPLICATION_XML_TYPE)
+      .param(IDENTIFIER, OkapiMockServer.EXISTING_IDENTIFIER)
+      .get(LIST_METADATA_FORMATS_PATH)
+      .then()
+      .contentType(APPLICATION_XML_TYPE)
+      .statusCode(200)
+      .extract()
+      .body()
+      .asString();
+
+    logger.info("Response with request with existing identifier: " + responseWithExistingIdentifier);
+
+    OAIPMH oaiPmhResponseWithExistingIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithExistingIdentifier);
+    context.assertNotNull(responseWithExistingIdentifier)
+      .assertNotNull(oaiPmhResponseWithExistingIdentifier.getListMetadataFormats())
+      .assertTrue(oaiPmhResponseWithExistingIdentifier.getResponseDate().isBefore(Instant.now()))
+      .assertNotNull(oaiPmhResponseWithExistingIdentifier.getRequest())
+      .assertNotNull(oaiPmhResponseWithExistingIdentifier.getRequest().getValue())
+      .assertEquals(0, oaiPmhResponseWithExistingIdentifier.getErrors().size())
+      .assertEquals(VerbType.LIST_METADATA_FORMATS, oaiPmhResponseWithExistingIdentifier.getRequest().getVerb());
+  }
+
+  @Test
+  public void getOaiMetadataFormatsWithNonExistingIdentifier(TestContext context) throws JAXBException {
+    logger.info("=== Test Metadata Formats with non-existing identifier ===");
 
     // Check that error message is returned
-    assertThat(response, is(notNullValue()));
+    String responseWithNonExistingIdentifier = RestAssured
+      .with()
+      .header(okapiUrlHeader)
+      .header(tenantHeader)
+      .contentType(APPLICATION_XML_TYPE)
+      .param(IDENTIFIER, OkapiMockServer.NON_EXISTING_IDENTIFIER)
+      .get(LIST_METADATA_FORMATS_PATH)
+      .then()
+      .contentType(APPLICATION_XML_TYPE)
+      .statusCode(404)
+      .extract()
+      .body()
+      .asString();
 
-    async.complete();
+    logger.info("Response with request with non-existing identifier: " + responseWithNonExistingIdentifier);
+
+    OAIPMH oaiPmhResponseWithNonExistingIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithNonExistingIdentifier);
+    context.assertNotNull(responseWithNonExistingIdentifier)
+      .assertNull(oaiPmhResponseWithNonExistingIdentifier.getListMetadataFormats())
+      .assertTrue(oaiPmhResponseWithNonExistingIdentifier.getResponseDate().isBefore(Instant.now()))
+      .assertEquals(VerbType.LIST_METADATA_FORMATS, oaiPmhResponseWithNonExistingIdentifier.getRequest().getVerb())
+      .assertNull(oaiPmhResponseWithNonExistingIdentifier.getListMetadataFormats())
+      .assertNotNull(oaiPmhResponseWithNonExistingIdentifier.getErrors())
+      .assertEquals(1, oaiPmhResponseWithNonExistingIdentifier.getErrors().size())
+      .assertEquals(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST, oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getCode())
+      .assertEquals("Identifier not found", oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getValue());
   }
 
   @Test
