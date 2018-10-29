@@ -1,23 +1,15 @@
 package org.folio.oaipmh.helpers;
 
-import jersey.repackaged.com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang.text.StrSubstitutor;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Map;
+
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 /**
  * Utility class used to build http CQL query param.
  */
 public class CQLQueryBuilder {
-
-  /** CQL query statement to search records by source. */
-  private static final String SOURCE_STATEMENT = "source==%s";
-  /** CQL query statement to search records created/updated within date range. */
-  private static final String DATE_RANGE_STATEMENT =
-    "((metadata.updatedDate==null and metadata.createdDate>%{from} and metadata.createdDate<%{until}) " +
-      "or (metadata.updatedDate<>null and metadata.updatedDate>%{from} and metadata.updatedDate<%{until}))";
 
   private StringBuilder builder = new StringBuilder();
   private String prefix;
@@ -30,15 +22,46 @@ public class CQLQueryBuilder {
     prefix = addQuestionMark ? "?query=" : "&query=";
   }
 
+  /**
+   * Adds a statement to search by source to the query.
+   *
+   * @param source the source to search by
+   * @return {@link CQLQueryBuilder}
+   */
   public CQLQueryBuilder source(String source) {
-    builder.append(String.format(SOURCE_STATEMENT, source));
+    builder.append(String.format("source==%s", source));
     return this;
   }
 
+  /**
+   * Adds a statement to search by id to the query.
+   *
+   * @param id the id to search by
+   * @return {@link CQLQueryBuilder}
+   */
+  public CQLQueryBuilder identifier(String id) {
+    builder.append(String.format("id==%s", id));
+    return this;
+  }
+
+  /**
+   * Adds a statement to search by date range (or just lower/upper bound) to the query.
+   *
+   * @param from the lower date bound
+   * @param until the upper date bound
+   * @return {@link CQLQueryBuilder}
+   */
   public CQLQueryBuilder dateRange(String from, String until) {
-    Map<String, String> valueMap = ImmutableMap.of("from", from, "until", until);
-    StrSubstitutor sub = new StrSubstitutor(valueMap, "%{", "}");
-    builder.append(sub.replace(DATE_RANGE_STATEMENT));
+    builder
+      .append("(")
+      .append(String.format("(metadata.updatedDate==null%s%s)",
+        isNotEmpty(from) ? String.format(" and metadata.createdDate>=%s", from) : EMPTY,
+        isNotEmpty(until) ? String.format(" and metadata.createdDate<=%s", until) : EMPTY))
+      .append(String.format(" or (metadata.updatedDate<>null%s%s)",
+        isNotEmpty(from) ? String.format(" and metadata.updatedDate>=%s", from) : EMPTY,
+        isNotEmpty(until) ? String.format(" and metadata.updatedDate<=%s", until) : EMPTY))
+      .append(")");
+
     return this;
   }
 

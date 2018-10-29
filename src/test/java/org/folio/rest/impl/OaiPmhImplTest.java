@@ -44,6 +44,7 @@ import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAM
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -309,6 +310,25 @@ class OaiPmhImplTest {
     testContext.completeNow();
   }
 
+  @Test
+  void getOaiIdentifiersWithInvalidDateRange(VertxTestContext testContext) throws JAXBException {
+    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String from = "2018-12-19T02:52:08Z";
+    String until = "2018-10-20T02:03:04Z";
+    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s", metadataPrefix, from, until);
+
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 1);
+
+    // The dates are of invalid format so they are not present in request
+    assertThat(oaipmh.getRequest().getFrom(), not(nullValue()));
+    assertThat(oaipmh.getRequest().getUntil(), not(nullValue()));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
+
+    testContext.completeNow();
+  }
+
   private OAIPMH verifyListIdentifiersErrors(String endpoint, int errorsCount) throws JAXBException {
     RequestSpecification requestSpecification = createBaseRequest();
 
@@ -316,11 +336,11 @@ class OaiPmhImplTest {
       .when()
       .get(endpoint)
       .then()
-      .statusCode(404)
-      .contentType(ContentType.XML)
+        .statusCode(404)
+        .contentType(ContentType.XML)
       .extract()
-      .body()
-      .asString();
+        .body()
+          .asString();
 
     // Check that error message is returned
     assertThat(response, is(notNullValue()));

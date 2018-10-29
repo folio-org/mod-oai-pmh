@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -113,21 +114,11 @@ public abstract class AbstractHelper implements VerbHelper {
       }
     }
 
-    if (request.getFrom() != null) {
+    if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       hasOtherParam = true;
-      // In case the 'from' date is invalid, we cannot send it in OAI-PMH/request@from because it contradicts schema definition
-      if (!validateDate(request.getFrom(), errors)) {
-        request.getOaiRequest().setFrom(null);
-      }
+      validateDateRange(request, errors);
     }
 
-    if (request.getUntil() != null) {
-      hasOtherParam = true;
-      if (!validateDate(request.getUntil(), errors)) {
-        // In case the 'until' date is invalid, we cannot send it in OAI-PMH/request@until because it contradicts schema definition
-        request.getOaiRequest().setUntil(null);
-      }
-    }
 
     if (hasResumptionToken && hasOtherParam) {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
@@ -135,16 +126,38 @@ public abstract class AbstractHelper implements VerbHelper {
     return errors;
   }
 
-  private boolean validateDate(String date, List<OAIPMHerrorType> errors) {
+  private void validateDateRange(Request request, List<OAIPMHerrorType> errors) {
+    LocalDateTime from = null;
+    LocalDateTime until = null;
+    if (request.getFrom() != null) {
+      from = parseDate(request.getFrom(), errors);
+      if (from == null) {
+        // In case the 'from' date is invalid, we cannot send it in OAI-PMH/request@from because it contradicts schema definition
+        request.getOaiRequest().setFrom(null);
+      }
+    }
+    if (request.getUntil() != null) {
+      until = parseDate(request.getUntil(), errors);
+      if (until == null) {
+        // In case the 'until' date is invalid, we cannot send it in OAI-PMH/request@until because it contradicts schema definition
+        request.getOaiRequest().setUntil(null);
+      }
+    }
+    if (from != null && until != null && from.isAfter(until)) {
+      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+        .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
+    }
+  }
+
+  private LocalDateTime parseDate(String date, List<OAIPMHerrorType> errors) {
     try {
-      LocalDateTime.parse(date, ISO_UTC_DATE_TIME);
+      return LocalDateTime.parse(date, ISO_UTC_DATE_TIME);
     } catch (DateTimeParseException e) {
       errors.add(new OAIPMHerrorType()
         .withCode(BAD_ARGUMENT)
         .withValue(String.format("Bad datestamp format for '%s' argument.", date)));
-      return false;
+      return null;
     }
-    return true;
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
