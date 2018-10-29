@@ -55,11 +55,11 @@ public class CQLQueryBuilder {
     builder
       .append("(")
       .append(String.format("(metadata.updatedDate==null%s%s)",
-        isNotEmpty(from) ? String.format(" and metadata.createdDate>%s", from) : EMPTY,
-        isNotEmpty(until) ? String.format(" and metadata.createdDate<%s", until) : EMPTY))
+        isNotEmpty(from) ? String.format(" and metadata.createdDate>=%s", from) : EMPTY,
+        isNotEmpty(until) ? String.format(" and metadata.createdDate<=%s", until) : EMPTY))
       .append(String.format(" or (metadata.updatedDate<>null%s%s)",
-        isNotEmpty(from) ? String.format(" and metadata.updatedDate>%s", from) : EMPTY,
-        isNotEmpty(until) ? String.format(" and metadata.updatedDate<%s", until) : EMPTY))
+        isNotEmpty(from) ? String.format(" and metadata.updatedDate>=%s", from) : EMPTY,
+        isNotEmpty(until) ? String.format(" and metadata.updatedDate<=%s", until) : EMPTY))
       .append(")");
 
     return this;
