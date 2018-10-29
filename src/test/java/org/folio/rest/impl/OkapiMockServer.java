@@ -51,37 +51,21 @@ public class OkapiMockServer {
     }));
   }
 
-  private void handleMarcJsonRetrieved(RoutingContext ctx) {
-    ctx.response()
-      .setStatusCode(200)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-      .end();
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
-  }
-
-  private void handleMarcJsonNotRetrieved(RoutingContext ctx) {
-    ctx.response()
-      .setStatusCode(404)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
-      .end();
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
-  }
-
   private void handleInstancesInventoryStorageResponse(RoutingContext ctx) {
     String query = ctx.request().getParam("query");
     if (query != null)
     {
+      String jsonFile = "/instance-storage/instances/instances_10.json";
       if (query.endsWith("id=" + EXISTING_IDENTIFIER)) {
-        handleMarcJsonRetrieved(ctx);
+        jsonFile = "/instance-storage/instances/instances_1.json";
       } else if (query.endsWith("id=" + NON_EXISTING_IDENTIFIER)) {
-        handleMarcJsonNotRetrieved(ctx);
-      } else {
-        ctx.response()
-           .setStatusCode(200)
-           .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
-           .end(getJsonObjectFromFile("/instance-storage/instances/instances_10.json"));
-        logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+        jsonFile = "/instance-storage/instances/instances_0.json";
       }
+      ctx.response()
+         .setStatusCode(200)
+         .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+         .end(getJsonObjectFromFile(jsonFile));
+      logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
     } else {
       throw new UnsupportedOperationException();
     }

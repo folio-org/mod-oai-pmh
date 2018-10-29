@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonArray;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
@@ -76,10 +77,15 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
    */
   private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
-    if (!Response.isSuccess(response.getCode())) {
-      return GetOaiMetadataFormatsResponse.respond404WithApplicationXml(buildIdentifierNotFound(request));
+    if (Response.isSuccess(response.getCode())) {
+      JsonArray instances = storageHelper.getItems(response.getBody());
+      if (instances != null && !instances.isEmpty()) {
+        return retrieveMetadataFormats(request);
+      }
+    } else {
+      logger.error("No instances found. Service responded with error: " + response.getError());
     }
-    return retrieveMetadataFormats(request);
+    return GetOaiMetadataFormatsResponse.respond404WithApplicationXml(buildIdentifierNotFound(request));
   }
 
   /**
@@ -109,7 +115,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private String buildIdentifierNotFound(Request request) {
     return convertToString(buildBaseResponse(request.getOaiRequest())
         .withErrors(new OAIPMHerrorType()
-          .withValue(String.format("%s has the structure of a valid LOC identifier, but it maps to no known item", request.getIdentifier()))
+          .withValue(String.format("%s has the structure of a valid identifier, but it maps to no known item", request.getIdentifier()))
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
   }
 
