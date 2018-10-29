@@ -40,4 +40,11 @@ public interface InstancesStorageHelper {
    * @return endpoint
    */
   String buildItemsEndpoint(Request request) throws UnsupportedEncodingException;
+
+  /**
+   * Gets endpoint to search for an instance by identifier
+   * @param id instance identifier
+   * @return endpoint to search for an instance by identifier
+   */
+  String getInstanceEndpoint(String id);
 }

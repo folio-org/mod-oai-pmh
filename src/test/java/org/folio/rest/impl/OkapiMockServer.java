@@ -10,7 +10,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.log4j.Logger;
-import org.hamcrest.CoreMatchers;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
@@ -26,6 +24,7 @@ public class OkapiMockServer {
   private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
+  static final String INVALID_IDENTIFIER = "non-existing-identifier";
 
   private final int port;
   private final Vertx vertx;
@@ -38,12 +37,8 @@ public class OkapiMockServer {
   private Router defineRoutes() {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    router.route(HttpMethod.GET, "/instance-storage/instances/" + EXISTING_IDENTIFIER)
-      .handler(this::handleMarcJsonRetrieved);
     router.route(HttpMethod.GET, "/instance-storage/instances")
-          .handler(this::tenInstancesInventoryStorageResponse);
-    router.route(HttpMethod.GET, "/instance-storage/instances/" + NON_EXISTING_IDENTIFIER)
-      .handler(this::handleMarcJsonNotRetrieved);
+          .handler(this::handleInstancesInventoryStorageResponse);
     return router;
   }
 
@@ -72,12 +67,24 @@ public class OkapiMockServer {
     logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
   }
 
-  private void tenInstancesInventoryStorageResponse(RoutingContext ctx) {
-    ctx.response()
-      .setStatusCode(200)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
-      .end(getJsonObjectFromFile("/instance-storage/instances/instances_10.json"));
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+  private void handleInstancesInventoryStorageResponse(RoutingContext ctx) {
+    String query = ctx.request().getParam("query");
+    if (query != null)
+    {
+      if (query.endsWith("id=" + EXISTING_IDENTIFIER)) {
+        handleMarcJsonRetrieved(ctx);
+      } else if (query.endsWith("id=" + NON_EXISTING_IDENTIFIER)) {
+        handleMarcJsonNotRetrieved(ctx);
+      } else {
+        ctx.response()
+           .setStatusCode(200)
+           .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+           .end(getJsonObjectFromFile("/instance-storage/instances/instances_10.json"));
+        logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   /**

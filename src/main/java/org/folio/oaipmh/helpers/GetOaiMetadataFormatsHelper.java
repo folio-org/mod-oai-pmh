@@ -39,12 +39,16 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
     if (request.getIdentifier() == null) {
       return VertxCompletableFuture.completedFuture(retrieveMetadataFormats(request));
+    } else if (!validateIdentifier(request, ctx)) {
+      return VertxCompletableFuture.completedFuture(buildBadArgumentResponse(request));
     }
 
     CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
-      getOkapiClient(okapiHeaders).request(HttpMethod.GET, "/instance-storage/instances/" + request.getIdentifier(), okapiHeaders)
+      String endpoint = storageHelper.getInstanceEndpoint(extractStorageIdentifier(request, ctx));
+      getOkapiClient(okapiHeaders)
+        .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
         .thenAccept(future::complete)
         .exceptionally(t -> {
@@ -69,7 +73,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   /**
    * Validates inventory-mod-storage response and returns {@link OAIPMH} with populated
    * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
-   * @return basic {@link OAIPMH}
+   * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
    */
   private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
     if (!Response.isSuccess(response.getCode())) {
@@ -79,35 +83,59 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   }
 
   /**
+   * Builds {@linkplain javax.ws.rs.core.Response Response} with 'badArgument' error because passed identifier is invalid
+   * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
+   */
+  private javax.ws.rs.core.Response buildBadArgumentResponse(Request request) {
+    return GetOaiMetadataFormatsResponse.respond422WithApplicationXml(buildOaipmhWithBadArgumentError(request));
+  }
+
+  /**
    * Creates {@link OAIPMH} with ListMetadataFormats element
    *
+   * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
   private String buildMetadataFormatTypesResponse(Request request) {
-    try {
-      return ResponseHelper.getInstance()
-                           .writeToString(buildBaseResponse(request.getOaiRequest())
+      return convertToString(buildBaseResponse(request.getOaiRequest())
                              .withListMetadataFormats(getMetadataFormatTypes()));
-    } catch(JAXBException e) {
-      logger.error("Error marshalling response: " + e.getMessage());
-      throw new RuntimeException(e);
-    }
   }
 
   /**
    * Creates {@link OAIPMH} with Error id-does-not-exist
+   * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
   private String buildIdentifierNotFound(Request request) {
+    return convertToString(buildBaseResponse(request.getOaiRequest())
+        .withErrors(new OAIPMHerrorType()
+          .withValue(String.format("%s has the structure of a valid LOC identifier, but it maps to no known item", request.getIdentifier()))
+          .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
+  }
+
+  /**
+   * Creates {@link OAIPMH} with Error id-does-not-exist
+   * @param request {@link Request}
+   * @return basic {@link OAIPMH}
+   */
+  private String buildOaipmhWithBadArgumentError(Request request) {
+    return convertToString(buildBaseResponse(request.getOaiRequest())
+      .withErrors(new OAIPMHerrorType()
+        .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
+        .withValue(String.format("%s has the structure of an invalid identifier", request.getIdentifier()))));
+  }
+
+  /**
+   * Marshals {@link OAIPMH} to string. In case the {@link OAIPMH} is invalid, the {@link IllegalStateException} is thrown
+   * @param oaipmhResponse {@link OAIPMH} to marshal
+   * @return string representation of the {@link OAIPMH}
+   */
+  private String convertToString(OAIPMH oaipmhResponse) {
     try {
-      return ResponseHelper.getInstance()
-        .writeToString(buildBaseResponse(request.getOaiRequest())
-          .withErrors(new OAIPMHerrorType()
-            .withValue("Identifier not found")
-            .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
+      return ResponseHelper.getInstance().writeToString(oaipmhResponse);
     } catch(JAXBException e) {
       logger.error("Error marshalling response: " + e.getMessage());
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 

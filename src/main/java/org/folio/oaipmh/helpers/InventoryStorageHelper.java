@@ -79,4 +79,9 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
 
     return "/instance-storage/instances" + queryBuilder.build() + "&limit=" + RECORDS_LIMIT;
   }
+
+  @Override
+  public String getInstanceEndpoint(String id) {
+    return "/instance-storage/instances?query=source==MARC+and+id=" + id;
+  }
 }

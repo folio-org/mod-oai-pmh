@@ -44,7 +44,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       // 2. Search for instances
       httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
         // 3. Verify response and build list of identifiers
-        .thenApply(response -> buildListIdentifiers(request, response))
+        .thenApply(response -> buildListIdentifiers(request, response, ctx))
         .thenApply(identifiers -> {
           if (identifiers == null) {
             return buildNoRecordsResponse(buildNoRecordsFoundOaiResponse(request));
@@ -83,7 +83,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     } catch(JAXBException e) {
       logger.error("Error marshalling response: " + e.getMessage());
       // In case there is an issue to marshal response, there is no way to handle it
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     }
   }
 
@@ -98,10 +98,12 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
   /**
    * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
-   * @param instancesResponse the {@link JsonObject} which contains items
+   * @param request request
+   * @param instancesResponse the response from the storage which contains items
+   * @param ctx vert.x context
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
-  private ListIdentifiersType buildListIdentifiers(Request request, Response instancesResponse) {
+  private ListIdentifiersType buildListIdentifiers(Request request, Response instancesResponse, Context ctx) {
     if (!Response.isSuccess(instancesResponse.getCode())) {
       logger.error("No instances found. Service responded with error: " + instancesResponse.getError());
       return null;
@@ -112,7 +114,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       ListIdentifiersType identifiers = new ListIdentifiersType();
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
       instances.stream()
-               .map(instance -> populateHeader(tenantId, (JsonObject) instance))
+               .map(instance -> populateHeader(getIdentifierPrefix(tenantId, ctx), (JsonObject) instance))
                .forEach(identifiers::withHeaders);
       return identifiers;
     }
