@@ -42,7 +42,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
 
       // 2. Search for instances
-      httpClient.request(getEndpoint(request), request.getOkapiHeaders(), false)
+      httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
         // 3. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
         .thenApply(identifiers -> {
@@ -94,16 +94,6 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
   private void handleException(CompletableFuture<javax.ws.rs.core.Response> future, Throwable e) {
     logger.error(GENERIC_ERROR, e);
     future.completeExceptionally(e);
-  }
-
-  /**
-   * Builds endpoint to search for the items
-   * @param request {@link Request}
-   * @return endpoint to use for the service call
-   */
-  private String getEndpoint(Request request) {
-    request.getMetadataPrefix();
-    return storageHelper.getItemsEndpoint();
   }
 
   /**

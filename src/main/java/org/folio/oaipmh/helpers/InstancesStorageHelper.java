@@ -2,7 +2,9 @@ package org.folio.oaipmh.helpers;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.oaipmh.Request;
 
+import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 
 public interface InstancesStorageHelper {
@@ -37,5 +39,5 @@ public interface InstancesStorageHelper {
    * Returns base endpoint to get items
    * @return endpoint
    */
-  String getItemsEndpoint();
+  String buildItemsEndpoint(Request request) throws UnsupportedEncodingException;
 }
