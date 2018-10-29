@@ -101,9 +101,7 @@ public class OaiPmhImpl implements Oai {
 
     HELPERS.get(LIST_IDENTIFIERS)
            .handle(request, vertxContext)
-           .thenAccept(oai -> {
-             asyncResultHandler.handle(succeededFuture(oai));
-           })
+           .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
            .exceptionally(throwable -> {
              asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(ERROR_MESSAGE)));
              return null;
