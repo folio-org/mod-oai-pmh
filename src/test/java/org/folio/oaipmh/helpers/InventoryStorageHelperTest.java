@@ -5,11 +5,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.folio.oaipmh.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -65,8 +67,8 @@ class InventoryStorageHelperTest {
   }
 
   @Test
-  void getItemsEndpoint() {
-    assertThat(helper.getItemsEndpoint(), not(isEmptyOrNullString()));
+  void buildItemsEndpoint() throws UnsupportedEncodingException {
+    assertThat(helper.buildItemsEndpoint(Request.builder().build()), not(isEmptyOrNullString()));
   }
 
   /**

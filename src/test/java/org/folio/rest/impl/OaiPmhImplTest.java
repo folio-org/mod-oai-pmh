@@ -191,6 +191,40 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiIdentifiersWithDateRange(VertxTestContext testContext) throws JAXBException {
+    RequestSpecification requestSpecification = createBaseRequest();
+
+    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String from = "2018-09-19T02:52:08Z";
+    String until = "2018-10-20T02:03:04Z";
+    String set = "all";
+    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s&set=%s", metadataPrefix, from, until, set);
+
+    String response = requestSpecification
+      .when()
+      .get(endpoint)
+      .then()
+        .statusCode(200)
+        .contentType(ContentType.XML)
+        .extract()
+          .body()
+          .asString();
+
+    // Check that error message is returned
+    assertThat(response, is(notNullValue()));
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh, LIST_IDENTIFIERS);
+    assertThat(oaipmh.getErrors(), is(empty()));
+    assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
+    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+
+    testContext.completeNow();
+  }
+
+  @Test
   void getOaiIdentifiersWithoutParams(VertxTestContext testContext) throws JAXBException {
     List<OAIPMHerrorType> errors = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH, 1).getErrors();
     OAIPMHerrorType error = errors.get(0);
