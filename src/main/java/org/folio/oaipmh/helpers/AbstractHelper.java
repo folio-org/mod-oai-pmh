@@ -28,6 +28,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -37,13 +47,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
  * Abstract helper implementation that provides some common methods.
  */
 public abstract class AbstractHelper implements VerbHelper {
-
-  public static final String CANNOT_DISSEMINATE_FORMAT_ERROR = "The value '%s' of the metadataPrefix argument is not supported by the repository";
-  public static final String RESUMPTION_TOKEN_FORMAT_ERROR = "The value '%s' of the resumptionToken argument is invalid";
-  public static final String LIST_NO_REQUIRED_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix nor resumptionToken";
-  public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "The request includes resumptionToken and other argument(s)";
-  public static final String NO_RECORD_FOUND_ERROR = "There is no any record found matching search criteria";
-  public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
 
   /** Strict ISO Date and Time with UTC offset. */
   private static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -215,8 +218,18 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return populated {@link HeaderType}
    */
   protected HeaderType populateHeader(String identifierPrefix, JsonObject instance) {
+    return createHeader(instance)
+      .withIdentifier(getIdentifier(identifierPrefix, instance));
+  }
+
+  /**
+   * Creates {@link HeaderType} and Datestamp and Set
+   *
+   * @param instance the instance item returned by storage service
+   * @return populated {@link HeaderType}
+   */
+  protected HeaderType createHeader(JsonObject instance) {
     return new HeaderType()
-      .withIdentifier(getIdentifier(identifierPrefix, instance))
       .withDatestamp(getInstanceDate(instance))
       .withSetSpecs("all");
   }

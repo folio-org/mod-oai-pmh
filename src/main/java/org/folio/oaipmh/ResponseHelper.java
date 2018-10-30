@@ -72,9 +72,14 @@ public class ResponseHelper {
    * @return marshaled {@link OAIPMH} object as string representation
    * @throws JAXBException can be thrown, for example, if the {@link OAIPMH} object is invalid
    */
-  public String writeToString(OAIPMH response) throws JAXBException {
+  public String writeToString(OAIPMH response) {
     StringWriter writer = new StringWriter();
-    jaxbMarshaller.marshal(response, writer);
+    try {
+      jaxbMarshaller.marshal(response, writer);
+    } catch (JAXBException e) {
+      // In case there is an issue to marshal response, there is no way to handle it
+      throw new IllegalStateException("The OAI-PMH response cannot be converted to string representation.", e);
+    }
 
     return writer.toString();
   }

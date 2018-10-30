@@ -10,6 +10,7 @@ import org.openarchives.oai._2.RequestType;
 import javax.xml.bind.JAXBException;
 import java.time.Instant;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -26,8 +27,8 @@ class ResponseHelperTest {
     try {
       ResponseHelper.getInstance().writeToString(new OAIPMH());
       fail("JAXBException is expected because validation is enabled");
-    } catch (JAXBException e) {
-      // expected behavior
+    } catch (IllegalStateException e) {
+      assertThat(e.getCause(), instanceOf(JAXBException.class));
     } catch (Exception e) {
       logger.error("Unexpected error", e);
       fail("JAXBException is expected, but was " + e.getMessage());
@@ -63,7 +64,7 @@ class ResponseHelperTest {
 
       assertThat(oaipmh, equalTo(oaipmhFromString));
     } catch (JAXBException e) {
-      logger.error("Failed to marshal or unmarshal OAI-PMH response", e);
+      logger.error("Failed to unmarshal OAI-PMH response", e);
       fail(e.getMessage());
     }
   }

@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -10,6 +9,7 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
+import org.folio.oaipmh.helpers.GetOaiRecordsHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
@@ -26,15 +26,16 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
 import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
   private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
 
-  private static final String REPOSITORY_BASE_URL = "repository.baseURL";
   private static final String ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
 
   private ObjectFactory objectFactory = new ObjectFactory();
@@ -45,33 +46,31 @@ public class OaiPmhImpl implements Oai {
   public static void init(Handler<AsyncResult<Boolean>> resultHandler) {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
     HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
+    HELPERS.put(LIST_RECORDS, new GetOaiRecordsHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     // other verb implementations to be added here
 
-    resultHandler.handle(Future.succeededFuture(true));
+    resultHandler.handle(succeededFuture(true));
   }
 
   @Override
   public void getOaiRecords(String resumptionToken, String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                             Context vertxContext) {
-    OAIPMH oai = buildBaseResponse(VerbType.LIST_RECORDS)
-      .withErrors(objectFactory.createOAIPMHerrorType().withCode(OAIPMHerrorcodeType.NO_RECORDS_MATCH));
-    oai.getRequest()
-       .withResumptionToken(resumptionToken)
-       //.withFrom(from != null ? Instant.parse(from) : null)
-       //.withUntil(until != null ? Instant.parse(until) : null)
-       .withSet(set)
-       .withMetadataPrefix(metadataPrefix);
 
-    try {
-      String response = ResponseHelper.getInstance().writeToString(oai);
-      asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond422WithApplicationXml(response)));
-    } catch (Exception e) {
-      logger.error("Unexpected error happened while processing ListRecords verb request", e);
-      asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
-    }
+    Request request = Request.builder()
+                             .okapiHeaders(okapiHeaders)
+                             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
+                             .build();
+
+    HELPERS.get(LIST_RECORDS)
+           .handle(request, vertxContext)
+           .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)))
+           .exceptionally(throwable -> {
+             asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+             return null;
+           });
   }
 
   @Override
@@ -116,11 +115,11 @@ public class OaiPmhImpl implements Oai {
     VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
     getRepositoryInfoHelper.handle(request, vertxContext)
       .thenAccept(response -> {
-        logger.info("Successfully retrieved ListMetadataFormats info: " + response.getEntity().toString());
+        logger.debug("Successfully retrieved ListMetadataFormats info: " + response.getEntity().toString());
         asyncResultHandler.handle(succeededFuture(response));
       }).exceptionally(throwable -> {
-      asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
-      return null;
+        asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+        return null;
     });
   }
 
@@ -139,8 +138,8 @@ public class OaiPmhImpl implements Oai {
         logger.info("Successfully retrieved sets structure: " + response.getEntity().toString());
         asyncResultHandler.handle(succeededFuture(response));
       }).exceptionally(throwable -> {
-      asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
-      return null;
+        asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(ERROR_MESSAGE)));
+        return null;
     });
   }
 
