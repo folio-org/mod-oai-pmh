@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -40,12 +41,15 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
-  static {
+
+  public static void init(Handler<AsyncResult<Boolean>> resultHandler) {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
     HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     // other verb implementations to be added here
+
+    resultHandler.handle(Future.succeededFuture(true));
   }
 
   @Override
@@ -97,9 +101,7 @@ public class OaiPmhImpl implements Oai {
 
     HELPERS.get(LIST_IDENTIFIERS)
            .handle(request, vertxContext)
-           .thenAccept(oai -> {
-             asyncResultHandler.handle(succeededFuture(oai));
-           })
+           .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
            .exceptionally(throwable -> {
              asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(ERROR_MESSAGE)));
              return null;

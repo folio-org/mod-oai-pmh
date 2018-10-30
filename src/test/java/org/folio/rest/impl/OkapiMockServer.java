@@ -10,7 +10,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.log4j.Logger;
-import org.hamcrest.CoreMatchers;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
@@ -26,6 +24,14 @@ public class OkapiMockServer {
   private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
+  static final String INVALID_IDENTIFIER = "non-existing-identifier";
+  static final String ERROR_IDENTIFIER = "please-return-error";
+  static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
+  static final String ERROR_DATE = "2010-10-10T10:10:10Z";
+
+  private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
+  private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
+  private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
 
   private final int port;
   private final Vertx vertx;
@@ -38,12 +44,8 @@ public class OkapiMockServer {
   private Router defineRoutes() {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    router.route(HttpMethod.GET, "/instance-storage/instances/" + EXISTING_IDENTIFIER)
-      .handler(this::handleMarcJsonRetrieved);
     router.route(HttpMethod.GET, "/instance-storage/instances")
-          .handler(this::tenInstancesInventoryStorageResponse);
-    router.route(HttpMethod.GET, "/instance-storage/instances/" + NON_EXISTING_IDENTIFIER)
-      .handler(this::handleMarcJsonNotRetrieved);
+          .handler(this::handleInstancesInventoryStorageResponse);
     return router;
   }
 
@@ -56,28 +58,41 @@ public class OkapiMockServer {
     }));
   }
 
-  private void handleMarcJsonRetrieved(RoutingContext ctx) {
-    ctx.response()
-      .setStatusCode(200)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-      .end();
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+  private void handleInstancesInventoryStorageResponse(RoutingContext ctx) {
+    String query = ctx.request().getParam("query");
+    if (query != null)
+    {
+      if (query.endsWith("id=" + EXISTING_IDENTIFIER)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1));
+      } else if (query.endsWith("id=" + NON_EXISTING_IDENTIFIER)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
+      } else if (query.contains(NO_RECORDS_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
+      } else if (query.endsWith("id=" + ERROR_IDENTIFIER)) {
+        failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(ERROR_DATE)) {
+        failureResponse(ctx, 500, "Internal Server Error");
+      } else {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_10));
+      }
+      logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
-  private void handleMarcJsonNotRetrieved(RoutingContext ctx) {
+  private void successResponse(RoutingContext ctx, String body) {
     ctx.response()
-      .setStatusCode(404)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
-      .end();
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+       .setStatusCode(200)
+       .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+       .end(body);
   }
 
-  private void tenInstancesInventoryStorageResponse(RoutingContext ctx) {
+  private void failureResponse(RoutingContext ctx, int code, String body) {
     ctx.response()
-      .setStatusCode(200)
-      .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
-      .end(getJsonObjectFromFile("/instance-storage/instances/instances_10.json"));
-    logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+       .setStatusCode(code)
+       .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
+       .end(body);
   }
 
   /**

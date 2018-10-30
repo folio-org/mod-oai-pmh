@@ -1,6 +1,10 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -12,10 +16,7 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.SetType;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,34 +38,20 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
  */
 public abstract class AbstractHelper implements VerbHelper {
 
-  public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String CANNOT_DISSEMINATE_FORMAT_ERROR = "The value '%s' of the metadataPrefix argument is not supported by the repository";
   public static final String RESUMPTION_TOKEN_FORMAT_ERROR = "The value '%s' of the resumptionToken argument is invalid";
   public static final String LIST_NO_REQUIRED_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix nor resumptionToken";
   public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "The request includes resumptionToken and other argument(s)";
   public static final String NO_RECORD_FOUND_ERROR = "There is no any record found matching search criteria";
+  public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
 
   /** Strict ISO Date and Time with UTC offset. */
   private static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   /**
-   * The value should be populated only once at start up. So considered to be constant.
-   * @see #createRepositoryIdentifierPrefix()
-   */
-  private static String OAI_IDENTIFIER_PREFIX;
-
-  /**
    * Holds instance to handle items returned
    */
-  protected static InstancesStorageHelper storageHelper;
-
-  /**
-   * Initializes data required for OAI-PMH responses
-   */
-  public static void init() {
-    createRepositoryIdentifierPrefix();
-    storageHelper = InstancesStorageHelper.getStorageHelper();
-  }
+  protected static InstancesStorageHelper storageHelper = InstancesStorageHelper.getStorageHelper();
 
   /**
    * Creates basic {@link OAIPMH} with ResponseDate and Request details
@@ -130,14 +117,14 @@ public abstract class AbstractHelper implements VerbHelper {
     LocalDateTime from = null;
     LocalDateTime until = null;
     if (request.getFrom() != null) {
-      from = parseDate(request.getFrom(), errors);
+      from = parseDate(new ImmutablePair<>(FROM_PARAM, request.getFrom()), errors);
       if (from == null) {
         // In case the 'from' date is invalid, we cannot send it in OAI-PMH/request@from because it contradicts schema definition
         request.getOaiRequest().setFrom(null);
       }
     }
     if (request.getUntil() != null) {
-      until = parseDate(request.getUntil(), errors);
+      until = parseDate(new ImmutablePair<>(UNTIL_PARAM, request.getUntil()), errors);
       if (until == null) {
         // In case the 'until' date is invalid, we cannot send it in OAI-PMH/request@until because it contradicts schema definition
         request.getOaiRequest().setUntil(null);
@@ -149,15 +136,37 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  private LocalDateTime parseDate(String date, List<OAIPMHerrorType> errors) {
+  /**
+   * Validates if the date time format is in {@link #ISO_UTC_DATE_TIME} format. If the date is valid, it is returned as {@link LocalDateTime}.
+   * Otherwise {@literal null} is returned and validation error is added to errors list
+   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
+   * @param errors list of errors to be updated if format is wrong
+   * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
+   */
+  private LocalDateTime parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
     try {
-      return LocalDateTime.parse(date, ISO_UTC_DATE_TIME);
+      return LocalDateTime.parse(date.getValue(), ISO_UTC_DATE_TIME);
     } catch (DateTimeParseException e) {
       errors.add(new OAIPMHerrorType()
         .withCode(BAD_ARGUMENT)
-        .withValue(String.format("Bad datestamp format for '%s' argument.", date)));
+        .withValue(String.format(BAD_DATESTAMP_FORMAT_ERROR, date.getKey(), date.getValue())));
       return null;
     }
+  }
+
+  protected boolean validateIdentifier(Request request, Context ctx) {
+    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
+    return StringUtils.startsWith(request.getIdentifier(), getIdentifierPrefix(tenantId, ctx));
+  }
+
+  /**
+   * The method assumes that identifier already validated and has correct format
+   * @param request {@link Request} to get identifier and tenant from
+   * @return storage identifier
+   */
+  protected String extractStorageIdentifier(Request request, Context ctx) {
+    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
+    return request.getIdentifier().substring(getIdentifierPrefix(tenantId, ctx).length()) ;
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
@@ -201,34 +210,15 @@ public abstract class AbstractHelper implements VerbHelper {
   /**
    * Creates {@link HeaderType} and populates Identifier, Datestamp and Set
    *
-   * @param tenantId tenant id
+   * @param identifierPrefix oai-identifier prefix
    * @param instance the instance item returned by storage service
    * @return populated {@link HeaderType}
    */
-  protected HeaderType populateHeader(String tenantId, JsonObject instance) {
+  protected HeaderType populateHeader(String identifierPrefix, JsonObject instance) {
     return new HeaderType()
-      .withIdentifier(getIdentifier(tenantId, instance))
+      .withIdentifier(getIdentifier(identifierPrefix, instance))
       .withDatestamp(getInstanceDate(instance))
       .withSetSpecs("all");
-  }
-
-  /**
-   * Creates oai-identifier prefix based on {@link OaiIdentifier}. The format is {@literal oai:<repositoryIdentifier>}.
-   * The repositoryIdentifier is based on repository base URL (host part).
-   * @see <a href="http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm">OAI Identifier Format</a>
-   */
-  private static void createRepositoryIdentifierPrefix() {
-    String baseURL = getBaseURL();
-    try {
-      URL url = new URL(baseURL);
-      OaiIdentifier oaiIdentifier = new OaiIdentifier();
-      oaiIdentifier.setRepositoryIdentifier(url.getHost());
-
-      OAI_IDENTIFIER_PREFIX = oaiIdentifier.getScheme() + oaiIdentifier.getDelimiter()
-        + oaiIdentifier.getRepositoryIdentifier() + oaiIdentifier.getDelimiter();
-    } catch (MalformedURLException e) {
-      throw new IllegalStateException(e);
-    }
   }
 
   /**
@@ -242,12 +232,16 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
-   * @param tenantId tenant id
+   * @param identifierPrefix oai-identifier prefix
    * @param instance the instance item returned by storage service
    * @return oai-identifier
    */
-  private String getIdentifier(String tenantId, JsonObject instance) {
-    return  OAI_IDENTIFIER_PREFIX + tenantId + "/" + storageHelper.getItemId(instance);
+  private String getIdentifier(String identifierPrefix, JsonObject instance) {
+    return identifierPrefix + storageHelper.getItemId(instance);
+  }
+
+  protected String getIdentifierPrefix(String tenantId, Context ctx) {
+    return ctx.config().getString(IDENTIFIER_PREFIX) + tenantId + "/";
   }
 
   private List<String> getSupportedSetSpecs() {

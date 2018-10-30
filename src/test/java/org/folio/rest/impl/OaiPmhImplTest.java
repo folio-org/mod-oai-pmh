@@ -16,7 +16,6 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.PomReader;
-import org.folio.rest.tools.client.test.HttpClientMock2;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -42,6 +41,7 @@ import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADM
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -80,8 +80,10 @@ class OaiPmhImplTest {
 
   private static final String APPLICATION_XML_TYPE = "application/xml";
   private static final String IDENTIFIER = "identifier";
+  private static final String TENANT = "diku";
+  private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
 
-  private final Header tenantHeader = new Header("X-Okapi-Tenant", "diku");
+  private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private final Header contentTypeHeaderXML = new Header("Content-Type", "application/xml");
@@ -105,6 +107,7 @@ class OaiPmhImplTest {
 
     vertx.deployVerticle(RestVerticle.class.getName(), opt, result -> {
       if (result.succeeded()) {
+        OaiPmhImpl.init(testContext.succeeding());
         okapiMockServer.start(testContext);
       } else {
         testContext.failNow(result.cause());
@@ -187,6 +190,11 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
     assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+    oaipmh.getListIdentifiers().getHeaders().forEach(header -> {
+      assertThat(header.getIdentifier(), containsString(IDENTIFIER_PREFIX));
+      assertThat(header.getSetSpecs(), hasSize(1));
+      assertThat(header.getDatestamp(), is(notNullValue()));
+    });
 
     testContext.completeNow();
   }
@@ -227,7 +235,7 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiIdentifiersWithoutParams(VertxTestContext testContext) throws JAXBException {
-    List<OAIPMHerrorType> errors = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH, 1).getErrors();
+    List<OAIPMHerrorType> errors = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH, 400, 1).getErrors();
     OAIPMHerrorType error = errors.get(0);
     assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
     assertThat(error.getValue(), equalTo(LIST_NO_REQUIRED_PARAM_ERROR));
@@ -238,7 +246,8 @@ class OaiPmhImplTest {
   @Test
   void getOaiIdentifiersWithWrongMetadataPrefix(VertxTestContext testContext) throws JAXBException {
     String metadataPrefix = "abc";
-    OAIPMH oaipmh = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH + "?metadataPrefix=" + metadataPrefix, 1);
+    String endpoint = LIST_IDENTIFIERS_PATH + "?metadataPrefix=" + metadataPrefix;
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 422, 1);
 
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
 
@@ -251,7 +260,8 @@ class OaiPmhImplTest {
   @Test
   void getOaiIdentifiersWithResumptionToken(VertxTestContext testContext) throws JAXBException {
     String resumptionToken = "abc";
-    OAIPMH oaipmh = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH + "?resumptionToken=" + resumptionToken, 1);
+    String endpoint = LIST_IDENTIFIERS_PATH + "?resumptionToken=" + resumptionToken;
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 1);
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
 
     List<OAIPMHerrorType> errors = oaipmh.getErrors();
@@ -266,7 +276,7 @@ class OaiPmhImplTest {
     String metadataPrefix = "marc";
     String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?resumptionToken=%s&metadataPrefix=%s", resumptionToken, metadataPrefix);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 3);
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 3);
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
 
@@ -283,6 +293,24 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiIdentifiersWithWrongSet(VertxTestContext testContext) throws JAXBException {
+    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String set = "single";
+    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&set=%s", metadataPrefix, set);
+
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 404, 1);
+
+    assertThat(oaipmh.getRequest().getSet(), equalTo(set));
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
+    assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
+
+    testContext.completeNow();
+  }
+
+  @Test
   void getOaiIdentifiersWithWrongDatesAndWrongSet(VertxTestContext testContext) throws JAXBException {
     String metadataPrefix = MetadataPrefix.MARC_XML.getName();
     String from = "2018-09-19T02:52:08.873+0000";
@@ -290,7 +318,7 @@ class OaiPmhImplTest {
     String set = "single";
     String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s&set=%s", metadataPrefix, from, until, set);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 3);
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 3);
 
     assertThat(oaipmh.getRequest().getSet(), equalTo(set));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
@@ -317,7 +345,7 @@ class OaiPmhImplTest {
     String until = "2018-10-20T02:03:04Z";
     String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s", metadataPrefix, from, until);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 1);
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 1);
 
     // The dates are of invalid format so they are not present in request
     assertThat(oaipmh.getRequest().getFrom(), not(nullValue()));
@@ -329,14 +357,51 @@ class OaiPmhImplTest {
     testContext.completeNow();
   }
 
-  private OAIPMH verifyListIdentifiersErrors(String endpoint, int errorsCount) throws JAXBException {
+  @Test
+  void getOaiIdentifiersWithNoRecordsFoundFromStorage(VertxTestContext testContext) throws JAXBException {
+    String metadataPrefix = MetadataPrefix.DC.getName();
+    String from = OkapiMockServer.NO_RECORDS_DATE;
+    String set = "all";
+    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&set=%s", metadataPrefix, from, set);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 404, 1);
+
+    // The dates are of invalid format so they are not present in request
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    assertThat(oaipmh.getRequest().getSet(), equalTo(set));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
+    assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
+
+    testContext.completeNow();
+  }
+
+  @Test
+  void getOaiIdentifiersWithErrorFromStorage(VertxTestContext testContext) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param("metadataPrefix", MetadataPrefix.DC.getName())
+      .param("until", OkapiMockServer.ERROR_DATE);
+
+    String response = test500WithErrorMessage(request, LIST_IDENTIFIERS_PATH);
+
+    // Check that error message is returned
+    assertThat(response, is(notNullValue()));
+
+    testContext.completeNow();
+  }
+
+  private OAIPMH verifyListIdentifiersErrors(String endpoint, int statusCode, int errorsCount) throws JAXBException {
     RequestSpecification requestSpecification = createBaseRequest();
 
     String response = requestSpecification
       .when()
       .get(endpoint)
       .then()
-        .statusCode(404)
+        .statusCode(statusCode)
         .contentType(ContentType.XML)
       .extract()
         .body()
@@ -384,9 +449,10 @@ class OaiPmhImplTest {
   void getOaiMetadataFormatsWithExistingIdentifier(VertxTestContext testContext) throws JAXBException {
     logger.info("=== Test Metadata Formats with existing identifier ===");
 
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
     String responseWithExistingIdentifier = createBaseRequest()
       .with()
-      .param(IDENTIFIER, OkapiMockServer.EXISTING_IDENTIFIER)
+      .param(IDENTIFIER, identifier)
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)
@@ -411,9 +477,10 @@ class OaiPmhImplTest {
     logger.info("=== Test Metadata Formats with non-existing identifier ===");
 
     // Check that error message is returned
-    String responseWithNonExistingIdentifier = createBaseRequest()
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
+    String response = createBaseRequest()
       .with()
-      .param(IDENTIFIER, OkapiMockServer.NON_EXISTING_IDENTIFIER)
+      .param(IDENTIFIER, identifier)
       .get(LIST_METADATA_FORMATS_PATH)
       .then()
       .contentType(APPLICATION_XML_TYPE)
@@ -422,15 +489,59 @@ class OaiPmhImplTest {
       .body()
       .asString();
 
-    logger.info("Response with request with non-existing identifier: " + responseWithNonExistingIdentifier);
+    logger.info("Response for request with no record: " + response);
 
-    OAIPMH oaiPmhResponseWithNonExistingIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithNonExistingIdentifier);
-    verifyBaseResponse(oaiPmhResponseWithNonExistingIdentifier, LIST_METADATA_FORMATS);
+    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+    verifyBaseResponse(oaipmh, LIST_METADATA_FORMATS);
 
-    assertThat(oaiPmhResponseWithNonExistingIdentifier.getListMetadataFormats(), is(nullValue()));
-    assertThat(oaiPmhResponseWithNonExistingIdentifier.getErrors(), hasSize(1));
-    assertThat(oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
-    assertThat(oaiPmhResponseWithNonExistingIdentifier.getErrors().get(0).getValue(), equalTo("Identifier not found"));
+    assertThat(oaipmh.getListMetadataFormats(), is(nullValue()));
+    assertThat(oaipmh.getErrors(), hasSize(1));
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
+    assertThat(oaipmh.getErrors().get(0).getValue(), containsString(identifier));
+
+    testContext.completeNow();
+  }
+
+  @Test
+  void getOaiMetadataFormatsWithErrorFromStorage(VertxTestContext testContext) {
+    logger.info("=== Test Metadata Formats with expected error from storage service ===");
+    // Check that error message is returned
+    RequestSpecification request = createBaseRequest()
+      .with().param(IDENTIFIER, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
+
+    String response = test500WithErrorMessage(request, LIST_METADATA_FORMATS_PATH);
+
+    // Check that error message is returned
+    assertThat(response, is(notNullValue()));
+
+    testContext.completeNow();
+  }
+
+  @Test
+  void getOaiMetadataFormatsWithInvalidIdentifier(VertxTestContext testContext) throws JAXBException {
+    logger.info("=== Test Metadata Formats with invalid identifier format ===");
+
+    // Check that error message is returned
+    String response = createBaseRequest()
+      .with()
+        .param(IDENTIFIER, OkapiMockServer.INVALID_IDENTIFIER)
+      .get(LIST_METADATA_FORMATS_PATH)
+      .then()
+        .contentType(APPLICATION_XML_TYPE)
+        .statusCode(422)
+        .extract()
+        .body()
+          .asString();
+
+    logger.info("Response with request with invalid identifier: " + response);
+
+    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+    verifyBaseResponse(oaipmh, LIST_METADATA_FORMATS);
+
+    assertThat(oaipmh.getListMetadataFormats(), is(nullValue()));
+    assertThat(oaipmh.getErrors(), hasSize(1));
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
+    assertThat(oaipmh.getErrors().get(0).getValue(), containsString(OkapiMockServer.INVALID_IDENTIFIER));
 
     testContext.completeNow();
   }
