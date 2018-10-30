@@ -83,7 +83,9 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
         return retrieveMetadataFormats(request);
       }
     } else {
-      logger.error("No instances found. Service responded with error: " + response.getError());
+      // The storage service could not return an instance so we have to send 500 back to client
+      logger.error("No instance found. Service responded with error: " + response.getError());
+      throw new IllegalStateException(response.getError().toString());
     }
     return GetOaiMetadataFormatsResponse.respond404WithApplicationXml(buildIdentifierNotFound(request));
   }

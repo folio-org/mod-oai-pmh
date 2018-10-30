@@ -16,10 +16,7 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.SetType;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -140,10 +137,11 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Validates if the date time format is in {@link #ISO_UTC_DATE_TIME} format
+   * Validates if the date time format is in {@link #ISO_UTC_DATE_TIME} format. If the date is valid, it is returned as {@link LocalDateTime}.
+   * Otherwise {@literal null} is returned and validation error is added to errors list
    * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
    * @param errors list of errors to be updated if format is wrong
-   * @return {@literal true} if date format is valid, {@literal false} otherwise.
+   * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
   private LocalDateTime parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
     try {
