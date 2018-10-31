@@ -51,7 +51,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       // 2. Search for instances
       httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
         // 3. Verify response and build list of identifiers
-        .thenApply(response -> buildListIdentifiers(request, response, ctx))
+        .thenApply(response -> buildListIdentifiers(request, response))
         .thenApply(identifiers -> {
           if (identifiers == null) {
             return buildNoRecordsResponse(buildNoRecordsFoundOaiResponse(request));
@@ -106,10 +106,9 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
    * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
    * @param request request
    * @param instancesResponse the response from the storage which contains items
-   * @param ctx vert.x context
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
-  private ListIdentifiersType buildListIdentifiers(Request request, Response instancesResponse, Context ctx) {
+  private ListIdentifiersType buildListIdentifiers(Request request, Response instancesResponse) {
     if (!Response.isSuccess(instancesResponse.getCode())) {
       logger.error("No instances found. Service responded with error: " + instancesResponse.getError());
       // The storage service could not return instances so we have to send 500 back to client
@@ -120,7 +119,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     if (instances != null && !instances.isEmpty()) {
       ListIdentifiersType identifiers = new ListIdentifiersType();
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String identifierPrefix = getIdentifierPrefix(tenantId, ctx);
+      String identifierPrefix = getIdentifierPrefix(tenantId, request.getIdentifierPrefix());
       instances.stream()
                .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
                .forEach(identifiers::withHeaders);

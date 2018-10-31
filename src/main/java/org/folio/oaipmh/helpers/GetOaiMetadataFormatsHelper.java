@@ -39,14 +39,14 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
     if (request.getIdentifier() == null) {
       return VertxCompletableFuture.completedFuture(retrieveMetadataFormats(request));
-    } else if (!validateIdentifier(request, ctx)) {
+    } else if (!validateIdentifier(request)) {
       return VertxCompletableFuture.completedFuture(buildBadArgumentResponse(request));
     }
 
     CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
-      String endpoint = storageHelper.getInstanceEndpoint(extractStorageIdentifier(request, ctx));
+      String endpoint = storageHelper.getInstanceEndpoint(extractStorageIdentifier(request));
       getOkapiClient(okapiHeaders)
         .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))

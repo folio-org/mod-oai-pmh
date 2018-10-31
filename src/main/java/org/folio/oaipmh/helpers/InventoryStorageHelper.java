@@ -70,8 +70,10 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   @Override
   public String buildItemsEndpoint(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
-    queryBuilder.source("MARC");
-    if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
+    queryBuilder.source("MARC-JSON");
+    if (isNotEmpty(request.getIdentifier())) {
+      queryBuilder.and().identifier(AbstractHelper.extractStorageIdentifier(request));
+    } else if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       queryBuilder
         .and()
         .dateRange(request.getFrom(), request.getUntil());

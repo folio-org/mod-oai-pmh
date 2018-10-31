@@ -157,9 +157,9 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected boolean validateIdentifier(Request request, Context ctx) {
+  protected static boolean validateIdentifier(Request request) {
     String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return StringUtils.startsWith(request.getIdentifier(), getIdentifierPrefix(tenantId, ctx));
+    return StringUtils.startsWith(request.getIdentifier(), getIdentifierPrefix(tenantId, request.getIdentifierPrefix()));
   }
 
   /**
@@ -167,9 +167,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param request {@link Request} to get identifier and tenant from
    * @return storage identifier
    */
-  protected String extractStorageIdentifier(Request request, Context ctx) {
+  public static String extractStorageIdentifier(Request request) {
     String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return request.getIdentifier().substring(getIdentifierPrefix(tenantId, ctx).length()) ;
+    return request.getIdentifier().substring(getIdentifierPrefix(tenantId, request.getIdentifierPrefix()).length()) ;
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
@@ -253,8 +253,8 @@ public abstract class AbstractHelper implements VerbHelper {
     return identifierPrefix + storageHelper.getItemId(instance);
   }
 
-  protected String getIdentifierPrefix(String tenantId, Context ctx) {
-    return ctx.config().getString(IDENTIFIER_PREFIX) + tenantId + "/";
+  protected static String getIdentifierPrefix(String tenantId, String identifierPrefix) {
+    return identifierPrefix + tenantId + "/";
   }
 
   private List<String> getSupportedSetSpecs() {

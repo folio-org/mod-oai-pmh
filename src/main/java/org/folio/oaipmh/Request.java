@@ -11,6 +11,7 @@ import java.util.Map;
 public class Request {
   private RequestType oaiRequest;
   private Map<String, String> okapiHeaders;
+  private String identifierPrefix;
 
   /**
    * Builder used to build the request.
@@ -18,6 +19,7 @@ public class Request {
   public static class Builder {
     private RequestType oaiRequest = new RequestType();
     private Map<String, String> okapiHeaders;
+    private String identifierPrefix;
 
     public Builder metadataPrefix(String metadataPrefix) {
       oaiRequest.setMetadataPrefix(metadataPrefix);
@@ -54,15 +56,21 @@ public class Request {
       return this;
     }
 
+    public Builder identifierPrefix(String identifierPrefix) {
+      this.identifierPrefix = identifierPrefix;
+      return this;
+    }
+
     public Request build() {
-      return new Request(oaiRequest, okapiHeaders);
+      return new Request(oaiRequest, okapiHeaders, identifierPrefix);
     }
   }
 
 
-  private Request(RequestType oaiRequest, Map<String, String> okapiHeaders) {
+  private Request(RequestType oaiRequest, Map<String, String> okapiHeaders, String identifierPrefix) {
     this.oaiRequest = oaiRequest;
     this.okapiHeaders = okapiHeaders;
+    this.identifierPrefix = identifierPrefix;
   }
 
   public String getMetadataPrefix() {
@@ -97,6 +105,9 @@ public class Request {
     return okapiHeaders;
   }
 
+  public String getIdentifierPrefix() {
+    return identifierPrefix;
+  }
   /**
    * Factory method returning an instance of the builder.
    * @return {@link Builder} instance

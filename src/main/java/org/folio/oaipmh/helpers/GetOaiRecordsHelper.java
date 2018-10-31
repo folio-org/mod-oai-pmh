@@ -54,7 +54,7 @@ public class GetOaiRecordsHelper extends AbstractHelper {
       // 2. Search for instances
       httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
         // 3. Verify response and build list of identifiers
-        .thenApply(response -> buildRecords(request, response, ctx))
+        .thenApply(response -> buildRecords(request, response))
         .thenApply(records -> {
           if (records == null) {
             return buildNoRecordsFoundOaiResponse(request);
@@ -110,10 +110,9 @@ public class GetOaiRecordsHelper extends AbstractHelper {
   /**
    * Builds {{@link Map} if there are instances or {@code null}
    * @param instancesResponse the {@link JsonObject} which contains items
-   * @param ctx vert.x context
    * @return {@link Map} with storage id as key and {@link RecordType} with populated header if there is any or {@code null}
    */
-  private Map<String, RecordType> buildRecords(Request request, Response instancesResponse, Context ctx) {
+  private Map<String, RecordType> buildRecords(Request request, Response instancesResponse) {
     if (!Response.isSuccess(instancesResponse.getCode())) {
       logger.error("No instances found. Service responded with error: " + instancesResponse.getError());
       // The storage service could not return instances so we have to send 500 back to client
@@ -124,7 +123,7 @@ public class GetOaiRecordsHelper extends AbstractHelper {
     if (instances != null && !instances.isEmpty()) {
       Map<String, RecordType> records = new HashMap<>();
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String identifierPrefix = getIdentifierPrefix(tenantId, ctx);
+      String identifierPrefix = getIdentifierPrefix(tenantId, request.getIdentifierPrefix());
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String id = storageHelper.getItemId(instance);
