@@ -16,7 +16,6 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
-import javax.xml.bind.JAXBException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -105,8 +104,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return basic {@link OAIPMH}
    */
   private String buildMetadataFormatTypesResponse(Request request) {
-      return convertToString(buildBaseResponse(request.getOaiRequest())
-                             .withListMetadataFormats(getMetadataFormatTypes()));
+    return ResponseHelper.getInstance().writeToString(
+      buildBaseResponse(request.getOaiRequest()).withListMetadataFormats(getMetadataFormatTypes()));
   }
 
   /**
@@ -115,7 +114,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return basic {@link OAIPMH}
    */
   private String buildIdentifierNotFound(Request request) {
-    return convertToString(buildBaseResponse(request.getOaiRequest())
+    return ResponseHelper.getInstance().writeToString(
+      buildBaseResponse(request.getOaiRequest())
         .withErrors(new OAIPMHerrorType()
           .withValue(String.format("%s has the structure of a valid identifier, but it maps to no known item", request.getIdentifier()))
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
@@ -127,24 +127,11 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return basic {@link OAIPMH}
    */
   private String buildOaipmhWithBadArgumentError(Request request) {
-    return convertToString(buildBaseResponse(request.getOaiRequest())
-      .withErrors(new OAIPMHerrorType()
-        .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
-        .withValue(String.format("%s has the structure of an invalid identifier", request.getIdentifier()))));
-  }
-
-  /**
-   * Marshals {@link OAIPMH} to string. In case the {@link OAIPMH} is invalid, the {@link IllegalStateException} is thrown
-   * @param oaipmhResponse {@link OAIPMH} to marshal
-   * @return string representation of the {@link OAIPMH}
-   */
-  private String convertToString(OAIPMH oaipmhResponse) {
-    try {
-      return ResponseHelper.getInstance().writeToString(oaipmhResponse);
-    } catch(JAXBException e) {
-      logger.error("Error marshalling response: " + e.getMessage());
-      throw new IllegalStateException(e);
-    }
+    return ResponseHelper.getInstance().writeToString(
+      buildBaseResponse(request.getOaiRequest())
+        .withErrors(new OAIPMHerrorType()
+          .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
+          .withValue(String.format("%s has the structure of an invalid identifier", request.getIdentifier()))));
   }
 
   /**

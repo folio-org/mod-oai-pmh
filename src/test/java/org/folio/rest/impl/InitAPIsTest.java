@@ -12,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.net.MalformedURLException;
 
-import static org.folio.oaipmh.helpers.AbstractHelper.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.nullValue;

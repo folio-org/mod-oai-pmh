@@ -17,8 +17,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
 
-import static org.folio.oaipmh.helpers.VerbHelper.IDENTIFIER_PREFIX;
-import static org.folio.oaipmh.helpers.VerbHelper.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 
 /**
  * The class initializes system properties and checks if required configs are specified

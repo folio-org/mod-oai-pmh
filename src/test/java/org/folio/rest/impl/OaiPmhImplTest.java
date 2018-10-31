@@ -20,31 +20,42 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.VerbType;
 
 import javax.xml.bind.JAXBException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.helpers.AbstractHelper.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.helpers.AbstractHelper.LIST_NO_REQUIRED_PARAM_ERROR;
-import static org.folio.oaipmh.helpers.AbstractHelper.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -70,6 +81,7 @@ class OaiPmhImplTest {
   // API paths
   private static final String ROOT_PATH = "/oai";
   private static final String LIST_RECORDS_PATH = ROOT_PATH + "/records";
+  private static final String GET_RECORD_PATH = LIST_RECORDS_PATH + "/{identifier}";
   private static final String LIST_IDENTIFIERS_PATH = ROOT_PATH + "/identifiers";
   private static final String LIST_METADATA_FORMATS_PATH = ROOT_PATH + "/metadata_formats";
   private static final String LIST_SETS_PATH = ROOT_PATH + "/sets";
@@ -79,14 +91,23 @@ class OaiPmhImplTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final String APPLICATION_XML_TYPE = "application/xml";
-  private static final String IDENTIFIER = "identifier";
   private static final String TENANT = "diku";
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
-  private final Header contentTypeHeaderXML = new Header("Content-Type", "application/xml");
+
+  private static final Map<VerbType, String> basePaths = new HashMap<>();
+
+  static {
+    basePaths.put(GET_RECORD, GET_RECORD_PATH);
+    basePaths.put(LIST_RECORDS, LIST_RECORDS_PATH);
+    basePaths.put(LIST_IDENTIFIERS, LIST_IDENTIFIERS_PATH);
+    basePaths.put(LIST_METADATA_FORMATS, LIST_METADATA_FORMATS_PATH);
+    basePaths.put(LIST_SETS, LIST_SETS_PATH);
+    basePaths.put(IDENTIFY, IDENTIFY_PATH);
+  }
 
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
@@ -105,19 +126,17 @@ class OaiPmhImplTest {
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, result -> {
-      if (result.succeeded()) {
-        OaiPmhImpl.init(testContext.succeeding());
-        okapiMockServer.start(testContext);
-      } else {
-        testContext.failNow(result.cause());
-      }
-    });
-    RestAssured.baseURI = "http://localhost:" + okapiPort;
-    RestAssured.port = okapiPort;
-    RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
+      OaiPmhImpl.init(testContext.succeeding(success -> {
+        RestAssured.baseURI = "http://localhost:" + okapiPort;
+        RestAssured.port = okapiPort;
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
+        logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
+        // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
+        okapiMockServer.start(testContext);
+      }));
+    }));
   }
 
   @Test
@@ -125,7 +144,7 @@ class OaiPmhImplTest {
     // Simple GET request to see the module is running and we can talk to it.
     given()
       .get("/admin/health")
-      .then()
+    .then()
       .log().all()
       .statusCode(200);
 
@@ -133,26 +152,10 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecords(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
-    String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH);
-
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-    verifyBaseResponse(oaipmhFromString, LIST_RECORDS);
-    assertThat(oaipmhFromString.getErrors(), is(notNullValue()));
-    assertThat(oaipmhFromString.getErrors(), hasSize(equalTo(1)));
-
-    testContext.completeNow();
-  }
-
-  @Test
   void getOaiRecordsById(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
-    String response = test422WithXml(requestSpecification, LIST_RECORDS_PATH + "/someId");
+    RequestSpecification requestSpecification = createBaseRequest(GET_RECORD_PATH)
+      .pathParam("identifier", "someId");
+    String response = verifyWithCodeWithXml(requestSpecification, 422);
 
     // Check that error message is returned
     assertThat(response, is(notNullValue()));
@@ -167,116 +170,124 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiIdentifiersSuccess(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
+  void getOaiIdentifiersSuccess() throws JAXBException {
+    RequestSpecification request = createBaseRequest(LIST_IDENTIFIERS_PATH)
+      .with()
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC_XML.getName());
 
-    String response = requestSpecification
-      .when()
-      .get(LIST_IDENTIFIERS_PATH + "?metadataPrefix=" + MetadataPrefix.MARC_XML.getName())
-      .then()
-      .statusCode(200)
-      .contentType(ContentType.XML)
-      .extract()
-      .body()
-      .asString();
+    OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmh, LIST_IDENTIFIERS);
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
     assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
-    oaipmh.getListIdentifiers().getHeaders().forEach(header -> {
-      assertThat(header.getIdentifier(), containsString(IDENTIFIER_PREFIX));
-      assertThat(header.getSetSpecs(), hasSize(1));
-      assertThat(header.getDatestamp(), is(notNullValue()));
-    });
 
-    testContext.completeNow();
+    oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
   }
 
   @Test
-  void getOaiIdentifiersWithDateRange(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
+  void getOaiIdentifiersWithDateRange() throws JAXBException {
+    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS);
 
+    assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
+    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+
+    oaipmh.getListIdentifiers()
+          .getHeaders()
+          .forEach(this::verifyHeader);
+  }
+
+  @Test
+  void getOaiRecordsWithDateRange() throws JAXBException {
+    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_RECORDS);
+
+    assertThat(oaipmh.getListRecords(), is(notNullValue()));
+    assertThat(oaipmh.getListRecords().getRecords(), hasSize(10));
+
+    oaipmh.getListRecords()
+          .getRecords()
+          .stream()
+          .map(RecordType::getHeader)
+          .forEach(this::verifyHeader);
+  }
+
+  private OAIPMH verifyOaiListVerbWithDateRange(VerbType verb) throws JAXBException {
     String metadataPrefix = MetadataPrefix.MARC_XML.getName();
     String from = "2018-09-19T02:52:08Z";
     String until = "2018-10-20T02:03:04Z";
     String set = "all";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s&set=%s", metadataPrefix, from, until, set);
 
-    String response = requestSpecification
-      .when()
-      .get(endpoint)
-      .then()
-        .statusCode(200)
-        .contentType(ContentType.XML)
-        .extract()
-          .body()
-          .asString();
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(FROM_PARAM, from)
+      .param(UNTIL_PARAM, until)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix)
+      .param(SET_PARAM, set);
 
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
+    OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmh, LIST_IDENTIFIERS);
     assertThat(oaipmh.getErrors(), is(empty()));
-    assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
-    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
 
-    testContext.completeNow();
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
+    assertThat(oaipmh.getRequest().getSet(), equalTo(set));
+
+    return oaipmh;
   }
 
-  @Test
-  void getOaiIdentifiersWithoutParams(VertxTestContext testContext) throws JAXBException {
-    List<OAIPMHerrorType> errors = verifyListIdentifiersErrors(LIST_IDENTIFIERS_PATH, 400, 1).getErrors();
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithoutParams(VerbType verb) throws JAXBException {
+    List<OAIPMHerrorType> errors = verifyResponseWithErrors(createBaseRequest(basePaths.get(verb)), verb, 400, 1).getErrors();
     OAIPMHerrorType error = errors.get(0);
     assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
     assertThat(error.getValue(), equalTo(LIST_NO_REQUIRED_PARAM_ERROR));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithWrongMetadataPrefix(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithWrongMetadataPrefix(VerbType verb) throws JAXBException {
     String metadataPrefix = "abc";
-    String endpoint = LIST_IDENTIFIERS_PATH + "?metadataPrefix=" + metadataPrefix;
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 422, 1);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(METADATA_PREFIX_PARAM, metadataPrefix);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 422, 1);
 
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
 
     List<OAIPMHerrorType> errors = oaipmh.getErrors();
     assertThat(errors.get(0).getCode(), equalTo(CANNOT_DISSEMINATE_FORMAT));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithResumptionToken(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithResumptionToken(VerbType verb) throws JAXBException {
     String resumptionToken = "abc";
-    String endpoint = LIST_IDENTIFIERS_PATH + "?resumptionToken=" + resumptionToken;
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 1);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
 
     List<OAIPMHerrorType> errors = oaipmh.getErrors();
     assertThat(errors.get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithResumptionTokenAndWrongMetadataPrefix(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithResumptionTokenAndWrongMetadataPrefix(VerbType verb) throws JAXBException {
     String resumptionToken = "abc";
     String metadataPrefix = "marc";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?resumptionToken=%s&metadataPrefix=%s", resumptionToken, metadataPrefix);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(METADATA_PREFIX_PARAM, metadataPrefix)
+        .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 3);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 3);
+
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
 
@@ -288,37 +299,45 @@ class OaiPmhImplTest {
 
     Optional<String> badArgMsg = errors.stream().filter(error -> error.getCode() == BAD_ARGUMENT).map(OAIPMHerrorType::getValue).findAny();
     badArgMsg.ifPresent(msg -> assertThat(msg, equalTo(LIST_ILLEGAL_ARGUMENTS_ERROR)));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithWrongSet(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithWrongSet(VerbType verb) throws JAXBException {
     String metadataPrefix = MetadataPrefix.MARC_XML.getName();
     String set = "single";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&set=%s", metadataPrefix, set);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 404, 1);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(METADATA_PREFIX_PARAM, metadataPrefix)
+        .param(SET_PARAM, set);
 
-    assertThat(oaipmh.getRequest().getSet(), equalTo(set));
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 404, 1);
+
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+    assertThat(oaipmh.getRequest().getSet(), equalTo(set));
 
     OAIPMHerrorType error = oaipmh.getErrors().get(0);
     assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
     assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithWrongDatesAndWrongSet(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithWrongDatesAndWrongSet(VerbType verb) throws JAXBException {
     String metadataPrefix = MetadataPrefix.MARC_XML.getName();
-    String from = "2018-09-19T02:52:08.873+0000";
-    String until = "2018-10-20T02:03:04.567+0000";
+    String from = "2018-09-19T02:52:08.873";
+    String until = "2018-10-20T02:03:04.567";
     String set = "single";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s&set=%s", metadataPrefix, from, until, set);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 3);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(FROM_PARAM, from)
+        .param(UNTIL_PARAM, until)
+        .param(METADATA_PREFIX_PARAM, metadataPrefix)
+        .param(SET_PARAM, set);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 3);
 
     assertThat(oaipmh.getRequest().getSet(), equalTo(set));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
@@ -334,38 +353,46 @@ class OaiPmhImplTest {
     assertThat(codes, containsInAnyOrder(BAD_ARGUMENT, BAD_ARGUMENT, NO_RECORDS_MATCH));
     Optional<String> noRecordsMsg = errors.stream().filter(error -> error.getCode() == NO_RECORDS_MATCH).map(OAIPMHerrorType::getValue).findAny();
     noRecordsMsg.ifPresent(msg -> assertThat(msg, equalTo(NO_RECORD_FOUND_ERROR)));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithInvalidDateRange(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithInvalidDateRange(VerbType verb) throws JAXBException {
     String metadataPrefix = MetadataPrefix.MARC_XML.getName();
     String from = "2018-12-19T02:52:08Z";
     String until = "2018-10-20T02:03:04Z";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&until=%s", metadataPrefix, from, until);
 
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 400, 1);
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(FROM_PARAM, from)
+        .param(UNTIL_PARAM, until)
+        .param(METADATA_PREFIX_PARAM, metadataPrefix);
 
-    // The dates are of invalid format so they are not present in request
-    assertThat(oaipmh.getRequest().getFrom(), not(nullValue()));
-    assertThat(oaipmh.getRequest().getUntil(), not(nullValue()));
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
 
     OAIPMHerrorType error = oaipmh.getErrors().get(0);
     assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithNoRecordsFoundFromStorage(VertxTestContext testContext) throws JAXBException {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithNoRecordsFoundFromStorage(VerbType verb) throws JAXBException {
     String metadataPrefix = MetadataPrefix.DC.getName();
     String from = OkapiMockServer.NO_RECORDS_DATE;
     String set = "all";
-    String endpoint = String.format(LIST_IDENTIFIERS_PATH + "?metadataPrefix=%s&from=%s&set=%s", metadataPrefix, from, set);
+
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+        .param(FROM_PARAM, from)
+        .param(SET_PARAM, set)
+        .param(METADATA_PREFIX_PARAM, metadataPrefix);
 
     // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = verifyListIdentifiersErrors(endpoint, 404, 1);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 404, 1);
 
     // The dates are of invalid format so they are not present in request
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
@@ -375,69 +402,24 @@ class OaiPmhImplTest {
     OAIPMHerrorType error = oaipmh.getErrors().get(0);
     assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
     assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
-
-    testContext.completeNow();
   }
 
-  @Test
-  void getOaiIdentifiersWithErrorFromStorage(VertxTestContext testContext) {
-    RequestSpecification request = createBaseRequest()
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiIdentifiersWithErrorFromStorage(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
-      .param("metadataPrefix", MetadataPrefix.DC.getName())
-      .param("until", OkapiMockServer.ERROR_DATE);
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+        .param(UNTIL_PARAM, OkapiMockServer.ERROR_DATE);
 
-    String response = test500WithErrorMessage(request, LIST_IDENTIFIERS_PATH);
-
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    testContext.completeNow();
-  }
-
-  private OAIPMH verifyListIdentifiersErrors(String endpoint, int statusCode, int errorsCount) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
-
-    String response = requestSpecification
-      .when()
-      .get(endpoint)
-      .then()
-        .statusCode(statusCode)
-        .contentType(ContentType.XML)
-      .extract()
-        .body()
-          .asString();
-
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmhFromString, LIST_IDENTIFIERS);
-    assertThat(oaipmhFromString.getErrors(), is(notNullValue()));
-    assertThat(oaipmhFromString.getErrors(), hasSize(errorsCount));
-
-    return oaipmhFromString;
+    verify500WithErrorMessage(request);
   }
 
   @Test
   void getOaiMetadataFormats(VertxTestContext testContext) throws JAXBException {
     logger.info("=== Test Metadata Formats without identifier ===");
 
-    String responseWithoutIdentifier = createBaseRequest()
-      .get(LIST_METADATA_FORMATS_PATH)
-      .then()
-      .contentType(APPLICATION_XML_TYPE)
-      .statusCode(200)
-      .extract()
-      .response().asString();
-
-    assertThat(responseWithoutIdentifier, is(notNullValue()));
-
-    logger.info("Response with request without identifier: " + responseWithoutIdentifier);
-
-    OAIPMH oaiPmhResponseWithoutIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithoutIdentifier);
-    verifyBaseResponse(oaiPmhResponseWithoutIdentifier, LIST_METADATA_FORMATS);
+    OAIPMH oaiPmhResponseWithoutIdentifier = verify200WithXml(createBaseRequest(LIST_METADATA_FORMATS_PATH), LIST_METADATA_FORMATS);
 
     assertThat(oaiPmhResponseWithoutIdentifier.getListMetadataFormats(), is(notNullValue()));
     assertThat(oaiPmhResponseWithoutIdentifier.getErrors(), is(empty()));
@@ -450,21 +432,11 @@ class OaiPmhImplTest {
     logger.info("=== Test Metadata Formats with existing identifier ===");
 
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
-    String responseWithExistingIdentifier = createBaseRequest()
+    RequestSpecification request = createBaseRequest(LIST_METADATA_FORMATS_PATH)
       .with()
-      .param(IDENTIFIER, identifier)
-      .get(LIST_METADATA_FORMATS_PATH)
-      .then()
-      .contentType(APPLICATION_XML_TYPE)
-      .statusCode(200)
-      .extract()
-      .body()
-      .asString();
+        .param(IDENTIFIER_PARAM, identifier);
 
-    logger.info("Response with request with existing identifier: " + responseWithExistingIdentifier);
-
-    OAIPMH oaiPmhResponseWithExistingIdentifier = ResponseHelper.getInstance().stringToOaiPmh(responseWithExistingIdentifier);
-    verifyBaseResponse(oaiPmhResponseWithExistingIdentifier, LIST_METADATA_FORMATS);
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, LIST_METADATA_FORMATS);
 
     assertThat(oaiPmhResponseWithExistingIdentifier.getListMetadataFormats(), is(notNullValue()));
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
@@ -478,24 +450,13 @@ class OaiPmhImplTest {
 
     // Check that error message is returned
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
-    String response = createBaseRequest()
+    RequestSpecification request = createBaseRequest(LIST_METADATA_FORMATS_PATH)
       .with()
-      .param(IDENTIFIER, identifier)
-      .get(LIST_METADATA_FORMATS_PATH)
-      .then()
-      .contentType(APPLICATION_XML_TYPE)
-      .statusCode(404)
-      .extract()
-      .body()
-      .asString();
+        .param(IDENTIFIER_PARAM, identifier);
 
-    logger.info("Response for request with no record: " + response);
-
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
-    verifyBaseResponse(oaipmh, LIST_METADATA_FORMATS);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_METADATA_FORMATS, 404, 1);
 
     assertThat(oaipmh.getListMetadataFormats(), is(nullValue()));
-    assertThat(oaipmh.getErrors(), hasSize(1));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
     assertThat(oaipmh.getErrors().get(0).getValue(), containsString(identifier));
 
@@ -506,13 +467,11 @@ class OaiPmhImplTest {
   void getOaiMetadataFormatsWithErrorFromStorage(VertxTestContext testContext) {
     logger.info("=== Test Metadata Formats with expected error from storage service ===");
     // Check that error message is returned
-    RequestSpecification request = createBaseRequest()
-      .with().param(IDENTIFIER, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
+    RequestSpecification request = createBaseRequest(LIST_METADATA_FORMATS_PATH)
+      .with()
+        .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
 
-    String response = test500WithErrorMessage(request, LIST_METADATA_FORMATS_PATH);
-
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
+    verify500WithErrorMessage(request);
 
     testContext.completeNow();
   }
@@ -522,24 +481,13 @@ class OaiPmhImplTest {
     logger.info("=== Test Metadata Formats with invalid identifier format ===");
 
     // Check that error message is returned
-    String response = createBaseRequest()
+    RequestSpecification request = createBaseRequest(LIST_METADATA_FORMATS_PATH)
       .with()
-        .param(IDENTIFIER, OkapiMockServer.INVALID_IDENTIFIER)
-      .get(LIST_METADATA_FORMATS_PATH)
-      .then()
-        .contentType(APPLICATION_XML_TYPE)
-        .statusCode(422)
-        .extract()
-        .body()
-          .asString();
+        .param(IDENTIFIER_PARAM, OkapiMockServer.INVALID_IDENTIFIER);
 
-    logger.info("Response with request with invalid identifier: " + response);
-
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
-    verifyBaseResponse(oaipmh, LIST_METADATA_FORMATS);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_METADATA_FORMATS, 422, 1);
 
     assertThat(oaipmh.getListMetadataFormats(), is(nullValue()));
-    assertThat(oaipmh.getErrors(), hasSize(1));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
     assertThat(oaipmh.getErrors().get(0).getValue(), containsString(OkapiMockServer.INVALID_IDENTIFIER));
 
@@ -548,24 +496,8 @@ class OaiPmhImplTest {
 
   @Test
   void testSuccessfulGetOaiSets(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
+    OAIPMH oaipmhFromString = verify200WithXml(createBaseRequest(LIST_SETS_PATH), LIST_SETS);
 
-    String response = requestSpecification
-      .when()
-        .get(LIST_SETS_PATH)
-      .then()
-        .statusCode(200)
-        .contentType(ContentType.XML)
-        .extract()
-          .body().asString();
-
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmhFromString, LIST_SETS);
     assertThat(oaipmhFromString.getListSets(), is(notNullValue()));
     assertThat(oaipmhFromString.getListSets().getSets(), hasSize(equalTo(1)));
     assertThat(oaipmhFromString.getListSets().getSets().get(0).getSetSpec(), equalTo("all"));
@@ -576,16 +508,14 @@ class OaiPmhImplTest {
 
   @Test
   void testGetOaiSetsMissingBaseUrlProperty(VertxTestContext testContext) {
-
     // Remove required props
     String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
     try {
-      RequestSpecification requestSpecification = createBaseRequest();
       System.getProperties().remove(REPOSITORY_BASE_URL);
 
-      String response = test500WithErrorMessage(requestSpecification, LIST_SETS_PATH);
+      String response = verify500WithErrorMessage(createBaseRequest(LIST_SETS_PATH));
+
       // Check that error message is returned
-      assertThat(response, is(notNullValue()));
       assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
 
       testContext.completeNow();
@@ -594,75 +524,10 @@ class OaiPmhImplTest {
     }
   }
 
-  private static String test422WithXml(RequestSpecification requestSpecification, String endpoint) {
-    return requestSpecification
-      .when()
-        .get(endpoint)
-      .then()
-        .statusCode(422)
-      .contentType(ContentType.XML)
-        .extract()
-          .body()
-            .asString();
-  }
-
-  private static String test500WithErrorMessage(RequestSpecification requestSpecification, String endpoint) {
-    return requestSpecification
-      .when()
-        .get(endpoint)
-      .then()
-        .statusCode(500)
-        .contentType(ContentType.TEXT)
-        .extract()
-          .body()
-            .asString();
-  }
-
   @Test
-  void getOaiRepositoryInfo(VertxTestContext testContext) throws JAXBException {
-    RequestSpecification requestSpecification = createBaseRequest();
+  void getOaiRepositoryInfoSuccess(VertxTestContext testContext) throws JAXBException {
+    OAIPMH oaipmhFromString = verify200WithXml(createBaseRequest(IDENTIFY_PATH), IDENTIFY);
 
-    // Remove required props
-    Properties sysProps = System.getProperties();
-    sysProps.remove(REPOSITORY_NAME);
-    sysProps.remove(REPOSITORY_BASE_URL);
-    sysProps.remove(REPOSITORY_ADMIN_EMAILS);
-
-    String response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-
-    // Set some required props but not all
-    sysProps.setProperty(REPOSITORY_NAME, REPOSITORY_NAME);
-    // Set 2 emails
-    String emails = "oaiAdminEmail1@folio.org,oaiAdminEmail2@folio.org";
-    sysProps.setProperty(REPOSITORY_ADMIN_EMAILS, emails);
-
-    response = test500WithErrorMessage(requestSpecification, IDENTIFY_PATH);
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-    assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
-
-    // Set all required system properties
-    sysProps.setProperty(REPOSITORY_BASE_URL, REPOSITORY_BASE_URL);
-
-    response = requestSpecification
-      .when()
-        .get(IDENTIFY_PATH)
-      .then()
-        .statusCode(200)
-        .contentType(ContentType.XML)
-        .extract()
-          .body()
-            .asString();
-    // Check that error message is returned
-    assertThat(response, is(notNullValue()));
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmhFromString, IDENTIFY);
     assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getAdminEmails(), is(notNullValue()));
@@ -675,13 +540,28 @@ class OaiPmhImplTest {
     testContext.completeNow();
   }
 
-  private RequestSpecification createBaseRequest() {
+  @ParameterizedTest
+  @ValueSource(strings = { REPOSITORY_NAME, REPOSITORY_BASE_URL, REPOSITORY_ADMIN_EMAILS })
+  void getOaiRepositoryInfoMissingConfigs(String prop) {
+    // Remove required props
+    String propValue = System.getProperty(prop);
+    try {
+      System.getProperties().remove(prop);
+
+      String response = verify500WithErrorMessage(createBaseRequest(IDENTIFY_PATH));
+      assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
+    } finally {
+      System.setProperty(prop, propValue);
+    }
+  }
+
+  private RequestSpecification createBaseRequest(String basePath) {
     return RestAssured
       .given()
         .header(okapiUrlHeader)
         .header(tokenHeader)
         .header(tenantHeader)
-        .header(contentTypeHeaderXML)
+        .basePath(basePath)
         .contentType(APPLICATION_XML_TYPE);
   }
 
@@ -692,5 +572,65 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getRequest(), is(notNullValue()));
     assertThat(oaipmhFromString.getRequest().getValue(), is(notNullValue()));
     assertThat(oaipmhFromString.getRequest().getVerb(), equalTo(verb));
+  }
+
+  private OAIPMH verify200WithXml(RequestSpecification request, VerbType verb) throws JAXBException {
+    String response = verifyWithCodeWithXml(request, 200);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh, verb);
+
+    return oaipmh;
+  }
+
+  private static String verifyWithCodeWithXml(RequestSpecification request, int code) {
+    return request
+      .when()
+        .get()
+      .then()
+        .statusCode(code)
+        .contentType(APPLICATION_XML_TYPE)
+        .log().all()
+        .extract()
+          .body()
+          .asString();
+  }
+
+  private static String verify500WithErrorMessage(RequestSpecification request) {
+    String response = request
+      .when()
+        .get()
+      .then()
+        .statusCode(500)
+        .contentType(ContentType.TEXT)
+        .log().all()
+        .extract()
+          .body()
+          .asString();
+
+    assertThat(response, is(notNullValue()));
+
+    return response;
+  }
+
+  private OAIPMH verifyResponseWithErrors(RequestSpecification request, VerbType verb, int statusCode, int errorsCount) throws JAXBException {
+    String response = verifyWithCodeWithXml(request, statusCode);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmhFromString, verb);
+    assertThat(oaipmhFromString.getErrors(), is(notNullValue()));
+    assertThat(oaipmhFromString.getErrors(), hasSize(errorsCount));
+
+    return oaipmhFromString;
+  }
+
+  private void verifyHeader(HeaderType header) {
+    assertThat(header.getIdentifier(), containsString(IDENTIFIER_PREFIX));
+    assertThat(header.getSetSpecs(), hasSize(1));
+    assertThat(header.getDatestamp(), is(notNullValue()));
   }
 }

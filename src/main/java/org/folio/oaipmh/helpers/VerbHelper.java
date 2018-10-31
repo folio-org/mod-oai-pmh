@@ -10,12 +10,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface VerbHelper {
 
-  String FROM_PARAM = "from";
-  String UNTIL_PARAM = "until";
-
-  String REPOSITORY_BASE_URL = "repository.baseURL";
-  String IDENTIFIER_PREFIX = "identifierPrefix";
-
   /**
    * Performs verb specific business logic.
    *
