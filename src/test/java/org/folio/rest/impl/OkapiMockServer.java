@@ -19,21 +19,32 @@ import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class OkapiMockServer {
+class OkapiMockServer {
 
   private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
+
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
+
+  // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
   static final String ERROR_DATE = "2010-10-10T10:10:10Z";
+  static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE = "2001-01-01T01:01:01Z";
+  static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
   static final String THREE_INSTANCES_DATE = "2018-12-12T12:12:12Z";
 
+  // Instance UUID
+  private static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
+  private static final String INTERNAL_SERVER_ERROR_INSTANCE_ID = "6b4ae089-e1ee-431f-af83-e1133f8e3da0";
+
+  // Paths to json files
   private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
   private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
   private static final String INSTANCES_2 = "/instance-storage/instances/instances_2.json";
   private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
+  private static final String INSTANCES_4 = "/instance-storage/instances/instances_4.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
 
 
@@ -57,7 +68,13 @@ public class OkapiMockServer {
 
   private void handleMarcJsonInventoryStorageResponse(RoutingContext ctx) {
     String instanceId = ctx.request().getParam("instanceId");
-    successResponse(ctx, getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId)));
+    if (instanceId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
+      failureResponse(ctx, 500, "Internal Server Error");
+    } else if (instanceId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
+      failureResponse(ctx, 404, "Record not found");
+    } else {
+      successResponse(ctx, getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId)));
+    }
   }
 
   public void start(VertxTestContext context) {
@@ -83,8 +100,12 @@ public class OkapiMockServer {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_DATE)) {
         failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_2));
       } else if (query.contains(THREE_INSTANCES_DATE)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_3));
+      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_4));
       } else {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_10));
       }
