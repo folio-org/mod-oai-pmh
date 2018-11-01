@@ -28,9 +28,11 @@ public class OkapiMockServer {
   static final String ERROR_IDENTIFIER = "please-return-error";
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
   static final String ERROR_DATE = "2010-10-10T10:10:10Z";
+  static final String THREE_INSTANCES_DATE = "2018-12-12T12:12:12Z";
 
-  private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
   private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
+  private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
+  private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
 
   private final int port;
@@ -46,7 +48,14 @@ public class OkapiMockServer {
     router.route().handler(BodyHandler.create());
     router.route(HttpMethod.GET, "/instance-storage/instances")
           .handler(this::handleInstancesInventoryStorageResponse);
+    router.route(HttpMethod.GET, "/instance-storage/instances/:instanceId/source-record/marc-json")
+          .handler(this::handleMarcJsonInventoryStorageResponse);
     return router;
+  }
+
+  private void handleMarcJsonInventoryStorageResponse(RoutingContext ctx) {
+    String instanceId = ctx.request().getParam("instanceId");
+    successResponse(ctx, getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId)));
   }
 
   public void start(VertxTestContext context) {
@@ -62,16 +71,18 @@ public class OkapiMockServer {
     String query = ctx.request().getParam("query");
     if (query != null)
     {
-      if (query.endsWith("id=" + EXISTING_IDENTIFIER)) {
+      if (query.endsWith("id==" + EXISTING_IDENTIFIER)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_1));
-      } else if (query.endsWith("id=" + NON_EXISTING_IDENTIFIER)) {
+      } else if (query.endsWith("id==" + NON_EXISTING_IDENTIFIER)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
       } else if (query.contains(NO_RECORDS_DATE)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
-      } else if (query.endsWith("id=" + ERROR_IDENTIFIER)) {
+      } else if (query.endsWith("id==" + ERROR_IDENTIFIER)) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_DATE)) {
         failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(THREE_INSTANCES_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_3));
       } else {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_10));
       }

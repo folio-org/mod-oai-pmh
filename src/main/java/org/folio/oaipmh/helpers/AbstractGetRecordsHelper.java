@@ -7,159 +7,125 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse.*;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
-import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-
-  private static final Logger logger = Logger.getLogger(AbstractGetRecordsHelper.class);
-
-  private static final String GENERIC_ERROR = "Error happened while processing GetRecord verb " +
-    "request";
-
-
+  protected final Logger logger = Logger.getLogger(getClass());
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      // 1. Validate request
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildOaiResponse(request).withErrors(errors);
-        future.complete(buildNoRecordsResponse(oai));
+        OAIPMH oai = buildBaseResponse(request.getOaiRequest()).withErrors(errors);
+        future.complete(buildResponseWithErrors(oai));
         return future;
       }
 
-      final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
+      final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildItemsEndpoint(request);
-      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
-        .thenApply(response -> buildRecords(request, response))
-        .thenCompose(records -> {
-        if (records == null) {
-          return buildNoRecordsFoundOaiResponse(request);
-        } else {
-          // 4. Now we need to get marc data for each instance and update record with metadata
-          Map<String, String> okapiHeaders = request.getOkapiHeaders();
-          HttpClientInterface sourceHttpClient = getOkapiClient(okapiHeaders);
-          List<CompletableFuture<Void>> cfs = new ArrayList<>();
-          records.forEach((id, record) -> cfs.add(buildOaiMetadata(sourceHttpClient, request,
-            id).thenAccept(metadataType -> records.get(id).withMetadata(metadataType))));
-          CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(cfs.toArray(new
-            CompletableFuture[0]));
-          return allDoneFuture.thenApply(v -> buildSuccessResponse(addRecordsToOaiResponce
-            (buildOaiResponse(request), records.values())));
-        }
-        }).thenAccept(future::complete)
-    .exceptionally(e -> {
-        future.completeExceptionally(e);
-        return null;
-      });
-  } catch (Exception e) {
-    handleException(future, e);
-  }
-    return future;
-}
 
-  protected abstract OAIPMH addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records);
+      httpClient
+        .request(instanceEndpoint, request.getOkapiHeaders(), false)
+        .thenCompose(response -> buildRecordsResponse(httpClient, request, response))
+        .thenAccept(value -> {
+          httpClient.closeClient();
+          future.complete(value);
+        })
+        .exceptionally(e -> {
+          httpClient.closeClient();
+          handleException(future, e);
+          return null;
+        });
+    } catch (Exception e) {
+      handleException(future, e);
+    }
+    return future;
+  }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(Request request) {
-    OAIPMH oaipmh = buildOaiResponse(request).withErrors(createNoRecordsFoundError());
-    return VertxCompletableFuture.completedFuture(respond404WithApplicationXml(ResponseHelper
-      .getInstance().writeToString(oaipmh)));
+    OAIPMH oaipmh = buildBaseResponse(request.getOaiRequest()).withErrors(createNoRecordsFoundError());
+    return completedFuture(buildResponseWithErrors(oaipmh));
   }
 
-
-  private CompletableFuture<MetadataType> buildOaiMetadata(HttpClientInterface
-                                                         httpClient, Request request, String id) {
+  private CompletableFuture<MetadataType> getOaiMetadata(HttpClientInterface httpClient, Request request, String id) {
     try {
-      return httpClient.request(getSourceEndpoint(id), request.getOkapiHeaders(), false)
-        .thenApplyAsync(response -> buildOaiMetadata(request, response));
+      String metadataEndpoint = storageHelper.getMetadataEndpoint(id);
+      return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
+                       .thenApplyAsync(response -> buildOaiMetadata(request, response));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
-  private Response buildNoRecordsResponse(OAIPMH oai) {
-    String responseBody = getOaiResponseAsString(oai);
+  private CompletableFuture<Response> buildRecordsResponse(HttpClientInterface httpClient, Request request, org.folio.rest.tools.client.Response instancesResponse) {
+    requiresSuccessStorageResponse(instancesResponse);
 
-    // According to oai-pmh.raml the service will return different http codes depending on the error
-    Set<OAIPMHerrorcodeType> errorCodes = oai.getErrors()
-      .stream()
-      .map(OAIPMHerrorType::getCode)
-      .collect(Collectors.toSet());
-    if (errorCodes.stream()
-      .anyMatch(code -> (code == BAD_ARGUMENT || code == BAD_RESUMPTION_TOKEN))) {
-      return respond400WithApplicationXml(responseBody);
-    } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      return respond422WithApplicationXml(responseBody);
+    final Map<String, RecordType> records = buildRecords(request, instancesResponse);
+
+    if (records.isEmpty()) {
+      return buildNoRecordsFoundOaiResponse(request);
+    } else {
+      List<CompletableFuture<Void>> cfs = new ArrayList<>();
+
+      records.forEach((id, record) -> cfs.add(getOaiMetadata(httpClient, request, id).thenAccept(record::withMetadata)));
+
+      return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+              .thenApply(v -> {
+                OAIPMH oaipmh = buildBaseResponse(request.getOaiRequest());
+                addRecordsToOaiResponce(oaipmh, records.values());
+                return buildSuccessResponse(oaipmh);
+              });
     }
-    return respond404WithApplicationXml(responseBody);
   }
 
-
-  private String getOaiResponseAsString(OAIPMH oai) {
-    return ResponseHelper.getInstance().writeToString(oai);
-  }
-
-  private OAIPMH buildOaiResponse(Request request) {
-    return buildBaseResponse(request.getOaiRequest().withVerb(GET_RECORD));
-  }
-
-  private String getSourceEndpoint(String id) {
-    return String.format("/instance-storage/instances/%s/source-record/marc-json", id);
-  }
-
-  private Map<String, RecordType> buildRecords(Request request, org.folio.rest.tools.client
-    .Response sourceResponse) {
-    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
-      logger.error("No instances found. Service responded with error: " + sourceResponse.getError());
-      // The storage service could not return instances so we have to send 500 back to client
-      throw new IllegalStateException(sourceResponse.getError().toString());
-    }
-    JsonArray instances = storageHelper.getItems(sourceResponse.getBody());
+  /**
+   * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
+   * otherwise empty map is returned
+   */
+  private Map<String, RecordType> buildRecords(Request request, org.folio.rest.tools.client.Response instancesResponse) {
+    Map<String, RecordType> records = Collections.emptyMap();
+    JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     if (instances != null && !instances.isEmpty()) {
-      Map<String, RecordType> records = new HashMap<>();
-      String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String identifierPrefix = getIdentifierPrefix(tenantId, request.getIdentifierPrefix());
+      records = new HashMap<>();
+      String identifierPrefix = request.getIdentifierPrefix();
+
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String id = storageHelper.getItemId(instance);
         RecordType record = new RecordType().withHeader(createHeader(instance).withIdentifier(identifierPrefix + id));
         records.put(id, record);
       }
-      return records;
     }
-    return null;
+    return records;
   }
 
-  private MetadataType buildOaiMetadata(Request request, org.folio.rest.tools.client.Response
-    sourceResponse) {
-    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
-      logger.error("Source not found. Service responded with error: " + sourceResponse.getError());
-      throw new IllegalStateException(sourceResponse.getError().toString());
-    }
+  /**
+   * Builds {{@link Map} if there are instances or {@code null}
+   * @param sourceResponse the {@link JsonObject} which contains record metadata
+   * @return OAI record metadata
+   */
+  private MetadataType buildOaiMetadata(Request request, org.folio.rest.tools.client.Response sourceResponse) {
+    requiresSuccessStorageResponse(sourceResponse);
+
     JsonObject source = sourceResponse.getBody();
     MetadataType metadata = new MetadataType();
     MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
@@ -167,15 +133,26 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return metadata;
   }
 
-  private Response buildSuccessResponse(OAIPMH oai) {
-    return respond200WithApplicationXml(getOaiResponseAsString(oai));
+  /**
+   * In case the storage service could not return instances we have to send 500 back to client.
+   * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
+   * @param sourceResponse response from the storage
+   */
+  private void requiresSuccessStorageResponse(org.folio.rest.tools.client.Response sourceResponse) {
+    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
+      logger.error("Source not found. Service responded with error: " + sourceResponse.getError());
+      throw new IllegalStateException(sourceResponse.getError().toString());
+    }
   }
 
   private void handleException(CompletableFuture<Response> future, Throwable e) {
-    logger.error(GENERIC_ERROR, e);
+    logger.error(GENERIC_ERROR_MESSAGE, e);
     future.completeExceptionally(e);
   }
 
-  abstract List<OAIPMHerrorType> validateRequest(Request request);
+  protected abstract Response buildSuccessResponse(OAIPMH oai);
+  protected abstract Response buildResponseWithErrors(OAIPMH oai);
+  protected abstract List<OAIPMHerrorType> validateRequest(Request request);
+  protected abstract OAIPMH addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records);
 
 }

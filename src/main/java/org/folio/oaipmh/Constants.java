@@ -2,6 +2,10 @@ package org.folio.oaipmh;
 
 public final class Constants {
 
+  private Constants() {
+    throw new IllegalStateException("This class holds constants only");
+  }
+
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String IDENTIFIER_PREFIX = "identifierPrefix";
 
@@ -12,6 +16,7 @@ public final class Constants {
   public static final String SET_PARAM = "set";
   public static final String UNTIL_PARAM = "until";
 
+  public static final String GENERIC_ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
   public static final String CANNOT_DISSEMINATE_FORMAT_ERROR = "The value '%s' of the metadataPrefix argument is not supported by the repository";
   public static final String RESUMPTION_TOKEN_FORMAT_ERROR = "The value '%s' of the resumptionToken argument is invalid";
   public static final String LIST_NO_REQUIRED_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix nor resumptionToken";

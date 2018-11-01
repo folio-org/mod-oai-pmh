@@ -42,9 +42,9 @@ public interface InstancesStorageHelper {
   String buildItemsEndpoint(Request request) throws UnsupportedEncodingException;
 
   /**
-   * Gets endpoint to search for an instance by identifier
+   * Gets endpoint to search for record metadata by identifier
    * @param id instance identifier
-   * @return endpoint to search for an instance by identifier
+   * @return endpoint to get metadata by identifier
    */
-  String getInstanceEndpoint(String id);
+  String getMetadataEndpoint(String id);
 }

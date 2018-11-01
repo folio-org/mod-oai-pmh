@@ -81,6 +81,10 @@ public class Request {
     return oaiRequest.getIdentifier();
   }
 
+  public String getStorageIdentifier() {
+    return getIdentifier().substring(getIdentifierPrefix().length()) ;
+  }
+
   public String getFrom() {
     return oaiRequest.getFrom();
   }

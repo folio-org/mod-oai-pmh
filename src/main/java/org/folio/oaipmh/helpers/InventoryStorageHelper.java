@@ -72,7 +72,7 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     queryBuilder.source("MARC-JSON");
     if (isNotEmpty(request.getIdentifier())) {
-      queryBuilder.and().identifier(AbstractHelper.extractStorageIdentifier(request));
+      queryBuilder.and().identifier(request.getStorageIdentifier());
     } else if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       queryBuilder
         .and()
@@ -82,8 +82,13 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
     return "/instance-storage/instances" + queryBuilder.build() + "&limit=" + RECORDS_LIMIT;
   }
 
+  /**
+   * Gets endpoint to search for record metadata by identifier
+   * @param id instance identifier
+   * @return endpoint to get metadata by identifier
+   */
   @Override
-  public String getInstanceEndpoint(String id) {
-    return "/instance-storage/instances?query=source==MARC+and+id=" + id;
+  public String getMetadataEndpoint(String id){
+    return String.format("/instance-storage/instances/%s/source-record/marc-json", id);
   }
 }

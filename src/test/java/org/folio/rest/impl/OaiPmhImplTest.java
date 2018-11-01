@@ -53,6 +53,7 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
+import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -184,36 +185,39 @@ class OaiPmhImplTest {
     oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
   }
 
-  @Test
-  void getOaiIdentifiersWithDateRange() throws JAXBException {
-    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS);
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiIdentifiersWithDateRange(MetadataPrefix prefix) throws JAXBException {
+    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS, prefix);
 
     assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
-    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(3));
 
     oaipmh.getListIdentifiers()
           .getHeaders()
           .forEach(this::verifyHeader);
   }
 
-  @Test
-  void getOaiRecordsWithDateRange() throws JAXBException {
-    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_RECORDS);
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiRecordsWithDateRange(MetadataPrefix prefix) throws JAXBException {
+    OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_RECORDS, prefix);
 
     assertThat(oaipmh.getListRecords(), is(notNullValue()));
-    assertThat(oaipmh.getListRecords().getRecords(), hasSize(10));
+    assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
 
     oaipmh.getListRecords()
           .getRecords()
-          .stream()
-          .map(RecordType::getHeader)
-          .forEach(this::verifyHeader);
+          .forEach(record -> {
+            assertThat(record.getMetadata(), is(notNullValue()));
+            verifyHeader(record.getHeader());
+          });
   }
 
-  private OAIPMH verifyOaiListVerbWithDateRange(VerbType verb) throws JAXBException {
-    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+  private OAIPMH verifyOaiListVerbWithDateRange(VerbType verb, MetadataPrefix prefix) throws JAXBException {
+    String metadataPrefix = prefix.getName();
     String from = "2018-09-19T02:52:08Z";
-    String until = "2018-10-20T02:03:04Z";
+    String until = THREE_INSTANCES_DATE;
     String set = "all";
 
     RequestSpecification request = createBaseRequest(basePaths.get(verb))

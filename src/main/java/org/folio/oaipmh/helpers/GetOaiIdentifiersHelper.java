@@ -9,7 +9,6 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.Response;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -18,12 +17,8 @@ import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse.respond200WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse.respond400WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse.respond404WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse.respond422WithApplicationXml;
+import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -62,6 +57,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         })
         .thenAccept(future::complete)
         .exceptionally(e -> {
+          logger.error(GENERIC_ERROR, e);
           future.completeExceptionally(e);
           return null;
         });
@@ -81,21 +77,17 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     String responseBody = ResponseHelper.getInstance().writeToString(oai);
 
     // According to oai-pmh.raml the service will return different http codes depending on the error
-    Set<OAIPMHerrorcodeType> errorCodes = oai.getErrors()
-                                             .stream()
-                                             .map(OAIPMHerrorType::getCode)
-                                             .collect(Collectors.toSet());
-    if (errorCodes.stream()
-                  .anyMatch(code -> (code == BAD_ARGUMENT || code == BAD_RESUMPTION_TOKEN))) {
-      return respond400WithApplicationXml(responseBody);
+    Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);
+    if (errorCodes.contains(BAD_ARGUMENT) || errorCodes.contains(BAD_RESUMPTION_TOKEN)) {
+      return GetOaiIdentifiersResponse.respond400WithApplicationXml(responseBody);
     } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      return respond422WithApplicationXml(responseBody);
+      return GetOaiIdentifiersResponse.respond422WithApplicationXml(responseBody);
     }
-    return respond404WithApplicationXml(responseBody);
+    return GetOaiIdentifiersResponse.respond404WithApplicationXml(responseBody);
   }
 
   private javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
-    return respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
+    return GetOaiIdentifiersResponse.respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
   }
 
   private OAIPMH buildOaiResponse(Request request) {
@@ -118,8 +110,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     if (instances != null && !instances.isEmpty()) {
       ListIdentifiersType identifiers = new ListIdentifiersType();
-      String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String identifierPrefix = getIdentifierPrefix(tenantId, request.getIdentifierPrefix());
+      String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
                .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
                .forEach(identifiers::withHeaders);

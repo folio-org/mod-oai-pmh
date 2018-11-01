@@ -14,6 +14,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.SetType;
 
@@ -25,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -158,18 +160,7 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   protected static boolean validateIdentifier(Request request) {
-    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return StringUtils.startsWith(request.getIdentifier(), getIdentifierPrefix(tenantId, request.getIdentifierPrefix()));
-  }
-
-  /**
-   * The method assumes that identifier already validated and has correct format
-   * @param request {@link Request} to get identifier and tenant from
-   * @return storage identifier
-   */
-  public static String extractStorageIdentifier(Request request) {
-    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return request.getIdentifier().substring(getIdentifierPrefix(tenantId, request.getIdentifierPrefix()).length()) ;
+    return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
@@ -199,15 +190,19 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Return the repository name.
-   * For now, it is based on System property, but later it might be pulled from mod-configuration.
-   *
-   * @return repository name
+   * Creates Okapi client getting Okapi URL from headers. The connection will be closed automatically if idle
    */
   protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders) {
+    return getOkapiClient(okapiHeaders, true);
+  }
+
+  /**
+   * Creates Okapi client getting Okapi URL from headers.
+   */
+  protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders, boolean autoCloseConnections) {
     String tenantId = TenantTool.tenantId(okapiHeaders);
     String okapiURL = okapiHeaders.get(XOkapiHeaders.URL);
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId, true);
+    return HttpClientFactory.getHttpClient(okapiURL, tenantId, autoCloseConnections);
   }
 
   /**
@@ -253,8 +248,17 @@ public abstract class AbstractHelper implements VerbHelper {
     return identifierPrefix + storageHelper.getItemId(instance);
   }
 
-  protected static String getIdentifierPrefix(String tenantId, String identifierPrefix) {
-    return identifierPrefix + tenantId + "/";
+  /**
+   * The error codes required to define the http code to be returned in the http response
+   * @param oai OAIPMH response with errors
+   * @return set of error codes
+   */
+  protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
+    // According to oai-pmh.raml the service will return different http codes depending on the error
+    return oai.getErrors()
+              .stream()
+              .map(OAIPMHerrorType::getCode)
+              .collect(Collectors.toSet());
   }
 
   private List<String> getSupportedSetSpecs() {
