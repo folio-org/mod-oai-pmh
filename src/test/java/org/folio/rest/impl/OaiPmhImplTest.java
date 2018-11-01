@@ -28,7 +28,6 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.VerbType;
 
 import javax.xml.bind.JAXBException;
@@ -406,6 +405,44 @@ class OaiPmhImplTest {
     OAIPMHerrorType error = oaipmh.getErrors().get(0);
     assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
     assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) throws JAXBException {
+    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH)
+      .with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    // The dates are of invalid format so they are not present in request
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    assertThat(oaipmh.getListRecords(), is(notNullValue()));
+    assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
+
+    oaipmh.getListRecords()
+          .getRecords()
+          .forEach(record -> {
+            assertThat(record.getMetadata(), is(notNullValue()));
+            verifyHeader(record.getHeader());
+          });
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH)
+      .with()
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
+      .param(UNTIL_PARAM, OkapiMockServer.RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE);
+
+    verify500WithErrorMessage(request);
   }
 
   @ParameterizedTest

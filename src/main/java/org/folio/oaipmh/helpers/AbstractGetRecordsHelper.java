@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
@@ -76,7 +77,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<Response> buildRecordsResponse(HttpClientInterface httpClient, Request request, org.folio.rest.tools.client.Response instancesResponse) {
+  private CompletableFuture<Response> buildRecordsResponse(HttpClientInterface httpClient, Request request,
+                                                           org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
     final Map<String, RecordType> records = buildRecords(request, instancesResponse);
@@ -91,7 +93,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
               .thenApply(v -> {
                 OAIPMH oaipmh = buildBaseResponse(request.getOaiRequest());
-                addRecordsToOaiResponce(oaipmh, records.values());
+
+                // Return only records with metadata populated
+                addRecordsToOaiResponce(oaipmh, records.values().stream()
+                                                       .filter(record -> record.getMetadata() != null)
+                                                       .collect(Collectors.toList()));
                 return buildSuccessResponse(oaipmh);
               });
     }
@@ -124,7 +130,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @return OAI record metadata
    */
   private MetadataType buildOaiMetadata(Request request, org.folio.rest.tools.client.Response sourceResponse) {
-    requiresSuccessStorageResponse(sourceResponse);
+    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
+      logger.error("Record not found. Service responded with error: " + sourceResponse.getError());
+
+      // If no record found (404 code), we need to skip such record for now (see MODOAIPMH-12)
+      if (sourceResponse.getCode() == 404) {
+        return null;
+      }
+
+      // the rest of the errors we cannot handle
+      throw new IllegalStateException(sourceResponse.getError().toString());
+    }
 
     JsonObject source = sourceResponse.getBody();
     MetadataType metadata = new MetadataType();
