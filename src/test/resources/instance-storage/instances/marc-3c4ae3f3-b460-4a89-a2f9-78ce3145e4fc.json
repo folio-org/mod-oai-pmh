@@ -18,8 +18,8 @@
     },
     {
       "035": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "(DE-599)GBV858092093"
@@ -29,8 +29,8 @@
     },
     {
       "040": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "b": "ger"
@@ -47,7 +47,7 @@
     {
       "041": {
         "ind1": "0",
-        "ind2": "",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "eng"
@@ -58,7 +58,7 @@
     {
       "100": {
         "ind1": "1",
-        "ind2": "",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "Ris, Robert"
@@ -114,8 +114,8 @@
     },
     {
       "336": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "Computerprogramm"
@@ -131,8 +131,8 @@
     },
     {
       "337": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "Computermedien"
@@ -148,8 +148,8 @@
     },
     {
       "338": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "Computerdisk"
@@ -166,7 +166,7 @@
     {
       "490": {
         "ind1": "0",
-        "ind2": "",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "Fritztrainer"
@@ -197,7 +197,7 @@
     {
       "710": {
         "ind1": "2",
-        "ind2": "",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "ChessBase GmbH"
@@ -222,8 +222,8 @@
     },
     {
       "900": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "a": "GBV"
@@ -236,8 +236,8 @@
     },
     {
       "954": {
-        "ind1": "",
-        "ind2": "",
+        "ind1": "\\",
+        "ind2": "\\",
         "subfields": [
           {
             "0": "SUB+Uni Hamburg <18>"
