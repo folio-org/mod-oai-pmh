@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -15,7 +14,6 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.SetType;
 
 import java.time.Instant;
@@ -33,7 +31,6 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
@@ -63,11 +60,11 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
-  protected OAIPMH buildBaseResponse(RequestType request) {
+  protected OAIPMH buildBaseResponse(Request request) {
     return new OAIPMH()
       // According to spec the nanoseconds should not be used so truncate to seconds
       .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.withValue(getBaseURL()));
+      .withRequest(request.getOaiRequest().withValue(getBaseURL()));
   }
 
   /**

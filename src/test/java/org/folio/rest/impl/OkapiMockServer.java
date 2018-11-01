@@ -32,8 +32,10 @@ public class OkapiMockServer {
 
   private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
   private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
+  private static final String INSTANCES_2 = "/instance-storage/instances/instances_2.json";
   private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
+
 
   private final int port;
   private final Vertx vertx;
@@ -72,7 +74,7 @@ public class OkapiMockServer {
     if (query != null)
     {
       if (query.endsWith("id==" + EXISTING_IDENTIFIER)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1));
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_2));
       } else if (query.endsWith("id==" + NON_EXISTING_IDENTIFIER)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
       } else if (query.contains(NO_RECORDS_DATE)) {

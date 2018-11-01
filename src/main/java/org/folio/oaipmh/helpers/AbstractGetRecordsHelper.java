@@ -35,7 +35,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     try {
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildBaseResponse(request.getOaiRequest()).withErrors(errors);
+        OAIPMH oai = buildBaseResponse(request).withErrors(errors);
         future.complete(buildResponseWithErrors(oai));
         return future;
       }
@@ -62,7 +62,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(Request request) {
-    OAIPMH oaipmh = buildBaseResponse(request.getOaiRequest()).withErrors(createNoRecordsFoundError());
+    OAIPMH oaipmh = buildBaseResponse(request).withErrors(createNoRecordsFoundError());
     return completedFuture(buildResponseWithErrors(oaipmh));
   }
 
@@ -90,7 +90,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
               .thenApply(v -> {
-                OAIPMH oaipmh = buildBaseResponse(request.getOaiRequest());
+                OAIPMH oaipmh = buildBaseResponse(request);
                 addRecordsToOaiResponce(oaipmh, records.values());
                 return buildSuccessResponse(oaipmh);
               });
@@ -111,7 +111,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String id = storageHelper.getItemId(instance);
-        RecordType record = new RecordType().withHeader(createHeader(instance).withIdentifier(identifierPrefix + id));
+        RecordType record = new RecordType()
+          .withHeader(createHeader(instance)
+          .withIdentifier(identifierPrefix + id));
         records.put(id, record);
       }
     }
@@ -153,6 +155,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract Response buildSuccessResponse(OAIPMH oai);
   protected abstract Response buildResponseWithErrors(OAIPMH oai);
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
-  protected abstract OAIPMH addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records);
+  protected abstract void addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records);
 
 }

@@ -40,16 +40,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
-import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.Constants.*;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
 import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
@@ -152,11 +143,13 @@ class OaiPmhImplTest {
     testContext.completeNow();
   }
 
-  //@Test
-  void getOaiRecordsById(VertxTestContext testContext) throws JAXBException {
+  @Test
+  void getOaiRecordsByIdInvalidIdentifier(VertxTestContext testContext) throws JAXBException {
     RequestSpecification requestSpecification = createBaseRequest(GET_RECORD_PATH)
-      .pathParam("identifier", "someId");
-    String response = verifyWithCodeWithXml(requestSpecification, 422);
+      .pathParam("identifier", "someId")
+      .with()
+      .param(METADATA_PREFIX_PARAM,"oai_dc");
+    String response = verifyWithCodeWithXml(requestSpecification, 404);
 
     // Check that error message is returned
     assertThat(response, is(notNullValue()));
@@ -240,13 +233,15 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS"})
   void getOaiListVerbWithoutParams(VerbType verb) throws JAXBException {
     List<OAIPMHerrorType> errors = verifyResponseWithErrors(createBaseRequest(basePaths.get(verb)), verb, 400, 1).getErrors();
     OAIPMHerrorType error = errors.get(0);
     assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
     assertThat(error.getValue(), equalTo(LIST_NO_REQUIRED_PARAM_ERROR));
   }
+
+
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
@@ -417,6 +412,35 @@ class OaiPmhImplTest {
         .param(UNTIL_PARAM, OkapiMockServer.ERROR_DATE);
 
     verify500WithErrorMessage(request);
+  }
+
+  @Test
+  void getOaiGetRecordVerbWithoutMetadataPrefix(VertxTestContext testContext) throws JAXBException {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest(GET_RECORD_PATH)
+      .with().pathParam(IDENTIFIER_PARAM, identifier);
+    List<OAIPMHerrorType> errors = verifyResponseWithErrors(request,
+      GET_RECORD, 400, 1).getErrors();
+    OAIPMHerrorType error = errors.get(0);
+    assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
+    assertThat(error.getValue(), equalTo(RECORD_NO_REQUIRED_PARAM_ERROR));
+
+    testContext.completeNow();
+  }
+
+  @Test
+  void getOaiGetRecordVerbWithExistingIdentifier(VertxTestContext testContext) throws JAXBException {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest(GET_RECORD_PATH)
+      .with()
+      .pathParam(IDENTIFIER_PARAM, identifier)
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC_XML.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+
+    testContext.completeNow();
   }
 
   @Test

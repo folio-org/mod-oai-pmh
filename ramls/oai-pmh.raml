@@ -66,6 +66,14 @@ resourceTypes:
                 example:
                   strict: false
                   value: !include examples/record.sample
+          400:
+            description: "Bad request, e.g. malformed query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
+            body:
+              application/xml:
+                #schema: oai-pmh
+                example:
+                  strict: false
+                  value: !include examples/metadata_prefix_error.sample
           404:
             description: "Item with a given ID and selective harvesting params (if any) not found"
             body:
@@ -97,6 +105,7 @@ resourceTypes:
               example:
                 strict: false
                 value: !include examples/no_records_error.sample
+
 
   /metadata_formats:
     displayName: MetadataFormats

@@ -22,7 +22,6 @@ import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
-import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
 
 public class GetOaiIdentifiersHelper extends AbstractHelper {
 
@@ -36,7 +35,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       // 1. Validate request
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildOaiResponse(request).withErrors(errors);
+        OAIPMH oai = buildBaseResponse(request).withErrors(errors);
         future.complete(buildNoRecordsResponse(oai));
         return future;
       }
@@ -51,7 +50,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
           if (identifiers == null) {
             return buildNoRecordsResponse(buildNoRecordsFoundOaiResponse(request));
           } else {
-            return buildSuccessResponse(buildOaiResponse(request)
+            return buildSuccessResponse(buildBaseResponse(request)
               .withListIdentifiers(identifiers));
           }
         })
@@ -70,7 +69,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
   }
 
   private OAIPMH buildNoRecordsFoundOaiResponse(Request request) {
-    return buildOaiResponse(request).withErrors(createNoRecordsFoundError());
+    return buildBaseResponse(request).withErrors(createNoRecordsFoundError());
   }
 
   private javax.ws.rs.core.Response buildNoRecordsResponse(OAIPMH oai) {
@@ -88,10 +87,6 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
   private javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
     return GetOaiIdentifiersResponse.respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
-  }
-
-  private OAIPMH buildOaiResponse(Request request) {
-    return buildBaseResponse(request.getOaiRequest().withVerb(LIST_IDENTIFIERS));
   }
 
   /**

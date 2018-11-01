@@ -25,4 +25,5 @@ public final class Constants {
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
   public static final String RECORD_NO_REQUIRED_PARAM_ERROR ="The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
+  public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "%s has the structure of an invalid identifier";
 }

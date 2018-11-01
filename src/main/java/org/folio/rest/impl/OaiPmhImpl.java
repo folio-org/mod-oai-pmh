@@ -59,7 +59,7 @@ public class OaiPmhImpl implements Oai {
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                              .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                              .build();
-
+    request.getOaiRequest().setVerb(LIST_RECORDS);
      HELPERS.get(LIST_RECORDS)
        .handle(request, vertxContext)
        .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)))
@@ -79,7 +79,7 @@ public class OaiPmhImpl implements Oai {
                        .metadataPrefix(metadataPrefix)
                        .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                        .build();
-
+      request.getOaiRequest().setVerb(GET_RECORD);
       HELPERS.get(GET_RECORD)
         .handle(request, vertxContext)
         .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
@@ -101,7 +101,7 @@ public class OaiPmhImpl implements Oai {
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                              .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                              .build();
-
+    request.getOaiRequest().setVerb(LIST_IDENTIFIERS);
     HELPERS.get(LIST_IDENTIFIERS)
            .handle(request, vertxContext)
            .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
@@ -120,6 +120,7 @@ public class OaiPmhImpl implements Oai {
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                              .okapiHeaders(okapiHeaders)
                              .build();
+    request.getOaiRequest().withVerb(LIST_METADATA_FORMATS);
     VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
     getRepositoryInfoHelper.handle(request, vertxContext)
       .thenAccept(response -> {
@@ -140,6 +141,7 @@ public class OaiPmhImpl implements Oai {
       .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
       .resumptionToken(resumptionToken)
       .build();
+      request.getOaiRequest().setVerb(LIST_SETS);
 
     VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
     getSetsHelper.handle(request, vertxContext)
@@ -159,6 +161,7 @@ public class OaiPmhImpl implements Oai {
     Request request = Request.builder()
       .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
       .okapiHeaders(okapiHeaders).build();
+      request.getOaiRequest().setVerb(IDENTIFY);
 
     VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
     getRepositoryInfoHelper.handle(request, vertxContext)

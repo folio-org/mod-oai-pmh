@@ -3,12 +3,12 @@ package org.folio.oaipmh.helpers;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.GetRecordType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.RequestType;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -17,21 +17,23 @@ import java.util.List;
 import java.util.Set;
 
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.RECORD_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond200WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond404WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond422WithApplicationXml;
+import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsResponse.respond400WithApplicationXml;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
-import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
-
+    if (!validateIdentifier(request)) {
+      errors.add(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue
+        (String.format(INVALID_IDENTIFIER_ERROR_MESSAGE, request.getIdentifier())));
+    }
     if (request.getMetadataPrefix() != null) {
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
@@ -45,8 +47,8 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected OAIPMH addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records) {
-    return oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
+  protected void addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records) {
+    oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
   }
 
   @Override
@@ -55,10 +57,13 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
     // According to oai-pmh.raml the service will return different http codes depending on the error
     Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);
-    if (errorCodes.contains(NO_RECORDS_MATCH)) {
-      return respond404WithApplicationXml(responseBody);
+    if (errorCodes.stream()
+      .anyMatch(code -> (code == BAD_ARGUMENT))) {
+      return respond400WithApplicationXml(responseBody);
+    } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
+      return Oai.GetOaiRecordsResponse.respond422WithApplicationXml(responseBody);
     }
-    return respond422WithApplicationXml(responseBody);
+    return Oai.GetOaiRecordsResponse.respond404WithApplicationXml(responseBody);
   }
 
   @Override
@@ -66,8 +71,4 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
     return respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
   }
 
-  @Override
-  protected OAIPMH buildBaseResponse(RequestType request) {
-    return super.buildBaseResponse(request.withVerb(GET_RECORD));
-  }
 }

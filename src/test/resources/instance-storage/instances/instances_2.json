@@ -1,0 +1,66 @@
+{
+  "instances": [
+    {
+      "id": "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc",
+      "hrid": "in000007",
+      "source": "MARC",
+      "title": "The chess player’s mating guide Computer Datei Robert Ris",
+      "alternativeTitles": [],
+      "editions": [],
+      "series": [
+        "Fritztrainer Tactics"
+      ],
+      "identifiers": [
+        {
+          "value": "858092093",
+          "identifierTypeId": "5d164f4b-0b15-4e42-ae75-cfcf85318ad9"
+        },
+        {
+          "value": "(DE-599)GBV858092093",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Ris, Robert",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "ChessBase GmbH Hamburg",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        }
+      ],
+      "subjects": [
+        "DVD-ROM"
+      ],
+      "classifications": [],
+      "publication": [
+        {
+          "publisher": "Chessbase GmbH",
+          "place": "Hamburg",
+          "dateOfPublication": "[2016]-"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "electronicAccess": [],
+      "instanceTypeId": "c208544b-9e28-44fa-a13c-f4093d72f798",
+      "instanceFormatIds": [],
+      "physicalDescriptions": [],
+      "languages": [
+        "eng"
+      ],
+      "notes": [],
+      "statisticalCodes": [],
+      "sourceRecordFormat": "MARC-JSON",
+      "metadata": {
+        "createdDate": "2018-10-12T06:23:56.465+0000",
+        "createdByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de",
+        "updatedDate": "2018-10-12T06:23:56.465+0000",
+        "updatedByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de"
+      },
+      "holdingsRecords2": []
+    }
+  ],
+  "totalRecords": 1
+}

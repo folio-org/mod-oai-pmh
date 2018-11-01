@@ -7,7 +7,6 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.RequestType;
 
 import java.util.Collection;
 import java.util.List;
@@ -17,7 +16,6 @@ import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsResponse;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
-import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
@@ -27,8 +25,8 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected OAIPMH addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records) {
-    return oaipmh.withListRecords(new ListRecordsType().withRecords(records));
+  protected void addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records) {
+    oaipmh.withListRecords(new ListRecordsType().withRecords(records));
   }
 
   @Override
@@ -50,8 +48,4 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
     return GetOaiRecordsResponse.respond404WithApplicationXml(responseBody);
   }
 
-  @Override
-  protected OAIPMH buildBaseResponse(RequestType request) {
-    return super.buildBaseResponse(request.withVerb(LIST_RECORDS));
-  }
 }

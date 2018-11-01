@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
 
 
 /**
@@ -37,7 +36,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(IDENTIFY))
+      OAIPMH oai = buildBaseResponse(request)
         .withIdentify(new IdentifyType()
           .withRepositoryName(getRepositoryName(request.getOkapiHeaders()))
           .withBaseURL(getBaseURL())
