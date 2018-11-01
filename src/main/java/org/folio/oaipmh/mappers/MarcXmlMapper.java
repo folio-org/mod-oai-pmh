@@ -11,6 +11,7 @@ import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcWriter;
 import org.marc4j.MarcXmlWriter;
+import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
 import org.w3c.dom.Node;
 
@@ -33,6 +34,19 @@ public class MarcXmlMapper implements Mapper {
       MarcWriter marcXmlWriter = new MarcXmlWriter(domResult);
       while (marcJsonReader.hasNext()) {
         Record record = marcJsonReader.next();
+
+        /*
+         * Fix indicators which comes like "ind1": "\\" in the source string and values are converted to '\'
+         * which contradicts to the MARC21slim.xsd schema. So replacing unexpected char by space
+         */
+        for (DataField data : record.getDataFields()) {
+          if (data.getIndicator1() == '\\') {
+            data.setIndicator1(' ');
+          }
+          if (data.getIndicator2() == '\\') {
+            data.setIndicator2(' ');
+          }
+        }
         marcXmlWriter.write(record);
       }
       marcXmlWriter.close();
