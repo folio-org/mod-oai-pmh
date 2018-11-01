@@ -115,7 +115,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     return ResponseHelper.getInstance().writeToString(
       buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
-          .withValue(String.format("%s has the structure of a valid identifier, but it maps to no known item", request.getIdentifier()))
+          .withValue(String.format(Constants.RECORD_NOT_FOUND_ERROR, request.getIdentifier()))
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
   }
 
@@ -129,7 +129,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
           .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
-          .withValue(String.format(Constants.INVALID_IDENTIFIER_ERROR_MESSAGE, request.getIdentifier()))));
+          .withValue(Constants.INVALID_IDENTIFIER_ERROR_MESSAGE)));
   }
 
   /**

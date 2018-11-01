@@ -82,7 +82,7 @@ public abstract class AbstractHelper implements VerbHelper {
     if (hasResumptionToken) {
       // At the moment the 'resumptionToken' is not supported so any format is considered invalid so far
       errors.add(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN)
-                                      .withValue(String.format(RESUMPTION_TOKEN_FORMAT_ERROR, request.getResumptionToken())));
+                                      .withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
     }
 
     // The 'metadataPrefix' parameter is required only if there is no 'resumptionToken'
@@ -90,7 +90,7 @@ public abstract class AbstractHelper implements VerbHelper {
       hasOtherParam = true;
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
-          .withValue(String.format(CANNOT_DISSEMINATE_FORMAT_ERROR, request.getMetadataPrefix())));
+          .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else if (!hasResumptionToken) {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));

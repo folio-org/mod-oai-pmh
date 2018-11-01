@@ -91,7 +91,7 @@ class OkapiMockServer {
     if (query != null)
     {
       if (query.endsWith("id==" + EXISTING_IDENTIFIER)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_2));
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1));
       } else if (query.endsWith("id==" + NON_EXISTING_IDENTIFIER)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
       } else if (query.contains(NO_RECORDS_DATE)) {
