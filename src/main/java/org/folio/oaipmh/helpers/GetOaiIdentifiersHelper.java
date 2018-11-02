@@ -146,20 +146,20 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     }
     if (instances != null && !instances.isEmpty()) {
       ListIdentifiersType identifiers = new ListIdentifiersType();
-      String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String identifierPrefix = getIdentifierPrefix(tenantId, ctx);
-      instances.stream()
-        .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
-        .forEach(identifiers::withHeaders);
 
       String resumptionToken = buildResumptionToken(request, instances, totalRecords);
-
       if (resumptionToken != null) {
         identifiers.withResumptionToken(new ResumptionTokenType()
           .withValue(resumptionToken)
           .withCompleteListSize(BigInteger.valueOf(totalRecords))
           .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset())));
       }
+
+      String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
+      String identifierPrefix = getIdentifierPrefix(tenantId, ctx);
+      instances.stream()
+        .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
+        .forEach(identifiers::withHeaders);
 
       return buildBaseResponse(request).withListIdentifiers(identifiers);
     }
