@@ -209,7 +209,7 @@ class OaiPmhImplTest {
 
     assertThat(oaipmh.getListRecords(), is(notNullValue()));
     assertThat(oaipmh.getListRecords().getRecords(), hasSize(10));
-    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
+    assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
     oaipmh.getListRecords()
           .getRecords()
