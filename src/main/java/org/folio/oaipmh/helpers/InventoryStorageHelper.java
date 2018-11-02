@@ -12,10 +12,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 
 public class InventoryStorageHelper implements InstancesStorageHelper {
-
-  private static final String RECORDS_LIMIT = "100";
 
   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
@@ -37,6 +36,11 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   @Override
   public JsonArray getItems(JsonObject entries) {
     return entries.getJsonArray("instances");
+  }
+
+  @Override
+  public Integer getTotalRecords(JsonObject entries) {
+    return entries.getInteger("totalRecords");
   }
 
   /**
@@ -77,7 +81,11 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
         .dateRange(request.getFrom(), request.getUntil());
     }
 
-    return "/instance-storage/instances" + queryBuilder.build() + "&limit=" + RECORDS_LIMIT;
+    // one extra record is required to check if resumptionToken is good
+    int limit = Integer.parseInt(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
+    return "/instance-storage/instances" + queryBuilder.build()
+      + "&limit=" + limit
+      + "&offset=" + request.getOffset();
   }
 
   @Override

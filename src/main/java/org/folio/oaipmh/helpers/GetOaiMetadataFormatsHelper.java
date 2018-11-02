@@ -15,6 +15,7 @@ import org.openarchives.oai._2.MetadataFormatType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.VerbType;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,9 +28,12 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
   @Override
   public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
-    request.getOaiRequest().withVerb(LIST_METADATA_FORMATS);
-
     return retrieveMetadataFormats(request, ctx);
+  }
+
+  @Override
+  protected VerbType getVerb() {
+    return LIST_METADATA_FORMATS;
   }
 
   /**
@@ -105,7 +109,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    */
   private String buildMetadataFormatTypesResponse(Request request) {
     return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request.getOaiRequest()).withListMetadataFormats(getMetadataFormatTypes()));
+      buildBaseResponse(request).withListMetadataFormats(getMetadataFormatTypes()));
   }
 
   /**
@@ -115,7 +119,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    */
   private String buildIdentifierNotFound(Request request) {
     return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request.getOaiRequest())
+      buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
           .withValue(String.format("%s has the structure of a valid identifier, but it maps to no known item", request.getIdentifier()))
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
@@ -128,7 +132,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    */
   private String buildOaipmhWithBadArgumentError(Request request) {
     return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request.getOaiRequest())
+      buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
           .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
           .withValue(String.format("%s has the structure of an invalid identifier", request.getIdentifier()))));

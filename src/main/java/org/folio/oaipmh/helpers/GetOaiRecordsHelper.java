@@ -15,6 +15,7 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.VerbType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +45,7 @@ public class GetOaiRecordsHelper extends AbstractHelper {
       // 1. Validate request
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildOaiResponse(request).withErrors(errors);
+        OAIPMH oai = buildBaseResponse(request).withErrors(errors);
         future.complete(buildValidationFailureResponse(oai));
         return future;
       }
@@ -60,7 +61,7 @@ public class GetOaiRecordsHelper extends AbstractHelper {
             return buildNoRecordsFoundOaiResponse(request);
           } else {
             // 4. Now we need to get marc data for each instance and update record with metadata
-            return buildSuccessResponse(buildOaiResponse(request)
+            return buildSuccessResponse(buildBaseResponse(request)
               .withListRecords(new ListRecordsType().withRecords(records.values())));
           }
         })
@@ -77,8 +78,13 @@ public class GetOaiRecordsHelper extends AbstractHelper {
     return future;
   }
 
+  @Override
+  protected VerbType getVerb() {
+    return LIST_RECORDS;
+  }
+
   private javax.ws.rs.core.Response buildNoRecordsFoundOaiResponse(Request request) {
-    OAIPMH oaipmh = buildOaiResponse(request).withErrors(createNoRecordsFoundError());
+    OAIPMH oaipmh = buildBaseResponse(request).withErrors(createNoRecordsFoundError());
     return respond404WithApplicationXml(ResponseHelper.getInstance().writeToString(oaipmh));
   }
 
@@ -101,10 +107,6 @@ public class GetOaiRecordsHelper extends AbstractHelper {
 
   private javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
     return respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
-  }
-
-  private OAIPMH buildOaiResponse(Request request) {
-    return buildBaseResponse(request.getOaiRequest().withVerb(LIST_RECORDS));
   }
 
   /**

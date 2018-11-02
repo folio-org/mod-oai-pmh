@@ -22,6 +22,13 @@ public interface InstancesStorageHelper {
   JsonArray getItems(JsonObject entries);
 
   /**
+   * Extracts total number of records from {@linkplain JsonObject entries}
+   * @param entries the data returned by items storage service
+   * @return total number of records
+   */
+  Integer getTotalRecords(JsonObject entries);
+
+  /**
    * Returns item's last modified date or if no such just created date
    * @param item the item item returned by items storage service
    * @return {@link Instant} based on updated or created date

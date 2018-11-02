@@ -27,11 +27,13 @@ public class OkapiMockServer {
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
+  static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01T00:00:00Z";
   static final String ERROR_DATE = "2010-10-10T10:10:10Z";
 
   private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
   private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
+  private static final String INSTANCES_11 = "/instance-storage/instances/instances_11.json";
 
   private final int port;
   private final Vertx vertx;
@@ -72,6 +74,8 @@ public class OkapiMockServer {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_DATE)) {
         failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(PARTITIONABLE_RECORDS_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_11));
       } else {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_10));
       }

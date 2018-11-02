@@ -13,6 +13,8 @@ import org.openarchives.oai._2.VerbType;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
 
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
+
 /**
  * Helper class that contains business logic for retrieving OAI-PMH set structure of a repository.
  */
@@ -23,7 +25,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(VerbType.LIST_SETS))
+      OAIPMH oai = buildBaseResponse(request)
         .withListSets(new ListSetsType()
           .withSets(getSupportedSetTypes()));
 
@@ -35,5 +37,10 @@ public class GetOaiSetsHelper extends AbstractHelper {
     }
 
     return future;
+  }
+
+  @Override
+  protected VerbType getVerb() {
+    return LIST_SETS;
   }
 }

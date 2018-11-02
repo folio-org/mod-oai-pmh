@@ -10,6 +10,7 @@ import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.IdentifyType;
 import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.time.Instant;
@@ -37,7 +38,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(IDENTIFY))
+      OAIPMH oai = buildBaseResponse(request)
         .withIdentify(new IdentifyType()
           .withRepositoryName(getRepositoryName(request.getOkapiHeaders()))
           .withBaseURL(getBaseURL())
@@ -55,6 +56,11 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
     }
 
     return future;
+  }
+
+  @Override
+  protected VerbType getVerb() {
+    return IDENTIFY;
   }
 
   /**

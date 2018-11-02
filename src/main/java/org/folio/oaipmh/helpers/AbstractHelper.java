@@ -14,8 +14,8 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.SetType;
+import org.openarchives.oai._2.VerbType;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -32,14 +32,11 @@ import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
@@ -49,7 +46,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 public abstract class AbstractHelper implements VerbHelper {
 
   /** Strict ISO Date and Time with UTC offset. */
-  private static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  protected static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   /**
    * Holds instance to handle items returned
@@ -61,12 +58,20 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
-  protected OAIPMH buildBaseResponse(RequestType request) {
+  protected OAIPMH buildBaseResponse(Request request) {
     return new OAIPMH()
       // According to spec the nanoseconds should not be used so truncate to seconds
       .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.withValue(getBaseURL()));
+      .withRequest(request.getOaiRequest()
+        .withVerb(getVerb())
+        .withValue(getBaseURL()));
   }
+
+  /**
+   * Returns the verb associated with given helper implementation.
+   * @return
+   */
+  protected abstract VerbType getVerb();
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -76,43 +81,22 @@ public abstract class AbstractHelper implements VerbHelper {
   protected List<OAIPMHerrorType> validateListRequest(Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
 
-    // The 'resumptionToken' is an exclusive argument. We need to check that if it is, there is nothing else
-    boolean hasResumptionToken = request.getResumptionToken() != null;
-    boolean hasOtherParam = false;
-
-    if (hasResumptionToken) {
-      // At the moment the 'resumptionToken' is not supported so any format is considered invalid so far
-      errors.add(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN)
-                                      .withValue(String.format(RESUMPTION_TOKEN_FORMAT_ERROR, request.getResumptionToken())));
-    }
-
-    // The 'metadataPrefix' parameter is required only if there is no 'resumptionToken'
     if (request.getMetadataPrefix() != null) {
-      hasOtherParam = true;
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
-        errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
-          .withValue(String.format(CANNOT_DISSEMINATE_FORMAT_ERROR, request.getMetadataPrefix())));
+        errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT).withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
-    } else if (!hasResumptionToken) {
+    } else {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));
     }
 
-    if (request.getSet() != null) {
-      hasOtherParam = true;
-      if (!getSupportedSetSpecs().contains(request.getSet())) {
-        errors.add(createNoRecordsFoundError());
-      }
+    if (request.getSet() != null && !getSupportedSetSpecs().contains(request.getSet())) {
+      errors.add(createNoRecordsFoundError());
     }
 
     if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
-      hasOtherParam = true;
       validateDateRange(request, errors);
     }
 
-
-    if (hasResumptionToken && hasOtherParam) {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
-    }
     return errors;
   }
 
