@@ -574,6 +574,21 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void testGetOaiSetsWithResumptionToken(VertxTestContext testContext) throws JAXBException {
+    String resumptionToken = "abc";
+    RequestSpecification request = createBaseRequest(LIST_SETS_PATH)
+      .with()
+      .param("resumptionToken", resumptionToken);
+
+    OAIPMH oai = verifyResponseWithErrors(request, LIST_SETS, 400, 1);
+
+    assertThat(oai.getErrors().get(0).getCode(), is(equalTo(BAD_RESUMPTION_TOKEN)));
+    assertThat(oai.getRequest().getResumptionToken(), is(equalTo(resumptionToken)));
+
+    testContext.completeNow();
+  }
+
+  @Test
   void testGetOaiSetsMissingBaseUrlProperty(VertxTestContext testContext) {
     // Remove required props
     String baseUrl = System.getProperty(REPOSITORY_BASE_URL);

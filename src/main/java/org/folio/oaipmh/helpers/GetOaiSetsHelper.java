@@ -8,11 +8,14 @@ import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiSetsResponse;
 import org.openarchives.oai._2.ListSetsType;
 import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 /**
@@ -25,12 +28,20 @@ public class GetOaiSetsHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(request)
-        .withListSets(new ListSetsType()
-          .withSets(getSupportedSetTypes()));
+      OAIPMH oai = buildBaseResponse(request);
 
-      String response = ResponseHelper.getInstance().writeToString(oai);
-      future.complete(GetOaiSetsResponse.respond200WithApplicationXml(response));
+      if (request.getResumptionToken() != null) {
+        oai.withErrors(new OAIPMHerrorType()
+          .withCode(BAD_RESUMPTION_TOKEN).withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
+        future.complete(GetOaiSetsResponse
+          .respond400WithApplicationXml(ResponseHelper.getInstance().writeToString(oai)));
+        return future;
+      }
+
+      oai.withListSets(new ListSetsType()
+        .withSets(getSupportedSetTypes()));
+      future.complete(GetOaiSetsResponse
+        .respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai)));
     } catch (Exception e) {
       logger.error("Error happened while processing ListSets verb request", e);
       future.completeExceptionally(e);
