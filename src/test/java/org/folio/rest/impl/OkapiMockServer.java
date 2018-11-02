@@ -32,16 +32,18 @@ class OkapiMockServer {
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
   static final String ERROR_DATE = "2010-10-10T10:10:10Z";
   static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE = "2001-01-01T01:01:01Z";
+  static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
   static final String THREE_INSTANCES_DATE = "2018-12-12T12:12:12Z";
 
   // Instance UUID
-  private static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
+  static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
   private static final String INTERNAL_SERVER_ERROR_INSTANCE_ID = "6b4ae089-e1ee-431f-af83-e1133f8e3da0";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
   private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
+  private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instance-storage/instances/instances_1_withNoRecordSource.json";
   private static final String INSTANCES_2 = "/instance-storage/instances/instances_2.json";
   private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
   private static final String INSTANCES_4 = "/instance-storage/instances/instances_4.json";
@@ -100,6 +102,8 @@ class OkapiMockServer {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_DATE)) {
         failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1_NO_RECORD_SOURCE));
       } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_2));
       } else if (query.contains(THREE_INSTANCES_DATE)) {

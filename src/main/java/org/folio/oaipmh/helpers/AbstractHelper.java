@@ -242,7 +242,17 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return oai-identifier
    */
   private String getIdentifier(String identifierPrefix, JsonObject instance) {
-    return identifierPrefix + storageHelper.getItemId(instance);
+    return getIdentifier(identifierPrefix, storageHelper.getItemId(instance));
+  }
+
+  /**
+   * Builds oai-identifier
+   * @param identifierPrefix oai-identifier prefix
+   * @param storageId id of the instance returned by storage service
+   * @return oai-identifier
+   */
+  protected String getIdentifier(String identifierPrefix, String storageId) {
+    return identifierPrefix + storageId;
   }
 
   /**

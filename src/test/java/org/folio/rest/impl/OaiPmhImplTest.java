@@ -451,8 +451,48 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
   }
 
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiListRecordsVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) throws JAXBException {
+    String from = OkapiMockServer.DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH)
+      .with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+
+    // The dates are of invalid format so they are not present in request
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
+    assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC_XML", "DC" })
+  void getOaiGetRecordVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) throws JAXBException {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NOT_FOUND_RECORD_INSTANCE_ID;
+    RequestSpecification request = createBaseRequest(GET_RECORD_PATH)
+      .with()
+      .pathParam(IDENTIFIER_PARAM, identifier)
+      .with()
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
+
+    // The dates are of invalid format so they are not present in request
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getIdentifier(), equalTo(identifier));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(ID_DOES_NOT_EXIST));
+  }
+
   @Test
-  void getOaiGetRecordVerbWithWrongMetadataPrefix(VertxTestContext testContext) throws
+  void getOaiGetRecordVerbWithWrongMetadataPrefix() throws
     JAXBException {
     String metadataPrefix = "mark_xml";
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
@@ -464,8 +504,6 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 422, 1);
     assertThat(oaipmh.getGetRecord(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(CANNOT_DISSEMINATE_FORMAT));
-
-    testContext.completeNow();
   }
 
   @Test

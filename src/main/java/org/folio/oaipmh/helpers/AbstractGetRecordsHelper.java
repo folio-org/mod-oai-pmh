@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -98,7 +98,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 addRecordsToOaiResponce(oaipmh, records.values().stream()
                                                        .filter(record -> record.getMetadata() != null)
                                                        .collect(Collectors.toList()));
-                return buildSuccessResponse(oaipmh);
+                return buildResponse(oaipmh);
               });
     }
   }
@@ -111,31 +111,33 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Map<String, RecordType> records = Collections.emptyMap();
     JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     if (instances != null && !instances.isEmpty()) {
-      records = new HashMap<>();
+      // Using LinkedHashMap just to rely on order returned by storage service
+      records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
 
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String id = storageHelper.getItemId(instance);
+        String storageInstanceId = storageHelper.getItemId(instance);
         RecordType record = new RecordType()
           .withHeader(createHeader(instance)
-          .withIdentifier(identifierPrefix + id));
-        records.put(id, record);
+          .withIdentifier(getIdentifier(identifierPrefix, storageInstanceId)));
+        records.put(storageInstanceId, record);
       }
     }
     return records;
   }
 
   /**
-   * Builds {{@link Map} if there are instances or {@code null}
-   * @param sourceResponse the {@link JsonObject} which contains record metadata
+   * Builds {@link MetadataType} based on the response from storage service
+   * @param request the request to get metadata prefix
+   * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
   private MetadataType buildOaiMetadata(Request request, org.folio.rest.tools.client.Response sourceResponse) {
     if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
       logger.error("Record not found. Service responded with error: " + sourceResponse.getError());
 
-      // If no record found (404 code), we need to skip such record for now (see MODOAIPMH-12)
+      // If no record found (404 status code), we need to skip such record for now (see MODOAIPMH-12)
       if (sourceResponse.getCode() == 404) {
         return null;
       }
@@ -166,6 +168,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private void handleException(CompletableFuture<Response> future, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
     future.completeExceptionally(e);
+  }
+
+  private javax.ws.rs.core.Response buildResponse(OAIPMH oai) {
+    if (!oai.getErrors().isEmpty()) {
+      return buildResponseWithErrors(oai);
+    }
+    return buildSuccessResponse(oai);
   }
 
   protected abstract Response buildSuccessResponse(OAIPMH oai);
