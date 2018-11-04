@@ -4,9 +4,9 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.openarchives.oai._2.RequestType;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -14,6 +14,9 @@ import static java.util.stream.Collectors.toMap;
  * It implements builder pattern, so use {@link Builder} instance to build an instance of the request.
  */
 public class Request {
+  private static final char PARAMETER_SEPARATOR = ';';
+  private static final String PARAMETER_VALUE_SEPARATOR = "=";
+
   private RequestType oaiRequest;
   private Map<String, String> okapiHeaders;
 
@@ -145,7 +148,8 @@ public class Request {
       return false;
     }
 
-    Map<String, String> params = URLEncodedUtils.parse(oaiRequest.getResumptionToken(), StandardCharsets.UTF_8).stream()
+    Map<String, String> params = URLEncodedUtils
+      .parse(oaiRequest.getResumptionToken(), UTF_8, PARAMETER_SEPARATOR).stream()
       .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
     restoredOaiRequest = new RequestType();
@@ -183,8 +187,8 @@ public class Request {
     appendParam(builder, "set", getSet());
 
     extraParams.entrySet().stream()
-      .map(e -> e.getKey() + "=" + e.getValue())
-      .forEach(param -> builder.append("&").append(param));
+      .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
+      .forEach(param -> builder.append(PARAMETER_SEPARATOR).append(param));
 
     return builder.toString();
   }
@@ -193,11 +197,9 @@ public class Request {
   private void appendParam(StringBuilder builder, String name, String value) {
     if (value != null) {
       if (builder.length() > 0) {
-        builder.append("&");
+        builder.append(PARAMETER_SEPARATOR);
       }
-      builder.append(name);
-      builder.append("=");
-      builder.append(value);
+      builder.append(name).append(PARAMETER_VALUE_SEPARATOR).append(value);
     }
   }
 

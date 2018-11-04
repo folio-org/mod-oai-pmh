@@ -288,7 +288,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getListIdentifiers().getResumptionToken().getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(oaipmh.getListIdentifiers().getResumptionToken().getExpirationDate(), is(nullValue()));
 
-    List<NameValuePair> params = URLEncodedUtils.parse(oaipmh.getListIdentifiers().getResumptionToken().getValue(), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(oaipmh.getListIdentifiers().getResumptionToken().getValue(), StandardCharsets.UTF_8, ';');
     assertThat(params, is(hasSize(7)));
 
     assertThat(getParamValue(params, "metadataPrefix"), is(equalTo("oai_dc")));
@@ -304,12 +304,12 @@ class OaiPmhImplTest {
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS" })
   void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) throws JAXBException {
     String resumptionToken = "metadataPrefix=oai_dc" +
-      "&from=2003-01-01T00:00:00Z" +
-      "&until=2003-10-01T00:00:00Z" +
-      "&set=all" +
-      "&offset=0" +
-      "&totalRecords=100" +
-      "&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f45";
+      ";from=2003-01-01T00:00:00Z" +
+      ";until=2003-10-01T00:00:00Z" +
+      ";set=all" +
+      ";offset=0" +
+      ";totalRecords=100" +
+      ";nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f45";
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
@@ -330,12 +330,12 @@ class OaiPmhImplTest {
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS" })
   void getOaiListVerbWithBadResumptionToken(VerbType verb) throws JAXBException {
     String resumptionToken = "metadataPrefix=oai_dc" +
-      "&from=2003-01-01T00:00:00Z" +
-      "&until=2003-10-01T00:00:00Z" +
-      "&set=all" +
-      "&offset=0" +
-      "&totalRecords=101" +
-      "&nextRecordId=6506b79b-7702-48b2-9774-a1c538fdd34e";
+      ";from=2003-01-01T00:00:00Z" +
+      ";until=2003-10-01T00:00:00Z" +
+      ";set=all" +
+      ";offset=0" +
+      ";totalRecords=101" +
+      ";nextRecordId=6506b79b-7702-48b2-9774-a1c538fdd34e";
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
