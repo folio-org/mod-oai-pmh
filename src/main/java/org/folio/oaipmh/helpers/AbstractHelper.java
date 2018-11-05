@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Context;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -14,7 +13,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.SetType;
 
 import java.time.Instant;
@@ -25,13 +24,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
@@ -61,11 +60,11 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
-  protected OAIPMH buildBaseResponse(RequestType request) {
+  protected OAIPMH buildBaseResponse(Request request) {
     return new OAIPMH()
       // According to spec the nanoseconds should not be used so truncate to seconds
       .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.withValue(getBaseURL()));
+      .withRequest(request.getOaiRequest().withValue(getBaseURL()));
   }
 
   /**
@@ -83,7 +82,7 @@ public abstract class AbstractHelper implements VerbHelper {
     if (hasResumptionToken) {
       // At the moment the 'resumptionToken' is not supported so any format is considered invalid so far
       errors.add(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN)
-                                      .withValue(String.format(RESUMPTION_TOKEN_FORMAT_ERROR, request.getResumptionToken())));
+                                      .withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
     }
 
     // The 'metadataPrefix' parameter is required only if there is no 'resumptionToken'
@@ -91,7 +90,7 @@ public abstract class AbstractHelper implements VerbHelper {
       hasOtherParam = true;
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
-          .withValue(String.format(CANNOT_DISSEMINATE_FORMAT_ERROR, request.getMetadataPrefix())));
+          .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else if (!hasResumptionToken) {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));
@@ -157,19 +156,8 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected boolean validateIdentifier(Request request, Context ctx) {
-    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return StringUtils.startsWith(request.getIdentifier(), getIdentifierPrefix(tenantId, ctx));
-  }
-
-  /**
-   * The method assumes that identifier already validated and has correct format
-   * @param request {@link Request} to get identifier and tenant from
-   * @return storage identifier
-   */
-  protected String extractStorageIdentifier(Request request, Context ctx) {
-    String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-    return request.getIdentifier().substring(getIdentifierPrefix(tenantId, ctx).length()) ;
+  protected static boolean validateIdentifier(Request request) {
+    return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
@@ -199,15 +187,19 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Return the repository name.
-   * For now, it is based on System property, but later it might be pulled from mod-configuration.
-   *
-   * @return repository name
+   * Creates Okapi client getting Okapi URL from headers. The connection will be closed automatically if idle
    */
   protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders) {
+    return getOkapiClient(okapiHeaders, true);
+  }
+
+  /**
+   * Creates Okapi client getting Okapi URL from headers.
+   */
+  protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders, boolean autoCloseConnections) {
     String tenantId = TenantTool.tenantId(okapiHeaders);
     String okapiURL = okapiHeaders.get(XOkapiHeaders.URL);
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId, true);
+    return HttpClientFactory.getHttpClient(okapiURL, tenantId, autoCloseConnections);
   }
 
   /**
@@ -250,11 +242,30 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return oai-identifier
    */
   private String getIdentifier(String identifierPrefix, JsonObject instance) {
-    return identifierPrefix + storageHelper.getItemId(instance);
+    return getIdentifier(identifierPrefix, storageHelper.getItemId(instance));
   }
 
-  protected String getIdentifierPrefix(String tenantId, Context ctx) {
-    return ctx.config().getString(IDENTIFIER_PREFIX) + tenantId + "/";
+  /**
+   * Builds oai-identifier
+   * @param identifierPrefix oai-identifier prefix
+   * @param storageId id of the instance returned by storage service
+   * @return oai-identifier
+   */
+  protected String getIdentifier(String identifierPrefix, String storageId) {
+    return identifierPrefix + storageId;
+  }
+
+  /**
+   * The error codes required to define the http code to be returned in the http response
+   * @param oai OAIPMH response with errors
+   * @return set of error codes
+   */
+  protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
+    // According to oai-pmh.raml the service will return different http codes depending on the error
+    return oai.getErrors()
+              .stream()
+              .map(OAIPMHerrorType::getCode)
+              .collect(Collectors.toSet());
   }
 
   private List<String> getSupportedSetSpecs() {

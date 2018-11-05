@@ -8,7 +8,6 @@ import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiSetsResponse;
 import org.openarchives.oai._2.ListSetsType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
@@ -23,7 +22,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      OAIPMH oai = buildBaseResponse(request.getOaiRequest().withVerb(VerbType.LIST_SETS))
+      OAIPMH oai = buildBaseResponse(request)
         .withListSets(new ListSetsType()
           .withSets(getSupportedSetTypes()));
 

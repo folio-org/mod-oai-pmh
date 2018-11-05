@@ -29,7 +29,7 @@ public class CQLQueryBuilder {
    * @return {@link CQLQueryBuilder}
    */
   public CQLQueryBuilder source(String source) {
-    builder.append(String.format("source==%s", source));
+    builder.append(String.format("sourceRecordFormat==%s", source));
     return this;
   }
 
