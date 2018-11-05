@@ -1,21 +1,17 @@
 package org.folio.oaipmh.mappers;
 
-import java.io.InputStream;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
 import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMResult;
-import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 
 /**
@@ -52,21 +48,21 @@ public class XSLTMapper extends MarcXmlMapper {
    * Convert MarcJson to MarcXML with XSLT post-processing.
    *
    * @param source {@inheritDoc}
-   * @return Node representation of XML after XSLT transformation
+   * @return byte[] representation of XML after XSLT transformation
    */
   @Override
-  public Node convert(String source) {
-    Node nodeSource = super.convert(source);
+  public byte[] convert(String source) {
+    byte[] marcXmlResult = super.convert(source);
     try {
-      DocumentBuilderFactory docbFactory = DocumentBuilderFactory.newInstance();
-      DocumentBuilder documentBuilder = docbFactory.newDocumentBuilder();
-      DOMSource domSource = new DOMSource(nodeSource);
-      DOMResult result = new DOMResult(documentBuilder.newDocument());
+      InputStream in = new ByteArrayInputStream(marcXmlResult);
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      Source streamSource = new StreamSource(in);
+      Result result = new StreamResult(out);
       Transformer transformer = template.newTransformer();
-      transformer.transform(domSource, result);
-      return ((Document) result.getNode()).getDocumentElement();
-    } catch (TransformerException | ParserConfigurationException e) {
-      throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
+      transformer.transform(streamSource, result);
+      return out.toByteArray();
+    } catch (TransformerException e) {
+        throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
     }
   }
 

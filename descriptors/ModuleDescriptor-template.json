@@ -12,7 +12,8 @@
           "permissionsRequired": ["oai-pmh.records.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.source-record.marc-json.get"
           ]
         },
         {
@@ -21,7 +22,8 @@
           "permissionsRequired": ["oai-pmh.records.item.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.source-record.marc-json.get"
           ]
         },
         {

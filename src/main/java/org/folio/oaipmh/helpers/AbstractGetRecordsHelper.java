@@ -7,6 +7,7 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
@@ -149,7 +150,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonObject source = sourceResponse.getBody();
     MetadataType metadata = new MetadataType();
     MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
-    metadata.setAny(metadataPrefix.convert(source.toString()));
+    byte[] byteSource = metadataPrefix.convert(source.toString());
+    Object record = ResponseHelper.getInstance().bytesToObject(byteSource);
+    metadata.setAny(record);
     return metadata;
   }
 
