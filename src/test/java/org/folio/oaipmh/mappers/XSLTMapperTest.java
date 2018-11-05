@@ -9,6 +9,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XSLTMapperTest {
 
@@ -29,16 +30,12 @@ class XSLTMapperTest {
 
   @Test
   void incorrectJsonConvertingToDCValidationTest() throws IOException {
-    int titlePosition = 320;
-    int emptyTitleLength = 11;
-    String expextedTitle = "<dc:title/>";
+    String emptyTitle = "<dc:title/>";
     logger.info("=== Test incorrect json file converting to Dublin Core ===");
     String input = MapperTestHelper.getStringFromFile(StaticTestRecords.RESOURCES_INCORRECT_JSON_MARC);
-    byte[] result = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
-    byte[] titleSubArray = new byte[emptyTitleLength];
-    System.arraycopy(result, titlePosition, titleSubArray, 0, emptyTitleLength);
-    String title = new String(titleSubArray);
-    assertThat(title, equalTo(expextedTitle));
+    byte[] bytesResult = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
+    String result = new String(bytesResult);
+    assertTrue(result.contains(emptyTitle));
   }
 
   @Test
