@@ -74,8 +74,10 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   @Override
   public String buildItemsEndpoint(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
-    queryBuilder.source("MARC");
-    if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
+    queryBuilder.source("MARC-JSON");
+    if (isNotEmpty(request.getIdentifier())) {
+      queryBuilder.and().identifier(request.getStorageIdentifier());
+    } else if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       queryBuilder
         .and()
         .dateRange(request.getFrom(), request.getUntil());
@@ -88,8 +90,13 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
       + "&offset=" + request.getOffset();
   }
 
+  /**
+   * Gets endpoint to search for record metadata by identifier
+   * @param id instance identifier
+   * @return endpoint to get metadata by identifier
+   */
   @Override
-  public String getInstanceEndpoint(String id) {
-    return "/instance-storage/instances?query=source==MARC+and+id=" + id;
+  public String getMetadataEndpoint(String id){
+    return String.format("/instance-storage/instances/%s/source-record/marc-json", id);
   }
 }

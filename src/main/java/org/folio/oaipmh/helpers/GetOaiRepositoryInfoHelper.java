@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
 
 
 /**

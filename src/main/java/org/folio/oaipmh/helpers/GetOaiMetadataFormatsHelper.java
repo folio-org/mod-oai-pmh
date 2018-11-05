@@ -5,6 +5,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.log4j.Logger;
+import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
@@ -20,7 +21,6 @@ import org.openarchives.oai._2.VerbType;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
@@ -43,14 +43,14 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
     if (request.getIdentifier() == null) {
       return VertxCompletableFuture.completedFuture(retrieveMetadataFormats(request));
-    } else if (!validateIdentifier(request, ctx)) {
+    } else if (!validateIdentifier(request)) {
       return VertxCompletableFuture.completedFuture(buildBadArgumentResponse(request));
     }
 
     CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
-      String endpoint = storageHelper.getInstanceEndpoint(extractStorageIdentifier(request, ctx));
+      String endpoint = storageHelper.buildItemsEndpoint(request);
       getOkapiClient(okapiHeaders)
         .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
@@ -121,7 +121,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     return ResponseHelper.getInstance().writeToString(
       buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
-          .withValue(String.format("%s has the structure of a valid identifier, but it maps to no known item", request.getIdentifier()))
+          .withValue(String.format(Constants.RECORD_NOT_FOUND_ERROR, request.getIdentifier()))
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
   }
 
@@ -135,7 +135,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
           .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
-          .withValue(String.format("%s has the structure of an invalid identifier", request.getIdentifier()))));
+          .withValue(Constants.INVALID_IDENTIFIER_ERROR_MESSAGE)));
   }
 
   /**

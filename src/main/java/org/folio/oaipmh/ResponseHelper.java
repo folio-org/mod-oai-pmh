@@ -22,6 +22,9 @@ public class ResponseHelper {
   private static final Logger logger = LoggerFactory.getLogger(ResponseHelper.class);
   private static final String SCHEMA_PATH = "ramls" + File.separator + "schemas" + File.separator;
   private static final String RESPONSE_SCHEMA = SCHEMA_PATH + "OAI-PMH.xsd";
+  private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";
+  private static final String SIMPLE_DC_SCHEMA = SCHEMA_PATH + "simpledc20021212.xsd";
+  private static final String MARC21_SCHEMA = SCHEMA_PATH + "MARC21slim.xsd";
   private static ResponseHelper ourInstance;
 
   static {
@@ -50,10 +53,14 @@ public class ResponseHelper {
 
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
     if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
-      Schema oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI)
-                                         .newSchema(new StreamSource(this.getClass()
-                                                                         .getClassLoader()
-                                                                         .getResourceAsStream(RESPONSE_SCHEMA)));
+      ClassLoader classLoader = this.getClass().getClassLoader();
+      StreamSource[] streamSources = {
+        new StreamSource(classLoader.getResourceAsStream(RESPONSE_SCHEMA)),
+        new StreamSource(classLoader.getResourceAsStream(MARC21_SCHEMA)),
+        new StreamSource(classLoader.getResourceAsStream(SIMPLE_DC_SCHEMA)),
+        new StreamSource(classLoader.getResourceAsStream(DC_SCHEMA))
+      };
+      Schema oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI).newSchema(streamSources);
       jaxbMarshaller.setSchema(oaipmhSchema);
       jaxbUnmarshaller.setSchema(oaipmhSchema);
     }
