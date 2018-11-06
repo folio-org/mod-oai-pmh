@@ -4,7 +4,6 @@ import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
@@ -15,19 +14,13 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.VerbType;
 
 import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse;
@@ -92,11 +85,6 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     return future;
   }
 
-  @Override
-  protected VerbType getVerb() {
-    return LIST_IDENTIFIERS;
-  }
-
   private javax.ws.rs.core.Response buildNoRecordsResponse(OAIPMH oai) {
     String responseBody = ResponseHelper.getInstance().writeToString(oai);
 
@@ -153,56 +141,5 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     }
 
     return buildBaseResponse(request).withErrors(createNoRecordsFoundError());
-  }
-
-  /**
-   * Builds resumptionToken that is used to resume request sequence
-   * in case the whole result set is partitioned.
-   *
-   * @param request the initial request
-   * @param instances the array of instances returned from Instance Storage
-   * @param totalRecords the total number of records in the whole result set
-   * @return resumptionToken value if partitioning is used and not all instances are processed yet,
-   * empty string if partitioning is used and all instances are processed already,
-   * null if the result set is not partitioned.
-   */
-  private String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    if (newOffset < totalRecords) {
-      Map<String, String> extraParams = new HashMap<>();
-      extraParams.put("totalRecords", String.valueOf(totalRecords));
-      extraParams.put("offset", String.valueOf(newOffset));
-      String nextRecordId = storageHelper.getItemId((JsonObject) instances.remove(instances.size() - 1));
-      extraParams.put("nextRecordUUID", nextRecordId);
-      if (request.getUntil() == null
-        || LocalDateTime.now().isBefore(LocalDateTime.parse(request.getUntil(), ISO_UTC_DATE_TIME))) {
-        extraParams.put("until", LocalDateTime.now().format(ISO_UTC_DATE_TIME));
-      }
-
-      return request.toResumptionToken(extraParams);
-    } else {
-      return request.isRestored() ? EMPTY : null;
-    }
-  }
-
-  /**
-   * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
-   * <br/>
-   * The following state is an indicator that flow cannot be safely resumed:
-   * <li>No instances are returned</li>
-   * <li>Current total number of records is less than the previous one and the first
-   * record id does not match one stored in the resumptionToken</li>
-   * <br/>
-   * See <a href="https://issues.folio.org/browse/MODOAIPMH-10">MODOAIPMH-10</a> for more details.
-   * @param request
-   * @param totalRecords
-   * @param instances
-   * @return
-   */
-  private boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
-    Integer prevTotalRecords = request.getTotalRecords();
-    return instances != null && instances.size() > 0 &&
-      (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), storageHelper.getItemId(instances.getJsonObject(0))));
   }
 }

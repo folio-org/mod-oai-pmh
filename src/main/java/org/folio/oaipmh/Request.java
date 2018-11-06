@@ -3,7 +3,10 @@ package org.folio.oaipmh;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.VerbType;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -14,7 +17,7 @@ import static java.util.stream.Collectors.toMap;
  * It implements builder pattern, so use {@link Builder} instance to build an instance of the request.
  */
 public class Request {
-  private static final char PARAMETER_SEPARATOR = ';';
+  private static final char PARAMETER_SEPARATOR = '&';
   private static final String PARAMETER_VALUE_SEPARATOR = "=";
 
   private RequestType oaiRequest;
@@ -37,6 +40,11 @@ public class Request {
     private RequestType oaiRequest = new RequestType();
     private Map<String, String> okapiHeaders;
     private String identifierPrefix;
+
+    public Builder verb(VerbType verb) {
+      oaiRequest.setVerb(verb);
+      return this;
+    }
 
     public Builder metadataPrefix(String metadataPrefix) {
       oaiRequest.setMetadataPrefix(metadataPrefix);
@@ -119,6 +127,10 @@ public class Request {
     return oaiRequest.getResumptionToken();
   }
 
+  public VerbType getVerb() {
+    return oaiRequest.getVerb();
+  }
+
   public RequestType getOaiRequest() {
     return oaiRequest;
   }
@@ -163,8 +175,11 @@ public class Request {
       return false;
     }
 
+    String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
+      StandardCharsets.UTF_8);
+
     Map<String, String> params = URLEncodedUtils
-      .parse(oaiRequest.getResumptionToken(), UTF_8, PARAMETER_SEPARATOR).stream()
+      .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
       .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
     restoredOaiRequest = new RequestType();
@@ -205,7 +220,10 @@ public class Request {
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
       .forEach(param -> builder.append(PARAMETER_SEPARATOR).append(param));
 
-    return builder.toString();
+    return Base64.getUrlEncoder()
+      .encodeToString(builder.toString().getBytes())
+      // this is to remove '=' or '==' at the end
+      .split("=")[0];
   }
 
 
@@ -226,6 +244,7 @@ public class Request {
   private boolean isResumptionTokenExclusive() {
     Request exclusiveParamRequest = Request.builder()
       .resumptionToken(oaiRequest.getResumptionToken())
+      .verb(oaiRequest.getVerb())
       .build();
 
     return exclusiveParamRequest.getOaiRequest().equals(oaiRequest);

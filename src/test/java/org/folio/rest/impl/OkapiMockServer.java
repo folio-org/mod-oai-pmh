@@ -13,10 +13,12 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class OkapiMockServer {
@@ -77,7 +79,11 @@ class OkapiMockServer {
     } else if (instanceId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
       failureResponse(ctx, 404, "Record not found");
     } else {
-      successResponse(ctx, getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId)));
+      String json = getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId));
+      if (isNotEmpty(json)) {
+        successResponse(ctx, json);
+      }
+      successResponse(ctx, getJsonObjectFromFile("/instance-storage/instances/marc.json"));
     }
   }
 
@@ -144,7 +150,11 @@ class OkapiMockServer {
    */
   private String getJsonObjectFromFile(String path) {
     try {
-      File file = new File(OkapiMockServer.class.getResource(path).getFile());
+      URL resource = OkapiMockServer.class.getResource(path);
+      if (resource == null) {
+        return null;
+      }
+      File file = new File(resource.getFile());
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new String(encoded, StandardCharsets.UTF_8);
     } catch (IOException e) {

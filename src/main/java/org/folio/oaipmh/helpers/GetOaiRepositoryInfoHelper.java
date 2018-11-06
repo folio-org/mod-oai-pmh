@@ -10,7 +10,6 @@ import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.IdentifyType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.time.Instant;
@@ -55,11 +54,6 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
     }
 
     return future;
-  }
-
-  @Override
-  protected VerbType getVerb() {
-    return IDENTIFY;
   }
 
   /**

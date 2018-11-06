@@ -16,7 +16,6 @@ import org.openarchives.oai._2.MetadataFormatType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.VerbType;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -29,11 +28,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   @Override
   public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
     return retrieveMetadataFormats(request, ctx);
-  }
-
-  @Override
-  protected VerbType getVerb() {
-    return LIST_METADATA_FORMATS;
   }
 
   /**

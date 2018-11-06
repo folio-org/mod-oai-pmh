@@ -45,12 +45,17 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records) {
+  protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
       oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());
     }
+  }
+
+  @Override
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, String resumptionToken, Request request, Integer totalRecords) {
+    throw new UnsupportedOperationException("Control flow is not applicable for GetRecord verb.");
   }
 
   @Override
