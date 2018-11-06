@@ -38,8 +38,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.jayway.restassured.RestAssured.given;
-
+import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
@@ -675,6 +676,8 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
     assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo(REPOSITORY_PROTOCOL_VERSION_2_0)));
     assertThat(oaipmhFromString.getIdentify().getRepositoryName(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getCompressions(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getCompressions(), containsInAnyOrder(GZIP, DEFLATE));
 
     testContext.completeNow();
   }
