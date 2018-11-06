@@ -1,7 +1,5 @@
 package org.folio.oaipmh.mappers;
 
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
 import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -54,15 +52,13 @@ public class XSLTMapper extends MarcXmlMapper {
   public byte[] convert(String source) {
     byte[] marcXmlResult = super.convert(source);
     try {
-      InputStream in = new ByteArrayInputStream(marcXmlResult);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
-      Source streamSource = new StreamSource(in);
-      Result result = new StreamResult(out);
       Transformer transformer = template.newTransformer();
-      transformer.transform(streamSource, result);
+      transformer.transform(new StreamSource(new ByteArrayInputStream(marcXmlResult)),
+                        new StreamResult(out));
       return out.toByteArray();
     } catch (TransformerException e) {
-        throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
+      throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
     }
   }
 

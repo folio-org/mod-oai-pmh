@@ -38,8 +38,20 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.Constants.*;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.*;
+
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
+import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -48,9 +60,20 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
-import static org.openarchives.oai._2.VerbType.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 @ExtendWith(VertxExtension.class)
 class OaiPmhImplTest {
@@ -104,7 +127,7 @@ class OaiPmhImplTest {
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id ->
       OaiPmhImpl.init(testContext.succeeding(success -> {
         RestAssured.baseURI = "http://localhost:" + okapiPort;
         RestAssured.port = okapiPort;
@@ -113,8 +136,7 @@ class OaiPmhImplTest {
         logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
         // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
         okapiMockServer.start(testContext);
-      }));
-    }));
+    }))));
   }
 
   @Test
