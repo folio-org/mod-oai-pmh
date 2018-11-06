@@ -9,16 +9,10 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.resource.interfaces.InitAPI;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
 import java.io.File;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Properties;
-
-import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
-import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 
 /**
  * The class initializes system properties and checks if required configs are specified
@@ -51,8 +45,6 @@ public class InitAPIs implements InitAPI {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }
 
-      // Initialize data for OAI-PMH endpoint helpers
-      context.config().put(IDENTIFIER_PREFIX, createRepositoryIdentifierPrefix());
       OaiPmhImpl.init(resultHandler::handle);
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
@@ -61,21 +53,4 @@ public class InitAPIs implements InitAPI {
   }
 
 
-  /**
-   * Creates oai-identifier prefix based on {@link OaiIdentifier}. The format is {@literal oai:<repositoryIdentifier>}.
-   * The repositoryIdentifier is based on repository base URL (host part).
-   * @see <a href="http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm">OAI Identifier Format</a>
-   */
-  private String createRepositoryIdentifierPrefix() {
-    String baseURL = System.getProperty(REPOSITORY_BASE_URL);
-    try {
-      URL url = new URL(baseURL);
-      OaiIdentifier oaiIdentifier = new OaiIdentifier();
-      oaiIdentifier.setRepositoryIdentifier(url.getHost());
-
-      return oaiIdentifier.getScheme() + oaiIdentifier.getDelimiter() + oaiIdentifier.getRepositoryIdentifier() + oaiIdentifier.getDelimiter();
-    } catch (MalformedURLException e) {
-      throw new IllegalStateException(e);
-    }
-  }
 }

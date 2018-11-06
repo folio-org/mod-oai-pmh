@@ -77,7 +77,6 @@ public class ResponseHelper {
    * Marshals {@link OAIPMH} object and returns string representation
    * @param response {@link OAIPMH} object to marshal
    * @return marshaled {@link OAIPMH} object as string representation
-   * @throws JAXBException can be thrown, for example, if the {@link OAIPMH} object is invalid
    */
   public String writeToString(OAIPMH response) {
     StringWriter writer = new StringWriter();

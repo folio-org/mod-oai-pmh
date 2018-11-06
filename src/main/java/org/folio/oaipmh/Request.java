@@ -1,7 +1,12 @@
 package org.folio.oaipmh;
 
+import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Map;
 
 /**
@@ -11,7 +16,6 @@ import java.util.Map;
 public class Request {
   private RequestType oaiRequest;
   private Map<String, String> okapiHeaders;
-  private String identifierPrefix;
 
   /**
    * Builder used to build the request.
@@ -19,7 +23,6 @@ public class Request {
   public static class Builder {
     private RequestType oaiRequest = new RequestType();
     private Map<String, String> okapiHeaders;
-    private String identifierPrefix;
 
     public Builder metadataPrefix(String metadataPrefix) {
       oaiRequest.setMetadataPrefix(metadataPrefix);
@@ -56,21 +59,26 @@ public class Request {
       return this;
     }
 
-    public Builder identifierPrefix(String identifierPrefix) {
-      this.identifierPrefix = identifierPrefix;
+    public Builder verb(VerbType verb) {
+      this.oaiRequest.setVerb(verb);
       return this;
     }
 
     public Request build() {
-      return new Request(oaiRequest, okapiHeaders, identifierPrefix);
+      return new Request(oaiRequest, okapiHeaders);
+    }
+
+
+    public Builder baseURL(String baseURL) {
+      oaiRequest.setValue(baseURL);
+      return this;
     }
   }
 
 
-  private Request(RequestType oaiRequest, Map<String, String> okapiHeaders, String identifierPrefix) {
+  private Request(RequestType oaiRequest, Map<String, String> okapiHeaders) {
     this.oaiRequest = oaiRequest;
     this.okapiHeaders = okapiHeaders;
-    this.identifierPrefix = identifierPrefix;
   }
 
   public String getMetadataPrefix() {
@@ -81,9 +89,6 @@ public class Request {
     return oaiRequest.getIdentifier();
   }
 
-  public String getStorageIdentifier() {
-    return getIdentifier().substring(getIdentifierPrefix().length()) ;
-  }
 
   public String getFrom() {
     return oaiRequest.getFrom();
@@ -105,13 +110,28 @@ public class Request {
     return oaiRequest;
   }
 
+  public String getStorageIdentifier() {
+    return getIdentifier().substring(getIdentifierPrefix().length()) ;
+  }
+
+  public String getIdentifierPrefix() {
+    try {
+      String tenantId = TenantTool.tenantId(okapiHeaders);
+      URL url = new URL(oaiRequest.getValue());
+      OaiIdentifier oaiIdentifier = new OaiIdentifier();
+      oaiIdentifier.setRepositoryIdentifier(url.getHost());
+      return oaiIdentifier.getScheme() + oaiIdentifier.getDelimiter()
+        + oaiIdentifier.getRepositoryIdentifier()
+        + oaiIdentifier.getDelimiter() + tenantId + "/";
+    } catch (MalformedURLException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
   public Map<String, String> getOkapiHeaders() {
     return okapiHeaders;
   }
 
-  public String getIdentifierPrefix() {
-    return identifierPrefix;
-  }
   /**
    * Factory method returning an instance of the builder.
    * @return {@link Builder} instance
@@ -119,4 +139,7 @@ public class Request {
   public static Builder builder() {
     return new Builder();
   }
+
+
+
 }

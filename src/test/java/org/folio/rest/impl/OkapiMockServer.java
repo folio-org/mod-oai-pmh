@@ -17,9 +17,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import static org.folio.oaipmh.Constants.OKAPI_TENANT_HEADER;
 import static org.junit.jupiter.api.Assertions.fail;
 
-class OkapiMockServer {
+public class OkapiMockServer {
+
 
   private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
 
@@ -27,6 +29,8 @@ class OkapiMockServer {
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
+  public static final String EXIST_CONFIG_TENANT = "test_diku";
+  public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
@@ -49,11 +53,16 @@ class OkapiMockServer {
   private static final String INSTANCES_4 = "/instance-storage/instances/instances_4.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
 
+  private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
+  private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
+  private static final String CONFIG_DEFAULT = "/configurations.entries/config_default.json";
+  public static final String ERROR_TENANT = "error";
+
 
   private final int port;
   private final Vertx vertx;
 
-  OkapiMockServer(Vertx vertx, int port) {
+  public OkapiMockServer(Vertx vertx, int port) {
     this.port = port;
     this.vertx = vertx;
   }
@@ -65,7 +74,21 @@ class OkapiMockServer {
           .handler(this::handleInstancesInventoryStorageResponse);
     router.route(HttpMethod.GET, "/instance-storage/instances/:instanceId/source-record/marc-json")
           .handler(this::handleMarcJsonInventoryStorageResponse);
+    router.route(HttpMethod.GET, "/configurations/entries")
+          .handler(this::handleConfigurationModuleResponse);
     return router;
+  }
+
+  private void handleConfigurationModuleResponse(RoutingContext ctx) {
+    if (ctx.request().getHeader(OKAPI_TENANT_HEADER).equals(EXIST_CONFIG_TENANT)) {
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
+    } else if (ctx.request().getHeader(OKAPI_TENANT_HEADER).equals(NON_EXIST_CONFIG_TENANT)) {
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
+    } else if (ctx.request().getHeader(OKAPI_TENANT_HEADER).equals(ERROR_TENANT)) {
+      failureResponse(ctx, 500, "Internal Server Error");
+    } else {
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_DEFAULT));
+    }
   }
 
   private void handleMarcJsonInventoryStorageResponse(RoutingContext ctx) {

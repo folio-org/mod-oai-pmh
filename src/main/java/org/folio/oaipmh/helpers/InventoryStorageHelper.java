@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Request;
@@ -12,12 +13,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.REPOSITORY_REQUEST_ITEMS_LIMIT;
 
 public class InventoryStorageHelper implements InstancesStorageHelper {
 
-  private static final String RECORDS_LIMIT = "100";
-
-  /**
+   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
    * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
    */
@@ -68,7 +68,8 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   }
 
   @Override
-  public String buildItemsEndpoint(Request request) throws UnsupportedEncodingException {
+  public String buildItemsEndpoint(Request request) throws
+    UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     queryBuilder.source("MARC-JSON");
     if (isNotEmpty(request.getIdentifier())) {
@@ -79,7 +80,8 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
         .dateRange(request.getFrom(), request.getUntil());
     }
 
-    return "/instance-storage/instances" + queryBuilder.build() + "&limit=" + RECORDS_LIMIT;
+    return "/instance-storage/instances" + queryBuilder.build() + "&limit="
+      + RepositoryConfigurationHelper.getProperty(REPOSITORY_REQUEST_ITEMS_LIMIT, Vertx.currentContext());
   }
 
   /**
