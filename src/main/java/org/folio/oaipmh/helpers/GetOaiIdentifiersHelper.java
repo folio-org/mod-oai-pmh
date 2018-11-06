@@ -43,7 +43,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
 
       // 2. Search for instances
-      httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
+      VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false))
         // 3. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
         .thenApply(identifiers -> {

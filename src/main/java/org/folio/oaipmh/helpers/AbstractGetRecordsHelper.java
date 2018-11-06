@@ -44,9 +44,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildItemsEndpoint(request);
 
-      httpClient
-        .request(instanceEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> buildRecordsResponse(httpClient, request, response))
+      VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
+        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
         .thenAccept(value -> {
           httpClient.closeClient();
           future.complete(value);
@@ -67,17 +66,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return completedFuture(buildResponseWithErrors(oaipmh));
   }
 
-  private CompletableFuture<MetadataType> getOaiMetadata(HttpClientInterface httpClient, Request request, String id) {
+  private CompletableFuture<MetadataType> getOaiMetadata(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getMetadataEndpoint(id);
-      return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-                       .thenApplyAsync(response -> buildOaiMetadata(request, response));
+      return VertxCompletableFuture.from(ctx, httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false))
+                                   .thenApplyAsync(response -> buildOaiMetadata(request, response));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
-  private CompletableFuture<Response> buildRecordsResponse(HttpClientInterface httpClient, Request request,
+  private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
@@ -88,9 +87,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
 
-      records.forEach((id, record) -> cfs.add(getOaiMetadata(httpClient, request, id).thenAccept(record::withMetadata)));
+      records.forEach((id, record) -> cfs.add(getOaiMetadata(ctx, httpClient, request, id).thenAccept(record::withMetadata)));
 
-      return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
               .thenApply(v -> {
                 OAIPMH oaipmh = buildBaseResponse(request);
 
