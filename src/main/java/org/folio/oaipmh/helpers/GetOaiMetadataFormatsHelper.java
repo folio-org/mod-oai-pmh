@@ -3,8 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -23,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOaiMetadataFormatsHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {

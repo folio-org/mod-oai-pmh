@@ -1,8 +1,9 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiRepositoryInfoResponse;
@@ -17,7 +18,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.okapi.common.XOkapiHeaders.TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 
 
 /**
@@ -25,7 +26,7 @@ import static org.folio.okapi.common.XOkapiHeaders.TENANT;
  */
 public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOaiRepositoryInfoHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiRepositoryInfoHelper.class);
 
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
@@ -67,7 +68,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
     if (repoName == null) {
       throw new IllegalStateException("The required repository config 'repository.name' is missing");
     }
-    return repoName + "_" + okapiHeaders.get(TENANT);
+    return repoName + "_" + okapiHeaders.get(OKAPI_TENANT);
   }
 
   /**

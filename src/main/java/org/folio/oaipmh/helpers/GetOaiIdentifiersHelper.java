@@ -3,8 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.Response;
@@ -25,7 +26,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FOR
 
 public class GetOaiIdentifiersHelper extends AbstractHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOaiIdentifiersHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiIdentifiersHelper.class);
   private static final String GENERIC_ERROR = "Error happened while processing ListIdentifiers verb request";
 
   @Override

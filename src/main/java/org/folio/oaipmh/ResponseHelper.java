@@ -2,6 +2,7 @@ package org.folio.oaipmh;
 
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
 import org.xml.sax.SAXException;
 
@@ -13,6 +14,7 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 
@@ -77,18 +79,18 @@ public class ResponseHelper {
    * Marshals {@link OAIPMH} object and returns string representation
    * @param response {@link OAIPMH} object to marshal
    * @return marshaled {@link OAIPMH} object as string representation
-   * @throws JAXBException can be thrown, for example, if the {@link OAIPMH} object is invalid
    */
   public String writeToString(OAIPMH response) {
-    StringWriter writer = new StringWriter();
-    try {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+    try (StringWriter writer = new StringWriter()) {
       jaxbMarshaller.marshal(response, writer);
-    } catch (JAXBException e) {
+      return writer.toString();
+    } catch (JAXBException | IOException e) {
       // In case there is an issue to marshal response, there is no way to handle it
       throw new IllegalStateException("The OAI-PMH response cannot be converted to string representation.", e);
+    } finally {
+      logExecutionTime("OAIPMH converted to string", timer);
     }
-
-    return writer.toString();
   }
 
   /**
@@ -98,7 +100,12 @@ public class ResponseHelper {
    * @throws JAXBException in case passed string is not valid OAIPMH representation
    */
   public OAIPMH stringToOaiPmh(String oaipmhResponse) throws JAXBException {
-    return (OAIPMH) jaxbUnmarshaller.unmarshal(new StringReader(oaipmhResponse));
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+    try (StringReader reader = new StringReader(oaipmhResponse)) {
+      return (OAIPMH) jaxbUnmarshaller.unmarshal(reader);
+    } finally {
+      logExecutionTime("String converted to OAIPMH", timer);
+    }
   }
 
   /**
@@ -106,5 +113,12 @@ public class ResponseHelper {
    */
   public boolean isJaxbInitialized() {
     return jaxbMarshaller != null;
+  }
+
+  private void logExecutionTime(final String msg, StopWatch timer) {
+    if (timer != null) {
+      timer.stop();
+      logger.debug(String.format("%s after %d ms", msg, timer.getTime()));
+    }
   }
 }
