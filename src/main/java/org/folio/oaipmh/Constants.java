@@ -29,7 +29,7 @@ public final class Constants {
   public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "The request includes resumptionToken and other argument(s)";
   public static final String NO_RECORD_FOUND_ERROR = "There is no any record found matching search criteria";
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
-  public static final String RECORD_METADATA_PREFIX_PARAM_ERROR ="The request is missing required arguments. There is no metadataPrefix.";
+  public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
 }

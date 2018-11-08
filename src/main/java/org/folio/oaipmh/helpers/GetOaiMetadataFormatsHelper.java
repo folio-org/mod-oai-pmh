@@ -116,7 +116,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     return ResponseHelper.getInstance().writeToString(
       buildBaseResponse(request)
         .withErrors(new OAIPMHerrorType()
-          .withValue(String.format(Constants.RECORD_NOT_FOUND_ERROR, request.getIdentifier()))
+          .withValue(Constants.RECORD_NOT_FOUND_ERROR)
           .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
   }
 
