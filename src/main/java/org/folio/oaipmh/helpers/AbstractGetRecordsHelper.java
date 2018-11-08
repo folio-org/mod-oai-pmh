@@ -3,8 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -24,11 +25,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  protected final Logger logger = Logger.getLogger(getClass());
+  protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {
@@ -44,9 +46,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildItemsEndpoint(request);
 
-      httpClient
-        .request(instanceEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> buildRecordsResponse(httpClient, request, response))
+      if (logger.isDebugEnabled()) {
+        logger.debug("Sending message to " + instanceEndpoint);
+      }
+
+      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
+        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
         .thenAccept(value -> {
           httpClient.closeClient();
           future.complete(value);
@@ -67,17 +72,21 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return completedFuture(buildResponseWithErrors(oaipmh));
   }
 
-  private CompletableFuture<MetadataType> getOaiMetadata(HttpClientInterface httpClient, Request request, String id) {
+  private CompletableFuture<MetadataType> getOaiMetadata(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getMetadataEndpoint(id);
+      if (logger.isDebugEnabled()) {
+        logger.debug("Getting metadata info from " + metadataEndpoint);
+      }
+
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-                       .thenApplyAsync(response -> buildOaiMetadata(request, response));
+                       .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(request, response)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
-  private CompletableFuture<Response> buildRecordsResponse(HttpClientInterface httpClient, Request request,
+  private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
@@ -88,9 +97,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
 
-      records.forEach((id, record) -> cfs.add(getOaiMetadata(httpClient, request, id).thenAccept(record::withMetadata)));
+      records.forEach((id, record) -> cfs.add(getOaiMetadata(ctx, httpClient, request, id).thenAccept(record::withMetadata)));
 
-      return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
               .thenApply(v -> {
                 OAIPMH oaipmh = buildBaseResponse(request);
 
@@ -98,8 +107,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 addRecordsToOaiResponce(oaipmh, records.values().stream()
                                                        .filter(record -> record.getMetadata() != null)
                                                        .collect(Collectors.toList()));
-                return buildResponse(oaipmh);
-              });
+                return oaipmh;
+              })
+              .thenCompose(oaipmh -> supplyBlockingAsync(ctx, () -> buildResponse(oaipmh)));
     }
   }
 
@@ -111,6 +121,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Map<String, RecordType> records = Collections.emptyMap();
     JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     if (instances != null && !instances.isEmpty()) {
+      if (logger.isDebugEnabled()) {
+        logger.debug("Number of instances to process: " + instances.size());
+      }
+
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
