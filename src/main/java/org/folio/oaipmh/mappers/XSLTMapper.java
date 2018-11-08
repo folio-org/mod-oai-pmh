@@ -14,6 +14,9 @@ import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamSource;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -22,6 +25,7 @@ import org.w3c.dom.Node;
  * This class add XSLT post-processing to transform MarcXML to desired XML format.
  */
 public class XSLTMapper extends MarcXmlMapper {
+  private static final Logger logger = LoggerFactory.getLogger(XSLTMapper.class);
 
   private static final String MAPPER_CREATION_ERROR_MESSAGE = "Can't create mapper with provided stylesheet.";
   private static final String MAPPER_TRANSFORMATION_ERROR_MESSAGE = "Can't transform xml.";
@@ -57,6 +61,7 @@ public class XSLTMapper extends MarcXmlMapper {
   @Override
   public Node convert(String source) {
     Node nodeSource = super.convert(source);
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
     try {
       DocumentBuilderFactory docbFactory = DocumentBuilderFactory.newInstance();
       DocumentBuilder documentBuilder = docbFactory.newDocumentBuilder();
@@ -67,6 +72,11 @@ public class XSLTMapper extends MarcXmlMapper {
       return ((Document) result.getNode()).getDocumentElement();
     } catch (TransformerException | ParserConfigurationException e) {
       throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
+    } finally {
+      if (timer != null) {
+        timer.stop();
+        logger.debug(String.format("MarcXml converted to other format by XSLT transformation after %d ms", timer.getTime()));
+      }
     }
   }
 

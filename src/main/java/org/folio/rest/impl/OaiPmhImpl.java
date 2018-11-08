@@ -66,7 +66,12 @@ public class OaiPmhImpl implements Oai {
 
          HELPERS.get(LIST_RECORDS)
            .handle(request, vertxContext)
-           .thenAccept(response -> asyncResultHandler.handle(succeededFuture(response)))
+           .thenAccept(response -> {
+             if (logger.isDebugEnabled()) {
+               logger.debug("ListRecords response: " + response.getEntity());
+             }
+             asyncResultHandler.handle(succeededFuture(response));
+           })
            .exceptionally(throwable -> {
              asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
              return null;
@@ -91,7 +96,12 @@ public class OaiPmhImpl implements Oai {
 
           HELPERS.get(GET_RECORD)
             .handle(request, vertxContext)
-            .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
+            .thenAccept(response -> {
+              if (logger.isDebugEnabled()) {
+                logger.debug("GetRecord response: " + response.getEntity());
+              }
+              asyncResultHandler.handle(succeededFuture(response));
+            })
             .exceptionally(throwable -> {
               asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
               return null;
@@ -118,7 +128,12 @@ public class OaiPmhImpl implements Oai {
 
         HELPERS.get(LIST_IDENTIFIERS)
                .handle(request, vertxContext)
-               .thenAccept(oai -> asyncResultHandler.handle(succeededFuture(oai)))
+          .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListIdentifiers response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          })
                .exceptionally(throwable -> {
                  asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
                  return null;
@@ -141,7 +156,9 @@ public class OaiPmhImpl implements Oai {
         VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
         getRepositoryInfoHelper.handle(request, vertxContext)
           .thenAccept(response -> {
-            logger.debug("Successfully retrieved ListMetadataFormats info: " + response.getEntity().toString());
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListMetadataFormats response: " + response.getEntity());
+            }
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(throwable -> {
             asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
@@ -166,7 +183,9 @@ public class OaiPmhImpl implements Oai {
         VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
         getSetsHelper.handle(request, vertxContext)
           .thenAccept(response -> {
-            logger.info("Successfully retrieved sets structure: " + response.getEntity().toString());
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListSets response: " + response.getEntity());
+            }
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(throwable -> {
             asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
@@ -190,7 +209,9 @@ public class OaiPmhImpl implements Oai {
         VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
         getRepositoryInfoHelper.handle(request, vertxContext)
           .thenAccept(response -> {
-            logger.info("Successfully retrieved repository info: " + response.getEntity().toString());
+            if (logger.isDebugEnabled()) {
+              logger.debug("Identify response: " + response.getEntity());
+            }
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(throwable -> {
             asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
@@ -198,6 +219,4 @@ public class OaiPmhImpl implements Oai {
           });
       });
   }
-
-
 }

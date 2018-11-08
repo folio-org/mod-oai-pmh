@@ -1,6 +1,7 @@
 package org.folio.oaipmh;
 
-import org.apache.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -9,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MetadataPrefixTest {
 
-  private static final Logger logger = Logger.getLogger(MetadataPrefixTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(MetadataPrefixTest.class);
   private MetadataPrefix[] metadataPrefixes = MetadataPrefix.values();
 
   @Test

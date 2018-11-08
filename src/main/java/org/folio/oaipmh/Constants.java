@@ -6,6 +6,9 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
+  public static final String OKAPI_URL = "X-Okapi-Url";
+  public static final String OKAPI_TENANT = "X-Okapi-Tenant";
+
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
@@ -25,6 +28,9 @@ public final class Constants {
   public static final String RESUMPTION_TOKEN_PARAM = "resumptionToken";
   public static final String SET_PARAM = "set";
   public static final String UNTIL_PARAM = "until";
+
+  public static final String DEFLATE = "deflate";
+  public static final String GZIP = "gzip";
 
   public static final String GENERIC_ERROR_MESSAGE = "Sorry, we can't process your request. Please contact administrator(s).";
   public static final String CANNOT_DISSEMINATE_FORMAT_ERROR = "The value of thr MetadataPrefix argument is not supported by the repository";

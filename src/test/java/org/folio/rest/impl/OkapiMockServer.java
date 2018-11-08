@@ -5,11 +5,12 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class OkapiMockServer {
 
 
-  private static final Logger logger = Logger.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";

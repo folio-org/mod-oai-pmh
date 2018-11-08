@@ -1,6 +1,7 @@
 package org.folio.oaipmh;
 
-import org.apache.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 class ResponseHelperTest {
 
-  private static final Logger logger = Logger.getLogger(ResponseHelperTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(ResponseHelperTest.class);
 
   @Test
   void validationException() {

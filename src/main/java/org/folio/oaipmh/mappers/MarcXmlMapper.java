@@ -7,6 +7,9 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import javax.xml.transform.dom.DOMResult;
 
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcWriter;
@@ -19,6 +22,7 @@ import org.w3c.dom.Node;
  * Converts MarcJson format to MarcXML format.
  */
 public class MarcXmlMapper implements Mapper {
+  private static final Logger logger = LoggerFactory.getLogger(MarcXmlMapper.class);
 
   /**
    * Convert MarcJson to MarcXML.
@@ -27,6 +31,7 @@ public class MarcXmlMapper implements Mapper {
    * @return DOM's Node representation of MarcXML
    */
   public Node convert(String source) {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
     try (InputStream inputStream
            = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
       MarcReader marcJsonReader = new MarcJsonReader(inputStream);
@@ -53,6 +58,11 @@ public class MarcXmlMapper implements Mapper {
       return domResult.getNode().getFirstChild().getFirstChild();
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
+    } finally {
+      if (timer != null) {
+        timer.stop();
+        logger.debug(String.format("Marc-json converted to MarcXml after %d ms", timer.getTime()));
+      }
     }
   }
 

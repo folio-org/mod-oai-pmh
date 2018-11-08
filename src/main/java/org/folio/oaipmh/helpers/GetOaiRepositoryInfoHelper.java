@@ -1,8 +1,9 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiRepositoryInfoResponse;
@@ -22,6 +23,9 @@ import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_PROTOCOL_VERSION;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.GZIP;
+import static org.folio.oaipmh.Constants.DEFLATE;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 
 
 /**
@@ -29,7 +33,12 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
  */
 public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOaiRepositoryInfoHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiRepositoryInfoHelper.class);
+
+  public static final String REPOSITORY_NAME = "repository.name";
+  public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
+  public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
+
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {
@@ -46,7 +55,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
             (REPOSITORY_TIME_GRANULARITY, ctx)))
           .withDeletedRecord(DeletedRecordType.fromValue(RepositoryConfigurationHelper
             .getProperty(REPOSITORY_DELETED_RECORDS, ctx)))
-          .withAdminEmails(getEmails(ctx)));
+          .withAdminEmails(getEmails(ctx))
+          .withCompressions(GZIP, DEFLATE));
 
       String response = ResponseHelper.getInstance().writeToString(oai);
       future.complete(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(response));
