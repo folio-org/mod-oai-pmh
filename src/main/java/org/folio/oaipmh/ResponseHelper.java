@@ -4,6 +4,7 @@ import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
 import gov.loc.marc21.slim.RecordType;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.purl.dc.elements._1.ObjectFactory;
@@ -18,6 +19,7 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
@@ -88,8 +90,9 @@ public class ResponseHelper {
    * @return marshaled {@link OAIPMH} object as string representation
    */
   public String writeToString(OAIPMH response) {
-    StringWriter writer = new StringWriter();
-    try {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+
+    try (StringWriter writer = new StringWriter()) {
       // Marshaller is not thread-safe, so we should create every time a new one
       Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
       if (oaipmhSchema != null) {
@@ -103,12 +106,13 @@ public class ResponseHelper {
       // needed to replace the namespace prefixes with a more readable format.
       jaxbMarshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", namespacePrefixMapper);
       jaxbMarshaller.marshal(response, writer);
-    } catch (JAXBException e) {
+      return writer.toString();
+    } catch (JAXBException | IOException e) {
       // In case there is an issue to marshal response, there is no way to handle it
       throw new IllegalStateException("The OAI-PMH response cannot be converted to string representation.", e);
+    } finally {
+      logExecutionTime("OAIPMH converted to string", timer);
     }
-
-    return writer.toString();
   }
 
   /**
@@ -117,16 +121,19 @@ public class ResponseHelper {
    * @return the {@link OAIPMH} object based on passed string
    */
   public OAIPMH stringToOaiPmh(String oaipmhResponse) {
-    try {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+    try (StringReader reader = new StringReader(oaipmhResponse)) {
       // Unmarshaller is not thread-safe, so we should create every time a new one
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
       if (oaipmhSchema != null) {
         jaxbUnmarshaller.setSchema(oaipmhSchema);
       }
-      return (OAIPMH) jaxbUnmarshaller.unmarshal(new StringReader(oaipmhResponse));
+      return (OAIPMH) jaxbUnmarshaller.unmarshal(reader);
     } catch (JAXBException e) {
       // In case there is an issue to unmarshal response, there is no way to handle it
       throw new IllegalStateException("The string cannot be converted to OAI-PMH response.", e);
+    } finally {
+      logExecutionTime("String converted to OAIPMH", timer);
     }
   }
 
@@ -154,5 +161,12 @@ public class ResponseHelper {
    */
   public boolean isJaxbInitialized() {
     return jaxbContext != null;
+  }
+
+  private void logExecutionTime(final String msg, StopWatch timer) {
+    if (timer != null) {
+      timer.stop();
+      logger.debug(String.format("%s after %d ms", msg, timer.getTime()));
+    }
   }
 }

@@ -6,6 +6,9 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
+  public static final String OKAPI_URL = "X-Okapi-Url";
+  public static final String OKAPI_TENANT = "X-Okapi-Tenant";
+
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String IDENTIFIER_PREFIX = "identifierPrefix";
 
