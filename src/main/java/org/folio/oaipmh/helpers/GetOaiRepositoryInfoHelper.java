@@ -18,6 +18,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.oaipmh.Constants.GZIP;
+import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 
 
@@ -45,7 +47,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withEarliestDatestamp(getEarliestDatestamp())
           .withGranularity(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)
           .withDeletedRecord(DeletedRecordType.NO)
-          .withAdminEmails(getEmails()));
+          .withAdminEmails(getEmails())
+          .withCompressions(GZIP, DEFLATE));
 
       String response = ResponseHelper.getInstance().writeToString(oai);
       future.complete(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(response));
