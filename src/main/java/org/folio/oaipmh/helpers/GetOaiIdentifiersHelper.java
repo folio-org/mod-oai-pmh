@@ -14,11 +14,17 @@ import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiIdentifiersResponse;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -33,28 +39,35 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
   public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
     CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     try {
-      // 1. Validate request
+      // 1. Restore request from resumptionToken if present
+      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
+          OAIPMH oai = buildBaseResponse(request)
+            .withErrors(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
+          future.complete(buildNoRecordsResponse(oai));
+          return future;
+      }
+
+      // 2. Validate request
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildBaseResponse(request).withErrors(errors);
+        OAIPMH oai = buildBaseResponse(request);
+        if (request.isRestored()) {
+          oai.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
+        } else {
+          oai.withErrors(errors);
+        }
         future.complete(buildNoRecordsResponse(oai));
         return future;
       }
 
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
 
-      // 2. Search for instances
+      // 3. Search for instances
       VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false))
-        // 3. Verify response and build list of identifiers
+        // 4. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
-        .thenApply(identifiers -> {
-          if (identifiers == null) {
-            return buildNoRecordsResponse(buildNoRecordsFoundOaiResponse(request));
-          } else {
-            return buildSuccessResponse(buildBaseResponse(request)
-              .withListIdentifiers(identifiers));
-          }
-        })
+        // 5. Build final response to client (potentially blocking operation thus running on worker thread)
+        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai)))
         .thenAccept(future::complete)
         .exceptionally(e -> {
           logger.error(GENERIC_ERROR, e);
@@ -69,8 +82,15 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     return future;
   }
 
-  private OAIPMH buildNoRecordsFoundOaiResponse(Request request) {
-    return buildBaseResponse(request).withErrors(createNoRecordsFoundError());
+  /**
+   * Check if there are identifiers built and construct success response, otherwise return response with error(s)
+   */
+  private javax.ws.rs.core.Response buildResponse(OAIPMH oai) {
+    if (oai.getListIdentifiers() == null) {
+      return buildNoRecordsResponse(oai);
+    } else {
+      return buildSuccessResponse(oai);
+    }
   }
 
   private javax.ws.rs.core.Response buildNoRecordsResponse(OAIPMH oai) {
@@ -89,14 +109,13 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
   private javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
     return GetOaiIdentifiersResponse.respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
   }
-
   /**
    * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
    * @param request request
    * @param instancesResponse the response from the storage which contains items
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
-  private ListIdentifiersType buildListIdentifiers(Request request, Response instancesResponse) {
+  private OAIPMH buildListIdentifiers(Request request, Response instancesResponse) {
     if (!Response.isSuccess(instancesResponse.getCode())) {
       logger.error("No instances found. Service responded with error: " + instancesResponse.getError());
       // The storage service could not return instances so we have to send 500 back to client
@@ -104,14 +123,31 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     }
 
     JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
+    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
+    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
+        return buildBaseResponse(request).withErrors(new OAIPMHerrorType()
+        .withCode(BAD_RESUMPTION_TOKEN)
+        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+    }
     if (instances != null && !instances.isEmpty()) {
       ListIdentifiersType identifiers = new ListIdentifiersType();
+
+      String resumptionToken = buildResumptionToken(request, instances, totalRecords);
+      if (resumptionToken != null) {
+        identifiers.withResumptionToken(new ResumptionTokenType()
+          .withValue(resumptionToken)
+          .withCompleteListSize(BigInteger.valueOf(totalRecords))
+          .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset())));
+      }
+
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-               .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
-               .forEach(identifiers::withHeaders);
-      return identifiers;
+        .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
+        .forEach(identifiers::withHeaders);
+
+      return buildBaseResponse(request).withListIdentifiers(identifiers);
     }
-    return null;
+
+    return buildBaseResponse(request).withErrors(createNoRecordsFoundError());
   }
 }

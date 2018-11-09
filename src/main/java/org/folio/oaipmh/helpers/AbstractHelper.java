@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -21,24 +22,24 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
@@ -48,7 +49,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 public abstract class AbstractHelper implements VerbHelper {
 
   /** Strict ISO Date and Time with UTC offset. */
-  private static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  protected static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   /**
    * Holds instance to handle items returned
@@ -64,7 +65,8 @@ public abstract class AbstractHelper implements VerbHelper {
     return new OAIPMH()
       // According to spec the nanoseconds should not be used so truncate to seconds
       .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.getOaiRequest().withValue(getBaseURL()));
+      .withRequest(request.getOaiRequest()
+        .withValue(getBaseURL()));
   }
 
   /**
@@ -75,43 +77,22 @@ public abstract class AbstractHelper implements VerbHelper {
   protected List<OAIPMHerrorType> validateListRequest(Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
 
-    // The 'resumptionToken' is an exclusive argument. We need to check that if it is, there is nothing else
-    boolean hasResumptionToken = request.getResumptionToken() != null;
-    boolean hasOtherParam = false;
-
-    if (hasResumptionToken) {
-      // At the moment the 'resumptionToken' is not supported so any format is considered invalid so far
-      errors.add(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN)
-                                      .withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
-    }
-
-    // The 'metadataPrefix' parameter is required only if there is no 'resumptionToken'
     if (request.getMetadataPrefix() != null) {
-      hasOtherParam = true;
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
-        errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
-          .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
+        errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT).withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
-    } else if (!hasResumptionToken) {
+    } else {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));
     }
 
-    if (request.getSet() != null) {
-      hasOtherParam = true;
-      if (!getSupportedSetSpecs().contains(request.getSet())) {
-        errors.add(createNoRecordsFoundError());
-      }
+    if (request.getSet() != null && !getSupportedSetSpecs().contains(request.getSet())) {
+      errors.add(createNoRecordsFoundError());
     }
 
     if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
-      hasOtherParam = true;
       validateDateRange(request, errors);
     }
 
-
-    if (hasResumptionToken && hasOtherParam) {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
-    }
     return errors;
   }
 
@@ -266,6 +247,56 @@ public abstract class AbstractHelper implements VerbHelper {
               .stream()
               .map(OAIPMHerrorType::getCode)
               .collect(Collectors.toSet());
+  }
+
+  /**
+   * Builds resumptionToken that is used to resume request sequence
+   * in case the whole result set is partitioned.
+   *
+   * @param request the initial request
+   * @param instances the array of instances returned from Instance Storage
+   * @param totalRecords the total number of records in the whole result set
+   * @return resumptionToken value if partitioning is used and not all instances are processed yet,
+   * empty string if partitioning is used and all instances are processed already,
+   * null if the result set is not partitioned.
+   */
+  protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
+    int newOffset = request.getOffset() + Integer.valueOf(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    if (newOffset < totalRecords) {
+      Map<String, String> extraParams = new HashMap<>();
+      extraParams.put("totalRecords", String.valueOf(totalRecords));
+      extraParams.put("offset", String.valueOf(newOffset));
+      String nextRecordId = storageHelper.getItemId((JsonObject) instances.remove(instances.size() - 1));
+      extraParams.put("nextRecordId", nextRecordId);
+      if (request.getUntil() == null) {
+        extraParams.put("until", LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+      }
+
+      return request.toResumptionToken(extraParams);
+    } else {
+      return request.isRestored() ? EMPTY : null;
+    }
+  }
+
+  /**
+   * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
+   * <br/>
+   * The following state is an indicator that flow cannot be safely resumed:
+   * <li>No instances are returned</li>
+   * <li>Current total number of records is less than the previous one and the first
+   * record id does not match one stored in the resumptionToken</li>
+   * <br/>
+   * See <a href="https://issues.folio.org/browse/MODOAIPMH-10">MODOAIPMH-10</a> for more details.
+   * @param request
+   * @param totalRecords
+   * @param instances
+   * @return
+   */
+  protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
+    Integer prevTotalRecords = request.getTotalRecords();
+    return instances != null && instances.size() > 0 &&
+      (totalRecords >= prevTotalRecords
+        || StringUtils.equals(request.getNextRecordId(), storageHelper.getItemId(instances.getJsonObject(0))));
   }
 
   private List<String> getSupportedSetSpecs() {

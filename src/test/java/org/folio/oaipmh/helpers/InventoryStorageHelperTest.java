@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -32,6 +33,7 @@ class InventoryStorageHelperTest {
   @BeforeEach
   void init() {
     helper = new InventoryStorageHelper();
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
   }
 
   @Test

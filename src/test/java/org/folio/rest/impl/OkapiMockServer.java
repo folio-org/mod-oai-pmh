@@ -14,10 +14,12 @@ import io.vertx.junit5.VertxTestContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class OkapiMockServer {
@@ -31,6 +33,7 @@ class OkapiMockServer {
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
+  static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01T00:00:00Z";
   static final String ERROR_DATE = "2010-10-10T10:10:10Z";
   static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE = "2001-01-01T01:01:01Z";
   static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
@@ -49,6 +52,7 @@ class OkapiMockServer {
   private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
   private static final String INSTANCES_4 = "/instance-storage/instances/instances_4.json";
   private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
+  private static final String INSTANCES_11 = "/instance-storage/instances/instances_11.json";
 
 
   private final int port;
@@ -76,7 +80,11 @@ class OkapiMockServer {
     } else if (instanceId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
       failureResponse(ctx, 404, "Record not found");
     } else {
-      successResponse(ctx, getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId)));
+      String json = getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId));
+      if (isNotEmpty(json)) {
+        successResponse(ctx, json);
+      }
+      successResponse(ctx, getJsonObjectFromFile("/instance-storage/instances/marc.json"));
     }
   }
 
@@ -103,6 +111,8 @@ class OkapiMockServer {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_DATE)) {
         failureResponse(ctx, 500, "Internal Server Error");
+      } else if (query.contains(PARTITIONABLE_RECORDS_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(INSTANCES_11));
       } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
         successResponse(ctx, getJsonObjectFromFile(INSTANCES_1_NO_RECORD_SOURCE));
       } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE)) {
@@ -141,7 +151,11 @@ class OkapiMockServer {
    */
   private String getJsonObjectFromFile(String path) {
     try {
-      File file = new File(OkapiMockServer.class.getResource(path).getFile());
+      URL resource = OkapiMockServer.class.getResource(path);
+      if (resource == null) {
+        return null;
+      }
+      File file = new File(resource.getFile());
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new String(encoded, StandardCharsets.UTF_8);
     } catch (IOException e) {

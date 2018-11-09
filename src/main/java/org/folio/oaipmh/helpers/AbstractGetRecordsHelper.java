@@ -28,6 +28,11 @@ import java.util.stream.Collectors;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -37,9 +42,21 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   public CompletableFuture<Response> handle(Request request, Context ctx) {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
+      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
+        OAIPMH oai = buildBaseResponse(request)
+          .withErrors(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
+        future.complete(buildResponseWithErrors(oai));
+        return future;
+      }
+
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildBaseResponse(request).withErrors(errors);
+        OAIPMH oai = buildBaseResponse(request);
+        if (request.isRestored()) {
+          oai.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
+        } else {
+          oai.withErrors(errors);
+        }
         future.complete(buildResponseWithErrors(oai));
         return future;
       }
@@ -91,23 +108,33 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
-    final Map<String, RecordType> records = buildRecords(request, instancesResponse);
+    JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
+    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
+    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
+      OAIPMH oaipmh = buildBaseResponse(request).withErrors(new OAIPMHerrorType()
+        .withCode(BAD_RESUMPTION_TOKEN)
+        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+      return completedFuture(buildResponseWithErrors(oaipmh));
+    }
+    String resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
+    final Map<String, RecordType> records = buildRecords(request, instances);
     if (records.isEmpty()) {
       return buildNoRecordsFoundOaiResponse(request);
     } else {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
-
       records.forEach((id, record) -> cfs.add(getOaiMetadata(ctx, httpClient, request, id).thenAccept(record::withMetadata)));
 
       return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
               .thenApply(v -> {
                 OAIPMH oaipmh = buildBaseResponse(request);
-
                 // Return only records with metadata populated
-                addRecordsToOaiResponce(oaipmh, records.values().stream()
+                addRecordsToOaiResponse(oaipmh, records.values().stream()
                                                        .filter(record -> record.getMetadata() != null)
                                                        .collect(Collectors.toList()));
+                if (resumptionToken != null) {
+                  addResumptionTokenToOaiResponse(oaipmh, resumptionToken, request, totalRecords);
+                }
                 return oaipmh;
               })
               .thenCompose(oaipmh -> supplyBlockingAsync(ctx, () -> buildResponse(oaipmh)));
@@ -118,9 +145,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
    * otherwise empty map is returned
    */
-  private Map<String, RecordType> buildRecords(Request request, org.folio.rest.tools.client.Response instancesResponse) {
+  private Map<String, RecordType> buildRecords(Request request, JsonArray instances) {
     Map<String, RecordType> records = Collections.emptyMap();
-    JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     if (instances != null && !instances.isEmpty()) {
       if (logger.isDebugEnabled()) {
         logger.debug("Number of instances to process: " + instances.size());
@@ -197,6 +223,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract Response buildSuccessResponse(OAIPMH oai);
   protected abstract Response buildResponseWithErrors(OAIPMH oai);
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
-  protected abstract void addRecordsToOaiResponce(OAIPMH oaipmh, Collection<RecordType> records);
+  protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
+  protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, String resumptionToken,
+                                                          Request request, Integer totalRecords);
 
 }

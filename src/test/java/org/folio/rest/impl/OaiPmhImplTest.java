@@ -12,6 +12,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.RestVerticle;
@@ -28,9 +30,13 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +70,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.fail;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -163,6 +170,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
     assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
     oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
   }
@@ -172,8 +180,10 @@ class OaiPmhImplTest {
   void getOaiIdentifiersWithDateRange(MetadataPrefix prefix) {
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS, prefix);
 
+    assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
     assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(3));
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
     oaipmh.getListIdentifiers()
           .getHeaders()
@@ -187,6 +197,7 @@ class OaiPmhImplTest {
 
     assertThat(oaipmh.getListRecords(), is(notNullValue()));
     assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
+    assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
     oaipmh.getListRecords()
           .getRecords()
@@ -250,40 +261,102 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiListVerbWithResumptionToken(VerbType verb) {
-    String resumptionToken = "abc";
+  void getOaiListVerbResumptionFlowStarted(VerbType verb) {
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
-        .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      .param("from", "2003-01-01T00:00:00Z")
+      .param("metadataPrefix", "oai_dc")
+      .param("set", "all");
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
 
-    assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
+    OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    List<OAIPMHerrorType> errors = oaipmh.getErrors();
-    assertThat(errors.get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+
+    assertThat(oaipmh.getErrors(), is(empty()));
+    verifyListResponse(oaipmh, verb, 10);
+    assertThat(resumptionToken, is(notNullValue()));
+    assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(resumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
+    assertThat(resumptionToken.getExpirationDate(), is(nullValue()));
+
+    String resumptionTokenValue =
+      new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
+    assertThat(params, is(hasSize(7)));
+
+    assertThat(getParamValue(params, "metadataPrefix"), is(equalTo("oai_dc")));
+    assertThat(getParamValue(params, "from"), is(equalTo("2003-01-01T00:00:00Z")));
+    assertThat(getParamValue(params, "until"), is((notNullValue())));
+    assertThat(getParamValue(params, "set"), is(equalTo("all")));
+    assertThat(getParamValue(params, "offset"), is(equalTo("10")));
+    assertThat(getParamValue(params, "totalRecords"), is(equalTo("100")));
+    assertThat(getParamValue(params, "nextRecordId"), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiListVerbWithResumptionTokenAndWrongMetadataPrefix(VerbType verb) {
+  void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
+    // base64 encoded string:
+    // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
+    // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46
+    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAwMy" +
+      "0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4OWEwMS1mM2N" +
+      "kLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDY";
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    assertThat(oaipmh.getErrors(), is(empty()));
+    verifyListResponse(oaipmh, verb, 10);
+
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    String actualValue =
+      new String(Base64.getDecoder().decode(actualResumptionToken.getValue()), StandardCharsets.UTF_8);
+    String expectedValue = actualValue.replaceAll("offset=\\d+", "offset=10");
+    assertThat(actualValue, equalTo(expectedValue));
+    assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
+    assertThat(actualResumptionToken.getExpirationDate(), is(nullValue()));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithBadResumptionToken(VerbType verb) {
+    // base64 encoded string:
+    // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z
+    // &set=all&offset=0&totalRecords=101&nextRecordId=6506b79b-7702-48b2-9774-a1c538fdd34e
+    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9M" +
+      "jAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAxJm5leHRSZWNvcmRJZD02NTA2Y" +
+      "jc5Yi03NzAyLTQ4YjItOTc3NC1hMWM1MzhmZGQzNGU";
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+    assertThat(oaipmh.getErrors(), is(hasSize(1)));
+    assertThat(oaipmh.getErrors().get(0).getCode(), is(equalTo(BAD_RESUMPTION_TOKEN)));
+    assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithResumptionTokenAndMetadataPrefix(VerbType verb) {
     String resumptionToken = "abc";
-    String metadataPrefix = "marc";
+    String metadataPrefix = "oai_dc";
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
         .param(METADATA_PREFIX_PARAM, metadataPrefix)
         .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 3);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
 
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
 
     List<OAIPMHerrorType> errors = oaipmh.getErrors();
-    List<OAIPMHerrorcodeType> codes = errors.stream()
-                                            .map(OAIPMHerrorType::getCode)
-                                            .collect(Collectors.toList());
-    assertThat(codes, containsInAnyOrder(BAD_RESUMPTION_TOKEN, BAD_ARGUMENT, CANNOT_DISSEMINATE_FORMAT));
+    assertThat(oaipmh.getErrors().get(0).getCode(), is(equalTo(BAD_ARGUMENT)));
 
     Optional<String> badArgMsg = errors.stream().filter(error -> error.getCode() == BAD_ARGUMENT).map(OAIPMHerrorType::getValue).findAny();
     badArgMsg.ifPresent(msg -> assertThat(msg, equalTo(LIST_ILLEGAL_ARGUMENTS_ERROR)));
@@ -647,6 +720,21 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void testGetOaiSetsWithResumptionToken(VertxTestContext testContext) {
+    String resumptionToken = "abc";
+    RequestSpecification request = createBaseRequest(LIST_SETS_PATH)
+      .with()
+      .param("resumptionToken", resumptionToken);
+
+    OAIPMH oai = verifyResponseWithErrors(request, LIST_SETS, 400, 1);
+
+    assertThat(oai.getErrors().get(0).getCode(), is(equalTo(BAD_RESUMPTION_TOKEN)));
+    assertThat(oai.getRequest().getResumptionToken(), is(equalTo(resumptionToken)));
+
+    testContext.completeNow();
+  }
+
+  @Test
   void testGetOaiSetsMissingBaseUrlProperty(VertxTestContext testContext) {
     // Remove required props
     String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
@@ -774,5 +862,35 @@ class OaiPmhImplTest {
     assertThat(header.getIdentifier(), containsString(IDENTIFIER_PREFIX));
     assertThat(header.getSetSpecs(), hasSize(1));
     assertThat(header.getDatestamp(), is(notNullValue()));
+  }
+
+  private void verifyListResponse(OAIPMH oaipmh, VerbType verb, int recordsCount) {
+    if (verb == LIST_IDENTIFIERS) {
+      assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
+      assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
+    } else if (verb == LIST_RECORDS) {
+      assertThat(oaipmh.getListRecords().getRecords(), is(notNullValue()));
+      assertThat(oaipmh.getListRecords().getRecords(), hasSize(recordsCount));
+    } else {
+      fail("Can't verify specified verb: " + verb);
+    }
+  }
+
+  private ResumptionTokenType getResumptionToken(OAIPMH oaipmh, VerbType verb) {
+    if (verb == LIST_IDENTIFIERS) {
+      return oaipmh.getListIdentifiers().getResumptionToken();
+    } else if (verb == LIST_RECORDS) {
+      return oaipmh.getListRecords().getResumptionToken();
+    } else {
+      return null;
+    }
+  }
+
+  private String getParamValue(List<NameValuePair> params, String name) {
+    return params.stream()
+      .filter(p -> p.getName().equals(name))
+      .map(NameValuePair::getValue)
+      .findFirst()
+      .get();
   }
 }

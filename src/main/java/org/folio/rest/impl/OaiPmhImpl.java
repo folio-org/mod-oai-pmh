@@ -57,21 +57,21 @@ public class OaiPmhImpl implements Oai {
     Request request = Request.builder()
                              .okapiHeaders(okapiHeaders)
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
+                             .verb(LIST_RECORDS)
                              .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                              .build();
-    request.getOaiRequest().setVerb(LIST_RECORDS);
-     HELPERS.get(LIST_RECORDS)
-       .handle(request, vertxContext)
-       .thenAccept(response -> {
-         if (logger.isDebugEnabled()) {
-           logger.debug("ListRecords response: " + response.getEntity());
-         }
-         asyncResultHandler.handle(succeededFuture(response));
-       })
-       .exceptionally(throwable -> {
-         asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-         return null;
-       });
+    HELPERS.get(LIST_RECORDS)
+      .handle(request, vertxContext)
+      .thenAccept(response -> {
+        if (logger.isDebugEnabled()) {
+          logger.debug("ListRecords response: " + response.getEntity());
+        }
+        asyncResultHandler.handle(succeededFuture(response));
+      })
+      .exceptionally(throwable -> {
+        asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+        return null;
+      });
   }
 
   @Override
@@ -81,10 +81,11 @@ public class OaiPmhImpl implements Oai {
       Request request = Request.builder()
                        .identifier(URLDecoder.decode(id, "UTF-8"))
                        .okapiHeaders(okapiHeaders)
+                       .verb(GET_RECORD)
                        .metadataPrefix(metadataPrefix)
                        .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                        .build();
-      request.getOaiRequest().setVerb(GET_RECORD);
+
       HELPERS.get(GET_RECORD)
         .handle(request, vertxContext)
         .thenAccept(response -> {
@@ -109,21 +110,22 @@ public class OaiPmhImpl implements Oai {
     Request request = Request.builder()
                              .okapiHeaders(okapiHeaders)
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
+                             .verb(LIST_IDENTIFIERS)
                              .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                              .build();
-    request.getOaiRequest().setVerb(LIST_IDENTIFIERS);
+
     HELPERS.get(LIST_IDENTIFIERS)
-           .handle(request, vertxContext)
-           .thenAccept(response -> {
-             if (logger.isDebugEnabled()) {
-               logger.debug("ListIdentifiers response: " + response.getEntity());
-             }
-             asyncResultHandler.handle(succeededFuture(response));
-           })
-           .exceptionally(throwable -> {
-             asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-             return null;
-           });
+      .handle(request, vertxContext)
+      .thenAccept(response -> {
+        if (logger.isDebugEnabled()) {
+          logger.debug("ListIdentifiers response: " + response.getEntity());
+        }
+        asyncResultHandler.handle(succeededFuture(response));
+      })
+      .exceptionally(throwable -> {
+        asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+        return null;
+      });
   }
 
   @Override
@@ -132,12 +134,13 @@ public class OaiPmhImpl implements Oai {
 
     Request request = Request.builder()
                              .identifier(identifier)
+                             .verb(LIST_METADATA_FORMATS)
                              .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
                              .okapiHeaders(okapiHeaders)
                              .build();
-    request.getOaiRequest().withVerb(LIST_METADATA_FORMATS);
-    VerbHelper getRepositoryInfoHelper = HELPERS.get(LIST_METADATA_FORMATS);
-    getRepositoryInfoHelper.handle(request, vertxContext)
+
+    HELPERS.get(LIST_METADATA_FORMATS)
+      .handle(request, vertxContext)
       .thenAccept(response -> {
         if (logger.isDebugEnabled()) {
           logger.debug("ListMetadataFormats response: " + response.getEntity());
@@ -156,9 +159,9 @@ public class OaiPmhImpl implements Oai {
     Request request = Request.builder()
       .okapiHeaders(okapiHeaders)
       .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
+      .verb(LIST_SETS)
       .resumptionToken(resumptionToken)
       .build();
-    request.getOaiRequest().setVerb(LIST_SETS);
 
     VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
     getSetsHelper.handle(request, vertxContext)
@@ -179,8 +182,8 @@ public class OaiPmhImpl implements Oai {
 
     Request request = Request.builder()
       .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
+      .verb(IDENTIFY)
       .okapiHeaders(okapiHeaders).build();
-    request.getOaiRequest().setVerb(IDENTIFY);
 
     VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
     getRepositoryInfoHelper.handle(request, vertxContext)
