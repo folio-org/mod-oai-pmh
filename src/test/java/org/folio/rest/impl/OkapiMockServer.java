@@ -60,7 +60,6 @@ public class OkapiMockServer {
 
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
-  private static final String CONFIG_DEFAULT = "/configurations.entries/config_default.json";
   public static final String ERROR_TENANT = "error";
 
 
@@ -92,7 +91,7 @@ public class OkapiMockServer {
     } else if (ctx.request().getHeader(OKAPI_TENANT_HEADER).equals(ERROR_TENANT)) {
       failureResponse(ctx, 500, "Internal Server Error");
     } else {
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_DEFAULT));
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
     }
   }
 

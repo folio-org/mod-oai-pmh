@@ -82,9 +82,9 @@ class InventoryStorageHelperTest {
     vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s -> {
       testContext.verify(() ->  {
         try {
-          Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "100");
+          Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
           assertThat(helper.buildItemsEndpoint(Request.builder().build()), is
-            (equalTo("/instance-storage/instances?query=sourceRecordFormat%3D%3DMARC-JSON&limit=100")));
+            (equalTo("/instance-storage/instances?query=sourceRecordFormat%3D%3DMARC-JSON&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);

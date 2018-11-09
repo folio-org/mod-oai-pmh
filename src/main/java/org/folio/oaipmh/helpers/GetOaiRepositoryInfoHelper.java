@@ -35,8 +35,6 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(GetOaiRepositoryInfoHelper.class);
 
-  public static final String REPOSITORY_NAME = "repository.name";
-  public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
 
@@ -48,8 +46,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
         .withIdentify(new IdentifyType()
           .withRepositoryName(RepositoryConfigurationHelper.getProperty(REPOSITORY_NAME, ctx))
           .withBaseURL(RepositoryConfigurationHelper.getProperty(REPOSITORY_BASE_URL, ctx))
-          .withProtocolVersion(RepositoryConfigurationHelper.getProperty
-            (REPOSITORY_PROTOCOL_VERSION, ctx))
+          .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())
           .withGranularity(GranularityType.fromValue(RepositoryConfigurationHelper.getProperty
             (REPOSITORY_TIME_GRANULARITY, ctx)))

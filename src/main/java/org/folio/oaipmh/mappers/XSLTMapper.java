@@ -58,10 +58,10 @@ public class XSLTMapper extends MarcXmlMapper {
   public byte[] convert(String source) {
     byte[] marcXmlResult = super.convert(source);
     StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
-    try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-         ByteArrayInputStream inputStream = new ByteArrayInputStream(marcXmlResult)) {
+    try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
       Transformer transformer = template.newTransformer();
-      transformer.transform(new StreamSource(inputStream), new StreamResult(out));
+      transformer.transform(new StreamSource(new ByteArrayInputStream(marcXmlResult)),
+                        new StreamResult(out));
       return out.toByteArray();
     } catch (TransformerException | IOException e) {
       throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);

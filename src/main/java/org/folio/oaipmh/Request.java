@@ -1,17 +1,16 @@
 package org.folio.oaipmh;
 
-import org.folio.rest.tools.utils.TenantTool;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.RequestType;
-import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -261,6 +260,7 @@ public class Request {
   private boolean isResumptionTokenExclusive() {
     Request exclusiveParamRequest = Request.builder()
       .resumptionToken(oaiRequest.getResumptionToken())
+      .baseURL(oaiRequest.getValue())
       .verb(oaiRequest.getVerb())
       .build();
 
