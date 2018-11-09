@@ -20,9 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.folio.oaipmh.Constants.OKAPI_TENANT_HEADER;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN_HEADER;
-import static org.folio.oaipmh.Constants.OKAPI_URL_HEADER;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
@@ -44,8 +44,8 @@ class RepositoryConfigurationHelperTest {
 
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TOKEN_HEADER, "eyJhbGciOiJIUzI1NiJ9");
-    okapiHeaders.put(OKAPI_URL_HEADER, "http://localhost:" + mockPort);
+    okapiHeaders.put(OKAPI_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
+    okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
     JsonObject conf = new JsonObject()
       .put("http.port", okapiPort);
@@ -66,7 +66,7 @@ class RepositoryConfigurationHelperTest {
 
   @Test
   void testGetConfigurationIfExist(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TENANT_HEADER, OkapiMockServer.EXIST_CONFIG_TENANT);
+    okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.EXIST_CONFIG_TENANT);
     vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
 
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
@@ -88,7 +88,7 @@ class RepositoryConfigurationHelperTest {
 
   @Test
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TENANT_HEADER, OkapiMockServer.NON_EXIST_CONFIG_TENANT);
+    okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.NON_EXIST_CONFIG_TENANT);
     vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
@@ -103,7 +103,7 @@ class RepositoryConfigurationHelperTest {
 
   @Test
   void testGetConfigurationIfUnexpectedStatusCode(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TENANT_HEADER, OkapiMockServer.ERROR_TENANT);
+    okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.ERROR_TENANT);
     vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {

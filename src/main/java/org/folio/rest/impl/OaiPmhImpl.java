@@ -54,7 +54,7 @@ public class OaiPmhImpl implements Oai {
   public void getOaiRecords(String resumptionToken, String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                             Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
@@ -82,7 +82,7 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiRecordsById(String id, String metadataPrefix, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
 
@@ -109,14 +109,19 @@ public class OaiPmhImpl implements Oai {
         } catch (Exception e) {
           asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
         }
-      });
+      }).exceptionally(throwable -> {
+          asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse
+            .respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+          return null;
+        }
+      );
   }
 
   @Override
   public void getOaiIdentifiers(String resumptionToken, String from, String until, String set, String metadataPrefix,
                                 Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                 Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
@@ -127,14 +132,13 @@ public class OaiPmhImpl implements Oai {
                                   .build();
 
         HELPERS.get(LIST_IDENTIFIERS)
-               .handle(request, vertxContext)
+          .handle(request, vertxContext)
           .thenAccept(response -> {
             if (logger.isDebugEnabled()) {
               logger.debug("ListIdentifiers response: " + response.getEntity());
             }
             asyncResultHandler.handle(succeededFuture(response));
-          })
-               .exceptionally(throwable -> {
+          }).exceptionally(throwable -> {
                  asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
                  return null;
                });
@@ -144,7 +148,7 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiMetadataFormats(String identifier, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         Request request = Request.builder()
                                   .identifier(identifier)
@@ -170,7 +174,7 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiSets(String resumptionToken, Map<String, String> okapiHeaders,
                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
@@ -197,7 +201,7 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiRepositoryInfo(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                    Context vertxContext) {
-    RepositoryConfigurationHelper.getInstance().getConfiguration(okapiHeaders, vertxContext)
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()

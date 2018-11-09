@@ -40,7 +40,8 @@
           "permissionsRequired": ["oai-pmh.identifiers.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "configuration.entries.collection.get"
           ]
         },
         {

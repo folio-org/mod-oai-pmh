@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
@@ -247,7 +248,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationHelper.getProperty
+    (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext()));
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put("totalRecords", String.valueOf(totalRecords));
