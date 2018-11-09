@@ -3,8 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.Response;
@@ -30,7 +31,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FOR
 
 public class GetOaiIdentifiersHelper extends AbstractHelper {
 
-  private static final Logger logger = Logger.getLogger(GetOaiIdentifiersHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiIdentifiersHelper.class);
   private static final String GENERIC_ERROR = "Error happened while processing ListIdentifiers verb request";
 
   @Override
@@ -61,16 +62,11 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
 
       // 3. Search for instances
-      httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false)
+      VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false))
         // 4. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
-        .thenApply(oai -> {
-          if (oai.getListIdentifiers() == null) {
-            return buildNoRecordsResponse(oai);
-          } else {
-            return buildSuccessResponse(oai);
-          }
-        })
+        // 5. Build final response to client (potentially blocking operation thus running on worker thread)
+        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai))
         .thenAccept(future::complete)
         .exceptionally(e -> {
           logger.error(GENERIC_ERROR, e);
@@ -83,6 +79,17 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     }
 
     return future;
+  }
+
+  /**
+   * Check if there are identifiers built and construct success response, otherwise return response with error(s)
+   */
+  private javax.ws.rs.core.Response buildResponse(OAIPMH oai) {
+    if (oai.getListIdentifiers() == null) {
+      return buildNoRecordsResponse(oai);
+    } else {
+      return buildSuccessResponse(oai);
+    }
   }
 
   private javax.ws.rs.core.Response buildNoRecordsResponse(OAIPMH oai) {

@@ -7,7 +7,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
@@ -36,6 +35,7 @@ import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -179,7 +179,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders, boolean autoCloseConnections) {
     String tenantId = TenantTool.tenantId(okapiHeaders);
-    String okapiURL = okapiHeaders.get(XOkapiHeaders.URL);
+    String okapiURL = okapiHeaders.get(OKAPI_URL);
     return HttpClientFactory.getHttpClient(okapiURL, tenantId, autoCloseConnections);
   }
 

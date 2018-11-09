@@ -1,8 +1,9 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.jaxrs.resource.Oai.GetOaiSetsResponse;
@@ -20,7 +21,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
  * Helper class that contains business logic for retrieving OAI-PMH set structure of a repository.
  */
 public class GetOaiSetsHelper extends AbstractHelper {
-  private static final Logger logger = Logger.getLogger(GetOaiSetsHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiSetsHelper.class);
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {

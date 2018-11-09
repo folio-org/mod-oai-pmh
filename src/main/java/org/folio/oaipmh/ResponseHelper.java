@@ -1,8 +1,13 @@
 package org.folio.oaipmh;
 
+import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
+import gov.loc.marc21.slim.RecordType;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2_0.oai_dc.Dc;
+import org.purl.dc.elements._1.ObjectFactory;
 import org.xml.sax.SAXException;
 
 import javax.xml.bind.JAXBContext;
@@ -12,9 +17,13 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
 
@@ -25,19 +34,26 @@ public class ResponseHelper {
   private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";
   private static final String SIMPLE_DC_SCHEMA = SCHEMA_PATH + "simpledc20021212.xsd";
   private static final String MARC21_SCHEMA = SCHEMA_PATH + "MARC21slim.xsd";
+
+  private static final Map<String, String> NAMESPACE_PREFIX_MAP = new HashMap<>();
+  private final NamespacePrefixMapper namespacePrefixMapper;
+
   private static ResponseHelper ourInstance;
 
   static {
+    NAMESPACE_PREFIX_MAP.put("http://www.loc.gov/MARC21/slim", "marc");
+    NAMESPACE_PREFIX_MAP.put("http://purl.org/dc/elements/1.1/", "dc");
+    NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai_dc/", "oai_dc");
     try {
       ourInstance = new ResponseHelper();
     } catch (JAXBException | SAXException e) {
-      logger.error("The jaxb marshaller could not be initialized");
-      throw new IllegalStateException("Marshaller is not available", e);
+      logger.error("The jaxb context could not be initialized");
+      throw new IllegalStateException("Marshaller and unmarshaller are not available", e);
     }
   }
+  private JAXBContext jaxbContext;
+  private Schema oaipmhSchema;
 
-  private Marshaller jaxbMarshaller;
-  private Unmarshaller jaxbUnmarshaller;
 
   public static ResponseHelper getInstance() {
     return ourInstance;
@@ -47,10 +63,8 @@ public class ResponseHelper {
    * The main purpose is to initialize JAXB Marshaller and Unmarshaller to use the instances for business logic operations
    */
   private ResponseHelper() throws JAXBException, SAXException {
-    JAXBContext jaxbContext = JAXBContext.newInstance(OAIPMH.class);
-    jaxbMarshaller = jaxbContext.createMarshaller();
-    jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-
+    jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class,
+      ObjectFactory.class);
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
     if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
       ClassLoader classLoader = this.getClass().getClassLoader();
@@ -60,51 +74,99 @@ public class ResponseHelper {
         new StreamSource(classLoader.getResourceAsStream(SIMPLE_DC_SCHEMA)),
         new StreamSource(classLoader.getResourceAsStream(DC_SCHEMA))
       };
-      Schema oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI).newSchema(streamSources);
-      jaxbMarshaller.setSchema(oaipmhSchema);
-      jaxbUnmarshaller.setSchema(oaipmhSchema);
+      oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI).newSchema(streamSources);
     }
-
-    // Specifying xsi:schemaLocation (which will trigger xmlns:xsi being added to RS as well)
-    jaxbMarshaller.setProperty(Marshaller.JAXB_SCHEMA_LOCATION,
-      "http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd");
-
-    // Specifying if output should be formatted
-    jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.parseBoolean(System.getProperty("jaxb.marshaller.formattedOutput")));
+    namespacePrefixMapper = new NamespacePrefixMapper() {
+      @Override
+      public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
+        return NAMESPACE_PREFIX_MAP.getOrDefault(namespaceUri, suggestion);
+      }
+    };
   }
 
   /**
    * Marshals {@link OAIPMH} object and returns string representation
    * @param response {@link OAIPMH} object to marshal
    * @return marshaled {@link OAIPMH} object as string representation
-   * @throws JAXBException can be thrown, for example, if the {@link OAIPMH} object is invalid
    */
   public String writeToString(OAIPMH response) {
-    StringWriter writer = new StringWriter();
-    try {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+
+    try (StringWriter writer = new StringWriter()) {
+      // Marshaller is not thread-safe, so we should create every time a new one
+      Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+      if (oaipmhSchema != null) {
+        jaxbMarshaller.setSchema(oaipmhSchema);
+      }
+      // Specifying xsi:schemaLocation (which will trigger xmlns:xsi being added to RS as well)
+      jaxbMarshaller.setProperty(Marshaller.JAXB_SCHEMA_LOCATION,
+        "http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd");
+      // Specifying if output should be formatted
+      jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.parseBoolean(System.getProperty("jaxb.marshaller.formattedOutput")));
+      // needed to replace the namespace prefixes with a more readable format.
+      jaxbMarshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", namespacePrefixMapper);
       jaxbMarshaller.marshal(response, writer);
-    } catch (JAXBException e) {
+      return writer.toString();
+    } catch (JAXBException | IOException e) {
       // In case there is an issue to marshal response, there is no way to handle it
       throw new IllegalStateException("The OAI-PMH response cannot be converted to string representation.", e);
+    } finally {
+      logExecutionTime("OAIPMH converted to string", timer);
     }
-
-    return writer.toString();
   }
 
   /**
    * Unmarshals {@link OAIPMH} object based on passed string
    * @param oaipmhResponse the {@link OAIPMH} response in string representation
    * @return the {@link OAIPMH} object based on passed string
-   * @throws JAXBException in case passed string is not valid OAIPMH representation
    */
-  public OAIPMH stringToOaiPmh(String oaipmhResponse) throws JAXBException {
-    return (OAIPMH) jaxbUnmarshaller.unmarshal(new StringReader(oaipmhResponse));
+  public OAIPMH stringToOaiPmh(String oaipmhResponse) {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+    try (StringReader reader = new StringReader(oaipmhResponse)) {
+      // Unmarshaller is not thread-safe, so we should create every time a new one
+      Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+      if (oaipmhSchema != null) {
+        jaxbUnmarshaller.setSchema(oaipmhSchema);
+      }
+      return (OAIPMH) jaxbUnmarshaller.unmarshal(reader);
+    } catch (JAXBException e) {
+      // In case there is an issue to unmarshal response, there is no way to handle it
+      throw new IllegalStateException("The string cannot be converted to OAI-PMH response.", e);
+    } finally {
+      logExecutionTime("String converted to OAIPMH", timer);
+    }
   }
 
   /**
-   * @return Checks if the Jaxb marshaller initialized successfully
+   * Unmarshals {@link RecordType} or {@link Dc} objects based on passed byte array
+   * @param byteSource the {@link RecordType} or {@link Dc} objects in byte[] representation
+   * @return the object based on passed byte array
+   */
+  public Object bytesToObject(byte[] byteSource) {
+    try {
+      // Unmarshaller is not thread-safe, so we should create every time a new one
+      Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+      if (oaipmhSchema != null) {
+        jaxbUnmarshaller.setSchema(oaipmhSchema);
+      }
+      return jaxbUnmarshaller.unmarshal(new ByteArrayInputStream(byteSource));
+    } catch (JAXBException e) {
+      // In case there is an issue to unmarshal byteSource, there is no way to handle it
+      throw new IllegalStateException("The byte array cannot be converted to JAXB object response.", e);
+    }
+  }
+
+  /**
+   * @return Checks if the Jaxb context initialized successfully
    */
   public boolean isJaxbInitialized() {
-    return jaxbMarshaller != null;
+    return jaxbContext != null;
+  }
+
+  private void logExecutionTime(final String msg, StopWatch timer) {
+    if (timer != null) {
+      timer.stop();
+      logger.debug(String.format("%s after %d ms", msg, timer.getTime()));
+    }
   }
 }

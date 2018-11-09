@@ -1,6 +1,7 @@
 package org.folio.oaipmh;
 
-import org.apache.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 class ResponseHelperTest {
 
-  private static final Logger logger = Logger.getLogger(ResponseHelperTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(ResponseHelperTest.class);
 
   @Test
   void validationException() {
@@ -50,22 +51,17 @@ class ResponseHelperTest {
 
   @Test
   void successCase() {
-    try {
-      OAIPMH oaipmh = new OAIPMH()
-        .withResponseDate(Instant.EPOCH)
-        .withRequest(new RequestType().withValue("oai"))
-        .withErrors(new OAIPMHerrorType().withCode(OAIPMHerrorcodeType.BAD_VERB).withValue("error"));
+    OAIPMH oaipmh = new OAIPMH()
+      .withResponseDate(Instant.EPOCH)
+      .withRequest(new RequestType().withValue("oai"))
+      .withErrors(new OAIPMHerrorType().withCode(OAIPMHerrorcodeType.BAD_VERB).withValue("error"));
 
-      String result = ResponseHelper.getInstance().writeToString(oaipmh);
-      assertThat(result, not(isEmptyOrNullString()));
+    String result = ResponseHelper.getInstance().writeToString(oaipmh);
+    assertThat(result, not(isEmptyOrNullString()));
 
-      // Unmarshal string to OAIPMH and verify that these objects equals
-      OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(result);
+    // Unmarshal string to OAIPMH and verify that these objects equals
+    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(result);
 
-      assertThat(oaipmh, equalTo(oaipmhFromString));
-    } catch (JAXBException e) {
-      logger.error("Failed to unmarshal OAI-PMH response", e);
-      fail(e.getMessage());
-    }
+    assertThat(oaipmh, equalTo(oaipmhFromString));
   }
 }

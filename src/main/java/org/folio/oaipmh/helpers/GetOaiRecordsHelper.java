@@ -29,6 +29,9 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
+      if (logger.isDebugEnabled()) {
+        logger.debug(records.size() + " records found for the request.");
+      }
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());
@@ -43,6 +46,10 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   @Override
   protected javax.ws.rs.core.Response buildResponseWithErrors(OAIPMH oai) {
     String responseBody = ResponseHelper.getInstance().writeToString(oai);
+
+    if (logger.isInfoEnabled()) {
+      logger.info("The request processing completed with errors: " + responseBody);
+    }
 
     // According to oai-pmh.raml the service will return different http codes depending on the error
     Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);

@@ -1,14 +1,13 @@
 package org.folio.oaipmh;
 
+import org.folio.oaipmh.mappers.Mapper;
+import org.folio.oaipmh.mappers.MarcXmlMapper;
+import org.folio.oaipmh.mappers.XSLTMapper;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
-import org.folio.oaipmh.mappers.Mapper;
-import org.folio.oaipmh.mappers.MarcXmlMapper;
-import org.folio.oaipmh.mappers.XSLTMapper;
-import org.w3c.dom.Node;
 
 
 /**
@@ -54,7 +53,7 @@ public enum MetadataPrefix {
     return FORMATS;
   }
 
-  public Node convert(String source) {
+  public byte[] convert(String source) {
     return mapper.convert(source);
   }
 
