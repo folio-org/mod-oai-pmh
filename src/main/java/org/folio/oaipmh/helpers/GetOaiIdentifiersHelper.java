@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
@@ -66,7 +67,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         // 4. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
         // 5. Build final response to client (potentially blocking operation thus running on worker thread)
-        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai))
+        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai)))
         .thenAccept(future::complete)
         .exceptionally(e -> {
           logger.error(GENERIC_ERROR, e);

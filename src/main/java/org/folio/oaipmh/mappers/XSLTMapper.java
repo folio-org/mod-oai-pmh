@@ -13,6 +13,7 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 
@@ -57,13 +58,12 @@ public class XSLTMapper extends MarcXmlMapper {
   public byte[] convert(String source) {
     byte[] marcXmlResult = super.convert(source);
     StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
-    try {
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (ByteArrayOutputStream out = new ByteArrayOutputStream();
+         ByteArrayInputStream inputStream = new ByteArrayInputStream(marcXmlResult)) {
       Transformer transformer = template.newTransformer();
-      transformer.transform(new StreamSource(new ByteArrayInputStream(marcXmlResult)),
-                        new StreamResult(out));
+      transformer.transform(new StreamSource(inputStream), new StreamResult(out));
       return out.toByteArray();
-    } catch (TransformerException e) {
+    } catch (TransformerException | IOException e) {
       throw new IllegalStateException(MAPPER_TRANSFORMATION_ERROR_MESSAGE, e);
     } finally {
       if (timer != null) {

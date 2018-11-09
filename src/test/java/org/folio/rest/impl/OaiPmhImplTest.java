@@ -296,7 +296,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) throws JAXBException {
+  void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
     // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46
@@ -323,7 +323,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiListVerbWithBadResumptionToken(VerbType verb) throws JAXBException {
+  void getOaiListVerbWithBadResumptionToken(VerbType verb) {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z
     // &set=all&offset=0&totalRecords=101&nextRecordId=6506b79b-7702-48b2-9774-a1c538fdd34e
@@ -720,7 +720,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void testGetOaiSetsWithResumptionToken(VertxTestContext testContext) throws JAXBException {
+  void testGetOaiSetsWithResumptionToken(VertxTestContext testContext) {
     String resumptionToken = "abc";
     RequestSpecification request = createBaseRequest(LIST_SETS_PATH)
       .with()
