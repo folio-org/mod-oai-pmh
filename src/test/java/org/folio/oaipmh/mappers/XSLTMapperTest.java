@@ -3,15 +3,13 @@ package org.folio.oaipmh.mappers;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.Node;
 
 import java.io.IOException;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XSLTMapperTest {
 
@@ -26,19 +24,18 @@ class XSLTMapperTest {
     logger.info("=== Test correct json file converting ===");
     String input = MapperTestHelper.getStringFromFile(StaticTestRecords
       .RESOURCES_CORRECT_JSON_MARC);
-    Node result = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
+    byte[] result = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
     assertThat(MapperTestHelper.validateDocumentAgainstSchema(result, SCHEMA_FILE_PATH), is(true));
   }
 
   @Test
   void incorrectJsonConvertingToDCValidationTest() throws IOException {
+    String emptyTitle = "<dc:title/>";
     logger.info("=== Test incorrect json file converting to Dublin Core ===");
     String input = MapperTestHelper.getStringFromFile(StaticTestRecords.RESOURCES_INCORRECT_JSON_MARC);
-    Node result = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
-    String nodeName = result.getFirstChild().getLocalName();
-    assertThat(nodeName, equalTo("title"));
-    String titleValue =  result.getFirstChild().getNodeValue();
-    assertThat(titleValue, is(nullValue()));
+    byte[] bytesResult = new XSLTMapper(XSLT_MARC21SLIM2_OAIDC_XSL).convert(input);
+    String result = new String(bytesResult);
+    assertTrue(result.contains(emptyTitle));
   }
 
   @Test

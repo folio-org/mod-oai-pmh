@@ -22,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 
-import static org.folio.oaipmh.Constants.REPOSITORY_REQUEST_ITEMS_LIMIT;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -41,6 +41,7 @@ class InventoryStorageHelperTest {
   @BeforeEach
   void init() {
     helper = new InventoryStorageHelper();
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
   }
 
   @Test
@@ -81,7 +82,7 @@ class InventoryStorageHelperTest {
     vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s -> {
       testContext.verify(() ->  {
         try {
-          Vertx.currentContext().config().put(REPOSITORY_REQUEST_ITEMS_LIMIT, "100");
+          Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "100");
           assertThat(helper.buildItemsEndpoint(Request.builder().build()), is
             (equalTo("/instance-storage/instances?query=sourceRecordFormat%3D%3DMARC-JSON&limit=100")));
           testContext.completeNow();

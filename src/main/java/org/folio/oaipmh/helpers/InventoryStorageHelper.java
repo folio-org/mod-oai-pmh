@@ -13,11 +13,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.REPOSITORY_REQUEST_ITEMS_LIMIT;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 
 public class InventoryStorageHelper implements InstancesStorageHelper {
 
-   /**
+  /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
    * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
    */
@@ -37,6 +37,11 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   @Override
   public JsonArray getItems(JsonObject entries) {
     return entries.getJsonArray("instances");
+  }
+
+  @Override
+  public Integer getTotalRecords(JsonObject entries) {
+    return entries.getInteger("totalRecords");
   }
 
   /**
@@ -80,8 +85,12 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
         .dateRange(request.getFrom(), request.getUntil());
     }
 
-    return "/instance-storage/instances" + queryBuilder.build() + "&limit="
-      + RepositoryConfigurationHelper.getProperty(REPOSITORY_REQUEST_ITEMS_LIMIT, Vertx.currentContext());
+    // one extra record is required to check if resumptionToken is good
+    int limit = Integer.parseInt(RepositoryConfigurationHelper.getProperty
+      (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext())) + 1;
+    return "/instance-storage/instances" + queryBuilder.build()
+      + "&limit=" + limit
+      + "&offset=" + request.getOffset();
   }
 
   /**
