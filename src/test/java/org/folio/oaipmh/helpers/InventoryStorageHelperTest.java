@@ -1,13 +1,18 @@
 package org.folio.oaipmh.helpers;
 
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.folio.oaipmh.Request;
+import org.folio.rest.RestVerticle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +23,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -26,9 +32,11 @@ import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.fail;
 
+
 class InventoryStorageHelperTest {
   private static final Logger logger = LoggerFactory.getLogger(InventoryStorageHelperTest.class);
   private InventoryStorageHelper helper;
+
 
   @BeforeEach
   void init() {
@@ -69,9 +77,22 @@ class InventoryStorageHelperTest {
   }
 
   @Test
-  void buildItemsEndpoint() throws UnsupportedEncodingException {
-    assertThat(helper.buildItemsEndpoint(Request.builder().build()), not(isEmptyOrNullString()));
-  }
+  @ExtendWith(VertxExtension.class)
+  void buildItemsEndpoint(Vertx vertx, VertxTestContext testContext) {
+    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s -> {
+      testContext.verify(() ->  {
+        try {
+          Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
+          assertThat(helper.buildItemsEndpoint(Request.builder().build()), is
+            (equalTo("/instance-storage/instances?query=sourceRecordFormat%3D%3DMARC-JSON&limit=11&offset=0")));
+          testContext.completeNow();
+        } catch (UnsupportedEncodingException e) {
+          testContext.failNow(e);
+        }});
+
+    }));
+
+}
 
   /**
    * Creates {@link JsonObject} from the json file

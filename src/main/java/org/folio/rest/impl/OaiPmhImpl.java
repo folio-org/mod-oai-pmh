@@ -12,9 +12,9 @@ import org.folio.oaipmh.helpers.GetOaiRecordHelper;
 import org.folio.oaipmh.helpers.GetOaiRecordsHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.rest.jaxrs.resource.Oai;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
@@ -24,7 +24,8 @@ import java.util.Map;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PREFIX;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationHelper.getProperty;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
@@ -53,154 +54,173 @@ public class OaiPmhImpl implements Oai {
   public void getOaiRecords(String resumptionToken, String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                             Context vertxContext) {
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
 
-    Request request = Request.builder()
-                             .okapiHeaders(okapiHeaders)
-                             .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-                             .verb(LIST_RECORDS)
-                             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
-                             .build();
-    HELPERS.get(LIST_RECORDS)
-      .handle(request, vertxContext)
-      .thenAccept(response -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("ListRecords response: " + response.getEntity());
-        }
-        asyncResultHandler.handle(succeededFuture(response));
-      })
-      .exceptionally(throwable -> {
-        asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-        return null;
+        Request request = Request.builder()
+                                  .okapiHeaders(okapiHeaders)
+                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .verb(LIST_RECORDS)
+                                  .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
+                                  .build();
+
+         HELPERS.get(LIST_RECORDS)
+           .handle(request, vertxContext)
+           .thenAccept(response -> {
+             if (logger.isDebugEnabled()) {
+               logger.debug("ListRecords response: " + response.getEntity());
+             }
+             asyncResultHandler.handle(succeededFuture(response));
+           })
+           .exceptionally(throwable -> {
+             asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+             return null;
+           });
       });
   }
 
   @Override
   public void getOaiRecordsById(String id, String metadataPrefix, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    try {
-      Request request = Request.builder()
-                       .identifier(URLDecoder.decode(id, "UTF-8"))
-                       .okapiHeaders(okapiHeaders)
-                       .verb(GET_RECORD)
-                       .metadataPrefix(metadataPrefix)
-                       .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-                       .build();
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
+        try {
 
-      HELPERS.get(GET_RECORD)
-        .handle(request, vertxContext)
-        .thenAccept(response -> {
-          if (logger.isDebugEnabled()) {
-            logger.debug("GetRecord response: " + response.getEntity());
-          }
-          asyncResultHandler.handle(succeededFuture(response));
-        })
-        .exceptionally(throwable -> {
+          Request request = Request.builder()
+            .identifier(URLDecoder.decode(id, "UTF-8"))
+            .okapiHeaders(okapiHeaders)
+            .verb(GET_RECORD)
+            .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+            .metadataPrefix(metadataPrefix)
+            .build();
+
+          HELPERS.get(GET_RECORD)
+            .handle(request, vertxContext)
+            .thenAccept(response -> {
+              if (logger.isDebugEnabled()) {
+                logger.debug("GetRecord response: " + response.getEntity());
+              }
+              asyncResultHandler.handle(succeededFuture(response));
+            })
+            .exceptionally(throwable -> {
+              asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+              return null;
+            });
+        } catch (Exception e) {
           asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+        }
+      }).exceptionally(throwable -> {
+          asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse
+            .respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
           return null;
-        });
-    } catch (Exception e) {
-      asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-    }
+        }
+      );
   }
 
   @Override
   public void getOaiIdentifiers(String resumptionToken, String from, String until, String set, String metadataPrefix,
                                 Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                 Context vertxContext) {
-    Request request = Request.builder()
-                             .okapiHeaders(okapiHeaders)
-                             .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-                             .verb(LIST_IDENTIFIERS)
-                             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
-                             .build();
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
 
-    HELPERS.get(LIST_IDENTIFIERS)
-      .handle(request, vertxContext)
-      .thenAccept(response -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("ListIdentifiers response: " + response.getEntity());
-        }
-        asyncResultHandler.handle(succeededFuture(response));
-      })
-      .exceptionally(throwable -> {
-        asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-        return null;
+        Request request = Request.builder()
+                                  .okapiHeaders(okapiHeaders)
+                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .verb(LIST_IDENTIFIERS)
+                                  .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
+                                  .build();
+
+        HELPERS.get(LIST_IDENTIFIERS)
+          .handle(request, vertxContext)
+          .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListIdentifiers response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          }).exceptionally(throwable -> {
+                 asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+                 return null;
+               });
       });
   }
 
   @Override
   public void getOaiMetadataFormats(String identifier, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
+        Request request = Request.builder()
+                                  .identifier(identifier)
+                                  .verb(LIST_METADATA_FORMATS)
+                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .okapiHeaders(okapiHeaders)
+                                  .build();
 
-    Request request = Request.builder()
-                             .identifier(identifier)
-                             .verb(LIST_METADATA_FORMATS)
-                             .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-                             .okapiHeaders(okapiHeaders)
-                             .build();
-
-    HELPERS.get(LIST_METADATA_FORMATS)
-      .handle(request, vertxContext)
-      .thenAccept(response -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("ListMetadataFormats response: " + response.getEntity());
-        }
-        asyncResultHandler.handle(succeededFuture(response));
-      }).exceptionally(throwable -> {
-        asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-        return null;
-    });
+       HELPERS.get(LIST_METADATA_FORMATS)
+         .handle(request, vertxContext)
+         .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListMetadataFormats response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          }).exceptionally(throwable -> {
+            asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+            return null;
+        });
+      });
   }
 
   @Override
   public void getOaiSets(String resumptionToken, Map<String, String> okapiHeaders,
                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
 
-    Request request = Request.builder()
-      .okapiHeaders(okapiHeaders)
-      .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-      .verb(LIST_SETS)
-      .resumptionToken(resumptionToken)
-      .build();
+        Request request = Request.builder()
+          .okapiHeaders(okapiHeaders)
+          .verb(LIST_SETS)
+          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .resumptionToken(resumptionToken)
+          .build();
 
-    VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
-    getSetsHelper.handle(request, vertxContext)
-      .thenAccept(response -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("ListSets response: " + response.getEntity());
-        }
-        asyncResultHandler.handle(succeededFuture(response));
-      }).exceptionally(throwable -> {
-        asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-        return null;
-    });
+        VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
+        getSetsHelper.handle(request, vertxContext)
+          .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListSets response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          }).exceptionally(throwable -> {
+            asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+            return null;
+        });
+      });
   }
 
   @Override
   public void getOaiRepositoryInfo(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                    Context vertxContext) {
+    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+      .thenAccept(v -> {
 
-    Request request = Request.builder()
-      .identifierPrefix(buildIdentifierPrefix(okapiHeaders, vertxContext))
-      .verb(IDENTIFY)
-      .okapiHeaders(okapiHeaders).build();
+        Request request = Request.builder()
+          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .verb(IDENTIFY)
+          .okapiHeaders(okapiHeaders)
+          .build();
 
-    VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
-    getRepositoryInfoHelper.handle(request, vertxContext)
-      .thenAccept(response -> {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Identify response: " + response.getEntity());
-        }
-        asyncResultHandler.handle(succeededFuture(response));
-      }).exceptionally(throwable -> {
-        asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-        return null;
+        VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
+        getRepositoryInfoHelper.handle(request, vertxContext)
+          .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("Identify response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          }).exceptionally(throwable -> {
+            asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+            return null;
+          });
       });
-  }
-
-  private String buildIdentifierPrefix(Map<String, String> okapiHeaders, Context vertxContext) {
-    String tenantId = TenantTool.tenantId(okapiHeaders);
-    String identifierPrefix = vertxContext.config().getString(IDENTIFIER_PREFIX);
-    return identifierPrefix + tenantId + "/";
   }
 }

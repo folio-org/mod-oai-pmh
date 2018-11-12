@@ -13,7 +13,8 @@
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.instances.source-record.marc-json.get"
+            "inventory-storage.instances.source-record.marc-json.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -23,14 +24,15 @@
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.instances.source-record.marc-json.get"
+            "inventory-storage.instances.source-record.marc-json.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
           "methods": ["GET"],
           "pathPattern": "/oai/repository_info",
           "permissionsRequired": ["oai-pmh.identify.get"],
-          "modulePermissions": []
+          "modulePermissions": ["configuration.entries.collection.get"]
         },
         {
           "methods": ["GET"],
@@ -38,7 +40,8 @@
           "permissionsRequired": ["oai-pmh.identifiers.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
@@ -47,14 +50,15 @@
           "permissionsRequired": ["oai-pmh.metadata-formats.collection.get"],
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "configuration.entries.collection.get"
           ]
         },
         {
           "methods": ["GET"],
           "pathPattern": "/oai/sets",
           "permissionsRequired": ["oai-pmh.set.collection.get"],
-          "modulePermissions": []
+          "modulePermissions": ["configuration.entries.collection.get"]
         }
       ]
     }

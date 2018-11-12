@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Request;
@@ -72,7 +73,8 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
   }
 
   @Override
-  public String buildItemsEndpoint(Request request) throws UnsupportedEncodingException {
+  public String buildItemsEndpoint(Request request) throws
+    UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     queryBuilder.source("MARC-JSON");
     if (isNotEmpty(request.getIdentifier())) {
@@ -84,7 +86,8 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
     }
 
     // one extra record is required to check if resumptionToken is good
-    int limit = Integer.parseInt(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
+    int limit = Integer.parseInt(RepositoryConfigurationHelper.getProperty
+      (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext())) + 1;
     return "/instance-storage/instances" + queryBuilder.build()
       + "&limit=" + limit
       + "&offset=" + request.getOffset();

@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +37,7 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -65,8 +67,7 @@ public abstract class AbstractHelper implements VerbHelper {
     return new OAIPMH()
       // According to spec the nanoseconds should not be used so truncate to seconds
       .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.getOaiRequest()
-        .withValue(getBaseURL()));
+      .withRequest(request.getOaiRequest());
   }
 
   /**
@@ -137,26 +138,12 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected static boolean validateIdentifier(Request request) {
+  protected boolean validateIdentifier(Request request) {
     return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
   }
 
   protected OAIPMHerrorType createNoRecordsFoundError() {
     return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
-  }
-
-  /**
-   * Return the repository base URL.
-   * For now, it is based on System property, but later it might be pulled from mod-configuration.
-   *
-   * @return repository base URL
-   */
-  protected static String getBaseURL() {
-    String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
-    if (baseUrl == null) {
-      throw new IllegalStateException("The required repository config 'repository.baseURL' is missing");
-    }
-    return baseUrl;
   }
 
   protected List<SetType> getSupportedSetTypes() {
@@ -261,7 +248,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationHelper.getProperty
+    (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext()));
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put("totalRecords", String.valueOf(totalRecords));

@@ -8,10 +8,16 @@ public final class Constants {
 
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
+  public static final String OKAPI_TOKEN = "X-Okapi-Token";
 
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_MAX_RECORDS_PER_RESPONSE = "repository.maxRecordsPerResponse";
-  public static final String IDENTIFIER_PREFIX = "identifierPrefix";
+  public static final String REPOSITORY_NAME = "repository.name";
+  public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
+  public static final String REPOSITORY_PROTOCOL_VERSION = "repository.protocolVersion";
+  public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";
+  public static final String REPOSITORY_DELETED_RECORDS = "repository.deletedRecords";
+
 
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";

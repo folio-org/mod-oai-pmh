@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
@@ -52,13 +51,9 @@ import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
-import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_NAME;
-import static org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper.REPOSITORY_PROTOCOL_VERSION_2_0;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -735,24 +730,6 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void testGetOaiSetsMissingBaseUrlProperty(VertxTestContext testContext) {
-    // Remove required props
-    String baseUrl = System.getProperty(REPOSITORY_BASE_URL);
-    try {
-      System.getProperties().remove(REPOSITORY_BASE_URL);
-
-      String response = verify500WithErrorMessage(createBaseRequest(LIST_SETS_PATH));
-
-      // Check that error message is returned
-      assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
-
-      testContext.completeNow();
-    } finally {
-      System.setProperty(REPOSITORY_BASE_URL, baseUrl);
-    }
-  }
-
-  @Test
   void getOaiRepositoryInfoSuccess(VertxTestContext testContext) {
     OAIPMH oaipmhFromString = verify200WithXml(createBaseRequest(IDENTIFY_PATH), IDENTIFY);
 
@@ -762,27 +739,12 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
     assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
-    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo(REPOSITORY_PROTOCOL_VERSION_2_0)));
+    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo("2.0")));
     assertThat(oaipmhFromString.getIdentify().getRepositoryName(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getCompressions(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getCompressions(), containsInAnyOrder(GZIP, DEFLATE));
 
     testContext.completeNow();
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = { REPOSITORY_NAME, REPOSITORY_BASE_URL, REPOSITORY_ADMIN_EMAILS })
-  void getOaiRepositoryInfoMissingConfigs(String prop) {
-    // Remove required props
-    String propValue = System.getProperty(prop);
-    try {
-      System.getProperties().remove(prop);
-
-      String response = verify500WithErrorMessage(createBaseRequest(IDENTIFY_PATH));
-      assertThat(response, is(equalTo("Sorry, we can't process your request. Please contact administrator(s).")));
-    } finally {
-      System.setProperty(prop, propValue);
-    }
   }
 
   private RequestSpecification createBaseRequest(String basePath) {
