@@ -1,6 +1,5 @@
 package org.folio.oaipmh;
 
-import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
 import gov.loc.marc21.slim.RecordType;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -27,6 +26,7 @@ import java.util.Map;
 
 import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
 
+@SuppressWarnings("squid:S1191") //The com.sun.xml.bind.marshaller.NamespacePrefixMapper is part of jaxb logic
 public class ResponseHelper {
   private static final Logger logger = LoggerFactory.getLogger(ResponseHelper.class);
   private static final String SCHEMA_PATH = "ramls" + File.separator + "schemas" + File.separator;
@@ -36,7 +36,7 @@ public class ResponseHelper {
   private static final String MARC21_SCHEMA = SCHEMA_PATH + "MARC21slim.xsd";
 
   private static final Map<String, String> NAMESPACE_PREFIX_MAP = new HashMap<>();
-  private final NamespacePrefixMapper namespacePrefixMapper;
+  private final com.sun.xml.bind.marshaller.NamespacePrefixMapper namespacePrefixMapper;
 
   private static ResponseHelper ourInstance;
 
@@ -76,7 +76,7 @@ public class ResponseHelper {
       };
       oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI).newSchema(streamSources);
     }
-    namespacePrefixMapper = new NamespacePrefixMapper() {
+    namespacePrefixMapper = new com.sun.xml.bind.marshaller.NamespacePrefixMapper() {
       @Override
       public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
         return NAMESPACE_PREFIX_MAP.getOrDefault(namespaceUri, suggestion);

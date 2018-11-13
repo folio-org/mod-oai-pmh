@@ -86,8 +86,6 @@ public class OkapiMockServer {
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
     if (ctx.request().getHeader(OKAPI_TENANT).equals(EXIST_CONFIG_TENANT)) {
       successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
-    } else if (ctx.request().getHeader(OKAPI_TENANT).equals(NON_EXIST_CONFIG_TENANT)) {
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
     } else if (ctx.request().getHeader(OKAPI_TENANT).equals(ERROR_TENANT)) {
       failureResponse(ctx, 500, "Internal Server Error");
     } else {
@@ -105,8 +103,9 @@ public class OkapiMockServer {
       String json = getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId));
       if (isNotEmpty(json)) {
         successResponse(ctx, json);
+      } else {
+        successResponse(ctx, getJsonObjectFromFile("/instance-storage/instances/marc.json"));
       }
-      successResponse(ctx, getJsonObjectFromFile("/instance-storage/instances/marc.json"));
     }
   }
 
