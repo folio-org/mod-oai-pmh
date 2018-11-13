@@ -67,8 +67,7 @@ class RepositoryConfigurationHelperTest {
   @Test
   void testGetConfigurationIfExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.EXIST_CONFIG_TENANT);
-    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
-
+    vertx.runOnContext(event ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           Context context = Vertx.currentContext();
@@ -78,18 +77,17 @@ class RepositoryConfigurationHelperTest {
             ("http://mock.folio.org/oai")));
           assertThat(RepositoryConfigurationHelper.getProperty(REPOSITORY_ADMIN_EMAILS, context), is(equalTo
             ("oai-pmh-admin1@folio.org")));
-          assertThat(RepositoryConfigurationHelper.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, context), is(equalTo
-            ("100")));
+          assertThat(RepositoryConfigurationHelper.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, context), is(equalTo("100")));
           testContext.completeNow();
         })
       )
-    ));
+    );
   }
 
   @Test
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.NON_EXIST_CONFIG_TENANT);
-    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
+    vertx.runOnContext(event ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           JsonObject config = Vertx.currentContext().config();
@@ -98,37 +96,34 @@ class RepositoryConfigurationHelperTest {
           testContext.completeNow();
         })
       )
-    ));
+    );
   }
 
   @Test
   void testGetConfigurationIfUnexpectedStatusCode(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.ERROR_TENANT);
-    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
+
+    vertx.runOnContext(event ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           JsonObject config = Vertx.currentContext().config();
-          assertThat(config, is(equalTo
-            (new JsonObject())));
+          assertThat(config, is(equalTo(new JsonObject())));
           testContext.completeNow();
         })
-      )
-    ));
+      ));
   }
 
   @Test
   void testConfigurationFallback(Vertx vertx, VertxTestContext testContext) {
     String expectedValue = "test value";
     System.setProperty(REPOSITORY_BASE_URL, expectedValue);
-    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s ->
-        testContext.verify(() -> {
+    vertx.runOnContext(event -> testContext.verify(() -> {
           String propertyValue = RepositoryConfigurationHelper.getProperty(REPOSITORY_BASE_URL,
           Vertx.currentContext());
           assertThat(propertyValue, is(equalTo(expectedValue)));
           testContext.completeNow();
         })
-      )
-    );
+      );
   }
 
 }

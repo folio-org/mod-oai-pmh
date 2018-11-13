@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -21,6 +22,7 @@ import javax.ws.rs.core.Response;
 import java.net.URLDecoder;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
@@ -64,19 +66,16 @@ public class OaiPmhImpl implements Oai {
                                   .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                                   .build();
 
-         HELPERS.get(LIST_RECORDS)
-           .handle(request, vertxContext)
-           .thenAccept(response -> {
-             if (logger.isDebugEnabled()) {
-               logger.debug("ListRecords response: " + response.getEntity());
-             }
-             asyncResultHandler.handle(succeededFuture(response));
-           })
-           .exceptionally(throwable -> {
-             asyncResultHandler.handle(succeededFuture(GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-             return null;
-           });
-      });
+        HELPERS.get(LIST_RECORDS)
+          .handle(request, vertxContext)
+          .thenAccept(response -> {
+            if (logger.isDebugEnabled()) {
+              logger.debug("ListRecords response: " + response.getEntity());
+            }
+            asyncResultHandler.handle(succeededFuture(response));
+          })
+          .exceptionally(handleError(asyncResultHandler, LIST_RECORDS));
+      }).exceptionally(handleError(asyncResultHandler, LIST_RECORDS));
   }
 
   @Override
@@ -85,7 +84,6 @@ public class OaiPmhImpl implements Oai {
     new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
-
           Request request = Request.builder()
             .identifier(URLDecoder.decode(id, "UTF-8"))
             .okapiHeaders(okapiHeaders)
@@ -102,19 +100,11 @@ public class OaiPmhImpl implements Oai {
               }
               asyncResultHandler.handle(succeededFuture(response));
             })
-            .exceptionally(throwable -> {
-              asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-              return null;
-            });
+            .exceptionally(handleError(asyncResultHandler, GET_RECORD));
         } catch (Exception e) {
-          asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
+          asyncResultHandler.handle(getFutureWithErrorResponse(GET_RECORD));
         }
-      }).exceptionally(throwable -> {
-          asyncResultHandler.handle(succeededFuture(GetOaiRecordsByIdResponse
-            .respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-          return null;
-        }
-      );
+      }).exceptionally(handleError(asyncResultHandler, GET_RECORD));
   }
 
   @Override
@@ -138,11 +128,8 @@ public class OaiPmhImpl implements Oai {
               logger.debug("ListIdentifiers response: " + response.getEntity());
             }
             asyncResultHandler.handle(succeededFuture(response));
-          }).exceptionally(throwable -> {
-                 asyncResultHandler.handle(succeededFuture(GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-                 return null;
-               });
-      });
+          }).exceptionally(handleError(asyncResultHandler, LIST_IDENTIFIERS));
+      }).exceptionally(handleError(asyncResultHandler, LIST_IDENTIFIERS));
   }
 
   @Override
@@ -156,19 +143,15 @@ public class OaiPmhImpl implements Oai {
                                   .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
                                   .okapiHeaders(okapiHeaders)
                                   .build();
-
-       HELPERS.get(LIST_METADATA_FORMATS)
-         .handle(request, vertxContext)
-         .thenAccept(response -> {
+        HELPERS.get(LIST_METADATA_FORMATS)
+          .handle(request, vertxContext)
+          .thenAccept(response -> {
             if (logger.isDebugEnabled()) {
               logger.debug("ListMetadataFormats response: " + response.getEntity());
             }
             asyncResultHandler.handle(succeededFuture(response));
-          }).exceptionally(throwable -> {
-            asyncResultHandler.handle(succeededFuture(GetOaiMetadataFormatsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-            return null;
-        });
-      });
+          }).exceptionally(handleError(asyncResultHandler, LIST_METADATA_FORMATS));
+      }).exceptionally(handleError(asyncResultHandler, LIST_METADATA_FORMATS));
   }
 
   @Override
@@ -184,18 +167,15 @@ public class OaiPmhImpl implements Oai {
           .resumptionToken(resumptionToken)
           .build();
 
-        VerbHelper getSetsHelper = HELPERS.get(LIST_SETS);
-        getSetsHelper.handle(request, vertxContext)
+        HELPERS.get(LIST_SETS)
+          .handle(request, vertxContext)
           .thenAccept(response -> {
             if (logger.isDebugEnabled()) {
               logger.debug("ListSets response: " + response.getEntity());
             }
             asyncResultHandler.handle(succeededFuture(response));
-          }).exceptionally(throwable -> {
-            asyncResultHandler.handle(succeededFuture(GetOaiSetsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-            return null;
-        });
-      });
+          }).exceptionally(handleError(asyncResultHandler, LIST_SETS));
+      }).exceptionally(handleError(asyncResultHandler, LIST_SETS));
   }
 
   @Override
@@ -210,17 +190,42 @@ public class OaiPmhImpl implements Oai {
           .okapiHeaders(okapiHeaders)
           .build();
 
-        VerbHelper getRepositoryInfoHelper = HELPERS.get(IDENTIFY);
-        getRepositoryInfoHelper.handle(request, vertxContext)
+        HELPERS.get(IDENTIFY)
+          .handle(request, vertxContext)
           .thenAccept(response -> {
             if (logger.isDebugEnabled()) {
               logger.debug("Identify response: " + response.getEntity());
             }
             asyncResultHandler.handle(succeededFuture(response));
-          }).exceptionally(throwable -> {
-            asyncResultHandler.handle(succeededFuture(GetOaiRepositoryInfoResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE)));
-            return null;
-          });
-      });
+          }).exceptionally(handleError(asyncResultHandler, IDENTIFY));
+      }).exceptionally(handleError(asyncResultHandler, IDENTIFY));
+  }
+
+  private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>>
+                                                               asyncResultHandler, VerbType verb) {
+    return throwable -> {
+      asyncResultHandler.handle(getFutureWithErrorResponse(verb));
+      return null;
+    };
+  }
+
+  private Future<Response> getFutureWithErrorResponse(VerbType verb) {
+    Response errorResponse;
+    switch (verb) {
+      case GET_RECORD: errorResponse = GetOaiRecordsByIdResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      case LIST_RECORDS: errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      case LIST_IDENTIFIERS: errorResponse = GetOaiIdentifiersResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      case LIST_METADATA_FORMATS: errorResponse = GetOaiMetadataFormatsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      case LIST_SETS: errorResponse = GetOaiSetsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      case IDENTIFY: errorResponse = GetOaiRepositoryInfoResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+        break;
+      default: errorResponse = Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+    return succeededFuture(errorResponse);
   }
 }
