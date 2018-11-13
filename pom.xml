@@ -534,6 +534,7 @@
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
             <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
           </systemPropertyVariables>
+          <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
     </plugins>

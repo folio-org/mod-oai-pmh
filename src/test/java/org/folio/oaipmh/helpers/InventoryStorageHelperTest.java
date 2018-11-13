@@ -79,7 +79,7 @@ class InventoryStorageHelperTest {
   @Test
   @ExtendWith(VertxExtension.class)
   void buildItemsEndpoint(Vertx vertx, VertxTestContext testContext) {
-    vertx.deployVerticle(RestVerticle.class.getName(), testContext.succeeding(s -> {
+    vertx.runOnContext(event ->
       testContext.verify(() ->  {
         try {
           Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
@@ -88,9 +88,10 @@ class InventoryStorageHelperTest {
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);
-        }});
+        }})
 
-    }));
+    );
+
 
 }
 
