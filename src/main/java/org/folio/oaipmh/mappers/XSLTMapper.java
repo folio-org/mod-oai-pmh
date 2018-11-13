@@ -4,6 +4,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.time.StopWatch;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -39,6 +41,7 @@ public class XSLTMapper extends MarcXmlMapper {
       InputStream inputStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(stylesheet);
       TransformerFactory transformerFactory = TransformerFactory.newInstance();
+      transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
       transformerFactory.setURIResolver((href, base) -> new StreamSource(Thread.currentThread()
         .getContextClassLoader().getResourceAsStream(href)));
       template = transformerFactory.newTemplates(new StreamSource(inputStream));
@@ -60,6 +63,7 @@ public class XSLTMapper extends MarcXmlMapper {
     StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
     try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
       Transformer transformer = template.newTransformer();
+      transformer.setOutputProperty(OutputKeys.INDENT, "yes");
       transformer.transform(new StreamSource(new ByteArrayInputStream(marcXmlResult)),
                         new StreamResult(out));
       return out.toByteArray();
