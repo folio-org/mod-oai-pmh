@@ -35,8 +35,12 @@ public class InitAPIs implements InitAPI {
       // Set system property from config file if no specified at runtime
       Properties sysProps = System.getProperties();
       confProperties.forEach((key, value) -> {
-        if (sysProps.putIfAbsent(key, value) == null) {
-          logger.info(String.format("The '%s' property was loaded from config file with its default value '%s'", key, value));
+        Object existing = sysProps.putIfAbsent(key, value);
+        if (logger.isInfoEnabled()) {
+          String message = (existing == null) ?
+            String.format("The '%s' property was loaded from config file with its default value '%s'", key, value) :
+            String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
+          logger.info(message);
         }
       });
 
@@ -45,7 +49,7 @@ public class InitAPIs implements InitAPI {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }
 
-      OaiPmhImpl.init(resultHandler::handle);
+      OaiPmhImpl.init(resultHandler);
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
       logger.error("Unable to populate system properties", e);

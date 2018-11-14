@@ -8,8 +8,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.impl.OaiPmhImpl;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,9 +25,11 @@ import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
+import static org.folio.rest.impl.OkapiMockServer.NON_EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyIterable;
 
 @ExtendWith(VertxExtension.class)
 class RepositoryConfigurationHelperTest {
@@ -45,22 +45,17 @@ class RepositoryConfigurationHelperTest {
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-    okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
     JsonObject conf = new JsonObject()
       .put("http.port", okapiPort);
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id ->
-      OaiPmhImpl.init(testContext.succeeding(success -> {
-        logger.info("mod-oai-pmh Test: setup done.");
-        okapiMockServer.start(testContext);
-      }))
-    ));
+    vertx.runOnContext(event -> testContext.verify(() -> okapiMockServer.start(testContext)));
   }
 
   @BeforeEach
   void init() {
+    okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
     helper = new RepositoryConfigurationHelper();
   }
 
@@ -86,13 +81,11 @@ class RepositoryConfigurationHelperTest {
 
   @Test
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TENANT, OkapiMockServer.NON_EXIST_CONFIG_TENANT);
+    okapiHeaders.put(OKAPI_TENANT, NON_EXIST_CONFIG_TENANT);
     vertx.runOnContext(event ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
-          JsonObject config = Vertx.currentContext().config();
-          assertThat(config, is(equalTo
-            (new JsonObject())));
+          assertThat(Vertx.currentContext().config().getJsonObject(NON_EXIST_CONFIG_TENANT), is(emptyIterable()));
           testContext.completeNow();
         })
       )
@@ -106,8 +99,20 @@ class RepositoryConfigurationHelperTest {
     vertx.runOnContext(event ->
       helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
-          JsonObject config = Vertx.currentContext().config();
-          assertThat(config, is(equalTo(new JsonObject())));
+          assertThat(Vertx.currentContext().config(), is(emptyIterable()));
+          testContext.completeNow();
+        })
+      ));
+  }
+
+  @Test
+  void testGetConfigurationWithMissingOkapiHeader(Vertx vertx, VertxTestContext testContext) {
+    okapiHeaders.remove(OKAPI_URL);
+
+    vertx.runOnContext(event ->
+      helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+        testContext.verify(() -> {
+          assertThat(Vertx.currentContext().config(), is(emptyIterable()));
           testContext.completeNow();
         })
       ));

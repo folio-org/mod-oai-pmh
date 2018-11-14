@@ -19,6 +19,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.RestVerticle;
@@ -40,6 +41,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -54,22 +56,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.jayway.restassured.RestAssured.given;
-import static org.folio.oaipmh.Constants.DEFLATE;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.GZIP;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.Constants.*;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -108,11 +102,12 @@ class OaiPmhImplTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final String APPLICATION_XML_TYPE = "application/xml";
-  private static final String TENANT = "diku";
+  private static final String TENANT = OAI_TEST_TENANT;
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
   private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
+  private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
@@ -129,6 +124,7 @@ class OaiPmhImplTest {
 
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
+    resetSystemProperties();
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
 
     String moduleName = PomReader.INSTANCE.getModuleName()
@@ -143,7 +139,6 @@ class OaiPmhImplTest {
     logger.info(String.format("mod-oai-pmh test: Deploying %s with %s", RestVerticle.class.getName(), Json.encode(conf)));
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-
     vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id ->
       OaiPmhImpl.init(testContext.succeeding(success -> {
         RestAssured.baseURI = "http://localhost:" + okapiPort;
@@ -154,6 +149,15 @@ class OaiPmhImplTest {
         // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
         okapiMockServer.start(testContext);
     }))));
+  }
+
+  private static void resetSystemProperties() {
+    System.clearProperty(REPOSITORY_BASE_URL);
+    System.clearProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.clearProperty(REPOSITORY_NAME);
+    System.clearProperty(REPOSITORY_ADMIN_EMAILS);
+    System.clearProperty(REPOSITORY_TIME_GRANULARITY);
+    System.clearProperty(REPOSITORY_DELETED_RECORDS);
   }
 
   @BeforeEach
@@ -779,20 +783,37 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
     assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
-    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo("2.0")));
+    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo(Constants.REPOSITORY_PROTOCOL_VERSION_2_0)));
     assertThat(oaipmhFromString.getIdentify().getRepositoryName(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getCompressions(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getCompressions(), containsInAnyOrder(GZIP, DEFLATE));
+    assertThat(oaipmhFromString.getIdentify().getDescriptions(), hasSize(equalTo(1)));
+    assertThat(oaipmhFromString.getIdentify().getDescriptions().get(0).getAny(), instanceOf(OaiIdentifier.class));
 
     testContext.completeNow();
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = { REPOSITORY_ADMIN_EMAILS, REPOSITORY_NAME })
+  void getOaiRepositoryInfoMissingRequiredConfigs(String propKey) {
+    String prop = System.clearProperty(propKey);
+    try {
+      verify500WithErrorMessage(createBaseRequest(IDENTIFY_PATH, tenantWithotConfigsHeader));
+    } finally {
+      System.setProperty(propKey, prop);
+    }
+  }
+
   private RequestSpecification createBaseRequest(String basePath) {
+    return createBaseRequest(basePath, tenantHeader);
+  }
+
+  private RequestSpecification createBaseRequest(String basePath, Header tenant) {
     return RestAssured
       .given()
         .header(okapiUrlHeader)
         .header(tokenHeader)
-        .header(tenantHeader)
+        .header(tenant)
         .basePath(basePath)
         .contentType(APPLICATION_XML_TYPE);
   }
