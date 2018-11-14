@@ -14,10 +14,12 @@ import java.util.Set;
  * Enum that represents the metadata formats supported by the repository.
  */
 public enum MetadataPrefix {
-  MARC_XML("marc_xml",
+  /** Refer to <a href="http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm">OAI-PMH guidelines for MARCXML</a> */
+  MARC21XML("marc21",
     new MarcXmlMapper(),
     "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
     "http://www.loc.gov/MARC21/slim"),
+  /** Refer to <a href="https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore">Dublin Core</a> section of OAI-PMH specification */
   DC("oai_dc",
     new XSLTMapper("xslt/MARC21slim2OAIDC.xsl"),
     "http://www.openarchives.org/OAI/2.0/oai_dc.xsd",

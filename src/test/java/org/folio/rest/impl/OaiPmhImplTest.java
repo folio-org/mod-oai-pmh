@@ -180,7 +180,7 @@ class OaiPmhImplTest {
   void getOaiIdentifiersSuccess(String encoding) {
     RequestSpecification request = createBaseRequest(LIST_IDENTIFIERS_PATH)
       .with()
-        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC_XML.getName());
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
@@ -395,7 +395,7 @@ class OaiPmhImplTest {
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithWrongSet(VerbType verb) {
-    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String metadataPrefix = MetadataPrefix.MARC21XML.getName();
     String set = "single";
 
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
@@ -416,7 +416,7 @@ class OaiPmhImplTest {
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithWrongDatesAndWrongSet(VerbType verb) {
-    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String metadataPrefix = MetadataPrefix.MARC21XML.getName();
     String from = "2018-09-19T02:52:08.873";
     String until = "2018-10-20T02:03:04.567";
     String set = "single";
@@ -449,7 +449,7 @@ class OaiPmhImplTest {
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithInvalidDateRange(VerbType verb) {
-    String metadataPrefix = MetadataPrefix.MARC_XML.getName();
+    String metadataPrefix = MetadataPrefix.MARC21XML.getName();
     String from = "2018-12-19T02:52:08Z";
     String until = "2018-10-20T02:03:04Z";
 
