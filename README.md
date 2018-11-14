@@ -11,6 +11,9 @@ Portions of this software may use XML schemas Copyright © 2011 [DCMI](http://du
 
 Backend Module implementing the Open Archives Initiative Protocol for Metadata Harvesting ([OAI-PMH Version 2.0](http://www.openarchives.org/OAI/openarchivesprotocol.html)), but providing more RESTful API than described in the specification. Refer to [oai-pmh.raml](ramls/oai-pmh.raml) for the details.
 
+The repository supports [oai_dc](https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore) and [marc21](http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm) metadata formats.
+The [OAI Identifier Format](http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm) is used for resource identifiers with the following pattern: `oai:<repositoryBaseUrl>:<tenantId>/<uuid of record>` e.g. ` oai:demo.folio.org:tenant123/fb857902-3ab2-4c34-9772-14ad7acdfe76`.
+
 ## Additional information
 ### Schemas
 The following schemas used:
