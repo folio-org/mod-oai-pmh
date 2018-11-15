@@ -1,11 +1,7 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.rest.impl.OkapiMockServer;
@@ -34,10 +30,7 @@ import static org.hamcrest.Matchers.emptyIterable;
 @ExtendWith(VertxExtension.class)
 class RepositoryConfigurationHelperTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationHelperTest.class);
-
   private static final int mockPort = NetworkUtils.nextFreePort();
-  private static final int okapiPort = NetworkUtils.nextFreePort();
 
   private static final Map<String, String> okapiHeaders = new HashMap<>();
   private RepositoryConfigurationHelper helper;
@@ -46,9 +39,6 @@ class RepositoryConfigurationHelperTest {
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
-    JsonObject conf = new JsonObject()
-      .put("http.port", okapiPort);
-    DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
 
     vertx.runOnContext(event -> testContext.verify(() -> okapiMockServer.start(testContext)));
   }
