@@ -35,7 +35,7 @@ public class RepositoryConfigurationHelper {
   public CompletableFuture<Void> getConfiguration(Map<String, String> okapiHeaders,
                                                         Context ctx) {
 
-    String okapiURL = okapiHeaders.get(OKAPI_URL);
+    String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
@@ -70,7 +70,15 @@ public class RepositoryConfigurationHelper {
             .forEach(o ->
               config.put(((JsonObject) o).getString("code"),
                 ((JsonObject) o).getString("value")));
+          // this should be removed once proper support of the config per tenant is added
           ctx.config().mergeIn(config);
+          // Introduce config per tenant
+          JsonObject tenantConfig = ctx.config().getJsonObject(tenant);
+          if (tenantConfig != null) {
+            tenantConfig.mergeIn(config);
+          } else {
+            ctx.config().put(tenant, config);
+          }
           future.complete(null);
         })
       );
@@ -85,4 +93,21 @@ public class RepositoryConfigurationHelper {
     return ctx.config().getString(name, System.getProperty(name));
   }
 
+  /**
+   * Gets value of the config either from shared config or from System properties as a fallback.
+   * @param tenant tenant
+   * @param name config key
+   * @param ctx Vert.x context
+   * @return value of the config either from shared config if present. Or from System properties as fallback.
+   */
+  public static String getProperty(String tenant, String name, Context ctx) {
+    JsonObject configs = ctx.config().getJsonObject(tenant);
+    String defaultValue = System.getProperty(name);
+
+    if (configs != null) {
+      return configs.getString(name, defaultValue);
+    }
+
+    return defaultValue;
+  }
 }

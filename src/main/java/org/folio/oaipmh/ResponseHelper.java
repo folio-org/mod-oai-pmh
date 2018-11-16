@@ -6,6 +6,7 @@ import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2_0.oai_dc.Dc;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ObjectFactory;
 import org.xml.sax.SAXException;
 
@@ -34,6 +35,7 @@ public class ResponseHelper {
   private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";
   private static final String SIMPLE_DC_SCHEMA = SCHEMA_PATH + "simpledc20021212.xsd";
   private static final String MARC21_SCHEMA = SCHEMA_PATH + "MARC21slim.xsd";
+  private static final String OAI_IDENTIFIER_SCHEMA = SCHEMA_PATH + "oai-identifier.xsd";
 
   private static final Map<String, String> NAMESPACE_PREFIX_MAP = new HashMap<>();
   private final com.sun.xml.bind.marshaller.NamespacePrefixMapper namespacePrefixMapper;
@@ -44,6 +46,7 @@ public class ResponseHelper {
     NAMESPACE_PREFIX_MAP.put("http://www.loc.gov/MARC21/slim", "marc");
     NAMESPACE_PREFIX_MAP.put("http://purl.org/dc/elements/1.1/", "dc");
     NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai_dc/", "oai_dc");
+    NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai-identifier", "oai-identifier");
     try {
       ourInstance = new ResponseHelper();
     } catch (JAXBException | SAXException e) {
@@ -63,13 +66,13 @@ public class ResponseHelper {
    * The main purpose is to initialize JAXB Marshaller and Unmarshaller to use the instances for business logic operations
    */
   private ResponseHelper() throws JAXBException, SAXException {
-    jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class,
-      ObjectFactory.class);
+    jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class, OaiIdentifier.class, ObjectFactory.class);
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
     if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
       ClassLoader classLoader = this.getClass().getClassLoader();
       StreamSource[] streamSources = {
         new StreamSource(classLoader.getResourceAsStream(RESPONSE_SCHEMA)),
+        new StreamSource(classLoader.getResourceAsStream(OAI_IDENTIFIER_SCHEMA)),
         new StreamSource(classLoader.getResourceAsStream(MARC21_SCHEMA)),
         new StreamSource(classLoader.getResourceAsStream(SIMPLE_DC_SCHEMA)),
         new StreamSource(classLoader.getResourceAsStream(DC_SCHEMA))

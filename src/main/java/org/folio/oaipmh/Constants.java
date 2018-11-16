@@ -14,9 +14,9 @@ public final class Constants {
   public static final String REPOSITORY_MAX_RECORDS_PER_RESPONSE = "repository.maxRecordsPerResponse";
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
-  public static final String REPOSITORY_PROTOCOL_VERSION = "repository.protocolVersion";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";
   public static final String REPOSITORY_DELETED_RECORDS = "repository.deletedRecords";
+  public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
 
   public static final String FROM_PARAM = "from";

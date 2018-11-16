@@ -32,6 +32,7 @@ public class OkapiMockServer {
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
+  static final String OAI_TEST_TENANT = "oaiTest";
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
 
@@ -60,6 +61,7 @@ public class OkapiMockServer {
 
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
+  private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   public static final String ERROR_TENANT = "error";
 
 
@@ -84,12 +86,19 @@ public class OkapiMockServer {
   }
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
-    if (ctx.request().getHeader(OKAPI_TENANT).equals(EXIST_CONFIG_TENANT)) {
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
-    } else if (ctx.request().getHeader(OKAPI_TENANT).equals(ERROR_TENANT)) {
-      failureResponse(ctx, 500, "Internal Server Error");
-    } else {
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
+    switch (ctx.request().getHeader(OKAPI_TENANT)) {
+      case EXIST_CONFIG_TENANT:
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
+        break;
+      case OAI_TEST_TENANT:
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+        break;
+      case ERROR_TENANT:
+        failureResponse(ctx, 500, "Internal Server Error");
+        break;
+      default:
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
+        break;
     }
   }
 
