@@ -19,9 +19,13 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 
-public class RepositoryConfigurationHelper {
+public class RepositoryConfigurationUtil {
 
-  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationHelper.class);
+  private RepositoryConfigurationUtil() {
+
+  }
+
+  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
 
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final int DEFAULT_PORT = 9130;
@@ -33,8 +37,8 @@ public class RepositoryConfigurationHelper {
    * @param ctx the context
    * @return empty CompletableFuture
    */
-  public CompletableFuture<Void> getConfiguration(Map<String, String> okapiHeaders,
-                                                        Context ctx) {
+  public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders,
+                                                   Context ctx) {
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);

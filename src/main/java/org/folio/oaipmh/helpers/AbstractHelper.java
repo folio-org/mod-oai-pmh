@@ -246,7 +246,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationHelper.getProperty
+    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationUtil.getProperty
     (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();

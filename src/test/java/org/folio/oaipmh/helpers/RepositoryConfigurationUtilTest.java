@@ -32,12 +32,11 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNull.nullValue;
 
 @ExtendWith(VertxExtension.class)
-class RepositoryConfigurationHelperTest {
+class RepositoryConfigurationUtilTest {
 
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final Map<String, String> okapiHeaders = new HashMap<>();
-  private RepositoryConfigurationHelper helper;
 
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
@@ -50,7 +49,6 @@ class RepositoryConfigurationHelperTest {
   @BeforeEach
   void init() {
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
-    helper = new RepositoryConfigurationHelper();
   }
 
   @Test
@@ -60,10 +58,10 @@ class RepositoryConfigurationHelperTest {
       Map<String, Map<String, String>> tenantsWithExpectedConfigs = tenantAndExpectedConfigProvider();
       tenantsWithExpectedConfigs.keySet().forEach(tenant -> {
         okapiHeaders.put(OKAPI_TENANT, tenant);
-        helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+        RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
           testContext.verify(() -> {
             Map<String, String> expectedConfig = tenantsWithExpectedConfigs.get(tenant);
-            expectedConfig.keySet().forEach(key -> assertThat(RepositoryConfigurationHelper.getProperty(tenant, key),
+            expectedConfig.keySet().forEach(key -> assertThat(RepositoryConfigurationUtil.getProperty(tenant, key),
               is(equalTo(expectedConfig.get(key)))));
             testContext.completeNow();
           })
@@ -76,7 +74,7 @@ class RepositoryConfigurationHelperTest {
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, NON_EXIST_CONFIG_TENANT);
     vertx.runOnContext(event ->
-      helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           assertThat(Vertx.currentContext().config().getJsonObject(NON_EXIST_CONFIG_TENANT), is(emptyIterable()));
           testContext.completeNow();
@@ -90,7 +88,7 @@ class RepositoryConfigurationHelperTest {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
 
     vertx.runOnContext(event ->
-      helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT), is(nullValue()));
           testContext.completeNow();
@@ -107,7 +105,7 @@ class RepositoryConfigurationHelperTest {
       JsonObject config = new JsonObject();
       config.put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, configValue);
       Vertx.currentContext().config().put(ERROR_TENANT, config);
-      helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT).getString
             (REPOSITORY_MAX_RECORDS_PER_RESPONSE), equalTo(configValue));
@@ -122,7 +120,7 @@ class RepositoryConfigurationHelperTest {
     okapiHeaders.remove(OKAPI_URL);
 
     vertx.runOnContext(event ->
-      helper.getConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
         testContext.verify(() -> {
           assertThat(Vertx.currentContext().config(), is(emptyIterable()));
           testContext.completeNow();
@@ -135,7 +133,7 @@ class RepositoryConfigurationHelperTest {
     String expectedValue = "test value";
     System.setProperty(REPOSITORY_BASE_URL, expectedValue);
     vertx.runOnContext(event -> testContext.verify(() -> {
-          String propertyValue = RepositoryConfigurationHelper.getProperty(NON_EXIST_CONFIG_TENANT, REPOSITORY_BASE_URL);
+          String propertyValue = RepositoryConfigurationUtil.getProperty(NON_EXIST_CONFIG_TENANT, REPOSITORY_BASE_URL);
           assertThat(propertyValue, is(equalTo(expectedValue)));
           System.clearProperty(REPOSITORY_BASE_URL);
           testContext.completeNow();

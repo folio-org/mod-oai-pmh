@@ -54,9 +54,9 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withBaseURL(request.getOaiRequest().getValue())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())
-          .withGranularity(GranularityType.fromValue(RepositoryConfigurationHelper.getProperty
+          .withGranularity(GranularityType.fromValue(RepositoryConfigurationUtil.getProperty
             (tenant, REPOSITORY_TIME_GRANULARITY)))
-          .withDeletedRecord(DeletedRecordType.fromValue(RepositoryConfigurationHelper
+          .withDeletedRecord(DeletedRecordType.fromValue(RepositoryConfigurationUtil
             .getProperty(tenant, REPOSITORY_DELETED_RECORDS)))
           .withAdminEmails(getEmails(tenant))
           .withCompressions(GZIP, DEFLATE)
@@ -87,7 +87,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    * @return repository name
    */
   private String getRepositoryName(String tenant) {
-    String repoName = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_NAME);
+    String repoName = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_NAME);
     if (repoName == null) {
       throw new IllegalStateException("The required repository config 'repository.name' is missing");
     }
@@ -101,7 +101,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    * @return repository name
    */
   private String[] getEmails(String tenant) {
-    String emails = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_ADMIN_EMAILS);
+    String emails = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_ADMIN_EMAILS);
     if (StringUtils.isBlank(emails)) {
       throw new IllegalStateException("The required repository config 'repository.adminEmails' is missing");
     }

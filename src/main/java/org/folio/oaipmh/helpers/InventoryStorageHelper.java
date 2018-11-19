@@ -86,7 +86,7 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
     }
 
     // one extra record is required to check if resumptionToken is good
-    int limit = Integer.parseInt(RepositoryConfigurationHelper.getProperty
+    int limit = Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
     return "/instance-storage/instances" + queryBuilder.build()
       + "&limit=" + limit
