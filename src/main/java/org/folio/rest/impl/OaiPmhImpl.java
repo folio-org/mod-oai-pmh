@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationHelper.getProperty;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
@@ -61,7 +62,7 @@ public class OaiPmhImpl implements Oai {
 
         Request request = Request.builder()
                                   .okapiHeaders(okapiHeaders)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .verb(LIST_RECORDS)
                                   .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                                   .build();
@@ -88,7 +89,7 @@ public class OaiPmhImpl implements Oai {
             .identifier(URLDecoder.decode(id, "UTF-8"))
             .okapiHeaders(okapiHeaders)
             .verb(GET_RECORD)
-            .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+            .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
             .metadataPrefix(metadataPrefix)
             .build();
 
@@ -116,7 +117,7 @@ public class OaiPmhImpl implements Oai {
 
         Request request = Request.builder()
                                   .okapiHeaders(okapiHeaders)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .verb(LIST_IDENTIFIERS)
                                   .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                                   .build();
@@ -140,7 +141,7 @@ public class OaiPmhImpl implements Oai {
         Request request = Request.builder()
                                   .identifier(identifier)
                                   .verb(LIST_METADATA_FORMATS)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .okapiHeaders(okapiHeaders)
                                   .build();
         HELPERS.get(LIST_METADATA_FORMATS)
@@ -163,7 +164,7 @@ public class OaiPmhImpl implements Oai {
         Request request = Request.builder()
           .okapiHeaders(okapiHeaders)
           .verb(LIST_SETS)
-          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
           .resumptionToken(resumptionToken)
           .build();
 
@@ -183,9 +184,8 @@ public class OaiPmhImpl implements Oai {
                                    Context vertxContext) {
     new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
-
         Request request = Request.builder()
-          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
           .verb(IDENTIFY)
           .okapiHeaders(okapiHeaders)
           .build();

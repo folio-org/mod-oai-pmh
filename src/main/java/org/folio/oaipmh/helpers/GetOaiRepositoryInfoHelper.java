@@ -50,15 +50,15 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
       String tenant = request.getOkapiHeaders().get(OKAPI_TENANT);
       OAIPMH oai = buildBaseResponse(request)
         .withIdentify(new IdentifyType()
-          .withRepositoryName(getRepositoryName(tenant, ctx))
+          .withRepositoryName(getRepositoryName(tenant))
           .withBaseURL(request.getOaiRequest().getValue())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())
           .withGranularity(GranularityType.fromValue(RepositoryConfigurationHelper.getProperty
-            (tenant, REPOSITORY_TIME_GRANULARITY, ctx)))
+            (tenant, REPOSITORY_TIME_GRANULARITY)))
           .withDeletedRecord(DeletedRecordType.fromValue(RepositoryConfigurationHelper
-            .getProperty(tenant, REPOSITORY_DELETED_RECORDS, ctx)))
-          .withAdminEmails(getEmails(tenant, ctx))
+            .getProperty(tenant, REPOSITORY_DELETED_RECORDS)))
+          .withAdminEmails(getEmails(tenant))
           .withCompressions(GZIP, DEFLATE)
           .withDescriptions(getDescriptions(request)));
 
@@ -86,8 +86,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    *
    * @return repository name
    */
-  private String getRepositoryName(String tenant, Context ctx) {
-    String repoName = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_NAME, ctx);
+  private String getRepositoryName(String tenant) {
+    String repoName = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_NAME);
     if (repoName == null) {
       throw new IllegalStateException("The required repository config 'repository.name' is missing");
     }
@@ -100,8 +100,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    *
    * @return repository name
    */
-  private String[] getEmails(String tenant, Context ctx) {
-    String emails = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_ADMIN_EMAILS, ctx);
+  private String[] getEmails(String tenant) {
+    String emails = RepositoryConfigurationHelper.getProperty(tenant, REPOSITORY_ADMIN_EMAILS);
     if (StringUtils.isBlank(emails)) {
       throw new IllegalStateException("The required repository config 'repository.adminEmails' is missing");
     }

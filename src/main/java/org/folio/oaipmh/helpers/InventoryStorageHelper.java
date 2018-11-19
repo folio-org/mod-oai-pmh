@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Request;
@@ -13,6 +12,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 
 public class InventoryStorageHelper implements InstancesStorageHelper {
@@ -87,7 +87,7 @@ public class InventoryStorageHelper implements InstancesStorageHelper {
 
     // one extra record is required to check if resumptionToken is good
     int limit = Integer.parseInt(RepositoryConfigurationHelper.getProperty
-      (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext())) + 1;
+      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
     return "/instance-storage/instances" + queryBuilder.build()
       + "&limit=" + limit
       + "&offset=" + request.getOffset();

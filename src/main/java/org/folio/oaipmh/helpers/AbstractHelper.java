@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
@@ -36,9 +35,8 @@ import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
-import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
@@ -249,7 +247,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationHelper.getProperty
-    (REPOSITORY_MAX_RECORDS_PER_RESPONSE, Vertx.currentContext()));
+    (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put("totalRecords", String.valueOf(totalRecords));

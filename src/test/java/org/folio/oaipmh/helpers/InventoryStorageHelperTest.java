@@ -9,7 +9,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.oaipmh.Request;
-import org.folio.rest.RestVerticle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,8 +20,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -79,21 +82,26 @@ class InventoryStorageHelperTest {
   @Test
   @ExtendWith(VertxExtension.class)
   void buildItemsEndpoint(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     vertx.runOnContext(event ->
       testContext.verify(() ->  {
         try {
-          Vertx.currentContext().config().put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-          assertThat(helper.buildItemsEndpoint(Request.builder().build()), is
+
+          Map<String, String> okapiHeaders = new HashMap<>();
+          okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+          assertThat(helper.buildItemsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
             (equalTo("/instance-storage/instances?query=sourceRecordFormat%3D%3DMARC-JSON&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);
-        }})
+        } finally {
+          System.clearProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+        }
+      })
 
     );
 
-
-}
+  }
 
   /**
    * Creates {@link JsonObject} from the json file

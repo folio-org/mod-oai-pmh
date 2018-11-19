@@ -32,8 +32,9 @@ public class OkapiMockServer {
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
-  static final String OAI_TEST_TENANT = "oaiTest";
+  public static final String OAI_TEST_TENANT = "oaiTest";
   public static final String EXIST_CONFIG_TENANT = "test_diku";
+  public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
 
   // Dates
@@ -89,6 +90,9 @@ public class OkapiMockServer {
     switch (ctx.request().getHeader(OKAPI_TENANT)) {
       case EXIST_CONFIG_TENANT:
         successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
+        break;
+      case EXIST_CONFIG_TENANT_2:
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
         break;
       case OAI_TEST_TENANT:
         successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
