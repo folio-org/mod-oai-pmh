@@ -1,6 +1,7 @@
 package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -18,9 +19,13 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 
-public class RepositoryConfigurationHelper {
+public class RepositoryConfigurationUtil {
 
-  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationHelper.class);
+  private RepositoryConfigurationUtil() {
+
+  }
+
+  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
 
   private static final Pattern HOST_PORT_PATTERN = Pattern.compile("https?://([^:/]+)(?::?(\\d+)?)");
   private static final int DEFAULT_PORT = 9130;
@@ -32,8 +37,8 @@ public class RepositoryConfigurationHelper {
    * @param ctx the context
    * @return empty CompletableFuture
    */
-  public CompletableFuture<Void> getConfiguration(Map<String, String> okapiHeaders,
-                                                        Context ctx) {
+  public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders,
+                                                   Context ctx) {
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
@@ -51,8 +56,6 @@ public class RepositoryConfigurationHelper {
     ConfigurationsClient configurationsClient = new ConfigurationsClient(host,
       StringUtils.isNotBlank(port) ? Integer.valueOf(port) : DEFAULT_PORT, tenant, token);
 
-
-
     try {
       configurationsClient.getEntries(QUERY, 0, 7, null, null, response ->
         response.bodyHandler(body -> {
@@ -65,14 +68,11 @@ public class RepositoryConfigurationHelper {
           }
 
           JsonObject entries = body.toJsonObject();
-          final  JsonObject config = new JsonObject();
+          JsonObject config = new JsonObject();
           entries.getJsonArray("configs").stream()
             .forEach(o ->
               config.put(((JsonObject) o).getString("code"),
                 ((JsonObject) o).getString("value")));
-          // this should be removed once proper support of the config per tenant is added
-          ctx.config().mergeIn(config);
-          // Introduce config per tenant
           JsonObject tenantConfig = ctx.config().getJsonObject(tenant);
           if (tenantConfig != null) {
             tenantConfig.mergeIn(config);
@@ -89,19 +89,14 @@ public class RepositoryConfigurationHelper {
     return future;
   }
 
-  public static String getProperty(String name, Context ctx) {
-    return ctx.config().getString(name, System.getProperty(name));
-  }
-
   /**
    * Gets value of the config either from shared config or from System properties as a fallback.
    * @param tenant tenant
    * @param name config key
-   * @param ctx Vert.x context
    * @return value of the config either from shared config if present. Or from System properties as fallback.
    */
-  public static String getProperty(String tenant, String name, Context ctx) {
-    JsonObject configs = ctx.config().getJsonObject(tenant);
+  public static String getProperty(String tenant, String name) {
+    JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
 
     if (configs != null) {

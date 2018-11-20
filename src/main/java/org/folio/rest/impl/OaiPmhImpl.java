@@ -13,7 +13,7 @@ import org.folio.oaipmh.helpers.GetOaiRecordHelper;
 import org.folio.oaipmh.helpers.GetOaiRecordsHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.VerbType;
@@ -26,8 +26,9 @@ import java.util.function.Function;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationHelper.getProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
@@ -56,12 +57,12 @@ public class OaiPmhImpl implements Oai {
   public void getOaiRecords(String resumptionToken, String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                             Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
                                   .okapiHeaders(okapiHeaders)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .verb(LIST_RECORDS)
                                   .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                                   .build();
@@ -81,14 +82,14 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiRecordsById(String id, String metadataPrefix, Map<String, String> okapiHeaders,
                                 Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
           Request request = Request.builder()
             .identifier(URLDecoder.decode(id, "UTF-8"))
             .okapiHeaders(okapiHeaders)
             .verb(GET_RECORD)
-            .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+            .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
             .metadataPrefix(metadataPrefix)
             .build();
 
@@ -111,12 +112,12 @@ public class OaiPmhImpl implements Oai {
   public void getOaiIdentifiers(String resumptionToken, String from, String until, String set, String metadataPrefix,
                                 Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                 Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
                                   .okapiHeaders(okapiHeaders)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .verb(LIST_IDENTIFIERS)
                                   .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until)
                                   .build();
@@ -135,12 +136,12 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiMetadataFormats(String identifier, Map<String, String> okapiHeaders,
                                     Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         Request request = Request.builder()
                                   .identifier(identifier)
                                   .verb(LIST_METADATA_FORMATS)
-                                  .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+                                  .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
                                   .okapiHeaders(okapiHeaders)
                                   .build();
         HELPERS.get(LIST_METADATA_FORMATS)
@@ -157,13 +158,13 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiSets(String resumptionToken, Map<String, String> okapiHeaders,
                          Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
 
         Request request = Request.builder()
           .okapiHeaders(okapiHeaders)
           .verb(LIST_SETS)
-          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
           .resumptionToken(resumptionToken)
           .build();
 
@@ -181,11 +182,10 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiRepositoryInfo(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
                                    Context vertxContext) {
-    new RepositoryConfigurationHelper().getConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
-
         Request request = Request.builder()
-          .baseURL(getProperty(REPOSITORY_BASE_URL, vertxContext))
+          .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
           .verb(IDENTIFY)
           .okapiHeaders(okapiHeaders)
           .build();
