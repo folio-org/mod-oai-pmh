@@ -16,8 +16,11 @@ public final class Constants {
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";
   public static final String REPOSITORY_DELETED_RECORDS = "repository.deletedRecords";
+  public static final String REPOSITORY_STORAGE = "repository.storage";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
+  public static final String SOURCE_RECORD_STORAGE = "SRS";
+  public static final String INVENTORY_STORAGE = "INVENTORY";
 
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";

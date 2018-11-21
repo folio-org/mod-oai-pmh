@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -11,6 +10,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
+import org.folio.oaipmh.helpers.storage.InventoryStorageHelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,12 +19,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.MARC_JSON_RECORD_URI;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
-
 
   private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
@@ -32,39 +34,52 @@ public class OkapiMockServer {
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
-  public static final String OAI_TEST_TENANT = "oaiTest";
+  static final String OAI_TEST_TENANT = "oaiTest";
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
+  private static final String NO_RECORDS_DATE_STORAGE = "2011-11-11T11:11:11.000Z";
   static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01T00:00:00Z";
-  static final String ERROR_DATE = "2010-10-10T10:10:10Z";
-  static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE = "2001-01-01T01:01:01Z";
+  private static final String PARTITIONABLE_RECORDS_DATE_STORAGE = "2003-01-01T00:00:00.000Z";
+  static final String ERROR_UNTIL_DATE = "2010-10-10T10:10:10Z";
+  // 1 second should be added to storage until date time
+  private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:11.000Z";
+  static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE = "2001-01-01T01:01:01Z";
+  // 1 second should be added to storage until date time
+  private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02.000Z";
   static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
+  private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00.000Z";
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
-  static final String THREE_INSTANCES_DATE = "2018-12-12T12:12:12Z";
+  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05.000Z";
+  static final String THREE_INSTANCES_DATE = "2018-12-12";
+  static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
   private static final String INTERNAL_SERVER_ERROR_INSTANCE_ID = "6b4ae089-e1ee-431f-af83-e1133f8e3da0";
 
   // Paths to json files
-  private static final String INSTANCES_0 = "/instance-storage/instances/instances_0.json";
-  private static final String INSTANCES_1 = "/instance-storage/instances/instances_1.json";
-  private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instance-storage/instances/instances_1_withNoRecordSource.json";
-  private static final String INSTANCES_2 = "/instance-storage/instances/instances_2.json";
-  private static final String INSTANCES_3 = "/instance-storage/instances/instances_3.json";
-  private static final String INSTANCES_4 = "/instance-storage/instances/instances_4.json";
-  private static final String INSTANCES_10 = "/instance-storage/instances/instances_10.json";
-  private static final String INSTANCES_11 = "/instance-storage/instances/instances_11.json";
+  private static final String INSTANCES_0 = "/instances_0.json";
+  private static final String INSTANCES_1 = "/instances_1.json";
+  private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instances_1_withNoRecordSource.json";
+  private static final String INSTANCES_2 = "/instances_2_lastWithStorageError500.json";
+  private static final String INSTANCES_3 = "/instances_3.json";
+  private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
+  private static final String INSTANCES_10 = "/instances_10.json";
+  private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
 
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
-  public static final String ERROR_TENANT = "error";
+  private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
+  private static final String INSTANCE_STORAGE_BY_ID_MARC_JSON = String.format(MARC_JSON_RECORD_URI, ":instanceId");
+  private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
+
+  public static final String ERROR_TENANT = "error";
 
   private final int port;
   private final Vertx vertx;
@@ -77,11 +92,17 @@ public class OkapiMockServer {
   private Router defineRoutes() {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    router.route(HttpMethod.GET, "/instance-storage/instances")
+    router.get(InventoryStorageHelper.INSTANCES_URI)
           .handler(this::handleInstancesInventoryStorageResponse);
-    router.route(HttpMethod.GET, "/instance-storage/instances/:instanceId/source-record/marc-json")
+    router.get(INSTANCE_STORAGE_BY_ID_MARC_JSON)
           .handler(this::handleMarcJsonInventoryStorageResponse);
-    router.route(HttpMethod.GET, "/configurations/entries")
+
+    router.get(SOURCE_STORAGE_RESULT_URI)
+          .handler(this::handleRecordStorageResultResponse);
+    router.get(SOURCE_STORAGE_RECORD)
+          .handler(this::handleSourceRecordStorageByIdResponse);
+
+    router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
     return router;
   }
@@ -122,6 +143,22 @@ public class OkapiMockServer {
     }
   }
 
+  private void handleSourceRecordStorageByIdResponse(RoutingContext ctx) {
+    String recordId = ctx.request().getParam("id");
+    if (recordId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
+      failureResponse(ctx, 500, "Internal Server Error");
+    } else if (recordId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
+      failureResponse(ctx, 404, "Record not found");
+    } else {
+      String json = getJsonObjectFromFile(String.format("/source-storage/record/marc-%s.json", recordId));
+      if (isNotEmpty(json)) {
+        successResponse(ctx, json);
+      } else {
+        fail("There is no mock response for recordId=" + recordId);
+      }
+    }
+  }
+
   public void start(VertxTestContext context) {
     HttpServer server = vertx.createHttpServer();
 
@@ -132,36 +169,48 @@ public class OkapiMockServer {
   }
 
   private void handleInstancesInventoryStorageResponse(RoutingContext ctx) {
+    handleResultResponse(ctx, InventoryStorageHelper.INSTANCES_URI);
+  }
+
+  private void handleRecordStorageResultResponse(RoutingContext ctx) {
+    handleResultResponse(ctx, SOURCE_STORAGE_RESULT_URI);
+  }
+
+  private void handleResultResponse(RoutingContext ctx, String filePath) {
     String query = ctx.request().getParam("query");
     if (query != null)
     {
-      if (query.endsWith("id==" + EXISTING_IDENTIFIER)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1));
-      } else if (query.endsWith("id==" + NON_EXISTING_IDENTIFIER)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
-      } else if (query.contains(NO_RECORDS_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_0));
-      } else if (query.endsWith("id==" + ERROR_IDENTIFIER)) {
+      if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), EXISTING_IDENTIFIER))) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_1));
+      } else if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), NON_EXISTING_IDENTIFIER))) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_0));
+      } else if (query.contains(NO_RECORDS_DATE_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_0));
+      } else if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), ERROR_IDENTIFIER))) {
         failureResponse(ctx, 500, "Internal Server Error");
-      } else if (query.contains(ERROR_DATE)) {
+      } else if (query.contains(ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
-      } else if (query.contains(PARTITIONABLE_RECORDS_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_11));
-      } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_1_NO_RECORD_SOURCE));
-      } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_2));
+      } else if (query.contains(PARTITIONABLE_RECORDS_DATE_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_11));
+      } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_1_NO_RECORD_SOURCE));
+      } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_2));
       } else if (query.contains(THREE_INSTANCES_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_3));
-      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD)) {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_4));
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3));
+      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_4));
       } else {
-        successResponse(ctx, getJsonObjectFromFile(INSTANCES_10));
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10));
       }
       logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private String getIdParamName(String filePath) {
+    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "recordId" : "id";
   }
 
   private void successResponse(RoutingContext ctx, String body) {
@@ -185,6 +234,7 @@ public class OkapiMockServer {
    */
   private String getJsonObjectFromFile(String path) {
     try {
+      logger.debug("Loading file " + path);
       URL resource = OkapiMockServer.class.getResource(path);
       if (resource == null) {
         return null;

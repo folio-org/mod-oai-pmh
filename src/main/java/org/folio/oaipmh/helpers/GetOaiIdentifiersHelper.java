@@ -14,9 +14,7 @@ import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ResumptionTokenType;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -63,7 +61,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
 
       // 3. Search for instances
-      VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildItemsEndpoint(request), request.getOkapiHeaders(), false))
+      VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildRecordsEndpoint(request), request.getOkapiHeaders(), false))
         // 4. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
         // 5. Build final response to client (potentially blocking operation thus running on worker thread)
@@ -122,32 +120,27 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       throw new IllegalStateException(instancesResponse.getError().toString());
     }
 
+    OAIPMH oaipmh = buildBaseResponse(request);
     JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-        return buildBaseResponse(request).withErrors(new OAIPMHerrorType()
+        return oaipmh.withErrors(new OAIPMHerrorType()
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
     }
     if (instances != null && !instances.isEmpty()) {
       ListIdentifiersType identifiers = new ListIdentifiersType();
 
-      String resumptionToken = buildResumptionToken(request, instances, totalRecords);
-      if (resumptionToken != null) {
-        identifiers.withResumptionToken(new ResumptionTokenType()
-          .withValue(resumptionToken)
-          .withCompleteListSize(BigInteger.valueOf(totalRecords))
-          .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset())));
-      }
+      identifiers.withResumptionToken(buildResumptionToken(request, instances, totalRecords));
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
         .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
         .forEach(identifiers::withHeaders);
 
-      return buildBaseResponse(request).withListIdentifiers(identifiers);
+      return oaipmh.withListIdentifiers(identifiers);
     }
 
-    return buildBaseResponse(request).withErrors(createNoRecordsFoundError());
+    return oaipmh.withErrors(createNoRecordsFoundError());
   }
 }
