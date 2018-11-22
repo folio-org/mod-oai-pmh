@@ -9,7 +9,6 @@ import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
-import java.math.BigInteger;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -29,9 +28,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(records.size() + " records found for the request.");
-      }
+      logger.debug("{} records found for the request.", records.size());
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());
@@ -62,11 +59,10 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, String resumptionToken, Request request, Integer totalRecords) {
-    oaipmh.getListRecords()
-      .withResumptionToken(new ResumptionTokenType()
-        .withValue(resumptionToken)
-        .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset())));
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+    if (oaipmh.getListRecords() != null) {
+      oaipmh.getListRecords()
+            .withResumptionToken(resumptionToken);
+    }
   }
 }

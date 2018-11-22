@@ -45,7 +45,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
-      String endpoint = storageHelper.buildItemsEndpoint(request);
+      String endpoint = storageHelper.buildRecordsEndpoint(request);
       getOkapiClient(okapiHeaders)
         .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))

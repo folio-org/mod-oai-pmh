@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "recordId": "04489a01-f3cd-4f9e-9be4-d9c198703f45",
+      "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
+      "recordType": "MARC",
+      "metadata": {
+        "createdDate": "2018-11-20T07:23:11.172+0000",
+        "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
+        "updatedDate": "2018-11-20T07:23:11.172+0000",
+        "updatedByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

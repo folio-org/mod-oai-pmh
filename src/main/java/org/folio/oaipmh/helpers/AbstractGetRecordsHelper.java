@@ -14,6 +14,7 @@ import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -62,11 +64,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildItemsEndpoint(request);
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request);
 
-      if (logger.isDebugEnabled()) {
-        logger.debug("Sending message to " + instanceEndpoint);
-      }
+      logger.debug("Sending message to {}", instanceEndpoint);
 
       httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
         .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
@@ -85,17 +85,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(Request request) {
-    OAIPMH oaipmh = buildBaseResponse(request).withErrors(createNoRecordsFoundError());
+  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh) {
+    oaipmh.withErrors(createNoRecordsFoundError());
     return completedFuture(buildResponseWithErrors(oaipmh));
   }
 
-  private CompletableFuture<MetadataType> getOaiMetadata(Context ctx, HttpClientInterface httpClient, Request request, String id) {
+  private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
-      String metadataEndpoint = storageHelper.getMetadataEndpoint(id);
-      if (logger.isDebugEnabled()) {
-        logger.debug("Getting metadata info from " + metadataEndpoint);
-      }
+      String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
+      logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
                        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(request, response)));
@@ -108,37 +106,42 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
-    JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
-    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
+    JsonObject body = instancesResponse.getBody();
+    JsonArray instances = storageHelper.getItems(body);
+    Integer totalRecords = storageHelper.getTotalRecords(body);
+
+    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
+
+    // In case the request is based on resumption token, the response should be validated if no missed records since previous response
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       OAIPMH oaipmh = buildBaseResponse(request).withErrors(new OAIPMHerrorType()
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       return completedFuture(buildResponseWithErrors(oaipmh));
     }
-    String resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
-    final Map<String, RecordType> records = buildRecords(request, instances);
-    if (records.isEmpty()) {
-      return buildNoRecordsFoundOaiResponse(request);
-    } else {
-      List<CompletableFuture<Void>> cfs = new ArrayList<>();
-      records.forEach((id, record) -> cfs.add(getOaiMetadata(ctx, httpClient, request, id).thenAccept(record::withMetadata)));
+    ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
-      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
-              .thenApply(v -> {
-                OAIPMH oaipmh = buildBaseResponse(request);
-                // Return only records with metadata populated
-                addRecordsToOaiResponse(oaipmh, records.values().stream()
-                                                       .filter(record -> record.getMetadata() != null)
-                                                       .collect(Collectors.toList()));
-                if (resumptionToken != null) {
-                  addResumptionTokenToOaiResponse(oaipmh, resumptionToken, request, totalRecords);
-                }
-                return oaipmh;
-              })
-              .thenCompose(oaipmh -> supplyBlockingAsync(ctx, () -> buildResponse(oaipmh)));
-    }
+    /*
+    * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
+    * of any database query or search function necessary to answer the list request, rather than when the output is written.
+    */
+    final OAIPMH oaipmh = buildBaseResponse(request);
+
+    // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
+    return supplyBlockingAsync(ctx, () -> buildRecords(request, instances))
+      .thenCompose(recordsMap -> {
+        if (recordsMap.isEmpty()) {
+          return buildNoRecordsFoundOaiResponse(oaipmh);
+        } else {
+          return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
+            .thenApply(records -> {
+              addRecordsToOaiResponse(oaipmh, records);
+              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+              return buildResponse(oaipmh);
+            });
+        }
+      });
   }
 
   /**
@@ -148,28 +151,31 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private Map<String, RecordType> buildRecords(Request request, JsonArray instances) {
     Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Number of instances to process: " + instances.size());
-      }
-
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
 
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String storageInstanceId = storageHelper.getItemId(instance);
+        String storageRecordId = storageHelper.getRecordId(instance);
+
         RecordType record = new RecordType()
           .withHeader(createHeader(instance)
-          .withIdentifier(getIdentifier(identifierPrefix, storageInstanceId)));
-        records.put(storageInstanceId, record);
+          .withIdentifier(getIdentifier(identifierPrefix, storageRecordId)));
+
+        // Some repositories like SRS can return record source data along with other info
+        String source = storageHelper.getInstanceRecordSource(instance);
+        if (source != null) {
+          record.withMetadata(buildOaiMetadata(request, source));
+        }
+        records.put(storageRecordId, record);
       }
     }
     return records;
   }
 
   /**
-   * Builds {@link MetadataType} based on the response from storage service
+   * Builds {@link MetadataType} if the response from storage service is successful
    * @param request the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
@@ -187,13 +193,56 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       throw new IllegalStateException(sourceResponse.getError().toString());
     }
 
-    JsonObject source = sourceResponse.getBody();
+    String source = storageHelper.getRecordSource(sourceResponse.getBody());
+    return buildOaiMetadata(request, source);
+  }
+
+  private MetadataType buildOaiMetadata(Request request, String content) {
     MetadataType metadata = new MetadataType();
     MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
-    byte[] byteSource = metadataPrefix.convert(source.toString());
+    byte[] byteSource = metadataPrefix.convert(content);
     Object record = ResponseHelper.getInstance().bytesToObject(byteSource);
     metadata.setAny(record);
     return metadata;
+  }
+
+  private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
+    if (hasRecordsWithoutMetadata(records)) {
+      List<CompletableFuture<Void>> cfs = new ArrayList<>();
+      records.forEach((id, record) -> {
+        if (Objects.isNull(record.getMetadata())) {
+          cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id).thenAccept(record::withMetadata));
+        }
+      });
+      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
+                                   // Return only records with metadata populated
+                                   .thenApply(v -> filterEmptyRecords(records));
+    } else {
+      return CompletableFuture.completedFuture(records.values());
+    }
+  }
+
+  private boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
+    return records.values()
+                  .stream()
+                  .map(RecordType::getMetadata)
+                  .anyMatch(Objects::isNull);
+  }
+
+  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
+    return records.entrySet()
+                  .stream()
+                  .filter(this::hasMetadata)
+                  .map(Map.Entry::getValue)
+                  .collect(Collectors.toList());
+  }
+
+  private boolean hasMetadata(Map.Entry<String, RecordType> entry) {
+    boolean hasMetadata = Objects.nonNull(entry.getValue().getMetadata());
+    if (!hasMetadata) {
+      logger.warn(String.format("The record with '%s' storage's id has no metadata", entry.getKey()));
+    }
+    return hasMetadata;
   }
 
   /**
@@ -224,7 +273,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract Response buildResponseWithErrors(OAIPMH oai);
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
   protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
-  protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, String resumptionToken,
-                                                          Request request, Integer totalRecords);
+  protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);
 
 }

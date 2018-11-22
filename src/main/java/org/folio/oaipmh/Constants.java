@@ -1,10 +1,18 @@
 package org.folio.oaipmh;
 
+import java.time.format.DateTimeFormatter;
+
 public final class Constants {
 
   private Constants() {
     throw new IllegalStateException("This class holds constants only");
   }
+
+  /**
+   * Strict ISO Date and Time with UTC offset.
+   * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
+   */
+  public static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
@@ -16,8 +24,11 @@ public final class Constants {
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";
   public static final String REPOSITORY_DELETED_RECORDS = "repository.deletedRecords";
+  public static final String REPOSITORY_STORAGE = "repository.storage";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
 
+  public static final String SOURCE_RECORD_STORAGE = "SRS";
+  public static final String INVENTORY_STORAGE = "INVENTORY";
 
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";

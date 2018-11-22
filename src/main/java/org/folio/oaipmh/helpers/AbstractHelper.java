@@ -7,16 +7,21 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 
+import java.math.BigInteger;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -33,11 +38,13 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -48,13 +55,10 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
  */
 public abstract class AbstractHelper implements VerbHelper {
 
-  /** Strict ISO Date and Time with UTC offset. */
-  protected static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-
   /**
    * Holds instance to handle items returned
    */
-  protected static InstancesStorageHelper storageHelper = InstancesStorageHelper.getStorageHelper();
+  protected StorageHelper storageHelper = StorageHelper.getInstance();
 
   /**
    * Creates basic {@link OAIPMH} with ResponseDate and Request details
@@ -96,38 +100,76 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   private void validateDateRange(Request request, List<OAIPMHerrorType> errors) {
-    LocalDateTime from = null;
-    LocalDateTime until = null;
+    Pair<GranularityType, LocalDateTime> from = null;
+    Pair<GranularityType, LocalDateTime> until = null;
+    // Get repository supported granularity
+    boolean isDateOnly = isDateOnlyGranularity(request);
     if (request.getFrom() != null) {
-      from = parseDate(new ImmutablePair<>(FROM_PARAM, request.getFrom()), errors);
+      ImmutablePair<String, String> date = new ImmutablePair<>(FROM_PARAM, request.getFrom());
+      from = isDateOnly ? parseDate(date, errors) : parseDateTime(date, errors);
       if (from == null) {
-        // In case the 'from' date is invalid, we cannot send it in OAI-PMH/request@from because it contradicts schema definition
+        // In case the 'from' date is invalid, it cannot be sent in OAI-PMH/request@from because it contradicts schema definition
         request.getOaiRequest().setFrom(null);
       }
     }
     if (request.getUntil() != null) {
-      until = parseDate(new ImmutablePair<>(UNTIL_PARAM, request.getUntil()), errors);
+      ImmutablePair<String, String> date = new ImmutablePair<>(UNTIL_PARAM, request.getUntil());
+      until = isDateOnly ? parseDate(date, errors) : parseDateTime(date, errors);
       if (until == null) {
-        // In case the 'until' date is invalid, we cannot send it in OAI-PMH/request@until because it contradicts schema definition
+        // In case the 'until' date is invalid, it cannot be sent in OAI-PMH/request@until because it contradicts schema definition
         request.getOaiRequest().setUntil(null);
       }
     }
-    if (from != null && until != null && from.isAfter(until)) {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
-        .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
+    if (from != null && until != null) {
+      // Both arguments must have the same granularity.
+      if (from.getLeft() != until.getLeft()) {
+        errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+                                        .withValue("Invalid date range: 'from' must have the same granularity as 'until'."));
+      } else if (from.getRight().isAfter(until.getRight())) {
+        // The from argument must be less than or equal to the until argument.
+        errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+                                        .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
+      }
     }
   }
 
+  private boolean isDateOnlyGranularity(Request request) {
+    String granularity = RepositoryConfigurationUtil.getProperty
+      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_TIME_GRANULARITY);
+    return GranularityType.fromValue(granularity) == GranularityType.YYYY_MM_DD;
+  }
+
   /**
-   * Validates if the date time format is in {@link #ISO_UTC_DATE_TIME} format. If the date is valid, it is returned as {@link LocalDateTime}.
-   * Otherwise {@literal null} is returned and validation error is added to errors list
+   * Validates if the date time is in {@linkplain org.folio.oaipmh.Constants#ISO_UTC_DATE_TIME ISO_UTC_DATE_TIME} format.
+   * If the date is valid, {@link LocalDateTime} is returned. Otherwise {@link #parseDate(Pair, List)} is called because repository
+   * must support {@linkplain GranularityType#YYYY_MM_DD YYYY_MM_DD} granularity and date might be in such format
+   *
    * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
-  private LocalDateTime parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+  private Pair<GranularityType, LocalDateTime> parseDateTime(Pair<String, String> date, List<OAIPMHerrorType> errors) {
     try {
-      return LocalDateTime.parse(date.getValue(), ISO_UTC_DATE_TIME);
+      LocalDateTime dateTime = LocalDateTime.parse(date.getValue(), ISO_UTC_DATE_TIME);
+      return new ImmutablePair<>(GranularityType.YYYY_MM_DD_THH_MM_SS_Z, dateTime);
+    } catch (DateTimeParseException e) {
+      // The repository must support YYYY-MM-DD granularity so try to parse date only
+      return parseDate(date, errors);
+    }
+  }
+
+  /**
+   * Validates if the date is in {@link DateTimeFormatter#ISO_LOCAL_DATE} format.
+   * If the date is valid, it is returned as {@link LocalDateTime} at time of midnight.
+   * Otherwise {@literal null} is returned and validation error is added to errors list
+   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date
+   * @param errors list of errors to be updated if format is wrong
+   * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
+   */
+  private Pair<GranularityType, LocalDateTime> parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+    try {
+      LocalDateTime dateTime = LocalDate.parse(date.getValue()).atStartOfDay();
+      return new ImmutablePair<>(GranularityType.YYYY_MM_DD, dateTime);
     } catch (DateTimeParseException e) {
       errors.add(new OAIPMHerrorType()
         .withCode(BAD_ARGUMENT)
@@ -208,7 +250,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return oai-identifier
    */
   private String getIdentifier(String identifierPrefix, JsonObject instance) {
-    return getIdentifier(identifierPrefix, storageHelper.getItemId(instance));
+    return getIdentifier(identifierPrefix, storageHelper.getRecordId(instance));
   }
 
   /**
@@ -245,23 +287,31 @@ public abstract class AbstractHelper implements VerbHelper {
    * empty string if partitioning is used and all instances are processed already,
    * null if the result set is not partitioned.
    */
-  protected String buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
+  protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationUtil.getProperty
-    (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put("totalRecords", String.valueOf(totalRecords));
       extraParams.put("offset", String.valueOf(newOffset));
-      String nextRecordId = storageHelper.getItemId((JsonObject) instances.remove(instances.size() - 1));
+      String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
       extraParams.put("nextRecordId", nextRecordId);
       if (request.getUntil() == null) {
         extraParams.put("until", LocalDateTime.now().format(ISO_UTC_DATE_TIME));
       }
 
-      return request.toResumptionToken(extraParams);
-    } else {
-      return request.isRestored() ? EMPTY : null;
+      resumptionToken = request.toResumptionToken(extraParams);
     }
+
+    if (resumptionToken != null) {
+      return new ResumptionTokenType()
+        .withValue(resumptionToken)
+        .withCompleteListSize(BigInteger.valueOf(totalRecords))
+        .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+    }
+
+    return null;
   }
 
   /**
@@ -282,7 +332,7 @@ public abstract class AbstractHelper implements VerbHelper {
     Integer prevTotalRecords = request.getTotalRecords();
     return instances != null && instances.size() > 0 &&
       (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), storageHelper.getItemId(instances.getJsonObject(0))));
+        || StringUtils.equals(request.getNextRecordId(), storageHelper.getRecordId(instances.getJsonObject(0))));
   }
 
   private List<String> getSupportedSetSpecs() {

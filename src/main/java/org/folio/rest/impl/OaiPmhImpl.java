@@ -70,9 +70,7 @@ public class OaiPmhImpl implements Oai {
         HELPERS.get(LIST_RECORDS)
           .handle(request, vertxContext)
           .thenAccept(response -> {
-            if (logger.isDebugEnabled()) {
-              logger.debug("ListRecords response: " + response.getEntity());
-            }
+            logger.debug("ListRecords response: {}", response.getEntity());
             asyncResultHandler.handle(succeededFuture(response));
           })
           .exceptionally(handleError(asyncResultHandler, LIST_RECORDS));
@@ -96,9 +94,7 @@ public class OaiPmhImpl implements Oai {
           HELPERS.get(GET_RECORD)
             .handle(request, vertxContext)
             .thenAccept(response -> {
-              if (logger.isDebugEnabled()) {
-                logger.debug("GetRecord response: " + response.getEntity());
-              }
+              logger.debug("GetRecord response: {}", response.getEntity());
               asyncResultHandler.handle(succeededFuture(response));
             })
             .exceptionally(handleError(asyncResultHandler, GET_RECORD));
@@ -125,9 +121,7 @@ public class OaiPmhImpl implements Oai {
         HELPERS.get(LIST_IDENTIFIERS)
           .handle(request, vertxContext)
           .thenAccept(response -> {
-            if (logger.isDebugEnabled()) {
-              logger.debug("ListIdentifiers response: " + response.getEntity());
-            }
+            logger.debug("ListIdentifiers response: {}", response.getEntity());
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(handleError(asyncResultHandler, LIST_IDENTIFIERS));
       }).exceptionally(handleError(asyncResultHandler, LIST_IDENTIFIERS));
@@ -147,9 +141,7 @@ public class OaiPmhImpl implements Oai {
         HELPERS.get(LIST_METADATA_FORMATS)
           .handle(request, vertxContext)
           .thenAccept(response -> {
-            if (logger.isDebugEnabled()) {
-              logger.debug("ListMetadataFormats response: " + response.getEntity());
-            }
+            logger.debug("ListMetadataFormats response: {}", response.getEntity());
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(handleError(asyncResultHandler, LIST_METADATA_FORMATS));
       }).exceptionally(handleError(asyncResultHandler, LIST_METADATA_FORMATS));
@@ -171,9 +163,7 @@ public class OaiPmhImpl implements Oai {
         HELPERS.get(LIST_SETS)
           .handle(request, vertxContext)
           .thenAccept(response -> {
-            if (logger.isDebugEnabled()) {
-              logger.debug("ListSets response: " + response.getEntity());
-            }
+            logger.debug("ListSets response: {}", response.getEntity());
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(handleError(asyncResultHandler, LIST_SETS));
       }).exceptionally(handleError(asyncResultHandler, LIST_SETS));
@@ -193,9 +183,7 @@ public class OaiPmhImpl implements Oai {
         HELPERS.get(IDENTIFY)
           .handle(request, vertxContext)
           .thenAccept(response -> {
-            if (logger.isDebugEnabled()) {
-              logger.debug("Identify response: " + response.getEntity());
-            }
+            logger.debug("Identify response: {}", response.getEntity());
             asyncResultHandler.handle(succeededFuture(response));
           }).exceptionally(handleError(asyncResultHandler, IDENTIFY));
       }).exceptionally(handleError(asyncResultHandler, IDENTIFY));

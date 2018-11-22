@@ -3,12 +3,12 @@ package org.folio.oaipmh.helpers;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
-
 import org.openarchives.oai._2.GetRecordType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -18,9 +18,9 @@ import java.util.Set;
 
 import static org.folio.oaipmh.Constants.*;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond200WithApplicationXml;
+import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond400WithApplicationXml;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond404WithApplicationXml;
 import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond422WithApplicationXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond400WithApplicationXml;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
 
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
@@ -54,8 +54,10 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, String resumptionToken, Request request, Integer totalRecords) {
-    throw new UnsupportedOperationException("Control flow is not applicable for GetRecord verb.");
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+    if (resumptionToken != null) {
+      throw new UnsupportedOperationException("Control flow is not applicable for GetRecord verb.");
+    }
   }
 
   @Override
