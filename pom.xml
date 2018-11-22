@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -19,7 +18,7 @@
     <url>https://github.com/folio-org/mod-oai-pmh.git</url>
     <connection>scm:git:git://github.com/folio-org/mod-oai-pmh.git</connection>
     <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v1.0.0</tag>
   </scm>
 
   <issueManagement>
@@ -382,8 +381,7 @@
             <phase>prepare-package</phase>
             <configuration>
               <target if="http.port">
-                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh" value="baseUri: http://localhost:${http.port}"
-                         dir="${basedir}/target/classes/apidocs/raml">
+                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh" value="baseUri: http://localhost:${http.port}" dir="${basedir}/target/classes/apidocs/raml">
                   <include name="**/*.raml" />
                 </replace>
                 <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]" dir="${basedir}/target/classes/apidocs/raml">
@@ -466,7 +464,7 @@
                   </manifestEntries>
                 </transformer>
               </transformers>
-              <artifactSet/>
+              <artifactSet />
               <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
             </configuration>
           </execution>
