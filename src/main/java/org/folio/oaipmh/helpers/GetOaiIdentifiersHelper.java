@@ -129,9 +129,10 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
     }
     if (instances != null && !instances.isEmpty()) {
-      ListIdentifiersType identifiers = new ListIdentifiersType();
+      logger.debug("{} entries retrieved out of {}", instances.size(), totalRecords);
 
-      identifiers.withResumptionToken(buildResumptionToken(request, instances, totalRecords));
+      ListIdentifiersType identifiers = new ListIdentifiersType()
+        .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()

@@ -38,6 +38,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -53,9 +54,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
  * Abstract helper implementation that provides some common methods.
  */
 public abstract class AbstractHelper implements VerbHelper {
-
-  /** Strict ISO Date and Time with UTC offset. */
-  private static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   /**
    * Holds instance to handle items returned
@@ -142,8 +140,10 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Validates if the date time is in {@link #ISO_UTC_DATE_TIME} format. If the date is valid, {@link LocalDateTime} is returned.
-   * Otherwise {@link #parseDate(Pair, List)} is called because repository must support YYYY-MM-DD granularity and date might be in such format
+   * Validates if the date time is in {@linkplain org.folio.oaipmh.Constants#ISO_UTC_DATE_TIME ISO_UTC_DATE_TIME} format.
+   * If the date is valid, {@link LocalDateTime} is returned. Otherwise {@link #parseDate(Pair, List)} is called because repository
+   * must support {@linkplain GranularityType#YYYY_MM_DD YYYY_MM_DD} granularity and date might be in such format
+   *
    * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.

@@ -8,7 +8,6 @@ import com.jayway.restassured.http.ContentType;
 import com.jayway.restassured.response.Header;
 import com.jayway.restassured.response.ValidatableResponse;
 import com.jayway.restassured.specification.RequestSpecification;
-import gov.loc.marc21.slim.RecordType;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
@@ -41,6 +40,7 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_dc.Dc;
@@ -208,12 +208,8 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
-    assertThat(oaipmh.getErrors(), is(empty()));
-    assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
-    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(10));
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
-
-    oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
 
     getLogger().debug(String.format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", encoding));
   }
@@ -225,9 +221,8 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS, prefix, encoding);
 
-    assertThat(oaipmh.getErrors(), is(empty()));
-    assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
-    assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(3));
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 3);
+
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
     oaipmh.getListIdentifiers()
@@ -244,21 +239,8 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_RECORDS, prefix, encoding);
 
-    assertThat(oaipmh.getListRecords(), is(notNullValue()));
-    assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
-
-    oaipmh.getListRecords()
-          .getRecords()
-          .forEach(record -> {
-            assertThat(record.getMetadata(), is(notNullValue()));
-            if (prefix == MetadataPrefix.MARC21XML) {
-              assertThat(record.getMetadata().getAny(), is(instanceOf(RecordType.class)));
-            } else if (prefix == MetadataPrefix.DC) {
-              assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
-            }
-            verifyHeader(record.getHeader());
-          });
 
     getLogger().debug(String.format("==== getOaiRecordsWithDateTimeRange(%s, %s) successfully completed ====", prefix.getName(), encoding));
   }
@@ -290,11 +272,11 @@ class OaiPmhImplTest {
     return oaipmh;
   }
 
-  @Test
-  void getOaiRecordsWithDateRange() {
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiRecordsWithDateRange(MetadataPrefix metadataPrefix) {
     getLogger().debug("==== Starting getOaiRecordsWithDateRange() ====");
 
-    String metadataPrefix = MetadataPrefix.MARC21XML.getName();
     String from = THREE_INSTANCES_DATE;
     String until = "2018-12-20";
 
@@ -302,27 +284,18 @@ class OaiPmhImplTest {
       .with()
       .param(FROM_PARAM, from)
       .param(UNTIL_PARAM, until)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix);
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
     assertThat(oaipmh.getErrors(), is(empty()));
 
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
     assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
 
-    assertThat(oaipmh.getListRecords(), is(notNullValue()));
-    assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
-
-    oaipmh.getListRecords()
-          .getRecords()
-          .forEach(record -> {
-            assertThat(record.getMetadata(), is(notNullValue()));
-            assertThat(record.getMetadata().getAny(), is(instanceOf(RecordType.class)));
-            verifyHeader(record.getHeader());
-          });
 
     getLogger().debug("==== getOaiRecordsWithDateRange() successfully completed ====");
   }
@@ -389,10 +362,10 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
+    verifyListResponse(oaipmh, verb, 10);
+
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
 
-    assertThat(oaipmh.getErrors(), is(empty()));
-    verifyListResponse(oaipmh, verb, 10);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(resumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
@@ -426,7 +399,7 @@ class OaiPmhImplTest {
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    assertThat(oaipmh.getErrors(), is(empty()));
+
     verifyListResponse(oaipmh, verb, 10);
 
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
@@ -601,19 +574,10 @@ class OaiPmhImplTest {
     // Unmarshal string to OAIPMH and verify required data presents
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
-    // The dates are of invalid format so they are not present in request
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
-    assertThat(oaipmh.getListRecords(), is(notNullValue()));
-    assertThat(oaipmh.getListRecords().getRecords(), hasSize(3));
-
-    oaipmh.getListRecords()
-          .getRecords()
-          .forEach(record -> {
-            assertThat(record.getMetadata(), is(notNullValue()));
-            verifyHeader(record.getHeader());
-          });
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
 
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
@@ -972,6 +936,16 @@ class OaiPmhImplTest {
     return oaipmhFromString;
   }
 
+  private void verifyRecord(RecordType record, MetadataPrefix metadataPrefix) {
+    assertThat(record.getMetadata(), is(notNullValue()));
+    if (metadataPrefix == MetadataPrefix.MARC21XML) {
+      assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
+    } else if (metadataPrefix == MetadataPrefix.DC) {
+      assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
+    }
+    verifyHeader(record.getHeader());
+  }
+
   private void verifyHeader(HeaderType header) {
     assertThat(header.getIdentifier(), containsString(IDENTIFIER_PREFIX));
     assertThat(header.getSetSpecs(), hasSize(1));
@@ -979,12 +953,16 @@ class OaiPmhImplTest {
   }
 
   private void verifyListResponse(OAIPMH oaipmh, VerbType verb, int recordsCount) {
+    assertThat(oaipmh.getErrors(), is(empty()));
     if (verb == LIST_IDENTIFIERS) {
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
+      oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
     } else if (verb == LIST_RECORDS) {
-      assertThat(oaipmh.getListRecords().getRecords(), is(notNullValue()));
+      assertThat(oaipmh.getListRecords(), is(notNullValue()));
       assertThat(oaipmh.getListRecords().getRecords(), hasSize(recordsCount));
+      MetadataPrefix metadataPrefix = MetadataPrefix.fromName(oaipmh.getRequest().getMetadataPrefix());
+      oaipmh.getListRecords().getRecords().forEach(record -> verifyRecord(record, metadataPrefix));
     } else {
       fail("Can't verify specified verb: " + verb);
     }

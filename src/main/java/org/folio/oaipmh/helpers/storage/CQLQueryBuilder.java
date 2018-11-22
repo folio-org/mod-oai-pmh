@@ -2,14 +2,13 @@ package org.folio.oaipmh.helpers.storage;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 
 /**
  * Utility class used to build http CQL query param.
@@ -65,7 +64,7 @@ public class CQLQueryBuilder {
     }
 
     if (notEmptyUntil) {
-      // The until param is inclusive. Due to the difference of OAI-PMH and storage granularity the until will be incremented by one and compared as exclusive
+      // The until param is inclusive. Due to the difference of OAI-PMH and storage granularity, the until will be incremented by one and compared as exclusive
       builder.append(String.format("metadata.updatedDate<%s", formatDateTime(until, true)));
     }
 
@@ -73,21 +72,22 @@ public class CQLQueryBuilder {
   }
 
   /**
-   * OAI-PMH finest granularity is by second but storage granularity is by millisecond. So the date should be formatted to include
-   * milliseconds as well.
+   * OAI-PMH finest granularity is by second but storage granularity is by millisecond. According to ramls/raml-util/schemas/metadata.schema
+   * the format of the dates is "date-time" which is ISO 8601 date and time with milliseconds and UTC offset. So the date should be
+   * formatted to include milliseconds as well.
    */
   private String formatDateTime(String date, boolean isUntil) {
     return queryDateFormat.format(parseDateTime(date, isUntil));
   }
 
   /**
-   * OAI-PMH finest granularity is by second but storage granularity is by millisecond. So the date should be formatted to include
-   * milliseconds as well.
+   * Converts passed date stamp string to LocalDateTime. In case this is until date, it is being incremented by one second.
+   * In case passed date stamp is in date only format {@link #parseDate(String, boolean)} will be called.
    */
   private LocalDateTime parseDateTime(String date, boolean isUntil) {
     LocalDateTime dateTime;
     try {
-      dateTime = LocalDateTime.ofInstant(Instant.parse(date), ZoneOffset.UTC);
+      dateTime = LocalDateTime.parse(date, ISO_UTC_DATE_TIME);
     } catch (DateTimeParseException e) {
       // The repository must support YYYY-MM-DD granularity so try to parse date only
       return parseDate(date, isUntil);
@@ -99,8 +99,7 @@ public class CQLQueryBuilder {
   }
 
   /**
-   * OAI-PMH finest granularity is by second but storage granularity is by millisecond. So the date should be formatted to include
-   * milliseconds as well.
+   * Converts passed date string to LocalDateTime at time of midnight. In case this is until date, it is being incremented by one day.
    */
   private LocalDateTime parseDate(String date, boolean isUntil) {
     LocalDateTime dateTime = LocalDate.parse(date).atStartOfDay();

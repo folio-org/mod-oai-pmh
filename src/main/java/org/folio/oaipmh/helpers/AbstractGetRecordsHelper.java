@@ -66,9 +66,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request);
 
-      if (logger.isDebugEnabled()) {
-        logger.debug("Sending message to " + instanceEndpoint);
-      }
+      logger.debug("Sending message to {}", instanceEndpoint);
 
       httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
         .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
@@ -95,9 +93,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
-      if (logger.isDebugEnabled()) {
-        logger.debug("Getting metadata info from " + metadataEndpoint);
-      }
+      logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
                        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(request, response)));
@@ -114,9 +110,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonArray instances = storageHelper.getItems(body);
     Integer totalRecords = storageHelper.getTotalRecords(body);
 
-    if (logger.isDebugEnabled()) {
-      logger.debug(String.format("%d entries retrieved out of %d", instances.size(), totalRecords));
-    }
+    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
 
     // In case the request is based on resumption token, the response should be validated if no missed records since previous response
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
@@ -157,10 +151,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private Map<String, RecordType> buildRecords(Request request, JsonArray instances) {
     Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
-      if (logger.isDebugEnabled()) {
-        logger.debug("Number of instances to process: " + instances.size());
-      }
-
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();

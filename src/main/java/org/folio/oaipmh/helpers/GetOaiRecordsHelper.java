@@ -28,9 +28,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(records.size() + " records found for the request.");
-      }
+      logger.debug("{} records found for the request.", records.size());
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());
