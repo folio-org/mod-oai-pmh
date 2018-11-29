@@ -146,16 +146,19 @@ public class ResponseHelper {
    * @return the object based on passed byte array
    */
   public Object bytesToObject(byte[] byteSource) {
-    try {
+    StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
+    try(ByteArrayInputStream inputStream = new ByteArrayInputStream(byteSource)) {
       // Unmarshaller is not thread-safe, so we should create every time a new one
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
       if (oaipmhSchema != null) {
         jaxbUnmarshaller.setSchema(oaipmhSchema);
       }
-      return jaxbUnmarshaller.unmarshal(new ByteArrayInputStream(byteSource));
-    } catch (JAXBException e) {
+      return jaxbUnmarshaller.unmarshal(inputStream);
+    } catch (JAXBException | IOException e) {
       // In case there is an issue to unmarshal byteSource, there is no way to handle it
       throw new IllegalStateException("The byte array cannot be converted to JAXB object response.", e);
+    } finally {
+      logExecutionTime("Array of bytes converted to Object", timer);
     }
   }
 
@@ -169,7 +172,7 @@ public class ResponseHelper {
   private void logExecutionTime(final String msg, StopWatch timer) {
     if (timer != null) {
       timer.stop();
-      logger.debug(String.format("%s after %d ms", msg, timer.getTime()));
+      logger.debug("{} after {} ms", msg, timer.getTime());
     }
   }
 }

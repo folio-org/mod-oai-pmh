@@ -40,6 +40,14 @@ OAI-PMH | `jaxb.marshaller.formattedOutput` | `false` | Boolean value which is u
 Notes: 
 * The system default values can be overwritten by VM options e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`
 * Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader
+* There is `repository.storage` system property defining which storage should be used to get records from. This configuration is not tenant specific but system wide therefore cannot be defined in [mod-configuration](https://github.com/folio-org/mod-configuration/) module. There are 2 allowed values:
+
+  | Value | Storage |
+  |  ---  |   ---   |  
+  | `SRS` | [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage) |
+  | `INVENTORY` | [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage) |
+  
+  The default value is `SRS`. To enable usage of the inventory storage, the `-Drepository.storage=INVENTORY` VM option should be specified.
 
 ### Issue tracker
 

@@ -17,7 +17,7 @@ public interface StorageHelper {
    * Creates instance of the StorageHelper depending on the `repository.storage` system property.
    */
   static StorageHelper getInstance() {
-    String repositoryType = System.getProperty(REPOSITORY_STORAGE, INVENTORY_STORAGE);
+    String repositoryType = System.getProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     if (SOURCE_RECORD_STORAGE.equals(repositoryType)) {
       return new SourceRecordStorageHelper();
     } else if (INVENTORY_STORAGE.equals(repositoryType)) {
