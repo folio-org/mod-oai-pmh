@@ -14,8 +14,8 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.source-record.marc-json.get",
-            "source-storage.record.get",
-            "source-storage.result.get",
+            "source-storage.records.get",
+            "source-storage.sourceRecords.get",
             "configuration.entries.collection.get"
           ]
         },
@@ -27,8 +27,8 @@
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.source-record.marc-json.get",
-            "source-storage.record.get",
-            "source-storage.result.get",
+            "source-storage.records.get",
+            "source-storage.sourceRecords.get",
             "configuration.entries.collection.get"
           ]
         },
@@ -45,7 +45,7 @@
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "source-storage.result.get",
+            "source-storage.sourceRecords.get",
             "configuration.entries.collection.get"
           ]
         },
@@ -56,7 +56,7 @@
           "modulePermissions": [
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "source-storage.result.get",
+            "source-storage.sourceRecords.get",
             "configuration.entries.collection.get"
           ]
         },
@@ -76,7 +76,7 @@
     },
     {
       "id": "source-record-storage",
-      "version": "1.0"
+      "version": "2.0"
     }
   ],
   "permissionSets": [
