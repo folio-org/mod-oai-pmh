@@ -2,9 +2,9 @@
   "id": "c1d3be12-ecec-4fab-9237-baf728575185",
   "snapshotId": "dfa3e164-2cdf-43bc-8175-78587067c2ae",
   "recordType": "MARC",
-  "sourceRecord": {
+  "rawRecord": {
     "id": "2dbb4878-ddf4-4c34-b0eb-7d955c979e06",
-    "source": "62ca5b43-0f11-40af-a6b4-1a9ee2db33cb"
+    "content": "62ca5b43-0f11-40af-a6b4-1a9ee2db33cb"
   },
   "parsedRecord": {
     "id": "694c7b24-4a4b-4ae5-a61f-5263adc09a0d",

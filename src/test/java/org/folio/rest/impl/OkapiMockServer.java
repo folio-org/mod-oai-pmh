@@ -150,7 +150,7 @@ public class OkapiMockServer {
     } else if (recordId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
       failureResponse(ctx, 404, "Record not found");
     } else {
-      String json = getJsonObjectFromFile(String.format("/source-storage/record/marc-%s.json", recordId));
+      String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", recordId)));
       if (isNotEmpty(json)) {
         successResponse(ctx, json);
       } else {

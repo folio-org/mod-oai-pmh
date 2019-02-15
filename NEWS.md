@@ -1,3 +1,5 @@
+## 1.0.2 (unreleased)
+ * [MODOAIPMH-66](https://issues.folio.org/browse/MODOAIPMH-66) Upgrade to [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage) 2.0 interface
 ## 1.0.1 (released on 11/30/2018)
  * The [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage) is enabled by default in scope of [MODOAIPMH-63](https://issues.folio.org/browse/MODOAIPMH-63). To enable usage of [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage), the `-Drepository.storage=INVENTORY` VM option should be specified.
 ## 1.0.0 (released on 11/22/2018)
