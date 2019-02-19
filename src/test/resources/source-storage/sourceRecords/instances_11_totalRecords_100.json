@@ -1,7 +1,7 @@
 {
-  "results": [
+  "sourceRecords": [
     {
-      "recordId": "04489a01-f3cd-4f9e-9be4-d9c198703f45",
+      "recordId": "3a54df61-312c-4b2b-a035-5c1868447fc9",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -16,7 +16,7 @@
       }
     },
     {
-      "recordId": "f31a36de-fcf8-44f9-87ef-a55d06ad21ae",
+      "recordId": "a9b47605-5835-45fa-93e3-5c81eda30d53",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -31,7 +31,7 @@
       }
     },
     {
-      "recordId": "81825729-e824-4d52-9d15-1695e9bf1831",
+      "recordId": "bdc84a52-426c-4ad7-8908-fb661bd8ee1e",
       "snapshotId": "dfa3e164-2cdf-43bc-8175-78587067c2ae",
       "recordType": "MARC",
       "parsedRecord": {
@@ -46,7 +46,7 @@
       }
     },
     {
-      "recordId": "cf23adf0-61ba-4887-bf82-956c4aae2260",
+      "recordId": "3f5f048d-a046-4e75-bf6d-4d03cf009595",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -61,7 +61,7 @@
       }
     },
     {
-      "recordId": "69640328-788e-43fc-9c3c-af39e243f3b7",
+      "recordId": "4765f780-10af-4bc7-8d50-71aef6a6dae0",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -76,7 +76,7 @@
       }
     },
     {
-      "recordId": "7ab22f0a-c9cd-449a-9137-c76e5055ca37",
+      "recordId": "e670b311-3241-45e9-a207-107c0894ce42",
       "snapshotId": "dfa3e164-2cdf-43bc-8175-78587067c2ae",
       "recordType": "MARC",
       "parsedRecord": {
@@ -91,7 +91,7 @@
       }
     },
     {
-      "recordId": "f7e82a1e-fc06-4b82-bb1d-da326cb378ce",
+      "recordId": "2e674cfb-b09f-4f34-b54e-30ecc937ed69",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -106,7 +106,7 @@
       }
     },
     {
-      "recordId": "6b4ae089-e1ee-431f-af83-e1133f8e3da0",
+      "recordId": "e0812e6a-3d2c-4dc9-9660-b51335bd7583",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -121,7 +121,7 @@
       }
     },
     {
-      "recordId": "6eee8eb9-db1a-46e2-a8ad-780f19974efa",
+      "recordId": "e9914d9c-ae34-4859-aff1-0de2151a81f2",
       "snapshotId": "51e201ba-95d3-44e5-b4ec-f0059f11afcb",
       "recordType": "MARC",
       "parsedRecord": {
@@ -136,7 +136,7 @@
       }
     },
     {
-      "recordId": "6506b79b-7702-48b2-9774-a1c538fdd34e",
+      "recordId": "119ec1e4-1cae-466b-b2c8-f2c7e50e5e0e",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
       "parsedRecord": {
@@ -149,7 +149,22 @@
         "updatedDate": "2018-11-20T07:23:11.172+0000",
         "updatedByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092"
       }
+    },
+    {
+      "recordId": "6506b79b-7702-48b2-9774-a1c538fdd34e",
+      "snapshotId": "dfa3e164-2cdf-43bc-8175-78587067c2ae",
+      "recordType": "MARC",
+      "parsedRecord": {
+        "id": "ed7adab2-f85d-4b68-b6fe-c88c9a68b21e",
+        "content": "{\"leader\":\"00906nmm a2200253 ca4500\",\"fields\":[{\"001\":\"858092093\"},{\"003\":\"DE-601\"},{\"005\":\"20160502164752.0\"},{\"007\":\"cu uuu---uuuuu\"},{\"008\":\"160502m20169999gw      o     000 0 eng d\"},{\"035\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"(DE-599)GBV858092093\"}]}},{\"040\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"b\":\"ger\"},{\"c\":\"GBVCP\"},{\"e\":\"rda\"}]}},{\"041\":{\"ind1\":\"0\",\"ind2\":\" \",\"subfields\":[{\"a\":\"eng\"}]}},{\"100\":{\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ris, Robert\"},{\"e\":\"VerfasserIn\"},{\"4\":\"aut\"},{\"0\":\"(DE-601)778649407\"},{\"0\":\"(DE-588)1047595397\"}]}},{\"245\":{\"ind1\":\"1\",\"ind2\":\"4\",\"subfields\":[{\"a\":\"The chess player’s mating guide\"},{\"h\":\"Computer Datei\"},{\"c\":\"Robert Ris\"}]}},{\"264\":{\"ind1\":\"3\",\"ind2\":\"1\",\"subfields\":[{\"a\":\"Hamburg\"},{\"b\":\"Chessbase GmbH\"},{\"c\":\"[2016]-\"}]}},{\"336\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Computerprogramm\"},{\"b\":\"cop\"},{\"2\":\"rdacontent\"}]}},{\"337\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Computermedien\"},{\"b\":\"c\"},{\"2\":\"rdamedia\"}]}},{\"338\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Computerdisk\"},{\"b\":\"cd\"},{\"2\":\"rdacarrier\"}]}},{\"490\":{\"ind1\":\"0\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Fritztrainer\"},{\"a\":\"Tactics\"}]}},{\"655\":{\"ind1\":\"0\",\"ind2\":\"7\",\"subfields\":[{\"0\":\"(DE-588)4585131-1\"},{\"a\":\"DVD-ROM\"},{\"2\":\"gnd-carrier\"}]}},{\"710\":{\"ind1\":\"2\",\"ind2\":\" \",\"subfields\":[{\"a\":\"ChessBase GmbH\"},{\"g\":\"Hamburg\"},{\"e\":\"Verlag\"},{\"4\":\"pbl\"},{\"0\":\"(DE-601)269520015\"},{\"0\":\"(DE-588)2177108-X\"}]}},{\"900\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"GBV\"},{\"b\":\"SUB+Uni Hamburg <18>\"}]}},{\"954\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"0\":\"SUB+Uni Hamburg <18>\"},{\"a\":\"22\"},{\"b\":\"1613697813\"},{\"c\":\"01\"},{\"x\":\"0018\"}]}}]}"
+      },
+      "metadata": {
+        "createdDate": "2018-11-20T07:23:11.172+0000",
+        "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
+        "updatedDate": "2018-11-20T07:23:11.172+0000",
+        "updatedByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092"
+      }
     }
   ],
-  "totalRecords": 10
+  "totalRecords": 100
 }
