@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Request;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Optional;
 
 public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
@@ -29,8 +30,10 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
   @Override
   public String getInstanceRecordSource(JsonObject entry) {
-    JsonObject parsedRecord = entry.getJsonObject("parsedRecord");
-    return (parsedRecord != null ) ? parsedRecord.getString("content") : null;
+    return Optional.ofNullable(entry.getJsonObject("parsedRecord"))
+      .map(record -> record.getJsonObject("content"))
+      .map(JsonObject::encode)
+      .orElse(null);
   }
 
   @Override
