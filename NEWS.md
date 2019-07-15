@@ -1,5 +1,6 @@
 ## 1.0.3 (Released)
 Bug fix related to SRS records not showing up, and upgrading instance interface dependency to latest version
+
 [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.0.2...v1.0.3)
 
 ### Stories
