@@ -1,3 +1,16 @@
+## 1.1.1 (UnReleased)
+
+## 1.1.0 (Released)
+Bug fix related to SRS records not showing up, and upgrading instance interface dependency to latest version
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.0.2...v1.1.0)
+
+### Stories
+* [MODOAIPMH-72](https://issues.folio.org/browse/MODOAIPMH-72) Update inventory interface version
+
+### Bug Fixes
+* [MODOAIPMH-73](https://issues.folio.org/browse/MODOAIPMH-73) Default-loaded SRS records won't show up in mod-oai-pmh
+
 ## 1.0.2 (released on 02/26/2019)
  * [MODOAIPMH-66](https://issues.folio.org/browse/MODOAIPMH-66) Upgrade to [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage) 2.0 interface
 ## 1.0.1 (released on 11/30/2018)
