@@ -1,7 +1,9 @@
-## 1.0.3 (Released)
+## 1.1.1 (UnReleased)
+
+## 1.1.0 (Released)
 Bug fix related to SRS records not showing up, and upgrading instance interface dependency to latest version
 
-[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.0.2...v1.0.3)
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.0.2...v1.1.0)
 
 ### Stories
 * [MODOAIPMH-72](https://issues.folio.org/browse/MODOAIPMH-72) Update inventory interface version
