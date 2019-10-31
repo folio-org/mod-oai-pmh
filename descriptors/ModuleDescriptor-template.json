@@ -75,8 +75,8 @@
       "version": "6.0 7.0"
     },
     {
-      "id": "source-record-storage",
-      "version": "2.2"
+      "id": "source-storage-records",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
