@@ -1,4 +1,14 @@
-## 1.1.1 (UnReleased)
+## 1.2.1 (UnReleased)
+
+## 1.2.0 (Released)
+Handle breaking changes in SRS and as a result update interface dependencies to avoid breaking mod-oai-pmh.
+Add Launch descriptor settings
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.1.0...v1.2.0)
+
+### Stories
+* [MODOAIPMH-76](https://issues.folio.org/browse/MODOAIPMH-76) Handle breaking changes in SRS
+* [FOLIO-2235](https://issues.folio.org/browse/FOLIO-2235) Add LaunchDescriptor settings to each backend non-core module repository
 
 ## 1.1.0 (Released)
 Bug fix related to SRS records not showing up, and upgrading instance interface dependency to latest version
