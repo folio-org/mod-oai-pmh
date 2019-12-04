@@ -1,7 +1,7 @@
 ## 1.2.2 (UnReleased)
 
 ## 1.2.1 (Released)
-This release was to tune and improve environment settings. Also, update interface dependencies to avoid breaking mod-oai-pmh.
+This release was to tune and improve environment settings.
 
 [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.2.0...v1.2.1)
 
