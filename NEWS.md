@@ -1,4 +1,12 @@
-## 1.2.1 (UnReleased)
+## 1.2.2 (UnReleased)
+
+## 1.2.1 (Released)
+This release was to tune and improve environment settings. Also, update interface dependencies to avoid breaking mod-oai-pmh.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.2.0...v1.2.1)
+
+### Stories
+* [FOLIO-2358](https://issues.folio.org/browse/FOLIO-2358) Use JVM features to manage container memory
 
 ## 1.2.0 (Released)
 Handle breaking changes in SRS and as a result update interface dependencies to avoid breaking mod-oai-pmh.
