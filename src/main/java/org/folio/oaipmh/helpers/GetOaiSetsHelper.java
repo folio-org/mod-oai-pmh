@@ -33,14 +33,14 @@ public class GetOaiSetsHelper extends AbstractHelper {
         oai.withErrors(new OAIPMHerrorType()
           .withCode(BAD_RESUMPTION_TOKEN).withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
         future.complete(GetOaiSetsResponse
-          .respond400WithApplicationXml(ResponseHelper.getInstance().writeToString(oai)));
+          .respond400WithTextXml(ResponseHelper.getInstance().writeToString(oai)));
         return future;
       }
 
       oai.withListSets(new ListSetsType()
         .withSets(getSupportedSetTypes()));
       future.complete(GetOaiSetsResponse
-        .respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai)));
+        .respond200WithTextXml(ResponseHelper.getInstance().writeToString(oai)));
     } catch (Exception e) {
       logger.error("Error happened while processing ListSets verb request", e);
       future.completeExceptionally(e);

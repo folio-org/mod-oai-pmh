@@ -66,7 +66,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return future with {@link OAIPMH} response
    */
   private javax.ws.rs.core.Response retrieveMetadataFormats(Request request) {
-    return GetOaiMetadataFormatsResponse.respond200WithApplicationXml(buildMetadataFormatTypesResponse(request));
+    return GetOaiMetadataFormatsResponse.respond200WithTextXml(buildMetadataFormatTypesResponse(request));
   }
 
   /**
@@ -85,7 +85,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       logger.error("No instance found. Service responded with error: " + response.getError());
       throw new IllegalStateException(response.getError().toString());
     }
-    return GetOaiMetadataFormatsResponse.respond404WithApplicationXml(buildIdentifierNotFound(request));
+    return GetOaiMetadataFormatsResponse.respond404WithTextXml(buildIdentifierNotFound(request));
   }
 
   /**
@@ -93,7 +93,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
    */
   private javax.ws.rs.core.Response buildBadArgumentResponse(Request request) {
-    return GetOaiMetadataFormatsResponse.respond422WithApplicationXml(buildOaipmhWithBadArgumentError(request));
+    return GetOaiMetadataFormatsResponse.respond422WithTextXml(buildOaipmhWithBadArgumentError(request));
   }
 
   /**

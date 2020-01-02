@@ -63,7 +63,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withDescriptions(getDescriptions(request)));
 
       String response = ResponseHelper.getInstance().writeToString(oai);
-      future.complete(GetOaiRepositoryInfoResponse.respond200WithApplicationXml(response));
+      future.complete(GetOaiRepositoryInfoResponse.respond200WithTextXml(response));
     } catch (Exception e) {
       logger.error("Error happened while processing Identify verb request", e);
       future.completeExceptionally(e);
