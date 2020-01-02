@@ -37,7 +37,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
   @Override
   protected javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
-    return GetOaiRecordsResponse.respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
+    return GetOaiRecordsResponse.respond200WithTextXml(ResponseHelper.getInstance().writeToString(oai));
   }
 
   @Override
@@ -51,11 +51,11 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
     // According to oai-pmh.raml the service will return different http codes depending on the error
     Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);
     if (errorCodes.contains(BAD_ARGUMENT) || errorCodes.contains(BAD_RESUMPTION_TOKEN)) {
-      return GetOaiRecordsResponse.respond400WithApplicationXml(responseBody);
+      return GetOaiRecordsResponse.respond400WithTextXml(responseBody);
     } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      return GetOaiRecordsResponse.respond422WithApplicationXml(responseBody);
+      return GetOaiRecordsResponse.respond422WithTextXml(responseBody);
     }
-    return GetOaiRecordsResponse.respond404WithApplicationXml(responseBody);
+    return GetOaiRecordsResponse.respond404WithTextXml(responseBody);
   }
 
   @Override

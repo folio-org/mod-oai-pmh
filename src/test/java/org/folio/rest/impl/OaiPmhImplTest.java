@@ -107,7 +107,7 @@ class OaiPmhImplTest {
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private static final String APPLICATION_XML_TYPE = "application/xml";
+  private static final String XML_TYPE = "text/xml";
   private static final String TENANT = OAI_TEST_TENANT;
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
   private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
@@ -869,7 +869,7 @@ class OaiPmhImplTest {
         .header(tokenHeader)
         .header(tenant)
         .basePath(basePath)
-        .contentType(APPLICATION_XML_TYPE);
+        .contentType(XML_TYPE);
   }
 
   private void verifyBaseResponse(OAIPMH oaipmhFromString, VerbType verb) {
@@ -898,7 +898,7 @@ class OaiPmhImplTest {
         .get()
       .then()
         .statusCode(code)
-        .contentType(APPLICATION_XML_TYPE);
+        .contentType(XML_TYPE);
 
     verifyContentEncodingHeader(response);
 

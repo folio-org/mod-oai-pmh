@@ -97,15 +97,15 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     // According to oai-pmh.raml the service will return different http codes depending on the error
     Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);
     if (errorCodes.contains(BAD_ARGUMENT) || errorCodes.contains(BAD_RESUMPTION_TOKEN)) {
-      return GetOaiIdentifiersResponse.respond400WithApplicationXml(responseBody);
+      return GetOaiIdentifiersResponse.respond400WithTextXml(responseBody);
     } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      return GetOaiIdentifiersResponse.respond422WithApplicationXml(responseBody);
+      return GetOaiIdentifiersResponse.respond422WithTextXml(responseBody);
     }
-    return GetOaiIdentifiersResponse.respond404WithApplicationXml(responseBody);
+    return GetOaiIdentifiersResponse.respond404WithTextXml(responseBody);
   }
 
   private javax.ws.rs.core.Response buildSuccessResponse(OAIPMH oai) {
-    return GetOaiIdentifiersResponse.respond200WithApplicationXml(ResponseHelper.getInstance().writeToString(oai));
+    return GetOaiIdentifiersResponse.respond200WithTextXml(ResponseHelper.getInstance().writeToString(oai));
   }
   /**
    * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}

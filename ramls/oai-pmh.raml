@@ -41,7 +41,7 @@ resourceTypes:
         404:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
-            application/xml:
+            text/xml:
               #schema: oai-pmh
               example:
                 strict: false
@@ -61,7 +61,7 @@ resourceTypes:
           200:
             description: "Returns item with a given ID"
             body:
-              application/xml:
+              text/xml:
                 #schema: oai-pmh
                 example:
                   strict: false
@@ -69,7 +69,7 @@ resourceTypes:
           400:
             description: "Bad request, e.g. malformed query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
             body:
-              application/xml:
+              text/xml:
                 #schema: oai-pmh
                 example:
                   strict: false
@@ -77,7 +77,7 @@ resourceTypes:
           404:
             description: "Item with a given ID and selective harvesting params (if any) not found"
             body:
-              application/xml:
+              text/xml:
                 #schema: oai-pmh
                 example:
                   strict: false
@@ -100,7 +100,7 @@ resourceTypes:
         404:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
-            application/xml:
+            text/xml:
               #schema: oai-pmh
               example:
                 strict: false
@@ -123,7 +123,7 @@ resourceTypes:
         404:
           description: "Item with a given ID and selective harvesting params (if any) not found"
           body:
-            application/xml:
+            text/xml:
               #schema: oai-pmh
               example:
                 strict: false
@@ -131,7 +131,7 @@ resourceTypes:
         422:
           description: "The request was well-formed, but contains semantic errors"
           body:
-            application/xml:
+            text/xml:
               #schema: oai-pmh
               example:
                 strict: false
@@ -155,7 +155,7 @@ resourceTypes:
         200:
           description: "Returns repository info"
           body:
-            application/xml:
+            text/xml:
               #schema: oai-pmh
               example:
                 strict: false
