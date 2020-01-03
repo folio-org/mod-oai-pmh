@@ -1,4 +1,13 @@
-## 1.2.2 (UnReleased)
+## 2.1.0 (UnReleased)
+
+## 2.0.0 (Released)
+This is a bugfix release to be included in Edelweiss (Q4/2019)
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v1.2.1...v2.0.0)
+
+### Bug Fixes
+
+* [MODOAIPMH-86](https://issues.folio.org/browse/MODOAIPMH-86) Must support "Accept: text/xml"
 
 ## 1.2.1 (Released)
 This release was to tune and improve environment settings.
