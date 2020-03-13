@@ -1,13 +1,13 @@
 package org.folio.rest.impl;
 
-import com.jayway.restassured.RestAssured;
-import com.jayway.restassured.config.DecoderConfig;
-import com.jayway.restassured.config.DecoderConfig.ContentDecoder;
-import com.jayway.restassured.config.RestAssuredConfig;
-import com.jayway.restassured.http.ContentType;
-import com.jayway.restassured.response.Header;
-import com.jayway.restassured.response.ValidatableResponse;
-import com.jayway.restassured.specification.RequestSpecification;
+import io.restassured.RestAssured;
+import io.restassured.config.DecoderConfig;
+import io.restassured.config.DecoderConfig.ContentDecoder;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.response.ValidatableResponse;
+import io.restassured.specification.RequestSpecification;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
@@ -58,7 +58,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.jayway.restassured.RestAssured.given;
+import static io.restassured.RestAssured.given;
 import static org.folio.oaipmh.Constants.*;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -190,8 +190,6 @@ class OaiPmhImplTest {
       .then()
         .log().all()
         .statusCode(200);
-
-    verifyContentEncodingHeader(response);
 
     getLogger().debug(String.format("==== adminHealth(%s) successfully completed ====", encoding));
   }
@@ -899,8 +897,6 @@ class OaiPmhImplTest {
       .then()
         .statusCode(code)
         .contentType(XML_TYPE);
-
-    verifyContentEncodingHeader(response);
 
     return response
       .extract()

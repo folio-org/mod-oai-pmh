@@ -162,7 +162,7 @@ public class OkapiMockServer {
   public void start(VertxTestContext context) {
     HttpServer server = vertx.createHttpServer();
 
-    server.requestHandler(defineRoutes()::accept).listen(port, context.succeeding(result -> {
+    server.requestHandler(defineRoutes()).listen(port, context.succeeding(result -> {
       logger.info("The server has started");
       context.completeNow();
     }));
