@@ -1,4 +1,13 @@
-## 2.1.0 (UnReleased)
+## 2.2.0 (UnReleased)
+
+## 2.1.0 (Released)
+
+This release contains only update to RMB v29.3.0
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v2.0.0...v2.1.0)
+
+* [MODOAIPMH-92](https://issues.folio.org/browse/MODOAIPMH-92) Update RMB from 26.1.2 to 29.3.0 version
+
 
 ## 2.0.0 (Released)
 This is a bugfix release to be included in Edelweiss (Q4/2019)
