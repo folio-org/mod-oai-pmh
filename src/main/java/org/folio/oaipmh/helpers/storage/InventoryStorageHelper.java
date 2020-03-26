@@ -35,6 +35,11 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
+  public String getIdentifierId(final JsonObject entry) {
+    return getRecordId(entry);
+  }
+
+  @Override
   public String buildRecordsEndpoint(Request request) throws UnsupportedEncodingException {
     return INSTANCES_URI + buildSearchQuery(request);
   }

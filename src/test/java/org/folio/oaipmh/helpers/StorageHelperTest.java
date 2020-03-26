@@ -7,6 +7,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+
+import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -40,11 +42,14 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class StorageHelperTest {
   private static final Logger logger = LoggerFactory.getLogger(StorageHelperTest.class);
+
+  private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
   @AfterEach
   void init() {
@@ -91,6 +96,18 @@ class StorageHelperTest {
   void getItemId(String storageType) {
     JsonObject item = getJsonObjectFromFile(getDirPath(storageType) + "/instance.json");
     assertThat(getStorageHelper(storageType).getRecordId(item), not(isEmptyOrNullString()));
+  }
+
+  @Test
+  void shouldReturnLinkedToRecordInstanceId_whenGetRecordIdAndStorageIsSRS(){
+    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance.json");
+    assertEquals(INSTANCE_ID, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
+  }
+
+  @Test
+  void shouldReturnEmptyString_whenGetRecordIdAndStorageIsSRSAndRecordHasNot999FieldWithLinkedInstanceId(){
+    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_without999Field.json");
+    assertEquals(StringUtils.EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
   @Test
