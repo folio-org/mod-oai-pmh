@@ -57,8 +57,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
   private Optional<JsonObject> getNineNineNineField(JsonArray jsonArray){
     return jsonArray.stream()
-      .map(Object::toString)
-      .map(JsonObject::new)
+      .map(obj->(JsonObject)obj)
       .filter(jsonObj -> jsonObj.containsKey(FILED_999_KEY))
       .map(obj -> obj.getJsonObject(FILED_999_KEY))
       .findFirst();
