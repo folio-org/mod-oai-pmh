@@ -60,7 +60,6 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
    * @param jsonArray - array of content fields within parsedRecord json field
    * @return Optional of json object that contains data of 999 content field
    */
-
   private Optional<JsonObject> getInstanceIdFieldHolder(JsonArray jsonArray) {
     return jsonArray.stream()
       .map(obj -> (JsonObject) obj)
