@@ -47,7 +47,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
       .map(parsedRecord->parsedRecord.getJsonObject(CONTENT))
       .map(content-> content.getJsonArray(FIELDS));
     return parsedRecordFields
-      .flatMap(this::getNineNineNineField)
+      .flatMap(this::getInstanceIdFieldHolder)
       .map(field -> field.getJsonArray(SUBFIELDS))
       .map(subfields -> subfields.getJsonObject(INSTANCE_ID_POSITION))
       .map(instanceId -> instanceId.getString(INSTANCE_ID))
@@ -55,7 +55,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
       .orElse("");
   }
 
-  private Optional<JsonObject> getNineNineNineField(JsonArray jsonArray){
+  private Optional<JsonObject> getInstanceIdFieldHolder(JsonArray jsonArray){
     return jsonArray.stream()
       .map(obj->(JsonObject)obj)
       .filter(jsonObj -> jsonObj.containsKey(FILED_999_KEY))
