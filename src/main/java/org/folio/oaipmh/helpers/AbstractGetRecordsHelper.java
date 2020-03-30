@@ -157,18 +157,20 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String storageRecordId = storageHelper.getRecordId(instance);
+
+        String recordId = storageHelper.getRecordId(instance);
+        String identifierId = storageHelper.getIdentifierId(instance);
 
         RecordType record = new RecordType()
           .withHeader(createHeader(instance)
-          .withIdentifier(getIdentifier(identifierPrefix, storageRecordId)));
+          .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
 
         // Some repositories like SRS can return record source data along with other info
         String source = storageHelper.getInstanceRecordSource(instance);
         if (source != null) {
           record.withMetadata(buildOaiMetadata(request, source));
         }
-        records.put(storageRecordId, record);
+        records.put(recordId, record);
       }
     }
     return records;
