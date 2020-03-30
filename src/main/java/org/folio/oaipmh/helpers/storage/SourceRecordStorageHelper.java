@@ -52,6 +52,11 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
+  void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
+    queryBuilder.addStrictCriteria("additionalInfo.suppressDiscovery","false");
+  }
+
+  @Override
   protected String getIdentifierName() {
     return RECORD_ID;
   }
