@@ -99,13 +99,13 @@ class StorageHelperTest {
   }
 
   @Test
-  void shouldReturnLinkedToRecordInstanceId_whenGetRecordIdAndStorageIsSRS(){
+  void shouldReturnLinkedToRecordInstanceId_whenGetIdentifierAndStorageIsSRS(){
     JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance.json");
     assertEquals(INSTANCE_ID, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
   @Test
-  void shouldReturnEmptyString_whenGetRecordIdAndStorageIsSRSAndRecordHasNot999FieldWithLinkedInstanceId(){
+  void shouldReturnEmptyString_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNot999FieldWithLinkedInstanceId(){
     JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_without999Field.json");
     assertEquals(StringUtils.EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
