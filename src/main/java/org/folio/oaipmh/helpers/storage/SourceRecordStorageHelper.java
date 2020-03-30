@@ -44,10 +44,9 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   @Override
   public String getIdentifierId(final JsonObject entry) {
     Optional<JsonArray> parsedRecordFields = Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
-      .map(parsedRecord->parsedRecord.getJsonObject(CONTENT))
-      .map(content-> content.getJsonArray(FIELDS));
-    return parsedRecordFields
-      .flatMap(this::getInstanceIdFieldHolder)
+      .map(parsedRecord -> parsedRecord.getJsonObject(CONTENT))
+      .map(content -> content.getJsonArray(FIELDS));
+    return parsedRecordFields.flatMap(this::getInstanceIdFieldHolder)
       .map(field -> field.getJsonArray(SUBFIELDS))
       .map(subfields -> subfields.getJsonObject(INSTANCE_ID_POSITION))
       .map(instanceId -> instanceId.getString(INSTANCE_ID))
@@ -55,9 +54,16 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
       .orElse("");
   }
 
-  private Optional<JsonObject> getInstanceIdFieldHolder(JsonArray jsonArray){
+  /**
+   * Returns json object that contains data of 999 content field
+   *
+   * @param jsonArray - array of content fields within parsedRecord json field
+   * @return Optional of json object that contains data of 999 content field
+   */
+
+  private Optional<JsonObject> getInstanceIdFieldHolder(JsonArray jsonArray) {
     return jsonArray.stream()
-      .map(obj->(JsonObject)obj)
+      .map(obj -> (JsonObject) obj)
       .filter(jsonObj -> jsonObj.containsKey(FILED_999_KEY))
       .map(obj -> obj.getJsonObject(FILED_999_KEY))
       .findFirst();
