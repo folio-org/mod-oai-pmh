@@ -56,6 +56,13 @@ public interface StorageHelper {
   String getRecordId(JsonObject entry);
 
   /**
+   * Returns instance id that is used for building record identifier.
+   * @param entry the entry entry returned by items storage service
+   * @return inventory instance id
+   */
+  String getIdentifierId(JsonObject entry);
+
+  /**
    * Returns the record's source of the instance returned in the list instances response
    * @param entry the instance returned by records storage service
    * @return {@link Instant} based on updated or created date
