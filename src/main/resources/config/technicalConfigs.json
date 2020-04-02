@@ -1,0 +1,6 @@
+{
+  "module" : "OAIPMH",
+  "configName" : "behavior",
+  "enabled" : true,
+  "value" : "{\"maxRecordsPerResponse\":\"100\",\"enableValidation\":\"false\",\"formattedOutput\":\"false\"}"
+}
