@@ -51,6 +51,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isIn;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
@@ -701,6 +703,8 @@ class OaiPmhImplTest {
       .with()
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
     OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
     assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
   }
@@ -954,11 +958,21 @@ class OaiPmhImplTest {
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
+      if(recordsCount==10){
+        List<HeaderType> headers = oaipmh.getListIdentifiers().getHeaders();
+        verifyIdentifiers(headers, getExpectedIdentifiers());
+      }
     } else if (verb == LIST_RECORDS) {
       assertThat(oaipmh.getListRecords(), is(notNullValue()));
       assertThat(oaipmh.getListRecords().getRecords(), hasSize(recordsCount));
       MetadataPrefix metadataPrefix = MetadataPrefix.fromName(oaipmh.getRequest().getMetadataPrefix());
       oaipmh.getListRecords().getRecords().forEach(record -> verifyRecord(record, metadataPrefix));
+      if(recordsCount==10){
+        List<HeaderType> headers = oaipmh.getListRecords().getRecords().stream()
+          .map(RecordType::getHeader)
+          .collect(Collectors.toList());
+        verifyIdentifiers(headers, getExpectedIdentifiers());
+      }
     } else {
       fail("Can't verify specified verb: " + verb);
     }
@@ -1026,5 +1040,31 @@ class OaiPmhImplTest {
       }
     }
     return builder.build();
+  }
+
+  private void verifyIdentifiers(List<HeaderType> headers, List<String> expectedIdentifiers) {
+    List<String> headerIdentifiers = headers.stream()
+      .map(this::getUUIDofHeaderIdentifier)
+      .collect(Collectors.toList());
+    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers));
+  }
+
+  private String getUUIDofHeaderIdentifier(HeaderType header) {
+    String identifierWithPrefix = header.getIdentifier();
+    return identifierWithPrefix.substring(IDENTIFIER_PREFIX.length());
+  }
+
+  private List<String> getExpectedIdentifiers() {
+    return Arrays.asList(
+      "00000000-0000-4000-a000-000000000000",
+      "10000000-0000-4000-a000-000000000000",
+      "20000000-0000-4000-a000-000000000000",
+      "30000000-0000-4000-a000-000000000000",
+      "40000000-0000-4000-a000-000000000000",
+      "50000000-0000-4000-a000-000000000000",
+      "60000000-0000-4000-a000-000000000000",
+      "70000000-0000-4000-a000-000000000000",
+      "80000000-0000-4000-a000-000000000000",
+      "90000000-0000-4000-a000-000000000000");
   }
 }
