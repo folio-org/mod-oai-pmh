@@ -71,7 +71,7 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
 
   @Override
   void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
-    queryBuilder.addStrictCriteria("discoverySuppress", "false");
+
   }
 
   @Override
