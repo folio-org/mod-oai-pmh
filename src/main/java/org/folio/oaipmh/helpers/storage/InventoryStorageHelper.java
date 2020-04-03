@@ -70,6 +70,11 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
+  void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
+
+  }
+
+  @Override
   protected String getIdentifierName() {
     return ID;
   }
