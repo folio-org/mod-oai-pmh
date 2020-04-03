@@ -67,6 +67,20 @@
           "modulePermissions": ["configuration.entries.collection.get"]
         }
       ]
+    },
+    {
+      "id" : "_tenant",
+      "version" : "1.2",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/_/tenant"
+        }, {
+          "methods": ["DELETE"],
+          "pathPattern": "/_/tenant"
+        }
+      ]
     }
   ],
   "requires": [
