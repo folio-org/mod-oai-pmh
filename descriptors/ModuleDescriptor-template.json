@@ -76,9 +76,6 @@
         {
           "methods": ["POST"],
           "pathPattern": "/_/tenant"
-        }, {
-          "methods": ["DELETE"],
-          "pathPattern": "/_/tenant"
         }
       ]
     }
@@ -91,6 +88,10 @@
     {
       "id": "source-storage-records",
       "version": "1.0"
+    },
+    {
+      "id": "configuration",
+      "version": "2.0"
     }
   ],
   "permissionSets": [
