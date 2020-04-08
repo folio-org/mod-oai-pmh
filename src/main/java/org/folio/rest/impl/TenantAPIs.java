@@ -136,8 +136,11 @@ public class TenantAPIs extends TenantAPI {
     });
   }
 
-  private Map<String, String> getConfigKeyValueMap(final String configValue) {
+  private Map<String, String> getConfigKeyValueMap(String configValue) {
     Map<String, String> configKeyValueMap = new HashMap<>();
+    configValue = configValue.replaceAll("\\{","")
+      .replaceAll("}","")
+      .replaceAll("\"","");
     List<String> keyValuePairs = Arrays.asList(configValue.split(","));
     keyValuePairs.forEach(keyValueString -> {
       String[] keyValue = keyValueString.split(":");
