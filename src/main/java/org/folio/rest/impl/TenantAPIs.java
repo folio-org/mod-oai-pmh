@@ -51,7 +51,7 @@ public class TenantAPIs extends TenantAPI {
   private static final String GENERAL = "general";
   private static final String TECHNICAL = "technical";
   private static final String CONFIG_NAME = "configName";
-  private static final String ACTIVE = "active";
+  private static final String ENABLED = "enabled";
   private static final String CONFIGS = "configs";
   private static final String CONFIG_DIR_NAME = "config";
   private static final String VALUE = "value";
@@ -98,7 +98,7 @@ public class TenantAPIs extends TenantAPI {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     queryBuilder.addStrictCriteria(CONFIG_NAME, configName)
       .and();
-    queryBuilder.addStrictCriteria(ACTIVE, Boolean.TRUE.toString());
+    queryBuilder.addStrictCriteria(ENABLED, Boolean.TRUE.toString());
     return MOD_CONFIGURATION_ENTRIES_PATH.concat(queryBuilder.build());
   }
 
