@@ -64,8 +64,7 @@ public class TenantAPIs extends TenantAPI {
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
     Set<String> configNames = new HashSet<>(Arrays.asList(BEHAVIOUR, GENERAL, TECHNICAL));
-    loadConfigData(headers, configNames)
-      .thenAccept(v -> handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_OK))))
+    loadConfigData(headers, configNames).thenAccept(v -> handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_OK))))
       .exceptionally(throwable -> {
         handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR)));
         return null;
@@ -81,7 +80,7 @@ public class TenantAPIs extends TenantAPI {
 
     configs.forEach(config -> completableFutures
       .add(requestConfig(httpClient, headers, config).thenCompose(configPair -> postConfigIfAbsent(httpClient, headers, configPair))
-        .thenAcceptAsync(this::populateSystemProperties)));
+        .thenAccept(this::populateSystemProperties)));
     return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
   }
 
@@ -124,14 +123,16 @@ public class TenantAPIs extends TenantAPI {
   }
 
   private CompletableFuture<Pair<String, JsonObject>> populateSystemProperties(Pair<String, JsonObject> configPair) {
-    JsonObject config = configPair.getValue()
-      .getJsonArray(CONFIGS)
-      .getJsonObject(CONFIG_JSON_BODY);
-    String configValue = config.getString(VALUE);
-    Map<String, String> configKeyValueMap = getConfigKeyValueMap(configValue);
-    Properties sysProps = System.getProperties();
-    sysProps.putAll(configKeyValueMap);
-    return CompletableFuture.completedFuture(configPair);
+    return CompletableFuture.supplyAsync(() -> {
+      JsonObject config = configPair.getValue()
+        .getJsonArray(CONFIGS)
+        .getJsonObject(CONFIG_JSON_BODY);
+      String configValue = config.getString(VALUE);
+      Map<String, String> configKeyValueMap = getConfigKeyValueMap(configValue);
+      Properties sysProps = System.getProperties();
+      sysProps.putAll(configKeyValueMap);
+      return configPair;
+    });
   }
 
   private Map<String, String> getConfigKeyValueMap(final String configValue) {
