@@ -75,7 +75,11 @@
       "handlers": [
         {
           "methods": ["POST"],
-          "pathPattern": "/_/tenant"
+          "pathPattern": "/_/tenant",
+          "modulePermissions": [
+            "configuration.entries.collection.get",
+            "configuration.entries.item.post"
+          ]
         }
       ]
     }

@@ -28,6 +28,7 @@ import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.jetbrains.annotations.NotNull;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -47,13 +48,14 @@ public class TenantAPIs extends TenantAPI {
   private static final String X_OKAPI_URL = "x-okapi-url";
   private static final String X_OKAPI_TENANT = "x-okapi-tenant";
   private static final String MOD_CONFIGURATION_ENTRIES_PATH = "/configurations/entries";
-  private static final String BEHAVIOUR = "behaviour";
+  private static final String BEHAVIOR = "behavior";
   private static final String GENERAL = "general";
   private static final String TECHNICAL = "technical";
   private static final String CONFIG_NAME = "configName";
   private static final String ENABLED = "enabled";
   private static final String CONFIGS = "configs";
   private static final String CONFIG_DIR_NAME = "config";
+  private static final String JSON_EXTENSION = ".json";
   private static final String VALUE = "value";
   private static final int KEY_POSITION = 0;
   private static final int VALUE_POSITION = 1;
@@ -62,7 +64,7 @@ public class TenantAPIs extends TenantAPI {
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
-    Set<String> configNames = new HashSet<>(Arrays.asList(BEHAVIOUR, GENERAL, TECHNICAL));
+    Set<String> configNames = new HashSet<>(Arrays.asList(BEHAVIOR, GENERAL, TECHNICAL));
     loadConfigData(headers, configNames).thenAccept(v -> handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_OK))))
       .exceptionally(throwable -> {
         handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR)));
@@ -145,8 +147,7 @@ public class TenantAPIs extends TenantAPI {
   }
 
   private JsonObject getJsonConfigFromResource(String configJsonName) {
-    String configJsonPath = CONFIG_DIR_NAME.concat(File.separator)
-      .concat(configJsonName);
+    String configJsonPath = buildConfigPath(configJsonName);
     try (InputStream is = getClass().getClassLoader()
       .getResourceAsStream(configJsonPath)) {
       if (is == null) {
@@ -164,6 +165,14 @@ public class TenantAPIs extends TenantAPI {
       logger.error(ex.getMessage(), ex);
       throw new IllegalStateException(ex);
     }
+  }
+
+  @NotNull
+  private String buildConfigPath(final String configJsonName) {
+    return CONFIG_DIR_NAME
+      .concat(File.separator)
+      .concat(configJsonName)
+      .concat(JSON_EXTENSION);
   }
 
   private Response buildResponse(int status) {
