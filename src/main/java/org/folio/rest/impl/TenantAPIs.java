@@ -84,11 +84,11 @@ public class TenantAPIs extends TenantAPI {
     return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
   }
 
-  private CompletableFuture<Pair<String, JsonObject>> requestConfig(HttpClientInterface httpClient, Map<String, String> headers,
+  private CompletableFuture<Map.Entry<String,JsonObject>> requestConfig(HttpClientInterface httpClient, Map<String, String> headers,
       String configName) {
     try {
       return httpClient.request(getConfigUrl(configName), headers)
-        .thenApply(response -> new Pair<>(configName, response.getBody()));
+        .thenApply(response -> new HashMap.SimpleImmutableEntry<>(configName, response.getBody()));
     } catch (Exception ex) {
       logger.error(format("Cannot get config with configName - %s. %s", configName, ex.getMessage()));
       throw new IllegalStateException(ex);
@@ -103,8 +103,8 @@ public class TenantAPIs extends TenantAPI {
     return MOD_CONFIGURATION_ENTRIES_PATH.concat(queryBuilder.build());
   }
 
-  private CompletableFuture<Pair<String, JsonObject>> postConfigIfAbsent(HttpClientInterface httpClient,
-      Map<String, String> headers, Pair<String, JsonObject> configPair) {
+  private CompletableFuture<Map.Entry<String, JsonObject>> postConfigIfAbsent(HttpClientInterface httpClient,
+      Map<String, String> headers, Map.Entry<String, JsonObject> configPair) {
     JsonObject config = configPair.getValue();
     JsonArray configs = config.getJsonArray(CONFIGS);
     if (configs.isEmpty()) {
@@ -112,7 +112,7 @@ public class TenantAPIs extends TenantAPI {
       try {
         headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString());
         return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_PATH, headers)
-          .thenApply(response -> new Pair<>(configPair.getKey(), response.getBody()));
+          .thenApply(response -> new HashMap.SimpleImmutableEntry<>(configPair.getKey(), response.getBody()));
       } catch (Exception ex) {
         logger.error(format("Cannot post config. %s", ex.getMessage()));
         throw new IllegalStateException(ex);
@@ -122,7 +122,7 @@ public class TenantAPIs extends TenantAPI {
     }
   }
 
-  private CompletableFuture<Pair<String, JsonObject>> populateSystemProperties(Pair<String, JsonObject> configPair) {
+  private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Map.Entry<String, JsonObject> configPair) {
     return CompletableFuture.supplyAsync(() -> {
       JsonObject config = configPair.getValue()
         .getJsonArray(CONFIGS)
