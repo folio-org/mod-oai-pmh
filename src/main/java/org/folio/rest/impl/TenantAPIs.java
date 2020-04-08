@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import static java.lang.String.format;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -38,9 +40,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import javafx.util.Pair;
-
-import static java.lang.String.format;
 
 public class TenantAPIs extends TenantAPI {
   private final Logger logger = LoggerFactory.getLogger(TenantAPIs.class);
@@ -84,8 +83,8 @@ public class TenantAPIs extends TenantAPI {
     return CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0]));
   }
 
-  private CompletableFuture<Map.Entry<String,JsonObject>> requestConfig(HttpClientInterface httpClient, Map<String, String> headers,
-      String configName) {
+  private CompletableFuture<Map.Entry<String, JsonObject>> requestConfig(HttpClientInterface httpClient,
+      Map<String, String> headers, String configName) {
     try {
       return httpClient.request(getConfigUrl(configName), headers)
         .thenApply(response -> new HashMap.SimpleImmutableEntry<>(configName, response.getBody()));
