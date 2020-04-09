@@ -25,7 +25,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
-import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.CQLQueryBuilder;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.rest.jaxrs.model.TenantAttributes;
@@ -68,7 +67,8 @@ public class TenantAPIs extends TenantAPI {
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
     Set<String> configNames = new HashSet<>(Arrays.asList(BEHAVIOR, GENERAL, TECHNICAL));
-    loadConfigData(headers, configNames).thenAccept(v -> handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_OK, EMPTY))))
+    loadConfigData(headers, configNames)
+      .thenAccept(v -> handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_OK, EMPTY))))
       .exceptionally(throwable -> {
         handlers.handle(Future.succeededFuture(buildResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, throwable.getMessage())));
         return null;
@@ -132,33 +132,19 @@ public class TenantAPIs extends TenantAPI {
         .getJsonArray(CONFIGS)
         .getJsonObject(CONFIG_JSON_BODY);
       String configValue = config.getString(VALUE);
-      Map<String, String> configKeyValueMap = parseConfigToKeyValueMap(configValue);
+      Map<String, String> configKeyValueMap = parseConfigStringToKeyValueMap(configValue);
       Properties sysProps = System.getProperties();
       sysProps.putAll(configKeyValueMap);
       return configPair;
     });
   }
 
-  /**
-   * Parses the string of configs key value to java.util.Map
-   * Example: {"key1":"value1","key2":"va,lue2","key3","val,:ue3"} will be parsed
-   * to map: key1 - value1 ; key2 - va,lue2 ; key3 - val,:ue3
-   *
-   * @param configValue - string that consist config key value pairs separated by comma
-   * @return Map
-   */
-  private Map<String, String> parseConfigToKeyValueMap(String configValue) {
-    Map<String, String> configKeyValueMap = new HashMap<>();
-    configValue = configValue.replaceAll("\\{","")
-      .replaceAll("}","");
-    List<String> keyValuePairs = Arrays.asList(configValue.split("\",\""));
-    keyValuePairs.forEach(keyValueString -> {
-      List<String> pair = Arrays.stream(keyValueString.split("\":\""))
-        .map(str->str.replaceAll("\"",""))
-        .collect(Collectors.toList());
-      configKeyValueMap.put(PropertyNameMapper.mapFrontendKeyToServerKeyName(pair.get(KEY_POSITION)), pair.get(VALUE_POSITION));
-    });
-    return configKeyValueMap;
+  private Map<String, String> parseConfigStringToKeyValueMap(String configValue) {
+    JsonObject configKeyValueSet = new JsonObject(configValue);
+    return configKeyValueSet.getMap()
+      .entrySet()
+      .stream()
+      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKeyName(entry.getKey()), entry -> (String) entry.getValue()));
   }
 
   private JsonObject getJsonConfigFromResource(String configJsonName) {
@@ -184,20 +170,20 @@ public class TenantAPIs extends TenantAPI {
 
   @NotNull
   private String buildConfigPath(final String configJsonName) {
-    return CONFIG_DIR_NAME
-      .concat(File.separator)
+    return CONFIG_DIR_NAME.concat(File.separator)
       .concat(configJsonName)
       .concat(JSON_EXTENSION);
   }
 
   private Response buildResponse(int statusCode, String message) {
     Response.ResponseBuilder responseBuilder;
-    if(StringUtils.isNotEmpty(message)){
+    if (StringUtils.isNotEmpty(message)) {
       responseBuilder = Response.status(statusCode)
         .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
         .entity(message);
-    }else {
-      responseBuilder = Response.noContent().status(statusCode);
+    } else {
+      responseBuilder = Response.noContent()
+        .status(statusCode);
     }
     return responseBuilder.build();
   }
