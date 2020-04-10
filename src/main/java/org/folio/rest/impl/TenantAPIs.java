@@ -178,7 +178,7 @@ public class TenantAPIs extends TenantAPI {
     return configKeyValueSet.getMap()
       .entrySet()
       .stream()
-      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKeyName(entry.getKey()), Object::toString));
+      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKeyName(entry.getKey()), entry-> entry.getValue().toString()));
   }
 
   private CompletableFuture<Response> buildSuccessResponse(Context context) {
