@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyAsync;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,11 +19,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.folio.oaipmh.helpers.storage.CQLQueryBuilder;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
@@ -66,21 +65,12 @@ public class TenantAPIs extends TenantAPI {
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
-    VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
-    loadConfigData(headers, context).thenAccept(v -> {
-      Response successResponse = buildResponse(HttpStatus.SC_NO_CONTENT, EMPTY);
-      future.complete(successResponse);
-      handlers.handle(Future.succeededFuture(successResponse));
-    })
-      .exceptionally(throwable -> {
-        Response failureResponse = buildResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, throwable.getMessage());
-        handleException(future, throwable);
-        handlers.handle(Future.succeededFuture(failureResponse));
-        return null;
-      });
+    loadConfigData(headers, context).thenAccept(response -> handlers.handle(Future.succeededFuture(response)))
+      .exceptionally(handleError(handlers));
   }
 
-  private CompletableFuture<Void> loadConfigData(Map<String, String> headers, Context context) {
+  private CompletableFuture<Response> loadConfigData(Map<String, String> headers, Context context) {
+    VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
     Set<String> configs = new HashSet<>(Arrays.asList(BEHAVIOR, GENERAL, TECHNICAL));
 
     String okapiUrl = headers.get(X_OKAPI_URL);
@@ -93,7 +83,14 @@ public class TenantAPIs extends TenantAPI {
       .thenCompose(configPair -> postConfigIfAbsent(context, httpClient, headers, configPair))
       .thenAccept(configEntry -> populateSystemProperties(context, configEntry))));
 
-    return VertxCompletableFuture.allOf(context, completableFutures.toArray(new CompletableFuture[0]));
+    VertxCompletableFuture.allOf(context, completableFutures.toArray(new CompletableFuture[0]))
+      .thenCompose(v -> buildSuccessResponse(context))
+      .thenAccept(future::complete)
+      .exceptionally(throwable -> {
+        handleException(future, throwable);
+        return null;
+      });
+    return future;
   }
 
   private CompletableFuture<Map.Entry<String, JsonObject>> requestConfig(Context context, HttpClientInterface httpClient,
@@ -124,8 +121,7 @@ public class TenantAPIs extends TenantAPI {
       try {
         headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString());
         return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_PATH, headers)
-          .thenCompose(
-              response -> supplyAsync(context, () -> new HashMap.SimpleImmutableEntry<>(configPair.getKey(), response.getBody())));
+          .thenCompose(response -> supplyAsync(context, () -> new HashMap.SimpleImmutableEntry<>(configPair.getKey(), response.getBody())));
       } catch (Exception ex) {
         logger.error(format("Cannot post config. %s", ex.getMessage()));
         throw new IllegalStateException(ex);
@@ -133,29 +129,6 @@ public class TenantAPIs extends TenantAPI {
     } else {
       return CompletableFuture.completedFuture(configPair);
     }
-  }
-
-  private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Context context,
-      Map.Entry<String, JsonObject> configPair) {
-    return VertxCompletableFuture.supplyAsync(context, () -> {
-      JsonObject config = configPair.getValue()
-        .getJsonArray(CONFIGS)
-        .getJsonObject(CONFIG_JSON_BODY);
-      String configValue = config.getString(VALUE);
-      Map<String, String> configKeyValueMap = parseConfigStringToKeyValueMap(configValue);
-      Properties sysProps = System.getProperties();
-      sysProps.putAll(configKeyValueMap);
-      return configPair;
-    });
-  }
-
-  private Map<String, String> parseConfigStringToKeyValueMap(String configValue) {
-    JsonObject configKeyValueSet = new JsonObject(configValue);
-    return configKeyValueSet.getMap()
-      .entrySet()
-      .stream()
-      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKeyName(entry.getKey()),
-          entry -> (String) entry.getValue()));
   }
 
   private JsonObject getJsonConfigFromResource(String configJsonName) {
@@ -186,22 +159,51 @@ public class TenantAPIs extends TenantAPI {
       .concat(JSON_EXTENSION);
   }
 
-  private Response buildResponse(int statusCode, String message) {
-    Response.ResponseBuilder responseBuilder;
-    if (StringUtils.isNotEmpty(message)) {
-      responseBuilder = Response.status(statusCode)
-        .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
-        .entity(message);
-    } else {
-      responseBuilder = Response.noContent()
-        .status(statusCode);
-    }
-    return responseBuilder.build();
+  private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Context context,
+      Map.Entry<String, JsonObject> configPair) {
+    return VertxCompletableFuture.supplyAsync(context, () -> {
+      JsonObject config = configPair.getValue()
+        .getJsonArray(CONFIGS)
+        .getJsonObject(CONFIG_JSON_BODY);
+      String configValue = config.getString(VALUE);
+      Map<String, String> configKeyValueMap = parseConfigStringToKeyValueMap(configValue);
+      Properties sysProps = System.getProperties();
+      sysProps.putAll(configKeyValueMap);
+      return configPair;
+    });
+  }
+
+  private Map<String, String> parseConfigStringToKeyValueMap(String configValue) {
+    JsonObject configKeyValueSet = new JsonObject(configValue);
+    return configKeyValueSet.getMap()
+      .entrySet()
+      .stream()
+      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKeyName(entry.getKey()), Object::toString));
+  }
+
+  private CompletableFuture<Response> buildSuccessResponse(Context context) {
+    return VertxCompletableFuture.supplyAsync(context, Response.noContent()
+      .status(HttpStatus.SC_NO_CONTENT)::build);
+  }
+
+  private Future<Response> buildFailureResponse(String message) {
+    Response response = Response.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+      .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
+      .entity(message)
+      .build();
+    return Future.succeededFuture(response);
   }
 
   private void handleException(CompletableFuture<Response> future, Throwable throwable) {
     logger.error(format("Cannot enable module: %s", throwable.getMessage()));
     future.completeExceptionally(throwable);
+  }
+
+  private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>> asyncResultHandler) {
+    return throwable -> {
+      asyncResultHandler.handle(buildFailureResponse(throwable.getMessage()));
+      return null;
+    };
   }
 
 }
