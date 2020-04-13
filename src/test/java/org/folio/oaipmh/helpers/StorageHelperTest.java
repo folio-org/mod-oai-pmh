@@ -120,7 +120,7 @@ class StorageHelperTest {
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
-            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC&limit=11&offset=0")));
+            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);
