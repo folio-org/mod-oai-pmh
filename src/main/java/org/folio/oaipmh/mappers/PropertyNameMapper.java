@@ -26,7 +26,7 @@ public class PropertyNameMapper {
 
   private PropertyNameMapper(){}
 
-  public static String mapFrontendKeyToServerKeyName(String keyName){
-    return mapper.get(keyName);
+  public static String mapFrontendKeyToServerKey(String keyName){
+    return mapper.getOrDefault(keyName, keyName);
   }
 }
