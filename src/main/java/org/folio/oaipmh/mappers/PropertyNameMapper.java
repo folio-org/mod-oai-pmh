@@ -24,6 +24,8 @@ public class PropertyNameMapper {
     mapper.put("formattedOutput","jaxb.marshaller.formattedOutput");
   }
 
+  private PropertyNameMapper(){}
+
   public static String mapFrontendKeyToServerKeyName(String keyName){
     return mapper.get(keyName);
   }

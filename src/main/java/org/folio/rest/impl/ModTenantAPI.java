@@ -45,12 +45,12 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
-public class TenantAPIs extends TenantAPI {
-  private final Logger logger = LoggerFactory.getLogger(TenantAPIs.class);
+public class ModTenantAPI extends TenantAPI {
+  private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
 
   private static final String X_OKAPI_URL = "x-okapi-url";
   private static final String X_OKAPI_TENANT = "x-okapi-tenant";
-  private static final String MOD_CONFIGURATION_ENTRIES_PATH = "/configurations/entries";
+  private static final String MOD_CONFIGURATION_ENTRIES_URI = "/configurations/entries";
   private static final String BEHAVIOR = "behavior";
   private static final String GENERAL = "general";
   private static final String TECHNICAL = "technical";
@@ -109,7 +109,7 @@ public class TenantAPIs extends TenantAPI {
     queryBuilder.addStrictCriteria(CONFIG_NAME, configName)
       .and();
     queryBuilder.addStrictCriteria(ENABLED, Boolean.TRUE.toString());
-    return MOD_CONFIGURATION_ENTRIES_PATH.concat(queryBuilder.build());
+    return MOD_CONFIGURATION_ENTRIES_URI.concat(queryBuilder.build());
   }
 
   private CompletableFuture<Map.Entry<String, JsonObject>> postConfigIfAbsent(Context context, HttpClientInterface httpClient,
@@ -120,7 +120,7 @@ public class TenantAPIs extends TenantAPI {
       JsonObject configToPost = getJsonConfigFromResource(configPair.getKey());
       try {
         headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString());
-        return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_PATH, headers)
+        return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_URI, headers)
           .thenCompose(response -> supplyAsync(context, () -> new HashMap.SimpleImmutableEntry<>(configPair.getKey(), response.getBody())));
       } catch (Exception ex) {
         logger.error(format("Cannot post config. %s", ex.getMessage()));
