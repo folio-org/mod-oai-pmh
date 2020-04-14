@@ -3,16 +3,19 @@ package org.folio.rest.impl;
 import static java.lang.String.format;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyAsync;
 import static org.folio.oaipmh.Constants.CONFIGS;
-import static org.folio.oaipmh.Constants.CONFIGS_SET;
+import static org.folio.oaipmh.Constants.CONFIGS_LIST;
 import static org.folio.oaipmh.Constants.VALUE;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -61,6 +64,7 @@ public class ModTenantAPI extends TenantAPI {
 
   private CompletableFuture<Response> loadConfigData(Map<String, String> headers, Context context) {
     VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
+    Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
 
     String okapiUrl = headers.get(X_OKAPI_URL);
     String tenant = headers.get(X_OKAPI_TENANT);
@@ -68,7 +72,7 @@ public class ModTenantAPI extends TenantAPI {
     HttpClientInterface httpClient = HttpClientFactory.getHttpClient(okapiUrl, tenant, true);
     List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
 
-    CONFIGS_SET.forEach(config -> completableFutures.add(requestConfig(context, httpClient, headers, config)
+    configsSet.forEach(config -> completableFutures.add(requestConfig(context, httpClient, headers, config)
       .thenCompose(configPair -> postConfigIfAbsent(context, httpClient, headers, configPair))
       .thenAccept(configEntry -> populateSystemProperties(context, configEntry))));
 

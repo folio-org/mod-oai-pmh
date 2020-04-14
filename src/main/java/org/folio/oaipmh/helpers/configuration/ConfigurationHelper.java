@@ -71,8 +71,7 @@ public class ConfigurationHelper {
     return configKeyValueSet.getMap()
       .entrySet()
       .stream()
-      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKey(entry.getKey()), entry -> entry.getValue()
-        .toString()));
+      .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKey(entry.getKey()), entry -> entry.getValue().toString()));
   }
 
 }

@@ -3,7 +3,6 @@ package org.folio.oaipmh;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public final class Constants {
@@ -34,7 +33,7 @@ public final class Constants {
   public static final String SOURCE_RECORD_STORAGE = "SRS";
   public static final String INVENTORY_STORAGE = "INVENTORY";
 
-  public static final Set<String> CONFIGS_SET = new HashSet<>(Arrays.asList("behavior","general","technical"));
+  public static final String CONFIGS_LIST = "behavior,general,technical";
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";
 

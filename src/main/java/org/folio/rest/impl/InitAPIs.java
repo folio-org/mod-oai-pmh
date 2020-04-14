@@ -1,9 +1,12 @@
 package org.folio.rest.impl;
 
-import static org.folio.oaipmh.Constants.CONFIGS_SET;
+import static org.folio.oaipmh.Constants.CONFIGS_LIST;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
@@ -32,8 +35,8 @@ public class InitAPIs implements InitAPI {
     try {
       Properties systemProperties = System.getProperties();
       String configPath = systemProperties.getProperty("configPath", CONFIG_PATH);
-
-      CONFIGS_SET.forEach(configName -> {
+      Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
+      configsSet.forEach(configName -> {
         JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
         Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonConfigEntry(jsonConfig);
         configKeyValueMap.forEach((key, value) -> {
