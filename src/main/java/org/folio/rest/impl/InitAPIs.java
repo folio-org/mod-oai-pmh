@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.folio.oaipmh.ResponseHelper;
-import org.folio.oaipmh.helpers.resource.ResourceHelper;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.resource.interfaces.InitAPI;
 
 import io.vertx.core.AsyncResult;
@@ -25,7 +25,7 @@ public class InitAPIs implements InitAPI {
   private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
 
   private static final String CONFIG_PATH = "config";
-  private ResourceHelper resourceHelper = new ResourceHelper();
+  private ConfigurationHelper configurationHelper = new ConfigurationHelper();
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
@@ -34,9 +34,17 @@ public class InitAPIs implements InitAPI {
       String configPath = systemProperties.getProperty("configPath", CONFIG_PATH);
 
       CONFIGS_SET.forEach(configName -> {
-        JsonObject jsonConfig = resourceHelper.getJsonConfigFromResources(configPath, configName);
-        Map<String, String> configKeyValueMap = resourceHelper.getConfigKeyValueMapFromJsonConfigEntry(jsonConfig);
-        systemProperties.putAll(configKeyValueMap);
+        JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
+        Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonConfigEntry(jsonConfig);
+        configKeyValueMap.forEach((key, value) -> {
+          Object existing = systemProperties.putIfAbsent(key, value);
+          if (logger.isInfoEnabled()) {
+            String message = (existing == null) ?
+              String.format("The '%s' property was loaded from config file with its default value '%s'", key, value) :
+              String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
+            logger.info(message);
+          }
+        });
       });
 
       // Initialize ResponseWriter and check if jaxb marshaller is ready to operate

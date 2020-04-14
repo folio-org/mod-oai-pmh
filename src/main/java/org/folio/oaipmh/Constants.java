@@ -35,6 +35,8 @@ public final class Constants {
   public static final String INVENTORY_STORAGE = "INVENTORY";
 
   public static final Set<String> CONFIGS_SET = new HashSet<>(Arrays.asList("behavior","general","technical"));
+  public static final String CONFIGS = "configs";
+  public static final String VALUE = "value";
 
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";
