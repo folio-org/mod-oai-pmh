@@ -38,8 +38,9 @@ OAI-PMH | `jaxb.marshaller.enableValidation` | `false` | Boolean value which def
 OAI-PMH | `jaxb.marshaller.formattedOutput` | `false` | Boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation.
 
 Notes: 
-* The system default values can be overwritten by VM options e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`
-* Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader
+* There is an option, if mod-configuration doesn't contain a value for configuration, then such value will be used further as expected, but in the opposite case such value will be used only during InitAPIs execution and will be overridden further with value from mod-configuration after ModTenantAPI execution. Only configPath configuration is an exception here. For more detail explanation refer to the NEWS.md "2.2.0 (UnReleased)" topic.
+* The system default values can be overwritten by VM options e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`. 
+* Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader. 
 * There is `repository.storage` system property defining which storage should be used to get records from. This configuration is not tenant specific but system wide therefore cannot be defined in [mod-configuration](https://github.com/folio-org/mod-configuration/) module. There are 2 allowed values:
 
   | Value | Storage |

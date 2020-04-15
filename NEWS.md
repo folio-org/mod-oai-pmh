@@ -1,4 +1,9 @@
 ## 2.2.0 (UnReleased)
+Configurations form configuration.properties file were split into 3 category - behavior, general, technical and were moved to corresponding json files under the resource/config folder. File configuration.properties has been removed due it necessity.
+Introduced new way for work with mod-configuration entries. Instead of the common configurations array there are now 3 configuration entry which holds configuration keys/values related to particular configuration group (behavior, general or technical) within its 'value' field. 
+Introduced TenantApi 'POST' implementation which is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. First one - if mod-configuration doesn't contain config entry for the particular configuration group then such group will be picked up from the resources with their default values and then will be posted to a mod-configuration. As well if some of them was already defined through JVM property setting up, then such "JVM" value will be used instead of the default one. As well, these values will be used farther within module business logic.
+Second one - if mod-configuration has successfully returned config entry for particular group then such configuration values overrides default and JVM specified as well and these values are set up to system properties and they will be used farther within module business logic.
+So, configurations priority from highest to lowest is the next: mod-configuration (1 priority) -> JVM specified (2 priority) -> default from resources (3 priority)
 
 ## 2.1.0 (Released)
 
