@@ -1,4 +1,4 @@
-## 2.2.0 (UnReleased)
+* [MODOAIPMH-100](https://issues.folio.org/browse/MODOAIPMH-100) Support configurations management from UI & change the way of working with configurations & splitting configuration into groups.
 
 ## 2.1.0 (Released)
 

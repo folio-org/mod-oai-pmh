@@ -1,21 +1,23 @@
 package org.folio.oaipmh.helpers;
 
+import static org.folio.oaipmh.Constants.CONFIGS;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.rest.client.ConfigurationsClient;
+
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Configs;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
 
 public class RepositoryConfigurationUtil {
 
@@ -25,7 +27,9 @@ public class RepositoryConfigurationUtil {
 
   private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
 
-  private static final String QUERY = "module==OAI-PMH";
+  private static final String QUERY = "module==OAIPMH";
+
+  private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   /**
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
@@ -55,9 +59,12 @@ public class RepositoryConfigurationUtil {
 
           JsonObject config = new JsonObject();
           body.toJsonObject()
-            .mapTo(Configs.class)
-            .getConfigs()
-            .forEach(entry -> config.put(entry.getCode(), entry.getValue()));
+            .getJsonArray(CONFIGS)
+            .stream()
+            .map(Object::toString)
+            .map(JsonObject::new)
+            .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
+            .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 
           JsonObject tenantConfig = ctx.config().getJsonObject(tenant);
           if (tenantConfig != null) {

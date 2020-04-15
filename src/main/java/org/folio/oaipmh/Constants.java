@@ -30,6 +30,10 @@ public final class Constants {
   public static final String SOURCE_RECORD_STORAGE = "SRS";
   public static final String INVENTORY_STORAGE = "INVENTORY";
 
+  public static final String CONFIGS_LIST = "behavior,general,technical";
+  public static final String CONFIGS = "configs";
+  public static final String VALUE = "value";
+
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";
   public static final String METADATA_PREFIX_PARAM = "metadataPrefix";

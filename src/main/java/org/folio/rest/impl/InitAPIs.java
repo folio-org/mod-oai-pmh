@@ -1,18 +1,25 @@
 package org.folio.rest.impl;
 
+import static org.folio.oaipmh.Constants.CONFIGS_LIST;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.rest.resource.interfaces.InitAPI;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.resource.interfaces.InitAPI;
-
-import java.io.File;
-import java.io.InputStream;
-import java.util.Properties;
 
 /**
  * The class initializes system properties and checks if required configs are specified
@@ -20,32 +27,32 @@ import java.util.Properties;
 public class InitAPIs implements InitAPI {
   private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
 
-  private static final String CONFIG_PATH = "config" + File.separator + "config.properties";
+  private static final String CONFIG_PATH = "config";
+  private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {
-    String configPath = System.getProperty("configPath", CONFIG_PATH);
-    try (InputStream configFile = InitAPIs.class.getClassLoader().getResourceAsStream(configPath)) {
-      if (configFile == null) {
-        throw new IllegalStateException(String.format("The config file %s is missing.", configPath));
-      }
-      final Properties confProperties = new Properties();
-      confProperties.load(configFile);
-
-      // Set system property from config file if no specified at runtime
-      Properties sysProps = System.getProperties();
-      confProperties.forEach((key, value) -> {
-        Object existing = sysProps.putIfAbsent(key, value);
-        if (logger.isInfoEnabled()) {
-          String message = (existing == null) ?
-            String.format("The '%s' property was loaded from config file with its default value '%s'", key, value) :
-            String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
-          logger.info(message);
-        }
+    try {
+      Properties systemProperties = System.getProperties();
+      String configPath = systemProperties.getProperty("configPath", CONFIG_PATH);
+      Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
+      configsSet.forEach(configName -> {
+        JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
+        Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfig);
+        configKeyValueMap.forEach((key, value) -> {
+          Object existing = systemProperties.putIfAbsent(key, value);
+          if (logger.isInfoEnabled()) {
+            String message = (existing == null) ?
+              String.format("The '%s' property was loaded from config file with its default value '%s'", key, value) :
+              String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
+            logger.info(message);
+          }
+        });
       });
 
       // Initialize ResponseWriter and check if jaxb marshaller is ready to operate
-      if (!ResponseHelper.getInstance().isJaxbInitialized()) {
+      if (!ResponseHelper.getInstance()
+        .isJaxbInitialized()) {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }
 
@@ -55,6 +62,5 @@ public class InitAPIs implements InitAPI {
       logger.error("Unable to populate system properties", e);
     }
   }
-
 
 }
