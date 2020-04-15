@@ -79,11 +79,11 @@ public class ConfigurationHelper {
   }
 
   /**
-   * Parses configurations form string within JsonObject value field to map.
+   * Parses configurations from string of JsonObject value field to map.
    *
    * @param configurationEntry - json configuration entry
    * @return {@link Map}
-   * @throws IllegalArgumentException when configurationEntry doesn't contain the value field
+   * @throws IllegalArgumentException when configurationEntry doesn't contain the value field or value field has incorrect structure
    */
   public Map<String, String> getConfigKeyValueMapFromJsonEntryValueField(JsonObject configurationEntry) {
     try {
