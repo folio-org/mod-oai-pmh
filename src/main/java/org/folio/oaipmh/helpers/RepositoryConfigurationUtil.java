@@ -29,7 +29,7 @@ public class RepositoryConfigurationUtil {
 
   private static final String QUERY = "module==OAIPMH";
 
-  private static ConfigurationHelper configurationHelper = new ConfigurationHelper();
+  private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   /**
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.

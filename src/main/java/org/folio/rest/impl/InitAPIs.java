@@ -28,7 +28,7 @@ public class InitAPIs implements InitAPI {
   private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
 
   private static final String CONFIG_PATH = "config";
-  private ConfigurationHelper configurationHelper = new ConfigurationHelper();
+  private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
   public void init(Vertx vertx, Context context, Handler<AsyncResult<Boolean>> resultHandler) {

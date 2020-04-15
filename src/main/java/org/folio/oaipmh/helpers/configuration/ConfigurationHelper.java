@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.folio.oaipmh.mappers.PropertyNameMapper;
@@ -20,11 +21,26 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+/**
+ * Is used for reading json configuration files from resources and mapping them to {@link JsonObject} instances.
+ * As well allows to parse configuration keys/values from json entry to Map.
+ */
 public class ConfigurationHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHelper.class);
 
   private static final String JSON_EXTENSION = ".json";
+  private static ConfigurationHelper instance;
+
+  private ConfigurationHelper(){}
+
+  public static ConfigurationHelper getInstance(){
+    if(Objects.nonNull(instance)){
+      return instance;
+    }
+    instance = new ConfigurationHelper();
+    return instance;
+  }
 
   /**
    * Reads json file under the resource folder and maps it to {@link JsonObject}

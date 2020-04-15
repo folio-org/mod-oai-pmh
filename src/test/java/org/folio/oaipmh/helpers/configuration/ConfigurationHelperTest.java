@@ -30,7 +30,7 @@ class ConfigurationHelperTest {
   private static final String TEST_KEY = "testKey";
   private static final String TEST_VALUE = "testValue";
 
-  private ConfigurationHelper configurationHelper = new ConfigurationHelper();
+  private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Test
   void shouldReturnValidJsonObject_whenGetJsonConfigFromResourcesAndParametersHaveValidValues() {
