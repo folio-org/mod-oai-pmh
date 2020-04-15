@@ -63,7 +63,7 @@ public class RepositoryConfigurationUtil {
             .stream()
             .map(Object::toString)
             .map(JsonObject::new)
-            .map(configurationHelper::getConfigKeyValueMapFromJsonConfigEntry)
+            .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
             .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 
           JsonObject tenantConfig = ctx.config().getJsonObject(tenant);

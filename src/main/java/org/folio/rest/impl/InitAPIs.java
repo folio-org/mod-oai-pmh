@@ -38,7 +38,7 @@ public class InitAPIs implements InitAPI {
       Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
       configsSet.forEach(configName -> {
         JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
-        Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonConfigEntry(jsonConfig);
+        Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfig);
         configKeyValueMap.forEach((key, value) -> {
           Object existing = systemProperties.putIfAbsent(key, value);
           if (logger.isInfoEnabled()) {

@@ -139,7 +139,7 @@ public class ModTenantAPI extends TenantAPI {
     Properties systemProperties = System.getProperties();
     String configPath = systemProperties.getProperty("configPath", CONFIG_DIR_PATH);
     JsonObject jsonConfigEntry = configurationHelper.getJsonConfigFromResources(configPath, jsonConfigFileName);
-    Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonConfigEntry(jsonConfigEntry);
+    Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfigEntry);
 
     JsonObject configEntryValueField = new JsonObject();
     configKeyValueMap.forEach((key, configDefaultValue) -> {
@@ -174,7 +174,7 @@ public class ModTenantAPI extends TenantAPI {
       }
       JsonObject configBody = config.getJsonArray(CONFIGS)
         .getJsonObject(CONFIG_JSON_BODY);
-      Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonConfigEntry(configBody);
+      Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(configBody);
       Properties sysProps = System.getProperties();
       sysProps.putAll(configKeyValueMap);
       return configEntry;

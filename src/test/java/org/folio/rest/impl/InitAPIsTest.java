@@ -44,7 +44,7 @@ class InitAPIsTest {
 
     new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.failing(ex -> {
       assertThat(ex, instanceOf(IllegalStateException.class));
-      assertThat(ex.getCause(), nullValue());
+      assertThat(ex.getCause(), instanceOf(IllegalArgumentException.class));
       assertThat(System.getProperty(TEST_PROP), nullValue());
       testContext.completeNow();
     }));
