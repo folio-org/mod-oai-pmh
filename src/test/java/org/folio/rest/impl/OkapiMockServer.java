@@ -210,7 +210,7 @@ public class OkapiMockServer {
   }
 
   private String getIdParamName(String filePath) {
-    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "recordId" : "id";
+    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "externalIdsHolder.instanceId" : "id";
   }
 
   private void successResponse(RoutingContext ctx, String body) {
