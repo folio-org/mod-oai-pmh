@@ -105,9 +105,11 @@ class StorageHelperTest {
   }
 
   @Test
-  void shouldReturnEmptyString_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNot999FieldWithLinkedInstanceId(){
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_without999Field.json");
-    assertEquals(StringUtils.EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
+  void shouldThrowException_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNotExternalIdsHolderField(){
+    Exception exception = assertThrows(NullPointerException.class, ()->{
+      JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_withoutExternalIdsHolderField.json");
+      getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item);
+    });
   }
 
   @Test
