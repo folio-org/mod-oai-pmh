@@ -24,6 +24,7 @@ import javax.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.helpers.storage.CQLQueryBuilder;
+import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.tools.client.HttpClientFactory;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -145,9 +146,9 @@ public class ModTenantAPI extends TenantAPI {
     configKeyValueMap.forEach((key, configDefaultValue) -> {
       String possibleJvmSpecifiedValue = systemProperties.getProperty(key);
       if (Objects.nonNull(possibleJvmSpecifiedValue) && !possibleJvmSpecifiedValue.equals(configDefaultValue)) {
-        configEntryValueField.put(key, possibleJvmSpecifiedValue);
+        configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key), possibleJvmSpecifiedValue);
       } else {
-        configEntryValueField.put(key, configDefaultValue);
+        configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key), configDefaultValue);
       }
     });
     jsonConfigEntry.put(VALUE, configEntryValueField.encode());
@@ -167,7 +168,7 @@ public class ModTenantAPI extends TenantAPI {
    */
   private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Context context,
       Map.Entry<String, JsonObject> configEntry) {
-    return VertxCompletableFuture.supplyAsync(context, () -> {
+    return VertxCompletableFuture.supplyBlockingAsync(context, () -> {
       JsonObject config = configEntry.getValue();
       if (config.containsKey(SHOULD_NOT_UPDATE_PROPS)) {
         return configEntry;
