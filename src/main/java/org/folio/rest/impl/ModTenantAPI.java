@@ -168,7 +168,7 @@ public class ModTenantAPI extends TenantAPI {
    */
   private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Context context,
       Map.Entry<String, JsonObject> configEntry) {
-    return VertxCompletableFuture.supplyAsync(context, () -> {
+    return VertxCompletableFuture.supplyBlockingAsync(context, () -> {
       JsonObject config = configEntry.getValue();
       if (config.containsKey(SHOULD_NOT_UPDATE_PROPS)) {
         return configEntry;
