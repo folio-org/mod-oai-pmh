@@ -146,9 +146,9 @@ public class ModTenantAPI extends TenantAPI {
     configKeyValueMap.forEach((key, configDefaultValue) -> {
       String possibleJvmSpecifiedValue = systemProperties.getProperty(key);
       if (Objects.nonNull(possibleJvmSpecifiedValue) && !possibleJvmSpecifiedValue.equals(configDefaultValue)) {
-        configEntryValueField.put(key, PropertyNameMapper.mapToFrontendKeyName(possibleJvmSpecifiedValue));
+        configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key), possibleJvmSpecifiedValue);
       } else {
-        configEntryValueField.put(key, PropertyNameMapper.mapToFrontendKeyName(configDefaultValue));
+        configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key), configDefaultValue);
       }
     });
     jsonConfigEntry.put(VALUE, configEntryValueField.encode());
