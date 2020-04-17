@@ -138,8 +138,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-        .map(Object::toString)
-        .map(JsonObject::new)
+        .map(object -> (JsonObject)object)
         .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
         .map(instance -> populateHeader(identifierPrefix, instance))
         .forEach(identifiers::withHeaders);
