@@ -52,8 +52,10 @@ public class OkapiMockServer {
   private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02.000Z";
   static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
   private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00.000Z";
-  static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
-  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05.000Z";
+  static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";  //
+  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05.000Z"; //
+  static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "2000-01-02T07:07:07Z";  //mine
+  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07.000Z"; //mine
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
 
@@ -68,6 +70,7 @@ public class OkapiMockServer {
   private static final String INSTANCES_2 = "/instances_2_lastWithStorageError500.json";
   private static final String INSTANCES_3 = "/instances_3.json";
   private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
+  private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
   private static final String INSTANCES_10 = "/instances_10.json";
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
 
@@ -200,6 +203,8 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3));
       } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_4));
+      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
       } else {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10));
       }
