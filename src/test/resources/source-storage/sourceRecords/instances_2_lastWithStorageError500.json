@@ -489,6 +489,9 @@
       "recordId": "6b4ae089-e1ee-431f-af83-e1133f8e3da0",
       "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
       "recordType": "MARC",
+      "externalIdsHolder": {
+        "instanceId": "10000000-0000-4000-a000-000000000000"
+      },
       "metadata": {
         "createdDate": "2018-11-20T09:23:00.445+0000",
         "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",

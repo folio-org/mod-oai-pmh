@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
@@ -105,11 +106,9 @@ class StorageHelperTest {
   }
 
   @Test
-  void shouldThrowException_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNotExternalIdsHolderField(){
-    Exception exception = assertThrows(NullPointerException.class, ()->{
-      JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_withoutExternalIdsHolderField.json");
-      getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item);
-    });
+  void shouldReturnEmptyString_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNotExternalIdsHolderField(){
+    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_withoutExternalIdsHolderField.json");
+    assertEquals(EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
   @Test
