@@ -61,8 +61,7 @@ public class RepositoryConfigurationUtil {
           body.toJsonObject()
             .getJsonArray(CONFIGS)
             .stream()
-            .map(Object::toString)
-            .map(JsonObject::new)
+            .map(object -> (JsonObject)object)
             .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
             .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 

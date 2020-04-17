@@ -216,6 +216,30 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProvider")
+  void getOaiIdentifiersVerbOneRecordWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiIdentifiersVerbOneRecordWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
+    RequestSpecification request = createBaseRequest(LIST_IDENTIFIERS_PATH)
+      .with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
+
+    getLogger().debug(String.format("==== getOaiIdentifiersVerbOneRecordWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiIdentifiersWithDateRange(MetadataPrefix prefix, String encoding) {
     getLogger().debug(String.format("==== Starting getOaiIdentifiersWithDateRange(%s, %s) ====", prefix.name(), encoding));
 
@@ -580,6 +604,30 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
 
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProvider")
+  void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH)
+      .with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 2);
+
+    getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
 
   @ParameterizedTest

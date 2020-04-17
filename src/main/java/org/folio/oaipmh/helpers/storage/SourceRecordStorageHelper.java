@@ -40,7 +40,9 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
    */
   @Override
   public String getIdentifierId(final JsonObject entry) {
-    return entry.getJsonObject(EXTERNAL_IDS_HOLDER).getString(INSTANCE_ID);
+    Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
+    return jsonObject.map(obj -> obj.getString(INSTANCE_ID))
+      .orElse("");
   }
 
   @Override

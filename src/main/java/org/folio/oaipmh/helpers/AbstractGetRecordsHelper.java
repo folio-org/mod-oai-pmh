@@ -6,6 +6,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
+import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
@@ -160,17 +162,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
         String recordId = storageHelper.getRecordId(instance);
         String identifierId = storageHelper.getIdentifierId(instance);
-
-        RecordType record = new RecordType()
-          .withHeader(createHeader(instance)
-          .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-
-        // Some repositories like SRS can return record source data along with other info
-        String source = storageHelper.getInstanceRecordSource(instance);
-        if (source != null) {
-          record.withMetadata(buildOaiMetadata(request, source));
+        if (StringUtils.isNotEmpty(identifierId)) {
+          RecordType record = new RecordType()
+            .withHeader(createHeader(instance)
+              .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
+          // Some repositories like SRS can return record source data along with other info
+          String source = storageHelper.getInstanceRecordSource(instance);
+          if (source != null) {
+            record.withMetadata(buildOaiMetadata(request, source));
+          }
+          records.put(recordId, record);
         }
-        records.put(recordId, record);
       }
     }
     return records;
