@@ -6,6 +6,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
+import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.rest.tools.client.Response;
@@ -136,7 +138,10 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-        .map(instance -> populateHeader(identifierPrefix, (JsonObject) instance))
+        .map(Object::toString)
+        .map(JsonObject::new)
+        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
+        .map(instance -> populateHeader(identifierPrefix, instance))
         .forEach(identifiers::withHeaders);
 
       return oaipmh.withListIdentifiers(identifiers);
