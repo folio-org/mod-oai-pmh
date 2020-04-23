@@ -88,4 +88,11 @@ public interface StorageHelper {
    * @return endpoint to get metadata by identifier
    */
   String getRecordByIdEndpoint(String id);
+
+  /**
+   * Returns value that describes whether instance is suppressed from discovery
+   * @param entry - the entry returned by items storage service
+   * @return String
+   */
+  boolean getSuppressedFromDiscovery(JsonObject entry);
 }

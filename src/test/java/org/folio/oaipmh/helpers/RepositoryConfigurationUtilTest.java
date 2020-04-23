@@ -4,6 +4,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+
+import org.folio.oaipmh.Request;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,6 +39,7 @@ class RepositoryConfigurationUtilTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final Map<String, String> okapiHeaders = new HashMap<>();
+  public static final String REPOSITORY_TEST_BOOLEAN_PROPERTY = "repository.testBooleanProperty";
 
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
@@ -139,7 +142,22 @@ class RepositoryConfigurationUtilTest {
           testContext.completeNow();
         })
       );
+  }
 
+  @Test
+  void testConfigurationGetBooleanProperty(Vertx vertx, VertxTestContext testContext) {
+    boolean expectedValue = true;
+    System.setProperty(REPOSITORY_TEST_BOOLEAN_PROPERTY, Boolean.toString(expectedValue));
+    vertx.runOnContext(event -> testContext.verify(() ->{
+      Map<String, String> okapiHeaders = new HashMap<>();
+      okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+      Request request = Request.builder().okapiHeaders(okapiHeaders).build();
+        boolean propertyValue = RepositoryConfigurationUtil.getBooleanProperty(request, REPOSITORY_TEST_BOOLEAN_PROPERTY );
+        assertThat(propertyValue, is(equalTo(expectedValue)));
+        System.clearProperty(REPOSITORY_TEST_BOOLEAN_PROPERTY);
+        testContext.completeNow();
+      })
+    );
   }
 
   private static Map<String, Map<String, String>> tenantAndExpectedConfigProvider() {

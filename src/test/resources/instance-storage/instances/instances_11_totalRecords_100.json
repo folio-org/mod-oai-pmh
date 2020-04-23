@@ -93,6 +93,7 @@
         "eng"
       ],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:18.018+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -142,6 +143,7 @@
       "languages": [],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:19.050+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -235,6 +237,7 @@
         "eng"
       ],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:20.064+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -277,6 +280,7 @@
       "languages": [],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:21.046+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -320,6 +324,7 @@
       "languages": [],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:22.096+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -407,6 +412,7 @@
         "eng"
       ],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:26.175+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -461,6 +467,7 @@
       ],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:27.250+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -542,6 +549,7 @@
       "notes": [],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:25.139+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -599,6 +607,7 @@
       "notes": [],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:23.102+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -642,6 +651,7 @@
       "languages": [],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-10-30T02:48:47.395+0000",
         "createdByUserId": "48b772cd-9d03-5090-84d0-905ca5564647",
@@ -685,6 +695,7 @@
       "languages": [],
       "notes": [],
       "statisticalCodes": [],
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:29.217+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",

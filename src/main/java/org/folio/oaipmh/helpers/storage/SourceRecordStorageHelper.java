@@ -1,11 +1,15 @@
 package org.folio.oaipmh.helpers.storage;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.folio.oaipmh.Request;
+import static org.folio.oaipmh.Constants.CONTENT;
+import static org.folio.oaipmh.Constants.PARSED_RECORD;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Optional;
+
+import org.folio.oaipmh.Request;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
@@ -17,10 +21,10 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
    */
   public static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/sourceRecords";
   public static final String SOURCE_STORAGE_RECORD_URI = "/source-storage/records/%s";
-  private static final String CONTENT = "content";
   private static final String INSTANCE_ID = "instanceId";
-  private static final String PARSED_RECORD = "parsedRecord";
   private static final String EXTERNAL_IDS_HOLDER = "externalIdsHolder";
+  private static final String ADDITIONAL_INFO = "additionalInfo";
+  private static final String SUPPRESS_DISCOVERY = "suppressDiscovery";
 
   @Override
   public JsonArray getItems(JsonObject entries) {
@@ -70,7 +74,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
   @Override
   void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
-    queryBuilder.addStrictCriteria("additionalInfo.suppressDiscovery", "false");
+    queryBuilder.addStrictCriteria(ADDITIONAL_INFO + "." + SUPPRESS_DISCOVERY, "false");
   }
 
   @Override
@@ -83,4 +87,8 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
     return String.format(SOURCE_STORAGE_RECORD_URI, id);
   }
 
+  @Override
+  public boolean getSuppressedFromDiscovery(final JsonObject entry) {
+    return entry.getJsonObject(ADDITIONAL_INFO).getBoolean(SUPPRESS_DISCOVERY);
+  }
 }

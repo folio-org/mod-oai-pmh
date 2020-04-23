@@ -478,6 +478,9 @@
       "externalIdsHolder": {
         "instanceId": "00000000-0000-4000-a000-000000000000"
       },
+      "additionalInfo": {
+        "suppressDiscovery": false
+      },
       "metadata": {
         "createdDate": "2018-11-20T09:14:35.400+0000",
         "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
@@ -1114,6 +1117,9 @@
       "externalIdsHolder": {
         "instanceId": "10000000-0000-4000-a000-000000000000"
       },
+      "additionalInfo": {
+        "suppressDiscovery": false
+      },
       "metadata": {
         "createdDate": "2018-11-20T09:23:00.445+0000",
         "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
@@ -1355,6 +1361,9 @@
       "externalIdsHolder": {
         "instanceId": "20000000-0000-4000-a000-000000000000"
       },
+      "additionalInfo": {
+        "suppressDiscovery": false
+      },
       "metadata": {
         "createdDate": "2018-11-20T07:23:11.172+0000",
         "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
@@ -1368,6 +1377,9 @@
       "recordType": "MARC",
       "externalIdsHolder": {
         "instanceId": "30000000-0000-4000-a000-000000000000"
+      },
+      "additionalInfo": {
+        "suppressDiscovery": false
       },
       "metadata": {
         "createdDate": "2018-11-20T09:25:09.295+0000",

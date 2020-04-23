@@ -1,8 +1,8 @@
 package org.folio.oaipmh.helpers.storage;
 
 import io.vertx.core.json.JsonObject;
+
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.time.Instant;
@@ -14,6 +14,9 @@ import java.util.Optional;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
 public abstract class AbstractStorageHelper implements StorageHelper {
 
@@ -49,8 +52,10 @@ public abstract class AbstractStorageHelper implements StorageHelper {
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
-    queryBuilder.and();
-    addSuppressFromDiscovery(queryBuilder);
+    if(getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+      queryBuilder.and();
+      addSuppressFromDiscovery(queryBuilder);
+    }
     if (isNotEmpty(request.getIdentifier())) {
       queryBuilder
         .and()
@@ -62,8 +67,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
     }
 
     // one extra record is required to check if resumptionToken is good
-    int limit = Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
+    int limit = Integer.parseInt(getProperty(request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
     return queryBuilder.build()
       + "&limit=" + limit
       + "&offset=" + request.getOffset();

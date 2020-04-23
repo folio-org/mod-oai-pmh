@@ -62,6 +62,7 @@
       ],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:12.011+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -121,6 +122,7 @@
       "notes": [],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-09-19T02:52:07.569+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
@@ -173,6 +175,7 @@
       ],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": true,
       "metadata": {
         "createdDate": "2018-09-19T02:52:17.008+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",

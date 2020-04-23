@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import static java.lang.Boolean.parseBoolean;
 import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
@@ -9,8 +10,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.tools.utils.TenantTool;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
@@ -101,4 +104,17 @@ public class RepositoryConfigurationUtil {
 
     return defaultValue;
   }
+
+  public static boolean getBooleanProperty(Request request, String name) {
+    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
+    JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
+    String defaultValue = System.getProperty(name);
+
+    if (configs != null) {
+      return parseBoolean(configs.getString(name, defaultValue));
+    }
+
+    return parseBoolean(defaultValue);
+  }
+
 }

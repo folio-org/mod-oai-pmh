@@ -8,7 +8,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +31,7 @@ import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.INSTANCES_URI;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
@@ -44,7 +44,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class StorageHelperTest {
@@ -99,6 +101,13 @@ class StorageHelperTest {
     assertThat(getStorageHelper(storageType).getRecordId(item), not(isEmptyOrNullString()));
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
+  void getSuppressedFromDiscovery(String storageType) {
+    JsonObject item = getJsonObjectFromFile(getDirPath(storageType) + "/instance.json");
+    assertFalse(getStorageHelper(storageType).getSuppressedFromDiscovery(item));
+  }
+
   @Test
   void shouldReturnLinkedToRecordInstanceId_whenGetIdentifierAndStorageIsSRS(){
     JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance.json");
@@ -113,15 +122,38 @@ class StorageHelperTest {
 
   @Test
   @ExtendWith(VertxExtension.class)
-  void buildItemsEndpoint(Vertx vertx, VertxTestContext testContext) {
+  void buildItemsEndpointWithSuppressDiscoveryTrue(Vertx vertx, VertxTestContext testContext) {
     vertx.runOnContext(event ->
       testContext.verify(() ->  {
         try {
           System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
+          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
             (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse&limit=11&offset=0")));
+          testContext.completeNow();
+        } catch (UnsupportedEncodingException e) {
+          testContext.failNow(e);
+        } finally {
+          System.clearProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+        }
+      })
+    );
+  }
+
+  @Test
+  @ExtendWith(VertxExtension.class)
+  void buildItemsEndpointWithSuppressDiscoveryFalse(Vertx vertx, VertxTestContext testContext) {
+    vertx.runOnContext(event ->
+      testContext.verify(() ->  {
+        try {
+          System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
+          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+          Map<String, String> okapiHeaders = new HashMap<>();
+          okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
+            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);

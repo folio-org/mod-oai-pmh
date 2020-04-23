@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import gov.loc.marc21.slim.DataFieldType;
+import gov.loc.marc21.slim.SubfieldatafieldType;
 import io.restassured.RestAssured;
 import io.restassured.config.DecoderConfig;
 import io.restassured.config.DecoderConfig.ContentDecoder;
@@ -55,7 +57,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -97,6 +101,10 @@ import static org.openarchives.oai._2.VerbType.LIST_SETS;
 class OaiPmhImplTest {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+  private static final int SUPPRESSED_RECORD_VALUE_SUBFIELD_INDEX = 0;
+  private static final boolean SHOULD_CONTAIN_FIELD = true;
+  private static final boolean SHOULD_NOT_CONTAIN_FIELD = false;
+
   // API paths
   private static final String ROOT_PATH = "/oai";
   private static final String LIST_RECORDS_PATH = ROOT_PATH + "/records";
@@ -112,7 +120,7 @@ class OaiPmhImplTest {
   private static final String XML_TYPE = "text/xml";
   private static final String TENANT = OAI_TEST_TENANT;
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
-  private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
+  protected static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
@@ -120,6 +128,7 @@ class OaiPmhImplTest {
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   private static final Map<VerbType, String> basePaths = new HashMap<>();
+  private final Map<Boolean, Predicate<List<DataFieldType>>> suppressedDiscoveryDataFieldPredicatesMap = new HashMap<>();
 
   static {
     basePaths.put(GET_RECORD, GET_RECORD_PATH);
@@ -155,6 +164,7 @@ class OaiPmhImplTest {
       // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
+    initSuppressedDiscoveryDataFieldPredicatesMap();
   }
 
   protected void setStorageType() {
@@ -173,6 +183,21 @@ class OaiPmhImplTest {
     System.clearProperty(REPOSITORY_TIME_GRANULARITY);
     System.clearProperty(REPOSITORY_DELETED_RECORDS);
     System.clearProperty(REPOSITORY_STORAGE);
+  }
+
+  private void initSuppressedDiscoveryDataFieldPredicatesMap(){
+    suppressedDiscoveryDataFieldPredicatesMap.put(true, new Predicate<List<DataFieldType>>() {
+      @Override
+      public boolean test(final List<DataFieldType> dataFieldList) {
+        return shouldContainSuppressedDiscoveryDataField(dataFieldList);
+      }
+    });
+    suppressedDiscoveryDataFieldPredicatesMap.put(false, new Predicate<List<DataFieldType>>() {
+      @Override
+      public boolean test(final List<DataFieldType> dataFieldList) {
+        return anyShouldNotContainSuppressedDiscoveryDataField(dataFieldList);
+      }
+    });
   }
 
   @BeforeEach
@@ -631,6 +656,61 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
+  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH).with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_CONTAIN_FIELD);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasTrueValue(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH).with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_NOT_CONTAIN_FIELD);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
@@ -1026,6 +1106,53 @@ class OaiPmhImplTest {
     }
   }
 
+  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, boolean shouldContainField) {
+    List<RecordType> records;
+    if (verbType == LIST_RECORDS) {
+      records = oaipmh.getListRecords().getRecords();
+    }
+    else if (verbType == GET_RECORD){
+      records = Collections.singletonList(oaipmh.getGetRecord().getRecord());
+    } else {
+      fail("Can't verify specified verb: " + verbType);
+      return;
+    }
+    verifyListRecordsWithSuppressedDiscoveryDataField(records, shouldContainField);
+  }
+
+  private void verifyListRecordsWithSuppressedDiscoveryDataField(List<RecordType> records, boolean shouldContainField){
+    boolean isRecordsListCorrect = records.stream()
+      .map(RecordType::getMetadata)
+      .map(metadataType -> (gov.loc.marc21.slim.RecordType) metadataType.getAny())
+      .map(gov.loc.marc21.slim.RecordType::getDatafields)
+      .allMatch(suppressedDiscoveryDataFieldPredicatesMap.get(shouldContainField));
+    assertTrue(isRecordsListCorrect);
+  }
+
+  private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+    return dataFields.stream()
+      .filter(dataFieldType -> dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER))
+      .anyMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+  }
+
+  private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+    return dataFields.stream()
+      .filter(dataFieldType -> dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER))
+      .noneMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+  }
+
+  private boolean doesFieldContainSuppressedDiscoverySubfield(final DataFieldType dataFieldType) {
+    List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
+    if (Objects.nonNull(subfields) && subfields.size() > 0) {
+      return subfields.stream()
+        .anyMatch(subfieldatafieldType -> {
+          return subfieldatafieldType.getCode().equals(SUPPRESS_DISCOVERY_SUBFIELD_CODE)
+            && (subfieldatafieldType.getValue().equals("0") || subfieldatafieldType.getValue().equals("1"));
+        });
+    }
+    return false;
+  }
+
   private ResumptionTokenType getResumptionToken(OAIPMH oaipmh, VerbType verb) {
     if (verb == LIST_IDENTIFIERS) {
       return oaipmh.getListIdentifiers().getResumptionToken();
@@ -1090,6 +1217,14 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
+  private static Stream<Arguments> metadataPrefixMarc21AndEncodingProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+      for (String encoding : ENCODINGS) {
+        builder.add(Arguments.arguments(MetadataPrefix.MARC21XML, encoding));
+      }
+    return builder.build();
+  }
+
   private void verifyIdentifiers(List<HeaderType> headers, List<String> expectedIdentifiers) {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
@@ -1103,6 +1238,7 @@ class OaiPmhImplTest {
   }
 
   private List<String> getExpectedIdentifiers() {
+    //@formatter:of
     return Arrays.asList(
       "00000000-0000-4000-a000-000000000000",
       "10000000-0000-4000-a000-000000000000",
@@ -1114,5 +1250,6 @@ class OaiPmhImplTest {
       "70000000-0000-4000-a000-000000000000",
       "80000000-0000-4000-a000-000000000000",
       "90000000-0000-4000-a000-000000000000");
+    //@formatter:on
   }
 }
