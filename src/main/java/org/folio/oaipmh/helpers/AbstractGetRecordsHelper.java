@@ -243,7 +243,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   /**
-   * Build folio specific data field (marked with "999" tag and both indexes have "f" value) with subfield which
+   * Builds folio specific data field (marked with "999" tag and both indexes have "f" value) with subfield which
    * holds data about record "suppress from discovery" state.
    *
    * @param suppressDiscoveryValue - value that has to be assigned to subfield value field

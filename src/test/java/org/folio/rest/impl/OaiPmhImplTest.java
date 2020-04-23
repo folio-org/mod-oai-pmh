@@ -101,7 +101,6 @@ import static org.openarchives.oai._2.VerbType.LIST_SETS;
 class OaiPmhImplTest {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-  private static final int SUPPRESSED_RECORD_VALUE_SUBFIELD_INDEX = 0;
   private static final boolean SHOULD_CONTAIN_FIELD = true;
   private static final boolean SHOULD_NOT_CONTAIN_FIELD = false;
 
@@ -120,7 +119,7 @@ class OaiPmhImplTest {
   private static final String XML_TYPE = "text/xml";
   private static final String TENANT = OAI_TEST_TENANT;
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
-  protected static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
+  private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
