@@ -127,7 +127,7 @@ class StorageHelperTest {
       testContext.verify(() ->  {
         try {
           System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
@@ -149,7 +149,7 @@ class StorageHelperTest {
       testContext.verify(() ->  {
         try {
           System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is

@@ -165,7 +165,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
-      boolean shouldAddSuppressDiscoveryFlag = !getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      boolean shouldAddSuppressDiscoveryFlag = getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
@@ -198,7 +198,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @param records - records to be updated
    */
   private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
-    if (!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
 
       Predicate<DataFieldType> folioSpecificDataFieldPredicate = new Predicate<DataFieldType>() {
         public boolean test(final DataFieldType dataFieldType) {

@@ -676,7 +676,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_CONTAIN_FIELD);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_NOT_CONTAIN_FIELD);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
@@ -703,7 +703,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_NOT_CONTAIN_FIELD);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_CONTAIN_FIELD);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
