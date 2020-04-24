@@ -192,7 +192,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   /**
-   * Updates records with "suppressed from discovery" data field if repository.suppressedRecordsProcessing == false
+   * Updates records with "suppressed from discovery" data field if repository.suppressedRecordsProcessing == false.
    *
    * @param request - request
    * @param records - records to be updated
