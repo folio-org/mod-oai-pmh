@@ -2,7 +2,7 @@ package org.folio.rest.impl;
 
 import static io.restassured.RestAssured.given;
 import static org.folio.oaipmh.Constants.DEFLATE;
-import static org.folio.oaipmh.Constants.FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
@@ -21,7 +21,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.Constants.SUPPRESS_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -1152,13 +1152,13 @@ class OaiPmhImplTest {
 
   private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
     return dataFields.stream()
-      .filter(dataFieldType -> dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER))
+      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
       .anyMatch(this::doesFieldContainSuppressedDiscoverySubfield);
   }
 
   private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
     return dataFields.stream()
-      .filter(dataFieldType -> dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER))
+      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
       .noneMatch(this::doesFieldContainSuppressedDiscoverySubfield);
   }
 
@@ -1167,7 +1167,7 @@ class OaiPmhImplTest {
     if (Objects.nonNull(subfields) && subfields.size() > 0) {
       return subfields.stream()
         .anyMatch(subfieldatafieldType -> {
-          return subfieldatafieldType.getCode().equals(SUPPRESS_DISCOVERY_SUBFIELD_CODE)
+          return subfieldatafieldType.getCode().equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
             && (subfieldatafieldType.getValue().equals("0") || subfieldatafieldType.getValue().equals("1"));
         });
     }
