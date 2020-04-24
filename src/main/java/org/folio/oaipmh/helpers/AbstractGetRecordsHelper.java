@@ -200,15 +200,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
     if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
 
-      Predicate<DataFieldType> folioSpecificDataFieldPredicate = new Predicate<DataFieldType>() {
-        public boolean test(final DataFieldType dataFieldType) {
-          return dataFieldType.getInd1().equals(FOLIO_SPECIFIC_DATA_FIELD_INDEX_VALUE)
-            && dataFieldType.getInd2().equals(FOLIO_SPECIFIC_DATA_FIELD_INDEX_VALUE)
-            && dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER);
-        }
-      };
+      Predicate<DataFieldType> folioSpecificDataFieldPredicate = dataFieldType ->
+        dataFieldType.getInd1().equals(FOLIO_SPECIFIC_DATA_FIELD_INDEX_VALUE)
+        && dataFieldType.getInd2().equals(FOLIO_SPECIFIC_DATA_FIELD_INDEX_VALUE)
+        && dataFieldType.getTag().equals(FOLIO_SPECIFIC_DATA_FIELD_TAG_NUMBER);
       records.forEach(recordType -> {
-        String suppressDiscoveryValue = recordType.isSuppressDiscovery() ? "0" : "1";
+        boolean isSuppressedFromDiscovery = recordType.isSuppressDiscovery();
+        String suppressDiscoveryValue = isSuppressedFromDiscovery ? "0" : "1";
         gov.loc.marc21.slim.RecordType record = (gov.loc.marc21.slim.RecordType) recordType.getMetadata().getAny();
         List<DataFieldType> datafields = record.getDatafields();
         boolean alreadyContainsFolioSpecificDataField = datafields.stream()
