@@ -1,15 +1,16 @@
 package org.folio.oaipmh.helpers.storage;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.folio.oaipmh.Request;
+import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
+import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
+import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 
 import java.io.UnsupportedEncodingException;
 import java.time.Instant;
 
-import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
-import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
-import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
+import org.folio.oaipmh.Request;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public interface StorageHelper {
 

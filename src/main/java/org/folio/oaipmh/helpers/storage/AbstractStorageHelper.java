@@ -1,8 +1,11 @@
 package org.folio.oaipmh.helpers.storage;
 
-import io.vertx.core.json.JsonObject;
-
-import org.folio.oaipmh.Request;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
 import java.io.UnsupportedEncodingException;
 import java.time.Instant;
@@ -11,12 +14,9 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import org.folio.oaipmh.Request;
+
+import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractStorageHelper implements StorageHelper {
 
