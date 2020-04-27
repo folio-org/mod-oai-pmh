@@ -2,10 +2,11 @@ package org.folio.rest.impl;
 
 import static io.restassured.RestAssured.given;
 import static org.folio.oaipmh.Constants.DEFLATE;
-import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
@@ -21,7 +22,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -122,9 +122,6 @@ import io.vertx.junit5.VertxTestContext;
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-  private static final boolean SHOULD_CONTAIN_FIELD = true;
-  private static final boolean SHOULD_NOT_CONTAIN_FIELD = false;
 
   // API paths
   private static final String ROOT_PATH = "/oai";
@@ -698,7 +695,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_NOT_CONTAIN_FIELD);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, false);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
@@ -725,7 +722,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, SHOULD_CONTAIN_FIELD);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, true);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
