@@ -53,6 +53,7 @@
       "notes": [],
       "statisticalCodes": [],
       "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
       "metadata": {
         "createdDate": "2018-10-12T06:23:56.465+0000",
         "createdByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de",

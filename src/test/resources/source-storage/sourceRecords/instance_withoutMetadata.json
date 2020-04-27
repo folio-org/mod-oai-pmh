@@ -316,5 +316,8 @@
         }
       ]
     }
+  },
+  "additionalInfo": {
+    "suppressDiscovery": false
   }
 }

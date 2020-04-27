@@ -1,10 +1,11 @@
 package org.folio.oaipmh.helpers.storage;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.io.UnsupportedEncodingException;
+
 import org.folio.oaipmh.Request;
 
-import java.io.UnsupportedEncodingException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class InventoryStorageHelper extends AbstractStorageHelper {
 
@@ -12,6 +13,7 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   public static final String MARC_JSON_RECORD_URI = "/instance-storage/instances/%s/source-record/marc-json";
 
   private static final String ID = "id";
+  public static final String DISCOVERY_SUPPRESS = "discoverySuppress";
 
   /**
    *
@@ -77,5 +79,10 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   @Override
   protected String getIdentifierName() {
     return ID;
+  }
+
+  @Override
+  public boolean getSuppressedFromDiscovery(final JsonObject entry) {
+    return entry.getBoolean(DISCOVERY_SUPPRESS);
   }
 }

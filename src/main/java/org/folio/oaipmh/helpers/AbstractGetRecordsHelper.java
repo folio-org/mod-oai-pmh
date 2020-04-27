@@ -1,11 +1,31 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Context;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
+import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
@@ -18,25 +38,14 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
-import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
-import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import gov.loc.marc21.slim.DataFieldType;
+import gov.loc.marc21.slim.SubfieldatafieldType;
+import io.vertx.core.Context;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -138,6 +147,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
             .thenApply(records -> {
+              updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(request, records);
               addRecordsToOaiResponse(oaipmh, records);
               addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
               return buildResponse(oaipmh);
@@ -156,6 +166,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
+      boolean shouldAddSuppressDiscoveryFlag = getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
@@ -166,6 +177,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
+          if (shouldAddSuppressDiscoveryFlag) {
+            record.setSuppressDiscovery(storageHelper.getSuppressedFromDiscovery(instance));
+          }
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
@@ -176,6 +190,72 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
     }
     return records;
+  }
+
+  /**
+   * Updates records with "suppressed from discovery" data field if repository.suppressedRecordsProcessing == false.
+   *
+   * @param request - request
+   * @param records - records to be updated
+   */
+  private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
+    if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+
+      Predicate<DataFieldType> folioSpecificDataFieldPredicate = dataFieldType ->
+        dataFieldType.getInd1().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
+        && dataFieldType.getInd2().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
+        && dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+      records.forEach(recordType -> {
+        boolean isSuppressedFromDiscovery = recordType.isSuppressDiscovery();
+        String suppressDiscoveryValue = isSuppressedFromDiscovery ? "0" : "1";
+        gov.loc.marc21.slim.RecordType record = (gov.loc.marc21.slim.RecordType) recordType.getMetadata().getAny();
+        List<DataFieldType> datafields = record.getDatafields();
+        boolean alreadyContainsFolioSpecificDataField = datafields.stream()
+          .anyMatch(folioSpecificDataFieldPredicate);
+
+        if(alreadyContainsFolioSpecificDataField){
+          updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(folioSpecificDataFieldPredicate, suppressDiscoveryValue, datafields);
+        } else {
+          buildGeneralInfoDataFieldWithSuppressDiscoverySubfield(suppressDiscoveryValue, datafields);
+        }
+      });
+    }
+  }
+
+  /**
+   * Updates instance general info data field (marked with "999" tag and both indexes have "f" value) with new subfield which
+   * holds data about record "suppress from discovery" state.
+   *
+   * @param folioSpecificDataFieldPredicate - predicate with required field search criteria
+   * @param suppressDiscoveryValue - value that has to be assigned to subfield value field
+   * @param datafields - list of {@link DataFieldType} which contains folio specific data field
+   */
+  private void updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(final Predicate<DataFieldType> folioSpecificDataFieldPredicate, final String suppressDiscoveryValue, final List<DataFieldType> datafields) {
+    datafields.stream()
+      .filter(folioSpecificDataFieldPredicate)
+      .findFirst()
+      .ifPresent(dataFieldType -> {
+        List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
+        subfields.add(new SubfieldatafieldType().withCode(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
+          .withValue(suppressDiscoveryValue));
+      });
+  }
+
+  /**
+   * Builds instance general info data field (marked with "999" tag and both indexes have "f" value) with subfield which
+   * holds data about record "suppress from discovery" state.
+   *
+   * @param suppressDiscoveryValue - value that has to be assigned to subfield value field
+   * @param datafields - list of {@link DataFieldType} which contains folio specific data field
+   */
+  private void buildGeneralInfoDataFieldWithSuppressDiscoverySubfield(final String suppressDiscoveryValue, final List<DataFieldType> datafields) {
+    DataFieldType folioSpecificDataField = new DataFieldType();
+    folioSpecificDataField.setInd1(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    folioSpecificDataField.setInd2(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    folioSpecificDataField.setTag(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+    folioSpecificDataField.withSubfields(new SubfieldatafieldType().withCode(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
+      .withValue(suppressDiscoveryValue));
+    datafields.add(folioSpecificDataField);
   }
 
   /**

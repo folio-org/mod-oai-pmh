@@ -1,66 +1,28 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
-import io.restassured.config.DecoderConfig;
-import io.restassured.config.DecoderConfig.ContentDecoder;
-import io.restassured.config.RestAssuredConfig;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.response.ValidatableResponse;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.folio.oaipmh.Constants;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.tools.PomReader;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.VerbType;
-import org.openarchives.oai._2_0.oai_dc.Dc;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
-
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static io.restassured.RestAssured.given;
-import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.Constants.DEFLATE;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
+import static org.folio.oaipmh.Constants.GZIP;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
+import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
@@ -92,6 +54,70 @@ import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.oaipmh.Constants;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.ResponseHelper;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.tools.PomReader;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2_0.oai_dc.Dc;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+
+import gov.loc.marc21.slim.DataFieldType;
+import gov.loc.marc21.slim.SubfieldatafieldType;
+import io.restassured.RestAssured;
+import io.restassured.config.DecoderConfig;
+import io.restassured.config.DecoderConfig.ContentDecoder;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.response.ValidatableResponse;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
@@ -120,6 +146,7 @@ class OaiPmhImplTest {
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   private static final Map<VerbType, String> basePaths = new HashMap<>();
+  private final Map<Boolean, Predicate<List<DataFieldType>>> suppressedDiscoveryDataFieldPredicatesMap = new HashMap<>();
 
   static {
     basePaths.put(GET_RECORD, GET_RECORD_PATH);
@@ -155,6 +182,7 @@ class OaiPmhImplTest {
       // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
+    initSuppressedDiscoveryDataFieldPredicatesMap();
   }
 
   protected void setStorageType() {
@@ -173,6 +201,21 @@ class OaiPmhImplTest {
     System.clearProperty(REPOSITORY_TIME_GRANULARITY);
     System.clearProperty(REPOSITORY_DELETED_RECORDS);
     System.clearProperty(REPOSITORY_STORAGE);
+  }
+
+  private void initSuppressedDiscoveryDataFieldPredicatesMap(){
+    suppressedDiscoveryDataFieldPredicatesMap.put(true, new Predicate<List<DataFieldType>>() {
+      @Override
+      public boolean test(final List<DataFieldType> dataFieldList) {
+        return shouldContainSuppressedDiscoveryDataField(dataFieldList);
+      }
+    });
+    suppressedDiscoveryDataFieldPredicatesMap.put(false, new Predicate<List<DataFieldType>>() {
+      @Override
+      public boolean test(final List<DataFieldType> dataFieldList) {
+        return anyShouldNotContainSuppressedDiscoveryDataField(dataFieldList);
+      }
+    });
   }
 
   @BeforeEach
@@ -631,6 +674,61 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
+  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH).with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, false);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasTrueValue(MetadataPrefix metadataPrefix, String encoding) {
+    getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
+
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(LIST_RECORDS_PATH).with()
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    addAcceptEncodingHeader(request, encoding);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, true);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
+  }
+
+  @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
@@ -1026,6 +1124,53 @@ class OaiPmhImplTest {
     }
   }
 
+  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, boolean shouldContainField) {
+    List<RecordType> records;
+    if (verbType == LIST_RECORDS) {
+      records = oaipmh.getListRecords().getRecords();
+    }
+    else if (verbType == GET_RECORD){
+      records = Collections.singletonList(oaipmh.getGetRecord().getRecord());
+    } else {
+      fail("Can't verify specified verb: " + verbType);
+      return;
+    }
+    verifyListRecordsWithSuppressedDiscoveryDataField(records, shouldContainField);
+  }
+
+  private void verifyListRecordsWithSuppressedDiscoveryDataField(List<RecordType> records, boolean shouldContainField){
+    boolean isRecordsListCorrect = records.stream()
+      .map(RecordType::getMetadata)
+      .map(metadataType -> (gov.loc.marc21.slim.RecordType) metadataType.getAny())
+      .map(gov.loc.marc21.slim.RecordType::getDatafields)
+      .allMatch(suppressedDiscoveryDataFieldPredicatesMap.get(shouldContainField));
+    assertTrue(isRecordsListCorrect);
+  }
+
+  private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+    return dataFields.stream()
+      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
+      .anyMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+  }
+
+  private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+    return dataFields.stream()
+      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
+      .noneMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+  }
+
+  private boolean doesFieldContainSuppressedDiscoverySubfield(final DataFieldType dataFieldType) {
+    List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
+    if (Objects.nonNull(subfields) && subfields.size() > 0) {
+      return subfields.stream()
+        .anyMatch(subfieldatafieldType -> {
+          return subfieldatafieldType.getCode().equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
+            && (subfieldatafieldType.getValue().equals("0") || subfieldatafieldType.getValue().equals("1"));
+        });
+    }
+    return false;
+  }
+
   private ResumptionTokenType getResumptionToken(OAIPMH oaipmh, VerbType verb) {
     if (verb == LIST_IDENTIFIERS) {
       return oaipmh.getListIdentifiers().getResumptionToken();
@@ -1090,6 +1235,14 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
+  private static Stream<Arguments> metadataPrefixMarc21AndEncodingProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+      for (String encoding : ENCODINGS) {
+        builder.add(Arguments.arguments(MetadataPrefix.MARC21XML, encoding));
+      }
+    return builder.build();
+  }
+
   private void verifyIdentifiers(List<HeaderType> headers, List<String> expectedIdentifiers) {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
@@ -1103,6 +1256,7 @@ class OaiPmhImplTest {
   }
 
   private List<String> getExpectedIdentifiers() {
+    //@formatter:of
     return Arrays.asList(
       "00000000-0000-4000-a000-000000000000",
       "10000000-0000-4000-a000-000000000000",
@@ -1114,5 +1268,6 @@ class OaiPmhImplTest {
       "70000000-0000-4000-a000-000000000000",
       "80000000-0000-4000-a000-000000000000",
       "90000000-0000-4000-a000-000000000000");
+    //@formatter:on
   }
 }
