@@ -65,7 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -146,7 +146,7 @@ class OaiPmhImplTest {
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   private static final Map<VerbType, String> basePaths = new HashMap<>();
-  private final Map<Boolean, Predicate<List<DataFieldType>>> suppressedDiscoveryDataFieldPredicatesMap = new HashMap<>();
+  private final Map<Boolean, BiPredicate<List<DataFieldType>, Boolean>> suppressedDiscoveryDataFieldPredicatesMap = new HashMap<>();
 
   static {
     basePaths.put(GET_RECORD, GET_RECORD_PATH);
@@ -204,18 +204,8 @@ class OaiPmhImplTest {
   }
 
   private void initSuppressedDiscoveryDataFieldPredicatesMap(){
-    suppressedDiscoveryDataFieldPredicatesMap.put(true, new Predicate<List<DataFieldType>>() {
-      @Override
-      public boolean test(final List<DataFieldType> dataFieldList) {
-        return shouldContainSuppressedDiscoveryDataField(dataFieldList);
-      }
-    });
-    suppressedDiscoveryDataFieldPredicatesMap.put(false, new Predicate<List<DataFieldType>>() {
-      @Override
-      public boolean test(final List<DataFieldType> dataFieldList) {
-        return anyShouldNotContainSuppressedDiscoveryDataField(dataFieldList);
-      }
-    });
+    suppressedDiscoveryDataFieldPredicatesMap.put(true, this::shouldContainSuppressedDiscoveryDataField);
+    suppressedDiscoveryDataFieldPredicatesMap.put(false, this::anyShouldNotContainSuppressedDiscoveryDataField);
   }
 
   @BeforeEach
@@ -1139,33 +1129,34 @@ class OaiPmhImplTest {
   }
 
   private void verifyListRecordsWithSuppressedDiscoveryDataField(List<RecordType> records, boolean shouldContainField){
-    boolean isRecordsListCorrect = records.stream()
-      .map(RecordType::getMetadata)
-      .map(metadataType -> (gov.loc.marc21.slim.RecordType) metadataType.getAny())
-      .map(gov.loc.marc21.slim.RecordType::getDatafields)
-      .allMatch(suppressedDiscoveryDataFieldPredicatesMap.get(shouldContainField));
-    assertTrue(isRecordsListCorrect);
+    records.forEach(record -> {
+      gov.loc.marc21.slim.RecordType recordType = (gov.loc.marc21.slim.RecordType) record.getMetadata().getAny();
+      List<DataFieldType> datafields = recordType.getDatafields();
+      boolean suppressDiscovery = shouldContainField ? record.isSuppressDiscovery() : false;
+      boolean isRecordCorrect = suppressedDiscoveryDataFieldPredicatesMap.get(shouldContainField).test(datafields, suppressDiscovery);
+      assertTrue(isRecordCorrect);
+    });
   }
 
-  private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+  private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields, boolean suppressDiscovery) {
     return dataFields.stream()
       .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
-      .anyMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+      .anyMatch(dataField -> doesFieldContainSuppressedDiscoverySubfield(dataField, suppressDiscovery));
   }
 
-  private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields) {
+  private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields, boolean suppressDiscovery) {
     return dataFields.stream()
       .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
-      .noneMatch(this::doesFieldContainSuppressedDiscoverySubfield);
+      .noneMatch(dataField -> doesFieldContainSuppressedDiscoverySubfield(dataField, suppressDiscovery));
   }
 
-  private boolean doesFieldContainSuppressedDiscoverySubfield(final DataFieldType dataFieldType) {
+  private boolean doesFieldContainSuppressedDiscoverySubfield(final DataFieldType dataFieldType,  boolean suppressDiscovery) {
     List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
     if (Objects.nonNull(subfields) && subfields.size() > 0) {
       return subfields.stream()
         .anyMatch(subfieldatafieldType -> {
           return subfieldatafieldType.getCode().equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
-            && (subfieldatafieldType.getValue().equals("0") || subfieldatafieldType.getValue().equals("1"));
+            && suppressDiscovery ? subfieldatafieldType.getValue().equals("1") : subfieldatafieldType.getValue().equals("0");
         });
     }
     return false;

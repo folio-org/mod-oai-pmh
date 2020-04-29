@@ -199,22 +199,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @param records - records to be updated
    */
   private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
-    if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && request.getMetadataPrefix().equals(MetadataPrefix.MARC21XML.getName())) {
 
-      Predicate<DataFieldType> folioSpecificDataFieldPredicate = dataFieldType ->
+      Predicate<DataFieldType> generalInfoDataFieldPredicate = dataFieldType ->
         dataFieldType.getInd1().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
         && dataFieldType.getInd2().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
         && dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
       records.forEach(recordType -> {
         boolean isSuppressedFromDiscovery = recordType.isSuppressDiscovery();
-        String suppressDiscoveryValue = isSuppressedFromDiscovery ? "0" : "1";
+        String suppressDiscoveryValue = isSuppressedFromDiscovery ? "1" : "0";
         gov.loc.marc21.slim.RecordType record = (gov.loc.marc21.slim.RecordType) recordType.getMetadata().getAny();
         List<DataFieldType> datafields = record.getDatafields();
         boolean alreadyContainsFolioSpecificDataField = datafields.stream()
-          .anyMatch(folioSpecificDataFieldPredicate);
+          .anyMatch(generalInfoDataFieldPredicate);
 
-        if(alreadyContainsFolioSpecificDataField){
-          updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(folioSpecificDataFieldPredicate, suppressDiscoveryValue, datafields);
+        if(alreadyContainsFolioSpecificDataField) {
+          updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(generalInfoDataFieldPredicate, suppressDiscoveryValue, datafields);
         } else {
           buildGeneralInfoDataFieldWithSuppressDiscoverySubfield(suppressDiscoveryValue, datafields);
         }
@@ -226,13 +226,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Updates instance general info data field (marked with "999" tag and both indexes have "f" value) with new subfield which
    * holds data about record "suppress from discovery" state.
    *
-   * @param folioSpecificDataFieldPredicate - predicate with required field search criteria
+   * @param generalInfoDataFieldPredicate - predicate with required field search criteria
    * @param suppressDiscoveryValue - value that has to be assigned to subfield value field
    * @param datafields - list of {@link DataFieldType} which contains folio specific data field
    */
-  private void updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(final Predicate<DataFieldType> folioSpecificDataFieldPredicate, final String suppressDiscoveryValue, final List<DataFieldType> datafields) {
+  private void updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(final Predicate<DataFieldType> generalInfoDataFieldPredicate, final String suppressDiscoveryValue, final List<DataFieldType> datafields) {
     datafields.stream()
-      .filter(folioSpecificDataFieldPredicate)
+      .filter(generalInfoDataFieldPredicate)
       .findFirst()
       .ifPresent(dataFieldType -> {
         List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
@@ -249,13 +249,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @param datafields - list of {@link DataFieldType} which contains folio specific data field
    */
   private void buildGeneralInfoDataFieldWithSuppressDiscoverySubfield(final String suppressDiscoveryValue, final List<DataFieldType> datafields) {
-    DataFieldType folioSpecificDataField = new DataFieldType();
-    folioSpecificDataField.setInd1(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
-    folioSpecificDataField.setInd2(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
-    folioSpecificDataField.setTag(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
-    folioSpecificDataField.withSubfields(new SubfieldatafieldType().withCode(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
+    DataFieldType generalInfoDataField = new DataFieldType();
+    generalInfoDataField.setInd1(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataField.setInd2(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataField.setTag(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+    generalInfoDataField.withSubfields(new SubfieldatafieldType().withCode(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
       .withValue(suppressDiscoveryValue));
-    datafields.add(folioSpecificDataField);
+    datafields.add(generalInfoDataField);
   }
 
   /**
