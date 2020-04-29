@@ -201,7 +201,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
     if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && request.getMetadataPrefix().equals(MetadataPrefix.MARC21XML.getName())) {
 
-      Predicate<DataFieldType> GeneralInfoDataFieldPredicate = dataFieldType ->
+      Predicate<DataFieldType> generalInfoDataFieldPredicate = dataFieldType ->
         dataFieldType.getInd1().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
         && dataFieldType.getInd2().equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE)
         && dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
@@ -211,10 +211,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         gov.loc.marc21.slim.RecordType record = (gov.loc.marc21.slim.RecordType) recordType.getMetadata().getAny();
         List<DataFieldType> datafields = record.getDatafields();
         boolean alreadyContainsFolioSpecificDataField = datafields.stream()
-          .anyMatch(GeneralInfoDataFieldPredicate);
+          .anyMatch(generalInfoDataFieldPredicate);
 
         if(alreadyContainsFolioSpecificDataField) {
-          updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(GeneralInfoDataFieldPredicate, suppressDiscoveryValue, datafields);
+          updateGeneralInfoDataFieldWithSuppressDiscoverySubfield(generalInfoDataFieldPredicate, suppressDiscoveryValue, datafields);
         } else {
           buildGeneralInfoDataFieldWithSuppressDiscoverySubfield(suppressDiscoveryValue, datafields);
         }
