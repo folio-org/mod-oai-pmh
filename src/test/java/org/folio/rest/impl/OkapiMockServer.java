@@ -42,8 +42,9 @@ public class OkapiMockServer {
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
   private static final String NO_RECORDS_DATE_STORAGE = "2011-11-11T11:11:11.000Z";
-  static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01T00:00:00Z";
-  private static final String PARTITIONABLE_RECORDS_DATE_STORAGE = "2003-01-01T00:00:00.000Z";
+  static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01";
+  static final String PARTITIONABLE_RECORDS_DATE_TIME = "2003-01-01T00:00:00Z";
+  private static final String PARTITIONABLE_RECORDS_DATE_TIME_STORAGE = "2003-01-01T00:00:00.000Z";
   static final String ERROR_UNTIL_DATE = "2010-10-10T10:10:10Z";
   // 1 second should be added to storage until date time
   private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:11.000Z";
@@ -58,6 +59,8 @@ public class OkapiMockServer {
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07.000Z";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
+  static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
+  private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00.000Z";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -71,7 +74,8 @@ public class OkapiMockServer {
   private static final String INSTANCES_3 = "/instances_3.json";
   private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
   private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
-  private static final String INSTANCES_10 = "/instances_10.json";
+  private static final String INSTANCES_10_TOTAL_RECORDS_10 = "/instances_10_totalRecords_10.json";
+  private static final String INSTANCES_10_TOTAL_RECORDS_11 = "/instances_10_totalRecords_11.json";
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
 
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
@@ -181,6 +185,7 @@ public class OkapiMockServer {
 
   private void handleResultResponse(RoutingContext ctx, String filePath) {
     String query = ctx.request().getParam("query");
+
     if (query != null)
     {
       if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), EXISTING_IDENTIFIER))) {
@@ -193,7 +198,7 @@ public class OkapiMockServer {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
-      } else if (query.contains(PARTITIONABLE_RECORDS_DATE_STORAGE)) {
+      } else if (query.contains(PARTITIONABLE_RECORDS_DATE_TIME_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_11));
       } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_1_NO_RECORD_SOURCE));
@@ -205,8 +210,10 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_4));
       } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
+      } else if (query.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_10));
       } else {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10));
+        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_11));
       }
       logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
     } else {

@@ -23,9 +23,11 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -139,6 +141,9 @@ class OaiPmhImplTest {
   private static final String TENANT = OAI_TEST_TENANT;
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + TENANT + "/";
   private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
+  private static final List<VerbType> LIST_VERBS = Arrays.asList(LIST_RECORDS, LIST_IDENTIFIERS);
+  private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
+  private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
@@ -236,7 +241,8 @@ class OaiPmhImplTest {
 
     RequestSpecification request = createBaseRequest(LIST_IDENTIFIERS_PATH)
       .with()
-        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param("from", DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
@@ -412,7 +418,7 @@ class OaiPmhImplTest {
   void getOaiListVerbResumptionFlowStarted(VerbType verb) {
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
-      .param("from", PARTITIONABLE_RECORDS_DATE)
+      .param("from", PARTITIONABLE_RECORDS_DATE_TIME)
       .param("metadataPrefix", "oai_dc")
       .param("set", "all");
 
@@ -434,12 +440,115 @@ class OaiPmhImplTest {
     assertThat(params, is(hasSize(7)));
 
     assertThat(getParamValue(params, "metadataPrefix"), is(equalTo("oai_dc")));
-    assertThat(getParamValue(params, "from"), is(equalTo(PARTITIONABLE_RECORDS_DATE)));
+    assertThat(getParamValue(params, "from"), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
     assertThat(getParamValue(params, "until"), is((notNullValue())));
     assertThat(getParamValue(params, "set"), is(equalTo("all")));
     assertThat(getParamValue(params, "offset"), is(equalTo("10")));
     assertThat(getParamValue(params, "totalRecords"), is(equalTo("100")));
     assertThat(getParamValue(params, "nextRecordId"), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiListVerbResumptionFlowStartedWithFromParamHasDateAndTimeGranularity(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
+
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param("from", PARTITIONABLE_RECORDS_DATE_TIME)
+      .param("metadataPrefix", prefix.getName())
+      .param("set", "all");
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+
+    //rollback changes of system properties as they were before test
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
+    assertThat(params, is(hasSize(7)));
+    assertTrue(getParamValue(params, "until").matches(DATE_TIME_GRANULARITY_PATTERN));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularity(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
+
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param("from", PARTITIONABLE_RECORDS_DATE)
+      .param("metadataPrefix", prefix.getName())
+      .param("set", "all");
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+
+    //rollback changes of system properties as they were before test
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
+    assertThat(params, is(hasSize(7)));
+    assertTrue(getParamValue(params, "until").matches(DATE_ONLY_GRANULARITY_PATTERN));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiListVerbResumptionFlowStartedWithoutFromParamAndGranularitySettingIsFull(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
+
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param("metadataPrefix", prefix.getName())
+      .param("set", "all");
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+
+    //rollback changes of system properties as they were before test
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
+    assertThat(params, is(hasSize(6)));
+    assertTrue(getParamValue(params, "until").matches(DATE_TIME_GRANULARITY_PATTERN));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularityAndGranularitySettingIsDateOnly(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD.value());
+
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param("from", PARTITIONABLE_RECORDS_DATE)
+      .param("metadataPrefix", prefix.getName())
+      .param("set", "all");
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+
+    //rollback changes of system properties as they were before test
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
+    List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
+    assertThat(params, is(hasSize(7)));
+    assertTrue(getParamValue(params, "until").matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
   @ParameterizedTest
@@ -1221,6 +1330,16 @@ class OaiPmhImplTest {
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
       for (String encoding : ENCODINGS) {
         builder.add(Arguments.arguments(prefix, encoding));
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> metadataPrefixAndVerbProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (VerbType verb : LIST_VERBS) {
+        builder.add(Arguments.arguments(prefix, verb));
       }
     }
     return builder.build();

@@ -14,6 +14,7 @@ public final class Constants {
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
    */
   public static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  public static final DateTimeFormatter ISO_UTC_DATE_ONLY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
