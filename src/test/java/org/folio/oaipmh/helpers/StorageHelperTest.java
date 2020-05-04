@@ -67,7 +67,7 @@ class StorageHelperTest {
   @ParameterizedTest
   @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
   void getItems(String storageType) {
-    JsonObject entries = getJsonObjectFromFile(getDirPath(storageType) + "/instances_10.json");
+    JsonObject entries = getJsonObjectFromFile(getDirPath(storageType) + "/instances_10_totalRecords_10.json");
     JsonArray items = getStorageHelper(storageType).getItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(10)));

@@ -38,6 +38,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
@@ -54,6 +55,8 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
  * Abstract helper implementation that provides some common methods.
  */
 public abstract class AbstractHelper implements VerbHelper {
+
+  private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
 
   /**
    * Holds instance to handle items returned
@@ -298,7 +301,7 @@ public abstract class AbstractHelper implements VerbHelper {
       String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
       extraParams.put("nextRecordId", nextRecordId);
       if (request.getUntil() == null) {
-        extraParams.put("until", LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+        extraParams.put("until", getUntilDate(request, request.getFrom()));
       }
 
       resumptionToken = request.toResumptionToken(extraParams);
@@ -315,6 +318,26 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
+   * Returns string representation of built LocalDateTime object. If repository.timeGranularity == yyyy-MM-dd format then only this
+   * format has to be used for building LocalDateTime. If repository.timeGranularity == yyyy-MM-ddTHH:mm:ssZ then since such format
+   * allows both formats for 'from' parameter (date+time or date only) then 'until' value should be built using the same format as
+   * 'from' has with purpose to keep the matching the formats of both parameters.
+   *
+   * @param request - OIA-PMH request
+   * @param from    - from parameter
+   * @return string representation of built LocalDateTime object
+   */
+  private String getUntilDate(Request request, String from) {
+    boolean isDateOnly = isDateOnlyGranularity(request);
+    if (isDateOnly) {
+      return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
+    } else {
+      return isNotEmpty(from) && from.matches(DATE_ONLY_PATTERN) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY)
+        : LocalDateTime.now().format(ISO_UTC_DATE_TIME);
+    }
+  }
+
+  /**
    * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
    * <br/>
    * The following state is an indicator that flow cannot be safely resumed:
@@ -323,6 +346,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * record id does not match one stored in the resumptionToken</li>
    * <br/>
    * See <a href="https://issues.folio.org/browse/MODOAIPMH-10">MODOAIPMH-10</a> for more details.
+   *
    * @param request
    * @param totalRecords
    * @param instances
