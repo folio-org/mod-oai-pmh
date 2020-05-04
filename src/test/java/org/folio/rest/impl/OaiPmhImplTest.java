@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import static io.restassured.RestAssured.given;
 import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
@@ -71,6 +70,8 @@ import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.xml.bind.JAXBElement;
+
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.oaipmh.Constants;
@@ -99,6 +100,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+import org.purl.dc.elements._1.ElementType;
 
 import gov.loc.marc21.slim.DataFieldType;
 import gov.loc.marc21.slim.SubfieldatafieldType;
@@ -151,7 +153,8 @@ class OaiPmhImplTest {
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   private static final Map<VerbType, String> basePaths = new HashMap<>();
-  private final Map<Boolean, BiPredicate<List<DataFieldType>, Boolean>> suppressedDiscoveryDataFieldPredicatesMap = new HashMap<>();
+  private BiPredicate<DataFieldType, Boolean> suppressedDiscoveryMarcFieldPredicate;
+  private BiPredicate<JAXBElement<ElementType>, Boolean> suppressedDiscoveryDcFieldPredicate;
 
   static {
     basePaths.put(GET_RECORD, GET_RECORD_PATH);
@@ -166,7 +169,6 @@ class OaiPmhImplTest {
   void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     resetSystemProperties();
     setStorageType();
-
     String moduleName = PomReader.INSTANCE.getModuleName()
                                           .replaceAll("_", "-");  // RMB normalizes the dash to underscore, fix back
     String moduleVersion = PomReader.INSTANCE.getVersion();
@@ -187,7 +189,7 @@ class OaiPmhImplTest {
       // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
-    initSuppressedDiscoveryDataFieldPredicatesMap();
+    setupPredicates();
   }
 
   protected void setStorageType() {
@@ -208,9 +210,25 @@ class OaiPmhImplTest {
     System.clearProperty(REPOSITORY_STORAGE);
   }
 
-  private void initSuppressedDiscoveryDataFieldPredicatesMap(){
-    suppressedDiscoveryDataFieldPredicatesMap.put(true, this::shouldContainSuppressedDiscoveryDataField);
-    suppressedDiscoveryDataFieldPredicatesMap.put(false, this::anyShouldNotContainSuppressedDiscoveryDataField);
+  private void setupPredicates(){
+    suppressedDiscoveryMarcFieldPredicate = (dataField, discoverySuppressed) -> {
+      List<SubfieldatafieldType> subfields = dataField.getSubfields();
+      if (Objects.nonNull(subfields) && subfields.size() > 0) {
+        return subfields.stream()
+          .anyMatch(subfieldatafieldType -> {
+            String value = subfieldatafieldType.getValue();
+            return subfieldatafieldType.getCode()
+              .equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE) && discoverySuppressed ? value.equals("1") : value.equals("0");
+          });
+      }
+      return false;
+    };
+
+    suppressedDiscoveryDcFieldPredicate = (jaxbElement, discoverySuppressed) -> {
+      String value = jaxbElement.getValue().getValue();
+      return jaxbElement.getName().getLocalPart().equals("rights")
+        && discoverySuppressed ? value.equals("discovery suppressed") : value.equals("discovery not suppressed");
+    };
   }
 
   @BeforeEach
@@ -773,7 +791,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -794,13 +812,13 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, false);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, metadataPrefix, false);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixMarc21AndEncodingProvider")
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasTrueValue(MetadataPrefix metadataPrefix, String encoding) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -821,7 +839,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, true);
+    verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, metadataPrefix, true);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
@@ -1223,7 +1241,7 @@ class OaiPmhImplTest {
     }
   }
 
-  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, boolean shouldContainField) {
+  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, MetadataPrefix metadataPrefix, boolean shouldContainField) {
     List<RecordType> records;
     if (verbType == LIST_RECORDS) {
       records = oaipmh.getListRecords().getRecords();
@@ -1234,41 +1252,46 @@ class OaiPmhImplTest {
       fail("Can't verify specified verb: " + verbType);
       return;
     }
-    verifyListRecordsWithSuppressedDiscoveryDataField(records, shouldContainField);
+    if (metadataPrefix.equals(MetadataPrefix.MARC21XML)) {
+      verifySuppressedDiscoveryDataFieldForMarcRecords(records, shouldContainField);
+    } else {
+      verifySuppressedDiscoveryDataFieldForDcRecords(records, shouldContainField);
+    }
   }
 
-  private void verifyListRecordsWithSuppressedDiscoveryDataField(List<RecordType> records, boolean shouldContainField){
+  private void verifySuppressedDiscoveryDataFieldForMarcRecords(List<RecordType> records, boolean shouldContainField){
     records.forEach(record -> {
       gov.loc.marc21.slim.RecordType recordType = (gov.loc.marc21.slim.RecordType) record.getMetadata().getAny();
       List<DataFieldType> datafields = recordType.getDatafields();
-      boolean suppressDiscovery = shouldContainField ? record.isSuppressDiscovery() : false;
-      boolean isRecordCorrect = suppressedDiscoveryDataFieldPredicatesMap.get(shouldContainField).test(datafields, suppressDiscovery);
+      boolean discoverySuppressed = shouldContainField ? record.isSuppressDiscovery() : false;
+      boolean isRecordCorrect;
+      Stream<DataFieldType> stream = datafields.stream();
+      if (shouldContainField) {
+        isRecordCorrect = stream
+          .anyMatch(dataField -> suppressedDiscoveryMarcFieldPredicate.test(dataField, discoverySuppressed));
+      } else {
+        isRecordCorrect = stream
+          .noneMatch(dataField -> suppressedDiscoveryMarcFieldPredicate.test(dataField, discoverySuppressed));
+      }
       assertTrue(isRecordCorrect);
     });
   }
 
-  private boolean shouldContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields, boolean suppressDiscovery) {
-    return dataFields.stream()
-      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
-      .anyMatch(dataField -> doesFieldContainSuppressedDiscoverySubfield(dataField, suppressDiscovery));
-  }
-
-  private boolean anyShouldNotContainSuppressedDiscoveryDataField(List<DataFieldType> dataFields, boolean suppressDiscovery) {
-    return dataFields.stream()
-      .filter(dataFieldType -> dataFieldType.getTag().equals(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
-      .noneMatch(dataField -> doesFieldContainSuppressedDiscoverySubfield(dataField, suppressDiscovery));
-  }
-
-  private boolean doesFieldContainSuppressedDiscoverySubfield(final DataFieldType dataFieldType,  boolean suppressDiscovery) {
-    List<SubfieldatafieldType> subfields = dataFieldType.getSubfields();
-    if (Objects.nonNull(subfields) && subfields.size() > 0) {
-      return subfields.stream()
-        .anyMatch(subfieldatafieldType -> {
-          return subfieldatafieldType.getCode().equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE)
-            && suppressDiscovery ? subfieldatafieldType.getValue().equals("1") : subfieldatafieldType.getValue().equals("0");
-        });
-    }
-    return false;
+  private void verifySuppressedDiscoveryDataFieldForDcRecords(List<RecordType> records, boolean shouldContainField){
+    records.forEach(record -> {
+      Dc dc = (Dc) record.getMetadata().getAny();
+      boolean discoverySuppressed = shouldContainField ? record.isSuppressDiscovery() : false;
+      boolean isRecordCorrect;
+      Stream<JAXBElement<ElementType>> stream = dc.getTitlesAndCreatorsAndSubjects().stream();
+      if (shouldContainField) {
+        isRecordCorrect = stream
+          .anyMatch(jaxbElement -> suppressedDiscoveryDcFieldPredicate.test(jaxbElement, discoverySuppressed));
+      } else {
+        isRecordCorrect = stream
+          .noneMatch(jaxbElement -> suppressedDiscoveryDcFieldPredicate.test(jaxbElement, discoverySuppressed));
+      }
+      assertTrue(isRecordCorrect);
+    });
   }
 
   private ResumptionTokenType getResumptionToken(OAIPMH oaipmh, VerbType verb) {
