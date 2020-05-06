@@ -65,7 +65,7 @@ public class ModTenantAPI extends TenantAPI {
 
   private CompletableFuture<Response> loadConfigData(Map<String, String> headers, Context context) {
     VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
-    Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS.split(",")));
+    Set<String> configsSet = new HashSet<>(Arrays.asList("behavior","general","technical"));
 
     String okapiUrl = headers.get(X_OKAPI_URL);
     String tenant = headers.get(X_OKAPI_TENANT);
