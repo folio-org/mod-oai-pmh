@@ -2,20 +2,27 @@ package org.folio.oaipmh.helpers.records.impl;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.function.BiPredicate;
 
 import javax.xml.bind.JAXBElement;
 
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseHelper;
-import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.helpers.records.RecordHelper;
 import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.rest.impl.OkapiMockServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openarchives.oai._2.MetadataType;
@@ -25,14 +32,16 @@ import org.purl.dc.elements._1.ElementType;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 class DcRecordHelperTest {
 
-  private static final String RECORD_COLLECTION_PATH = File.separator + "record-helper";
-  private static final String RECORD_COLLECTION_FILENAME = "records";
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+  private static final String RECORD_COLLECTION_PATH = "/record-helper/records.json";
 
   private BiPredicate<JAXBElement<ElementType>, Boolean> suppressedDiscoveryFieldPredicate;
-  private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
   private Collection<RecordType> recordCollection = new ArrayList<>();
   private RecordHelper recordHelper;
   private MetadataPrefix metadataPrefix;
@@ -44,8 +53,7 @@ class DcRecordHelperTest {
     metadataPrefix = getMetadataPrefix();
     recordHelper = RecordHelper.getInstance(metadataPrefix);
     setupSuppressedDiscoveryFieldPredicate();
-    JsonArray recordCollectionJson = configurationHelper
-      .getJsonConfigFromResources(RECORD_COLLECTION_PATH, RECORD_COLLECTION_FILENAME)
+    JsonArray recordCollectionJson = new JsonObject(Objects.requireNonNull(getJsonObjectFromFile(RECORD_COLLECTION_PATH)))
       .getJsonArray("sourceRecords");
     recordCollectionJson.stream()
       .map(record -> (JsonObject) record)
@@ -97,6 +105,23 @@ class DcRecordHelperTest {
       return jaxbElement.getName().getLocalPart().equals("rights")
         && discoverySuppressed ? value.equals("discovery suppressed") : value.equals("discovery not suppressed");
     };
+  }
+
+  private String getJsonObjectFromFile(String path) {
+    try {
+      logger.debug("Loading file " + path);
+      URL resource = OkapiMockServer.class.getResource(path);
+      if (resource == null) {
+        return null;
+      }
+      File file = new File(resource.getFile());
+      byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
+      return new String(encoded, StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      logger.error("Unexpected error", e);
+      fail(e.getMessage());
+    }
+    return null;
   }
 
 }

@@ -38,7 +38,6 @@ public final class Constants {
   public static final String GENERAL_INFO_DATA_FIELD_TAG_NUMBER = "999";
   public static final String INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE = "t";
 
-  public static final String CONFIGS_LIST = "behavior,general,technical";
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";
 

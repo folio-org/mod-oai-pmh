@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -17,12 +16,12 @@ import io.vertx.core.json.JsonObject;
 
 class ConfigurationHelperTest {
 
-  private static final String CORRECT_DIRECTORY_PATH = "config" + File.separator + "configurationHelperTestDir";
-  private static final String CORRECT_JSON_FILE_NAME = "testJson";
+  private static final String CORRECT_DIRECTORY_PATH = "config/configurationHelperTestDir";
+  private static final String CORRECT_JSON_FILE_NAME = "testJson.json";
   private static final String NONEXISTENT_DIRECTORY_PATH = "nonexistentDir";
-  private static final String NONEXISTENT_JSON_FILE_NAME = "nonexistentFileName";
-  private static final String JSON_FILE_WITHOUT_VALUE_FIELD = "incorrectTestJson";
-  private static final String JSON_WITH_INVALID_VALUE_FIELD = "testJsonWithIncorrectValueField";
+  private static final String NONEXISTENT_JSON_FILE_NAME = "nonexistentFileName.json";
+  private static final String JSON_FILE_WITHOUT_VALUE_FIELD = "incorrectTestJson.json";
+  private static final String JSON_WITH_INVALID_VALUE_FIELD = "testJsonWithIncorrectValueField.json";
   private static final String TEST_JSON_NAME_FIELD = "name";
   private static final String TEST_JSON_VALUE_FIELD = "value";
   private static final String NAME_FILED_EXPECTED_VALUE = "testJsonName";

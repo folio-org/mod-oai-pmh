@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyAsync;
-import static org.folio.oaipmh.Constants.CONFIGS;
-import static org.folio.oaipmh.Constants.CONFIGS_LIST;
 import static org.folio.oaipmh.Constants.VALUE;
 
 import java.io.UnsupportedEncodingException;
@@ -22,6 +20,7 @@ import java.util.function.Function;
 import javax.ws.rs.core.Response;
 
 import org.apache.http.HttpStatus;
+import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.helpers.storage.CQLQueryBuilder;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
@@ -44,9 +43,9 @@ import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class ModTenantAPI extends TenantAPI {
-  public static final String SHOULD_NOT_UPDATE_PROPS = "shouldUpdateProps";
   private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
 
+  private static final String SHOULD_NOT_UPDATE_PROPS = "shouldUpdateProps";
   private static final String X_OKAPI_URL = "x-okapi-url";
   private static final String X_OKAPI_TENANT = "x-okapi-tenant";
   private static final String MOD_CONFIGURATION_ENTRIES_URI = "/configurations/entries";
@@ -54,6 +53,7 @@ public class ModTenantAPI extends TenantAPI {
   private static final String ENABLED = "enabled";
   private static final String CONFIG_DIR_PATH = "config";
   private static final int CONFIG_JSON_BODY = 0;
+  private static final String CONFIGS = "behavior,general,technical";
   private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
@@ -65,7 +65,7 @@ public class ModTenantAPI extends TenantAPI {
 
   private CompletableFuture<Response> loadConfigData(Map<String, String> headers, Context context) {
     VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
-    Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
+    Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS.split(",")));
 
     String okapiUrl = headers.get(X_OKAPI_URL);
     String tenant = headers.get(X_OKAPI_TENANT);
@@ -109,9 +109,9 @@ public class ModTenantAPI extends TenantAPI {
   private CompletableFuture<Map.Entry<String, JsonObject>> postConfigIfAbsent(Context context, HttpClientInterface httpClient,
       Map<String, String> headers, Map.Entry<String, JsonObject> configPair) {
     JsonObject config = configPair.getValue();
-    JsonArray configs = config.getJsonArray(CONFIGS);
+    JsonArray configs = config.getJsonArray(Constants.CONFIGS);
     if (configs.isEmpty()) {
-      JsonObject configToPost = prepareJsonToPost(configPair.getKey());
+      JsonObject configToPost = prepareJsonToPost(configPair.getKey().concat(".json"));
       try {
         headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString());
         return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_URI, headers)
@@ -173,7 +173,7 @@ public class ModTenantAPI extends TenantAPI {
       if (config.containsKey(SHOULD_NOT_UPDATE_PROPS)) {
         return configEntry;
       }
-      JsonObject configBody = config.getJsonArray(CONFIGS)
+      JsonObject configBody = config.getJsonArray(Constants.CONFIGS)
         .getJsonObject(CONFIG_JSON_BODY);
       Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(configBody);
       Properties sysProps = System.getProperties();

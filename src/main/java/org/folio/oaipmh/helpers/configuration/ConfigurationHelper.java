@@ -29,7 +29,6 @@ public class ConfigurationHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHelper.class);
 
-  private static final String JSON_EXTENSION = ".json";
   private static ConfigurationHelper instance;
 
   private ConfigurationHelper(){}
@@ -73,9 +72,8 @@ public class ConfigurationHelper {
 
   @NotNull
   private String buildConfigPath(String dirPath, String configJsonName) {
-    return dirPath.concat(File.separator)
-      .concat(configJsonName)
-      .concat(JSON_EXTENSION);
+    return dirPath.concat("/")
+      .concat(configJsonName);
   }
 
   /**
