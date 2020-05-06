@@ -42,7 +42,7 @@ class DcRecordHelperTest {
   void setUp() {
     storageHelper = new SourceRecordStorageHelper();
     metadataPrefix = getMetadataPrefix();
-    recordHelper = getRecordHelper();
+    recordHelper = RecordHelper.getInstance(metadataPrefix);
     setupSuppressedDiscoveryFieldPredicate();
     JsonArray recordCollectionJson = configurationHelper
       .getJsonConfigFromResources(RECORD_COLLECTION_PATH, RECORD_COLLECTION_FILENAME)
@@ -71,10 +71,10 @@ class DcRecordHelperTest {
       boolean discoverySuppressed = record.isSuppressDiscovery();
       Dc dc = (Dc) record.getMetadata()
         .getAny();
-      boolean isRecordCollectionCorrect = dc.getTitlesAndCreatorsAndSubjects()
+      boolean isRecordCorrect = dc.getTitlesAndCreatorsAndSubjects()
         .stream()
         .anyMatch(jaxbElement -> suppressedDiscoveryFieldPredicate.test(jaxbElement, discoverySuppressed));
-      assertTrue(isRecordCollectionCorrect);
+      assertTrue(isRecordCorrect);
     });
   }
 
@@ -85,10 +85,6 @@ class DcRecordHelperTest {
       .bytesToObject(byteSource);
     metadata.setAny(record);
     return metadata;
-  }
-
-  protected RecordHelper getRecordHelper() {
-    return new DcRecordHelper();
   }
 
   protected MetadataPrefix getMetadataPrefix() {

@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.function.BiPredicate;
 
 import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.helpers.records.RecordHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.openarchives.oai._2.RecordType;
 
@@ -32,10 +31,10 @@ class MarcRecordHelperTest extends DcRecordHelperTest {
       boolean discoverySuppressed = record.isSuppressDiscovery();
       gov.loc.marc21.slim.RecordType recordType = (gov.loc.marc21.slim.RecordType) record.getMetadata()
         .getAny();
-      boolean isRecordCollectionCorrect = recordType.getDatafields()
+      boolean isRecordCorrect = recordType.getDatafields()
         .stream()
         .anyMatch(dataField -> suppressedDiscoveryFieldPredicate.test(dataField, discoverySuppressed));
-      assertTrue(isRecordCollectionCorrect);
+      assertTrue(isRecordCorrect);
     });
   }
 
@@ -52,11 +51,6 @@ class MarcRecordHelperTest extends DcRecordHelperTest {
       }
       return false;
     };
-  }
-
-  @Override
-  protected RecordHelper getRecordHelper() {
-    return new MarcRecordHelper();
   }
 
   @Override

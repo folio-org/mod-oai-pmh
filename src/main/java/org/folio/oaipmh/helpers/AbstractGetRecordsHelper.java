@@ -203,12 +203,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    */
   private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
     if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
-      RecordHelper recordHelper;
-      if(request.getMetadataPrefix().equals(MetadataPrefix.MARC21XML.getName())){
-        recordHelper = new MarcRecordHelper();
-      } else {
-        recordHelper = new DcRecordHelper();
-      }
+      RecordHelper recordHelper = RecordHelper.getInstance(MetadataPrefix.fromName(request.getMetadataPrefix()));
       recordHelper.updateRecordCollectionWithSuppressDiscoveryData(records);
     }
   }

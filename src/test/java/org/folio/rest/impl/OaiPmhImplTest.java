@@ -1368,14 +1368,6 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
-  private static Stream<Arguments> metadataPrefixMarc21AndEncodingProvider() {
-    Stream.Builder<Arguments> builder = Stream.builder();
-      for (String encoding : ENCODINGS) {
-        builder.add(Arguments.arguments(MetadataPrefix.MARC21XML, encoding));
-      }
-    return builder.build();
-  }
-
   private void verifyIdentifiers(List<HeaderType> headers, List<String> expectedIdentifiers) {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
