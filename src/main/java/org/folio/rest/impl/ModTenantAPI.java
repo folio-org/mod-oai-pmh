@@ -53,7 +53,6 @@ public class ModTenantAPI extends TenantAPI {
   private static final String ENABLED = "enabled";
   private static final String CONFIG_DIR_PATH = "config";
   private static final int CONFIG_JSON_BODY = 0;
-  private static final String CONFIGS = "behavior,general,technical";
   private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
