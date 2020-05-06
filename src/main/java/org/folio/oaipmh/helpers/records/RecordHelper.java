@@ -9,6 +9,10 @@ import org.folio.oaipmh.helpers.records.impl.DcRecordHelper;
 import org.folio.oaipmh.helpers.records.impl.MarcRecordHelper;
 import org.openarchives.oai._2.RecordType;
 
+/**
+ * Record helpers is used for manipulating under the record collection that composes the oai-pmh feed.
+ * The main operations for which it is used are adding,deleting and formatting record fields and etc.
+ */
 public interface RecordHelper {
 
   /**
@@ -22,6 +26,11 @@ public interface RecordHelper {
     }
   }
 
+  /**
+   * Updates records with 'record discovery suppression state' data.
+   *
+   * @param records - records to be updated
+   */
   void updateRecordCollectionWithSuppressDiscoveryData(Collection<RecordType> records);
 
 }
