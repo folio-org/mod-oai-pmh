@@ -142,7 +142,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
             .thenApply(records -> {
-              updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(request, records);
               addRecordsToOaiResponse(oaipmh, records);
               addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
               return buildResponse(oaipmh);
@@ -178,6 +177,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
+            updateSourceWithDiscoverySuppressedDataIfNecessary(source);
             record.withMetadata(buildOaiMetadata(request, source));
           }
           records.put(recordId, record);
@@ -187,17 +187,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return records;
   }
 
-  /**
-   * Updates records with "suppressed from discovery" data field if repository.suppressedRecordsProcessing == false.
-   *
-   * @param request - request
-   * @param records - records to be updated
-   */
-  private void updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(Request request, Collection<RecordType> records) {
-    if (getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
-      RecordHelper recordHelper = RecordHelper.getInstance(MetadataPrefix.fromName(request.getMetadataPrefix()));
-      recordHelper.updateRecordCollectionWithSuppressDiscoveryData(records);
-    }
+  private void updateSourceWithDiscoverySuppressedDataIfNecessary(String source) {
+    JsonObject content = new JsonObject(source);
+    JsonArray fields = content.getJsonArray("fields");
   }
 
   /**
