@@ -2,11 +2,14 @@ package org.folio.oaipmh.helpers;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
+import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -18,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -27,8 +31,8 @@ import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseHelper;
-import org.folio.oaipmh.helpers.records.RecordHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.jetbrains.annotations.NotNull;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -45,6 +49,11 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+  private static final String FIELDS = "fields";
+  private static final String INDEX_ONE = "ind1";
+  private static final String INDEX_TWO = "ind2";
+  private static final String SUBFIELDS = "subfields";
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {
@@ -102,7 +111,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-                       .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(request, response)));
+                       .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
@@ -135,7 +144,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final OAIPMH oaipmh = buildBaseResponse(request);
 
     // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
-    return supplyBlockingAsync(ctx, () -> buildRecords(request, instances))
+    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
       .thenCompose(recordsMap -> {
         if (recordsMap.isEmpty()) {
           return buildNoRecordsFoundOaiResponse(oaipmh);
@@ -154,31 +163,27 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
    * otherwise empty map is returned
    */
-  private Map<String, RecordType> buildRecords(Request request, JsonArray instances) {
+  private Map<String, RecordType> buildRecords(Context context, Request request, JsonArray instances) {
     Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
       // Using LinkedHashMap just to rely on order returned by storage service
       records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
-      boolean shouldAddSuppressDiscoveryFlag = getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-
         String recordId = storageHelper.getRecordId(instance);
         String identifierId = storageHelper.getIdentifierId(instance);
         if (StringUtils.isNotEmpty(identifierId)) {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-          if (shouldAddSuppressDiscoveryFlag) {
-            record.setSuppressDiscovery(storageHelper.getSuppressedFromDiscovery(instance));
-          }
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
-            updateSourceWithDiscoverySuppressedDataIfNecessary(source);
+            source = updateSourceWithDiscoverySuppressedDataIfNecessary(source, instance, request);
             record.withMetadata(buildOaiMetadata(request, source));
+          } else {
+            context.put(recordId, instance);
           }
           records.put(recordId, record);
         }
@@ -187,18 +192,83 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return records;
   }
 
-  private void updateSourceWithDiscoverySuppressedDataIfNecessary(String source) {
-    JsonObject content = new JsonObject(source);
-    JsonArray fields = content.getJsonArray("fields");
+  /**
+   * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional subfield which holds data about record discovery
+   * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite case.
+   *
+   * @param source record source
+   * @param sourceOwner record source owner
+   * @param request OAI-PMH request
+   * @return record source
+   */
+  private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
+    if(getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+      JsonObject content = new JsonObject(source);
+      JsonArray fields = content.getJsonArray(FIELDS);
+      Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
+      if (generalInfoDataFieldOptional.isPresent()){
+        updateDatafieldWithDiscoverySuppressedData(generalInfoDataFieldOptional.get(), sourceOwner);
+      } else {
+        appendGeneralInfoDatafieldWithDiscoverySuppressedData(fields, sourceOwner);
+      }
+      return content.encode();
+    }
+    return source;
+  }
+
+  @NotNull
+  private Optional<JsonObject> getGeneralInfoDataField(JsonArray fields) {
+    return fields.stream()
+      .map(obj -> (JsonObject) obj)
+      .filter(jsonObject -> jsonObject.containsKey(GENERAL_INFO_DATA_FIELD_TAG_NUMBER))
+      .filter(jsonObject -> {
+        JsonObject entryOfJson = jsonObject.getJsonObject(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+        String ind1 = entryOfJson.getString(INDEX_ONE);
+        String ind2 = entryOfJson.getString(INDEX_TWO);
+        return StringUtils.isNotEmpty(ind1) && StringUtils.isNotEmpty(ind2) && ind1.equals(ind2)
+          && ind1.equals(GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+      })
+      .findFirst();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateDatafieldWithDiscoverySuppressedData(JsonObject generalInfoDataField, JsonObject sourceOwner) {
+    JsonObject innerJsonField = generalInfoDataField.getJsonObject(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+    JsonArray subfields = innerJsonField.getJsonArray(SUBFIELDS);
+    Map<String, Object> map = new LinkedHashMap<>();
+    int value = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
+    map.put("t", value);
+    List<Object> list = subfields.getList();
+    list.add(map);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner){
+    List<Object> list = fields.getList();
+    Map<String, Object> generalInfoDataField = new LinkedHashMap<>();
+    Map<String, Object> generalInfoDataFieldContent = new LinkedHashMap<>();
+    List<Object> subfields = new ArrayList<>();
+    Map<String, Object> generalInfoDataFieldSubfield = new LinkedHashMap<>();
+
+    int value = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
+    generalInfoDataFieldSubfield.put(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE, value);
+    subfields.add(generalInfoDataFieldSubfield);
+    generalInfoDataFieldContent.put("ind1", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put("ind2", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put("subfields", subfields);
+    generalInfoDataField.put(GENERAL_INFO_DATA_FIELD_TAG_NUMBER, generalInfoDataFieldContent);
+    list.add(generalInfoDataField);
   }
 
   /**
    * Builds {@link MetadataType} if the response from storage service is successful
+   * @param context - holds json object that is a source owner which is used for building metadata
+   * @param id - source owner id
    * @param request the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
-  private MetadataType buildOaiMetadata(Request request, org.folio.rest.tools.client.Response sourceResponse) {
+  private MetadataType buildOaiMetadata(Context context, String id, Request request, org.folio.rest.tools.client.Response sourceResponse) {
     if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
       logger.error("Record not found. Service responded with error: " + sourceResponse.getError());
 
@@ -211,7 +281,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       throw new IllegalStateException(sourceResponse.getError().toString());
     }
 
+    JsonObject sourceOwner = context.get(id);
     String source = storageHelper.getRecordSource(sourceResponse.getBody());
+    source = updateSourceWithDiscoverySuppressedDataIfNecessary(source, sourceOwner, request);
     return buildOaiMetadata(request, source);
   }
 

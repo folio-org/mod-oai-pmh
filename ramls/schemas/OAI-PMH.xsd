@@ -153,7 +153,6 @@
       <element name="header" type="oai:headerType"/>
       <element name="metadata" type="oai:metadataType" minOccurs="0"/>
       <element name="about" type="oai:aboutType" minOccurs="0" maxOccurs="unbounded"/>
-      <element name="suppressDiscovery" type="boolean" minOccurs="0" maxOccurs="1"/>
     </sequence>
   </complexType>
 

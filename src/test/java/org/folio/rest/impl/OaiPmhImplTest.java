@@ -5,7 +5,7 @@ import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isIn;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -66,7 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -147,14 +148,18 @@ class OaiPmhImplTest {
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
 
+  private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
+  private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
+  private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_DC = "discovery suppressed";
+
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
   private static final Map<VerbType, String> basePaths = new HashMap<>();
-  private BiPredicate<DataFieldType, Boolean> suppressedDiscoveryMarcFieldPredicate;
-  private BiPredicate<JAXBElement<ElementType>, Boolean> suppressedDiscoveryDcFieldPredicate;
+  private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
+  private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
   static {
     basePaths.put(GET_RECORD, GET_RECORD_PATH);
@@ -211,23 +216,23 @@ class OaiPmhImplTest {
   }
 
   private void setupPredicates(){
-    suppressedDiscoveryMarcFieldPredicate = (dataField, discoverySuppressed) -> {
+    suppressedDiscoveryMarcFieldPredicate = (dataField) -> {
       List<SubfieldatafieldType> subfields = dataField.getSubfields();
       if (Objects.nonNull(subfields) && subfields.size() > 0) {
         return subfields.stream()
           .anyMatch(subfieldatafieldType -> {
             String value = subfieldatafieldType.getValue();
             return subfieldatafieldType.getCode()
-              .equals(INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE) && discoverySuppressed ? value.equals("1") : value.equals("0");
+              .equals(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE) && value.equals("0") || value.equals("1");
           });
       }
       return false;
     };
 
-    suppressedDiscoveryDcFieldPredicate = (jaxbElement, discoverySuppressed) -> {
+    suppressedDiscoveryDcFieldPredicate = (jaxbElement) -> {
       String value = jaxbElement.getValue().getValue();
       return jaxbElement.getName().getLocalPart().equals("rights")
-        && discoverySuppressed ? value.equals("discovery suppressed") : value.equals("discovery not suppressed");
+        && value.equals("discovery suppressed") || value.equals("discovery not suppressed") || value.equals("");
     };
   }
 
@@ -791,7 +796,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProvider")
+  @MethodSource("metadataPrefixDcAndEncodingProvider")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -840,6 +845,7 @@ class OaiPmhImplTest {
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
     verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, metadataPrefix, true);
+    verifySuppressDiscoveryFieldHasCorrectValue(oaipmh, LIST_RECORDS, metadataPrefix);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug(String.format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
@@ -1241,7 +1247,26 @@ class OaiPmhImplTest {
     }
   }
 
-  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, MetadataPrefix metadataPrefix, boolean shouldContainField) {
+  private void verifySuppressDiscoveryFieldHasCorrectValue(OAIPMH oaipmh, VerbType verbType, MetadataPrefix metadataPrefix) {
+    List<RecordType> records = getListRecords(oaipmh, verbType);
+    if(Objects.isNull(records)) {
+      fail("Can't verify specified verb: " + verbType);
+    }
+    records.stream()
+      .filter(recordType -> recordType.getHeader().getIdentifier().contains(TEST_INSTANCE_ID))
+      .findFirst()
+      .ifPresent(
+        recordType -> {
+          if(metadataPrefix.equals(MetadataPrefix.MARC21XML)) {
+            verifyForMarcRecord(recordType);
+          } else {
+            verifyForDcRecord(recordType);
+          }
+        }
+      );
+  }
+
+  private List<RecordType> getListRecords(OAIPMH oaipmh, VerbType verbType) {
     List<RecordType> records;
     if (verbType == LIST_RECORDS) {
       records = oaipmh.getListRecords().getRecords();
@@ -1249,8 +1274,44 @@ class OaiPmhImplTest {
     else if (verbType == GET_RECORD){
       records = Collections.singletonList(oaipmh.getGetRecord().getRecord());
     } else {
+      return null;
+    }
+    return records;
+  }
+
+  private void verifyForMarcRecord(RecordType record) {
+    gov.loc.marc21.slim.RecordType recordType = (gov.loc.marc21.slim.RecordType) record.getMetadata().getAny();
+    List<DataFieldType> datafields = recordType.getDatafields();
+    datafields.stream()
+      .filter(suppressedDiscoveryMarcFieldPredicate)
+      .findFirst()
+      .ifPresent(dataField -> {
+        Optional<SubfieldatafieldType> subfieldOptional = dataField.getSubfields().stream()
+          .filter(subfieldatafieldType -> subfieldatafieldType.getCode().equals(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE))
+          .findFirst();
+          if(subfieldOptional.isPresent()){
+            assertEquals(TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21, subfieldOptional.get().getValue());
+          } else {
+            fail("Record has incorrect structure: datafield 999 is absence");
+          }
+      });
+  }
+
+  private void verifyForDcRecord(RecordType record) {
+    Dc dc = (Dc) record.getMetadata().getAny();
+    dc.getTitlesAndCreatorsAndSubjects().stream()
+      .filter(suppressedDiscoveryDcFieldPredicate)
+      .findFirst()
+      .ifPresent(jaxbElement -> {
+        String value = jaxbElement.getValue().getValue();
+        assertEquals(TEST_INSTANCE_EXPECTED_VALUE_FOR_DC, value);
+      });
+  }
+
+  private void verifySuppressedDiscoveryFieldPresence(OAIPMH oaipmh, VerbType verbType, MetadataPrefix metadataPrefix, boolean shouldContainField) {
+    List<RecordType> records = getListRecords(oaipmh, verbType);
+    if(Objects.isNull(records)) {
       fail("Can't verify specified verb: " + verbType);
-      return;
     }
     if (metadataPrefix.equals(MetadataPrefix.MARC21XML)) {
       verifySuppressedDiscoveryDataFieldForMarcRecords(records, shouldContainField);
@@ -1263,15 +1324,14 @@ class OaiPmhImplTest {
     records.forEach(record -> {
       gov.loc.marc21.slim.RecordType recordType = (gov.loc.marc21.slim.RecordType) record.getMetadata().getAny();
       List<DataFieldType> datafields = recordType.getDatafields();
-      boolean discoverySuppressed = shouldContainField ? record.isSuppressDiscovery() : false;
       boolean isRecordCorrect;
       Stream<DataFieldType> stream = datafields.stream();
       if (shouldContainField) {
         isRecordCorrect = stream
-          .anyMatch(dataField -> suppressedDiscoveryMarcFieldPredicate.test(dataField, discoverySuppressed));
+          .anyMatch(suppressedDiscoveryMarcFieldPredicate);
       } else {
         isRecordCorrect = stream
-          .noneMatch(dataField -> suppressedDiscoveryMarcFieldPredicate.test(dataField, discoverySuppressed));
+          .noneMatch(suppressedDiscoveryMarcFieldPredicate);
       }
       assertTrue(isRecordCorrect);
     });
@@ -1280,15 +1340,14 @@ class OaiPmhImplTest {
   private void verifySuppressedDiscoveryDataFieldForDcRecords(List<RecordType> records, boolean shouldContainField){
     records.forEach(record -> {
       Dc dc = (Dc) record.getMetadata().getAny();
-      boolean discoverySuppressed = shouldContainField ? record.isSuppressDiscovery() : false;
       boolean isRecordCorrect;
       Stream<JAXBElement<ElementType>> stream = dc.getTitlesAndCreatorsAndSubjects().stream();
       if (shouldContainField) {
         isRecordCorrect = stream
-          .anyMatch(jaxbElement -> suppressedDiscoveryDcFieldPredicate.test(jaxbElement, discoverySuppressed));
+          .anyMatch(suppressedDiscoveryDcFieldPredicate);
       } else {
         isRecordCorrect = stream
-          .noneMatch(jaxbElement -> suppressedDiscoveryDcFieldPredicate.test(jaxbElement, discoverySuppressed));
+          .noneMatch(suppressedDiscoveryDcFieldPredicate);
       }
       assertTrue(isRecordCorrect);
     });
@@ -1365,6 +1424,14 @@ class OaiPmhImplTest {
         builder.add(Arguments.arguments(prefix, verb));
       }
     }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> metadataPrefixDcAndEncodingProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+      for (String encoding : ENCODINGS) {
+        builder.add(Arguments.arguments(MetadataPrefix.DC, encoding));
+      }
     return builder.build();
   }
 
