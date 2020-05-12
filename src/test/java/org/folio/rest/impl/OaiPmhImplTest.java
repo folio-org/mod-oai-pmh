@@ -796,7 +796,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixDcAndEncodingProvider")
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     getLogger().debug(String.format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -1424,14 +1424,6 @@ class OaiPmhImplTest {
         builder.add(Arguments.arguments(prefix, verb));
       }
     }
-    return builder.build();
-  }
-
-  private static Stream<Arguments> metadataPrefixDcAndEncodingProvider() {
-    Stream.Builder<Arguments> builder = Stream.builder();
-      for (String encoding : ENCODINGS) {
-        builder.add(Arguments.arguments(MetadataPrefix.DC, encoding));
-      }
     return builder.build();
   }
 
