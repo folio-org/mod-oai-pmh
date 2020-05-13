@@ -232,7 +232,7 @@ class OaiPmhImplTest {
     suppressedDiscoveryDcFieldPredicate = (jaxbElement) -> {
       String value = jaxbElement.getValue().getValue();
       return jaxbElement.getName().getLocalPart().equals("rights")
-        && value.equals("discovery suppressed") || value.equals("discovery not suppressed") || value.equals("");
+        && value.equals("discovery suppressed") || value.equals("discovery not suppressed");
     };
   }
 
