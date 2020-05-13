@@ -255,7 +255,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     subfields.add(generalInfoDataFieldSubfield);
     generalInfoDataFieldContent.put("ind1", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
     generalInfoDataFieldContent.put("ind2", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
-    generalInfoDataFieldContent.put("subfields", subfields);
+    generalInfoDataFieldContent.put(SUBFIELDS, subfields);
     generalInfoDataField.put(GENERAL_INFO_DATA_FIELD_TAG_NUMBER, generalInfoDataFieldContent);
     list.add(generalInfoDataField);
   }

@@ -1,11 +1,9 @@
 package org.folio.rest.impl;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
