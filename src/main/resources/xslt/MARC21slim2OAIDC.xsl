@@ -203,8 +203,8 @@
             <xsl:if test="string-length($suppress)>0">
                 <dc:rights>
                   <xsl:choose>
-                    <xsl:when test="$suppress = 0">discovery suppressed</xsl:when>
-                    <xsl:when test="$suppress = 1">discovery not suppressed</xsl:when>
+                    <xsl:when test="$suppress = 0">discovery not suppressed</xsl:when>
+                    <xsl:when test="$suppress = 1">discovery suppressed</xsl:when>
                   </xsl:choose>
                 </dc:rights>
             </xsl:if>

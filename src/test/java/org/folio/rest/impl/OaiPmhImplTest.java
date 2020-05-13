@@ -150,7 +150,7 @@ class OaiPmhImplTest {
 
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
-  private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_DC = "discovery suppressed";
+  private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_DC = "discovery not suppressed";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
