@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static org.folio.oaipmh.Constants.VALUE;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,7 +13,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.folio.oaipmh.mappers.PropertyNameMapper;
-import org.jetbrains.annotations.NotNull;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -33,7 +31,7 @@ public class ConfigurationHelper {
 
   private ConfigurationHelper(){}
 
-  public static ConfigurationHelper getInstance(){
+  public static ConfigurationHelper getInstance() {
     if(Objects.nonNull(instance)){
       return instance;
     }
