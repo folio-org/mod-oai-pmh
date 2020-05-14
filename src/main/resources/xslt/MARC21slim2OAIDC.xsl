@@ -197,7 +197,18 @@
             <dc:rights>
                 <xsl:value-of select="marc:subfield[@code='a']"/>
             </dc:rights>
-        </xsl:for-each><!--</oai_dc:dc>-->
+        </xsl:for-each>
+      <xsl:for-each select="marc:datafield[@tag=999 and @ind1='f' and @ind2='f']">
+          <xsl:variable name="suppress" select="marc:subfield[@code='t']" />
+            <xsl:if test="string-length($suppress)>0">
+                <dc:rights>
+                  <xsl:choose>
+                    <xsl:when test="$suppress = 0">discovery not suppressed</xsl:when>
+                    <xsl:when test="$suppress = 1">discovery suppressed</xsl:when>
+                  </xsl:choose>
+                </dc:rights>
+            </xsl:if>
+      </xsl:for-each><!--</oai_dc:dc>-->
     </xsl:template>
 </xsl:stylesheet><!--
  Stylus Studio meta-information - (c) 2004-2005. Progress Software Corporation. All rights reserved.

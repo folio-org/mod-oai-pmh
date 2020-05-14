@@ -1,12 +1,9 @@
 package org.folio.rest.impl;
 
-import static org.folio.oaipmh.Constants.CONFIGS_LIST;
-
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
 import org.folio.oaipmh.ResponseHelper;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
@@ -28,6 +25,7 @@ public class InitAPIs implements InitAPI {
   private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
 
   private static final String CONFIG_PATH = "config";
+  private static final String[] CONFIGS = {"behavior.json","general.json","technical.json"};
   private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
@@ -35,7 +33,7 @@ public class InitAPIs implements InitAPI {
     try {
       Properties systemProperties = System.getProperties();
       String configPath = systemProperties.getProperty("configPath", CONFIG_PATH);
-      Set<String> configsSet = new HashSet<>(Arrays.asList(CONFIGS_LIST.split(",")));
+      List<String> configsSet = Arrays.asList(CONFIGS);
       configsSet.forEach(configName -> {
         JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
         Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfig);
