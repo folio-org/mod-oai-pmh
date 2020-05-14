@@ -70,7 +70,6 @@ public class ConfigurationHelper {
     }
   }
 
-  @NotNull
   private String buildConfigPath(String dirPath, String configJsonName) {
     return dirPath.concat("/")
       .concat(configJsonName);

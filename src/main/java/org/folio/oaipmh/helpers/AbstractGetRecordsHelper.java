@@ -216,7 +216,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return source;
   }
 
-  @NotNull
   private Optional<JsonObject> getGeneralInfoDataField(JsonArray fields) {
     return fields.stream()
       .map(obj -> (JsonObject) obj)
