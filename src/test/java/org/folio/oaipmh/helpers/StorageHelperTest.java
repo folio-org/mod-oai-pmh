@@ -114,6 +114,14 @@ class StorageHelperTest {
     assertFalse(getStorageHelper(storageType).getSuppressedFromDiscovery(item));
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
+  void getRecordSource(String storageType) {
+    JsonObject item = getJsonObjectFromFile(getDirPath(storageType) + "/instance.json");
+    String recordSource = getStorageHelper(storageType).getRecordSource(item);
+    assertThat(recordSource, is(notNullValue()));
+  }
+
   @Test
   void shouldReturnLinkedToRecordInstanceId_whenGetIdentifierAndStorageIsSRS(){
     JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance.json");
