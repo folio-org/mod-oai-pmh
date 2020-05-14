@@ -19,15 +19,20 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
@@ -52,6 +57,8 @@ class StorageHelperTest {
   private static final Logger logger = LoggerFactory.getLogger(StorageHelperTest.class);
 
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
+
+  private final DateTimeFormatter DateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
   @AfterEach
   void init() {
@@ -129,8 +136,11 @@ class StorageHelperTest {
           System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+          String formattedCurrentDate = getFormattedCurrentDate();
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
-            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse&limit=11&offset=0")));
+            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse"
+              + "+and+metadata.updatedDate%3C" + URLEncoder.encode(formattedCurrentDate,"UTF-8")
+              + "&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);
@@ -151,8 +161,10 @@ class StorageHelperTest {
           System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+          String formattedCurrentDate = getFormattedCurrentDate();
           assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
-            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC&limit=11&offset=0")));
+            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+metadata.updatedDate%3C"
+              + URLEncoder.encode(formattedCurrentDate,"UTF-8") + "&limit=11&offset=0")));
           testContext.completeNow();
         } catch (UnsupportedEncodingException e) {
           testContext.failNow(e);
@@ -187,5 +199,11 @@ class StorageHelperTest {
       fail(e.getMessage());
     }
     return null;
+  }
+
+  private String getFormattedCurrentDate(){
+    return DateFormat.format(LocalDate.parse(LocalDateTime.now().format(ISO_UTC_DATE_ONLY))
+      .atStartOfDay()
+      .plusDays(1L));
   }
 }
