@@ -58,7 +58,7 @@ class StorageHelperTest {
 
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
-  private final DateTimeFormatter DateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+  private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
   @AfterEach
   void init() {
@@ -210,7 +210,7 @@ class StorageHelperTest {
   }
 
   private String getFormattedCurrentDate(){
-    return DateFormat.format(LocalDate.parse(LocalDateTime.now().format(ISO_UTC_DATE_ONLY))
+    return dateTimeFormatter.format(LocalDate.parse(LocalDateTime.now().format(ISO_UTC_DATE_ONLY))
       .atStartOfDay()
       .plusDays(1L));
   }
