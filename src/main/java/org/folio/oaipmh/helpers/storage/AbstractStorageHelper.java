@@ -62,14 +62,14 @@ public abstract class AbstractStorageHelper implements StorageHelper {
       queryBuilder
         .and()
         .addStrictCriteria(getIdentifierName(), request.getStorageIdentifier());
+    } else if (request.getFrom() == null && request.getUntil() == null){
+      queryBuilder
+        .and()
+        .dateRange(null, LocalDateTime.now().format(ISO_UTC_DATE_ONLY));
     } else if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       queryBuilder
         .and()
         .dateRange(request.getFrom(), request.getUntil());
-    }else if (request.getFrom() == null && request.getUntil() == null){
-      queryBuilder
-        .and()
-        .dateRange(null, LocalDateTime.now().format(ISO_UTC_DATE_ONLY));
     }
 
     // one extra record is required to check if resumptionToken is good
