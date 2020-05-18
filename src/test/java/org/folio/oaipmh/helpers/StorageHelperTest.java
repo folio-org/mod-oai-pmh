@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -210,7 +211,8 @@ class StorageHelperTest {
   }
 
   private String getFormattedCurrentDate(){
-    return dateTimeFormatter.format(LocalDate.parse(LocalDateTime.now().format(ISO_UTC_DATE_ONLY))
+    return dateTimeFormatter.format(LocalDate.parse(LocalDateTime.now(ZoneOffset.UTC)
+      .format(ISO_UTC_DATE_ONLY))
       .atStartOfDay()
       .plusDays(1L));
   }

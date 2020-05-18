@@ -61,6 +61,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -714,7 +715,7 @@ class OaiPmhImplTest {
       .with()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
-      .param(UNTIL_PARAM, LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     verifyListResponse(oaipmh, verb, 10);
@@ -740,7 +741,7 @@ class OaiPmhImplTest {
       .with()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
-      .param(UNTIL_PARAM, LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     verifyListResponse(oaipmh, verb, 10);
@@ -765,7 +766,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
-      .param(UNTIL_PARAM, LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     verifyListResponse(oaipmh, verb, 9);
@@ -790,7 +791,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest(basePaths.get(verb))
       .with()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
-      .param(UNTIL_PARAM, LocalDateTime.now().format(ISO_UTC_DATE_TIME));
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     verifyListResponse(oaipmh, verb, 9);
