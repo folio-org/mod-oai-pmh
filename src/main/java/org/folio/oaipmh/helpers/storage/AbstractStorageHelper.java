@@ -1,6 +1,7 @@
 package org.folio.oaipmh.helpers.storage;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -9,6 +10,8 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
 import java.io.UnsupportedEncodingException;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
@@ -60,6 +63,10 @@ public abstract class AbstractStorageHelper implements StorageHelper {
       queryBuilder
         .and()
         .addStrictCriteria(getIdentifierName(), request.getStorageIdentifier());
+    } else if (request.getFrom() == null && request.getUntil() == null){
+      queryBuilder
+        .and()
+        .dateRange(null, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_ONLY));
     } else if (isNotEmpty(request.getFrom()) || isNotEmpty(request.getUntil())) {
       queryBuilder
         .and()

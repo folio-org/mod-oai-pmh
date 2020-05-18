@@ -5,6 +5,7 @@ import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
@@ -59,6 +60,8 @@ import static org.openarchives.oai._2.VerbType.LIST_SETS;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -601,6 +604,210 @@ class OaiPmhImplTest {
     assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(actualResumptionToken.getExpirationDate(), is(nullValue()));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
+    String set = "all";
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(SET_PARAM, set);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 9);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(),is(""));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithoutFromAndWithMetadataPrefixDCAndResumptionToken(VerbType verb) {
+    String set = "all";
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(SET_PARAM, set);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 9);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(),is(""));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithFromAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 10);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithFromAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 10);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithFromAndUntilAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 10);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithFromAndUntilAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 10);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithUntilAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 9);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiRecordsWithUntilAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
+    RequestSpecification request = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 9);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(basePaths.get(verb))
+      .with()
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
   }
 
   @ParameterizedTest
