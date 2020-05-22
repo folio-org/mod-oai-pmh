@@ -29,6 +29,45 @@ resourceTypes:
 /oai:
   displayName: OAIPMH Repository
   description: Service that processes OAI-PMH requests in RESTfull way
+  /verbs:
+    displayName: Verb
+    description: The endpoint is the first entry point which is used for request validation and redirection to a prticular verb endpoint for further request processing.
+    get:
+      queryParameters:
+        verb:
+          description: 'verb that specifies oai-pmh request type'
+          type: string
+          required: true
+        identifier:
+          description: 'parameter that is used for GetRecord and ListMetadataFormats requests'
+          type: string
+          required: false
+      is: [ partionable, selective, metadataPrefix ]
+      responses:
+        200:
+          description: "Bad request, parameter 'verb' cannot be empty"
+          body:
+            text/xml:
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/bad_verb_error.sample
+        400:
+          description: "Bad request, parameter 'verb' cannot be empty"
+          body:
+            text/xml:
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/bad_verb_error.sample
+        503:
+          description: "OAI-PMH service is disabled"
+          body:
+            text/xml:
+              #schema: oai-pmh
+              example:
+                strict: false
+                value: !include examples/bad_verb_error.sample
   /records:
     displayName: Records
     description: The endpoint for "ListRecords" OAI-PMH verb which is used to harvest records from a repository.

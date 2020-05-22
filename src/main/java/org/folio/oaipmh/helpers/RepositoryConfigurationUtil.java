@@ -5,12 +5,13 @@ import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.SHOULD_LOAD_CONFIGS;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
@@ -41,12 +42,18 @@ public class RepositoryConfigurationUtil {
    * @return empty CompletableFuture
    */
   public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+
+    if(!shouldConfigsBeLoaded(ctx)) {
+      ctx.remove(SHOULD_LOAD_CONFIGS);
+      future.complete(null);
+      return future;
+    }
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
@@ -105,8 +112,8 @@ public class RepositoryConfigurationUtil {
     return defaultValue;
   }
 
-  public static boolean getBooleanProperty(Request request, String name) {
-    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
+  public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
+    String tenant = TenantTool.tenantId(okapiHeaders);
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
 
@@ -115,6 +122,17 @@ public class RepositoryConfigurationUtil {
     }
 
     return parseBoolean(defaultValue);
+  }
+
+  /**
+   * Performs verification whether it is needed to load configs from mod-configuration. If context contains
+   * 'shouldLoadConfigs' param and value of ot equals false or if such param is absence then configs shouldn't be loaded,
+   * in opposite case should.
+   *
+   * @param context - vertx context
+   */
+  private static boolean shouldConfigsBeLoaded(Context context) {
+    return Objects.nonNull(context.get(SHOULD_LOAD_CONFIGS)) ? context.get(SHOULD_LOAD_CONFIGS) : true;
   }
 
 }

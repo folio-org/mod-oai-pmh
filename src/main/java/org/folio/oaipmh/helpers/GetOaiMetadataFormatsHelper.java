@@ -1,25 +1,26 @@
 package org.folio.oaipmh.helpers;
 
+import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import org.folio.oaipmh.Constants;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.tools.client.Response;
+import org.openarchives.oai._2.ListMetadataFormatsType;
+import org.openarchives.oai._2.MetadataFormatType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+
 import io.vertx.core.Context;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.folio.oaipmh.Constants;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.jaxrs.resource.Oai.GetOaiMetadataFormatsResponse;
-import org.folio.rest.tools.client.Response;
-import org.openarchives.oai._2.ListMetadataFormatsType;
-import org.openarchives.oai._2.MetadataFormatType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
@@ -66,7 +67,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * @return future with {@link OAIPMH} response
    */
   private javax.ws.rs.core.Response retrieveMetadataFormats(Request request) {
-    return GetOaiMetadataFormatsResponse.respond200WithTextXml(buildMetadataFormatTypesResponse(request));
+    OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withListMetadataFormats(getMetadataFormatTypes());
+    return getResponseHelper().buildSuccessResponse(oaipmh);
   }
 
   /**
@@ -85,52 +87,26 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       logger.error("No instance found. Service responded with error: " + response.getError());
       throw new IllegalStateException(response.getError().toString());
     }
-    return GetOaiMetadataFormatsResponse.respond404WithTextXml(buildIdentifierNotFound(request));
+    return buildIdentifierNotFoundResponse(request);
   }
 
   /**
-   * Builds {@linkplain javax.ws.rs.core.Response Response} with 'badArgument' error because passed identifier is invalid
+   * Builds {@linkplain javax.ws.rs.core.Response Response} with 'badArgument' error because passed identifier is invalid.
    * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
    */
   private javax.ws.rs.core.Response buildBadArgumentResponse(Request request) {
-    return GetOaiMetadataFormatsResponse.respond422WithTextXml(buildOaipmhWithBadArgumentError(request));
+    ResponseHelper responseHelper = getResponseHelper();
+    OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.BAD_ARGUMENT, INVALID_IDENTIFIER_ERROR_MESSAGE);
+    return responseHelper.buildFailureResponse(oaipmh, request);
   }
 
   /**
-   * Creates {@link OAIPMH} with ListMetadataFormats element
-   *
-   * @param request {@link Request}
-   * @return basic {@link OAIPMH}
+   * Builds {@linkplain javax.ws.rs.core.Response Response} with 'id-does-not-exist' error because passed identifier isn't exist.
+   * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
    */
-  private String buildMetadataFormatTypesResponse(Request request) {
-    return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request).withListMetadataFormats(getMetadataFormatTypes()));
-  }
-
-  /**
-   * Creates {@link OAIPMH} with Error id-does-not-exist
-   * @param request {@link Request}
-   * @return basic {@link OAIPMH}
-   */
-  private String buildIdentifierNotFound(Request request) {
-    return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request)
-        .withErrors(new OAIPMHerrorType()
-          .withValue(Constants.RECORD_NOT_FOUND_ERROR)
-          .withCode(OAIPMHerrorcodeType.ID_DOES_NOT_EXIST)));
-  }
-
-  /**
-   * Creates {@link OAIPMH} with Error id-does-not-exist
-   * @param request {@link Request}
-   * @return basic {@link OAIPMH}
-   */
-  private String buildOaipmhWithBadArgumentError(Request request) {
-    return ResponseHelper.getInstance().writeToString(
-      buildBaseResponse(request)
-        .withErrors(new OAIPMHerrorType()
-          .withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
-          .withValue(Constants.INVALID_IDENTIFIER_ERROR_MESSAGE)));
+  private javax.ws.rs.core.Response buildIdentifierNotFoundResponse(Request request) {
+    OAIPMH oaipmh = getResponseHelper().buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.ID_DOES_NOT_EXIST, Constants.RECORD_NOT_FOUND_ERROR);
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
   /**

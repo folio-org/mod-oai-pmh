@@ -55,7 +55,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
-    if(!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if(!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       queryBuilder.and();
       addSuppressFromDiscovery(queryBuilder);
     }

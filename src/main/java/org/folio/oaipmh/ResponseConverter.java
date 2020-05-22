@@ -28,8 +28,8 @@ import java.util.Map;
 import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
 
 @SuppressWarnings("squid:S1191") //The com.sun.xml.bind.marshaller.NamespacePrefixMapper is part of jaxb logic
-public class ResponseHelper {
-  private static final Logger logger = LoggerFactory.getLogger(ResponseHelper.class);
+public class ResponseConverter {
+  private static final Logger logger = LoggerFactory.getLogger(ResponseConverter.class);
   private static final String SCHEMA_PATH = "ramls" + File.separator + "schemas" + File.separator;
   private static final String RESPONSE_SCHEMA = SCHEMA_PATH + "OAI-PMH.xsd";
   private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";
@@ -40,7 +40,7 @@ public class ResponseHelper {
   private static final Map<String, String> NAMESPACE_PREFIX_MAP = new HashMap<>();
   private final com.sun.xml.bind.marshaller.NamespacePrefixMapper namespacePrefixMapper;
 
-  private static ResponseHelper ourInstance;
+  private static ResponseConverter ourInstance;
 
   static {
     NAMESPACE_PREFIX_MAP.put("http://www.loc.gov/MARC21/slim", "marc");
@@ -48,7 +48,7 @@ public class ResponseHelper {
     NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai_dc/", "oai_dc");
     NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai-identifier", "oai-identifier");
     try {
-      ourInstance = new ResponseHelper();
+      ourInstance = new ResponseConverter();
     } catch (JAXBException | SAXException e) {
       logger.error("The jaxb context could not be initialized");
       throw new IllegalStateException("Marshaller and unmarshaller are not available", e);
@@ -58,14 +58,14 @@ public class ResponseHelper {
   private Schema oaipmhSchema;
 
 
-  public static ResponseHelper getInstance() {
+  public static ResponseConverter getInstance() {
     return ourInstance;
   }
 
   /**
    * The main purpose is to initialize JAXB Marshaller and Unmarshaller to use the instances for business logic operations
    */
-  private ResponseHelper() throws JAXBException, SAXException {
+  private ResponseConverter() throws JAXBException, SAXException {
     jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class, OaiIdentifier.class, ObjectFactory.class);
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
     if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
@@ -92,7 +92,7 @@ public class ResponseHelper {
    * @param response {@link OAIPMH} object to marshal
    * @return marshaled {@link OAIPMH} object as string representation
    */
-  public String writeToString(OAIPMH response) {
+  public String convertToString(OAIPMH response) {
     StopWatch timer = logger.isDebugEnabled() ? StopWatch.createStarted() : null;
 
     try (StringWriter writer = new StringWriter()) {

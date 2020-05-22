@@ -8,7 +8,6 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
-
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -29,6 +28,8 @@ public final class Constants {
   public static final String REPOSITORY_STORAGE = "repository.storage";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
   public static final String REPOSITORY_SUPPRESSED_RECORDS_PROCESSING = "repository.suppressedRecordsProcessing";
+  public static final String REPOSITORY_ENABLE_OAI_SERVICE = "repository.enableOaiService";
+  public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
   public static final String INVENTORY_STORAGE = "INVENTORY";
@@ -47,6 +48,10 @@ public final class Constants {
   public static final String RESUMPTION_TOKEN_PARAM = "resumptionToken";
   public static final String SET_PARAM = "set";
   public static final String UNTIL_PARAM = "until";
+  public static final String REQUEST_PARAMS = "requestParams";
+  public static final String VERB_PARAM = "verb";
+
+  public static final String SHOULD_LOAD_CONFIGS = "shouldLoadConfigs";
 
   public static final String DEFLATE = "deflate";
   public static final String GZIP = "gzip";

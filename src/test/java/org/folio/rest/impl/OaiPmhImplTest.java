@@ -80,7 +80,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.ResponseConverter;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -1097,7 +1097,7 @@ class OaiPmhImplTest {
     assertThat(response, is(notNullValue()));
 
     // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
     verifyBaseResponse(oaipmh, GET_RECORD);
     assertThat(oaipmh.getGetRecord(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
@@ -1270,7 +1270,7 @@ class OaiPmhImplTest {
       .with()
         .param(IDENTIFIER_PARAM, OkapiMockServer.INVALID_IDENTIFIER);
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_METADATA_FORMATS, 422, 1);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_METADATA_FORMATS, 400, 1);
 
     assertThat(oaipmh.getListMetadataFormats(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
@@ -1363,7 +1363,7 @@ class OaiPmhImplTest {
     String response = verifyWithCodeWithXml(request, 200);
 
     // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = ResponseHelper.getInstance().stringToOaiPmh(response);
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
 
     verifyBaseResponse(oaipmh, verb);
 
@@ -1403,7 +1403,7 @@ class OaiPmhImplTest {
     String response = verifyWithCodeWithXml(request, statusCode);
 
     // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(response);
+    OAIPMH oaipmhFromString = ResponseConverter.getInstance().stringToOaiPmh(response);
 
     verifyBaseResponse(oaipmhFromString, verb);
     assertThat(oaipmhFromString.getErrors(), is(notNullValue()));

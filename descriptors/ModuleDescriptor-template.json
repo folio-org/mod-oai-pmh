@@ -8,6 +8,19 @@
       "handlers": [
         {
           "methods": ["GET"],
+          "pathPattern": "/oai/verbs",
+          "permissionsRequired": ["oai-pmh.records.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.source-record.marc-json.get",
+            "source-storage.records.get",
+            "source-storage.sourceRecords.get",
+            "configuration.entries.collection.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
           "pathPattern": "/oai/records",
           "permissionsRequired": ["oai-pmh.records.collection.get"],
           "modulePermissions": [
