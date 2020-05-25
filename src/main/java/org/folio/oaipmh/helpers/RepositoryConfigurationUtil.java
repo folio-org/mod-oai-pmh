@@ -132,7 +132,11 @@ public class RepositoryConfigurationUtil {
    * @param context - vertx context
    */
   private static boolean shouldConfigsBeLoaded(Context context) {
-    return Objects.nonNull(context.get(SHOULD_LOAD_CONFIGS)) ? context.get(SHOULD_LOAD_CONFIGS) : true;
+    Object config = context.get(SHOULD_LOAD_CONFIGS);
+    if(Objects.nonNull(config)) {
+      return (Boolean) config;
+    }
+    return true;
   }
 
 }

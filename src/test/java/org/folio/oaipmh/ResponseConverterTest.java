@@ -25,8 +25,9 @@ class ResponseConverterTest {
 
   @Test
   void validationException() {
+    ResponseConverter converter = ResponseConverter.getInstance();
     try {
-      ResponseConverter.getInstance().convertToString(new OAIPMH());
+      converter.convertToString(new OAIPMH());
       fail("JAXBException is expected because validation is enabled");
     } catch (IllegalStateException e) {
       assertThat(e.getCause(), instanceOf(JAXBException.class));
@@ -38,8 +39,9 @@ class ResponseConverterTest {
 
   @Test
   void validateIllegalArgumentException() {
+    ResponseConverter converter = ResponseConverter.getInstance();
     try {
-      ResponseConverter.getInstance().convertToString(null);
+      converter.convertToString(new OAIPMH());
       fail("JAXBException is expected");
     } catch (IllegalArgumentException e) {
       // expected behavior
