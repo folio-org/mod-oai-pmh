@@ -41,7 +41,7 @@ class ResponseConverterTest {
   void validateIllegalArgumentException() {
     ResponseConverter converter = ResponseConverter.getInstance();
     try {
-      converter.convertToString(new OAIPMH());
+      converter.convertToString(null);
       fail("JAXBException is expected");
     } catch (IllegalArgumentException e) {
       // expected behavior

@@ -295,20 +295,19 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProvider")
-  void shouldReturnListIdentifiersWhenGetVerbsAndVerbEqualsListIdentifiers(MetadataPrefix metadataPrefix, String encoding) {
-    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
-    RequestSpecification request = createBaseRequest(VERB_PATH).with()
+  @ValueSource(strings = { "GZIP", "DEFLATE", "IDENTITY" })
+  void shouldReturnListIdentifiersWhenGetVerbsAndVerbEqualsListIdentifiers(String encoding) {
+    RequestSpecification request = createBaseRequest(VERB_PATH)
+      .with()
       .param(VERB_PARAM, LIST_IDENTIFIERS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
   }
 
   @Test
