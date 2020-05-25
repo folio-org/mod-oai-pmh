@@ -6,6 +6,7 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
+import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
@@ -56,6 +57,7 @@ import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
 import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
+import static org.openarchives.oai._2.VerbType.VERB;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -76,6 +78,7 @@ import java.util.stream.Stream;
 
 import javax.xml.bind.JAXBElement;
 
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.oaipmh.Constants;
@@ -139,6 +142,7 @@ class OaiPmhImplTest {
   private static final String LIST_METADATA_FORMATS_PATH = ROOT_PATH + "/metadata_formats";
   private static final String LIST_SETS_PATH = ROOT_PATH + "/sets";
   private static final String IDENTIFY_PATH = ROOT_PATH + "/repository_info";
+  private static final String VERB_PATH = ROOT_PATH + "/verbs";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -243,6 +247,17 @@ class OaiPmhImplTest {
   void setUpBeforeEach() {
     // Set default decoderConfig
     RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
+  }
+
+  @Test
+  void shouldRespondWithServiceUnavailableWhenGetVerbsAndEnableOaiSettingIsFalse() {
+    System.setProperty(REPOSITORY_ENABLE_OAI_SERVICE, "false");
+    RequestSpecification request = createBaseRequest(VERB_PATH);
+
+    String stringOaipmh = verifyWithCodeWithXml(request, HttpStatus.SC_SERVICE_UNAVAILABLE);
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(stringOaipmh);
+    verifyBaseResponse(oaipmh, VERB);
+    System.setProperty(REPOSITORY_ENABLE_OAI_SERVICE, "true");
   }
 
   @ParameterizedTest

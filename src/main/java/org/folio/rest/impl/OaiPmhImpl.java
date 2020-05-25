@@ -88,6 +88,7 @@ public class OaiPmhImpl implements Oai {
       .thenAccept(v -> {
 
         Request request = Request.builder()
+          .verb(VerbType.VERB)
           .okapiHeaders(okapiHeaders)
           .build();
 
@@ -297,6 +298,7 @@ public class OaiPmhImpl implements Oai {
     String set = requestParams.get(SET_PARAM);
     String metadataPrefix = requestParams.get(METADATA_PREFIX_PARAM);
     String identifier = requestParams.get(IDENTIFIER_PARAM);
+    context.remove(REQUEST_PARAMS);
 
     switch (verb) {
       case LIST_RECORDS: getOaiRecords(resumptionToken, from, until, set, metadataPrefix, okapiHeaders, asyncResultHandler, context);
