@@ -63,6 +63,7 @@
       <enumeration value="GetRecord"/>
       <enumeration value="ListIdentifiers"/>
       <enumeration value="ListRecords"/>
+      <enumeration value="Verb"/>
       <enumeration value="Unknown"/>
     </restriction>
   </simpleType>
