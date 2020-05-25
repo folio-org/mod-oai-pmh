@@ -5,12 +5,11 @@ import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supply
 import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
 import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
-import static org.folio.oaipmh.Constants.INSTANCE_SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -24,7 +23,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -41,8 +39,6 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
-import gov.loc.marc21.slim.DataFieldType;
-import gov.loc.marc21.slim.SubfieldatafieldType;
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -53,6 +49,11 @@ import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+  private static final String FIELDS = "fields";
+  private static final String INDEX_ONE = "ind1";
+  private static final String INDEX_TWO = "ind2";
+  private static final String SUBFIELDS = "subfields";
 
   @Override
   public CompletableFuture<Response> handle(Request request, Context ctx) {
@@ -151,7 +152,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
             .thenApply(records -> {
-              updateRecordsWithSuppressedFromDiscoverySubfieldIfNecessary(request, records);
               addRecordsToOaiResponse(oaipmh, records);
               addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
               return buildResponse(oaipmh, request);
@@ -181,7 +181,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
+            source = updateSourceWithDiscoverySuppressedDataIfNecessary(source, instance, request);
             record.withMetadata(buildOaiMetadata(request, source));
+          } else {
+            context.put(recordId, instance);
           }
           records.put(recordId, record);
         }
@@ -200,7 +203,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @return record source
    */
   private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
-    if(getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       JsonObject content = new JsonObject(source);
       JsonArray fields = content.getJsonArray(FIELDS);
       Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
@@ -250,8 +253,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int value = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
     generalInfoDataFieldSubfield.put(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE, value);
     subfields.add(generalInfoDataFieldSubfield);
-    generalInfoDataFieldContent.put("ind1", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
-    generalInfoDataFieldContent.put("ind2", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put(INDEX_ONE, GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put(INDEX_TWO, GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
     generalInfoDataFieldContent.put(SUBFIELDS, subfields);
     generalInfoDataField.put(GENERAL_INFO_DATA_FIELD_TAG_NUMBER, generalInfoDataFieldContent);
     list.add(generalInfoDataField);
