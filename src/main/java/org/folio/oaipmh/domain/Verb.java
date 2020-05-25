@@ -36,7 +36,6 @@ public enum Verb {
   LIST_METADATA_FORMATS("ListMetadataFormats", EMPTY_SET, of(IDENTIFIER_PARAM), null),
   LIST_RECORDS("ListRecords", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM), RESUMPTION_TOKEN_PARAM),
   LIST_SETS("ListSets", EMPTY_SET, EMPTY_SET, RESUMPTION_TOKEN_PARAM);
-  //VERB("Verb", EMPTY_SET, EMPTY_SET, null); kek
 
   private static final String VERB_PARAM = "verb";
   private static final String PARAM_API_KEY = "apikey";
