@@ -26,8 +26,8 @@ class ResponseConverterTest {
   @Test
   void validationException() {
     ResponseConverter converter = ResponseConverter.getInstance();
+    OAIPMH oaipmh = new OAIPMH();
     try {
-      OAIPMH oaipmh = new OAIPMH();
       converter.convertToString(oaipmh);
       fail("JAXBException is expected because validation is enabled");
     } catch (IllegalStateException e) {
