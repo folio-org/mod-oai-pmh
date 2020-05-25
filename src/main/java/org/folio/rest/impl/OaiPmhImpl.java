@@ -98,6 +98,7 @@ public class OaiPmhImpl implements Oai {
           asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
           return;
         }
+
         Map<String, String> contextParams = new HashMap<>();
         addParamToMapIfNotEmpty(RESUMPTION_TOKEN_PARAM, resumptionToken, contextParams);
         addParamToMapIfNotEmpty(FROM_PARAM, from, contextParams);
@@ -312,6 +313,7 @@ public class OaiPmhImpl implements Oai {
       case LIST_SETS: getOaiSets(resumptionToken, okapiHeaders, asyncResultHandler, context);
       break;
       case IDENTIFY: getOaiRepositoryInfo(okapiHeaders, asyncResultHandler, context);
+      break;
     }
   }
 

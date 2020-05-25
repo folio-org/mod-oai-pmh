@@ -6,8 +6,6 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
-import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
@@ -15,6 +13,7 @@ import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
+import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
@@ -23,7 +22,9 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -258,6 +259,106 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(stringOaipmh);
     verifyBaseResponse(oaipmh, VERB);
     System.setProperty(REPOSITORY_ENABLE_OAI_SERVICE, "true");
+  }
+
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void shouldReturnRecordWhenGetVerbsAndVerbEqualsGetRecord(MetadataPrefix metadataPrefix) {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest(VERB_PATH)
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProvider")
+  void shouldReturnListRecordsWhenGetVerbsAndVerbEqualsListRecords(MetadataPrefix metadataPrefix, String encoding) {
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(VERB_PATH).with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    addAcceptEncodingHeader(request, encoding);
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProvider")
+  void shouldReturnListIdentifiersWhenGetVerbsAndVerbEqualsListIdentifiers(MetadataPrefix metadataPrefix, String encoding) {
+    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
+    RequestSpecification request = createBaseRequest(VERB_PATH).with()
+      .param(VERB_PARAM, LIST_IDENTIFIERS.value())
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    addAcceptEncodingHeader(request, encoding);
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
+  }
+
+  @Test
+  void shouldReturnListMetadataFormatsWhenGetVerbsAndVerbEqualsListMetadataFormats() {
+    RequestSpecification request = createBaseRequest(VERB_PATH).with()
+      .param(VERB_PARAM, LIST_METADATA_FORMATS.value());
+
+    OAIPMH oaiPmhResponseWithoutIdentifier = verify200WithXml(request, LIST_METADATA_FORMATS);
+
+    assertThat(oaiPmhResponseWithoutIdentifier.getListMetadataFormats(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithoutIdentifier.getErrors(), is(empty()));
+  }
+
+  @Test
+  void shouldReturnMetadataFormatByIdentifierWhenGetVerbsAndVerbEqualsListMetadataFormats() {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest(VERB_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_METADATA_FORMATS.value())
+      .param(IDENTIFIER_PARAM, identifier);
+
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, LIST_METADATA_FORMATS);
+
+    assertThat(oaiPmhResponseWithExistingIdentifier.getListMetadataFormats(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+  }
+
+  @Test
+  void shouldReturnListSetsWhenGetVerbsAndVerbEqualsListSets() {
+    RequestSpecification request = createBaseRequest(VERB_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_SETS.value());
+
+    OAIPMH oaipmhFromString = verify200WithXml(request, LIST_SETS);
+
+    assertThat(oaipmhFromString.getListSets(), is(notNullValue()));
+    assertThat(oaipmhFromString.getListSets().getSets(), hasSize(equalTo(1)));
+    assertThat(oaipmhFromString.getListSets().getSets().get(0).getSetSpec(), equalTo("all"));
+    assertThat(oaipmhFromString.getListSets().getSets().get(0).getSetName(), equalTo("All records"));
+  }
+
+  @Test
+  void shouldReturnRepositoryInfoWhenGetVerbsAndVerbEqualsIdentify() {
+    RequestSpecification request = createBaseRequest(VERB_PATH)
+      .with()
+      .param(VERB_PARAM, IDENTIFY.value());
+
+    OAIPMH oaipmhFromString = verify200WithXml(request, IDENTIFY);
+
+    verifyRepositoryInfoResponse(oaipmhFromString);
   }
 
   @ParameterizedTest
@@ -1324,18 +1425,7 @@ class OaiPmhImplTest {
   void getOaiRepositoryInfoSuccess(VertxTestContext testContext) {
     OAIPMH oaipmhFromString = verify200WithXml(createBaseRequest(IDENTIFY_PATH), IDENTIFY);
 
-    assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
-    assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
-    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo(Constants.REPOSITORY_PROTOCOL_VERSION_2_0)));
-    assertThat(oaipmhFromString.getIdentify().getRepositoryName(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getCompressions(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getCompressions(), containsInAnyOrder(GZIP, DEFLATE));
-    assertThat(oaipmhFromString.getIdentify().getDescriptions(), hasSize(equalTo(1)));
-    assertThat(oaipmhFromString.getIdentify().getDescriptions().get(0).getAny(), instanceOf(OaiIdentifier.class));
+    verifyRepositoryInfoResponse(oaipmhFromString);
 
     testContext.completeNow();
   }
@@ -1412,6 +1502,21 @@ class OaiPmhImplTest {
           .asString();
 
     assertThat(response, is(notNullValue()));
+  }
+
+  private void verifyRepositoryInfoResponse(OAIPMH oaipmhFromString) {
+    assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
+    assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getGranularity(), is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
+    assertThat(oaipmhFromString.getIdentify().getProtocolVersion(), is(equalTo(Constants.REPOSITORY_PROTOCOL_VERSION_2_0)));
+    assertThat(oaipmhFromString.getIdentify().getRepositoryName(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getCompressions(), is(notNullValue()));
+    assertThat(oaipmhFromString.getIdentify().getCompressions(), containsInAnyOrder(GZIP, DEFLATE));
+    assertThat(oaipmhFromString.getIdentify().getDescriptions(), hasSize(equalTo(1)));
+    assertThat(oaipmhFromString.getIdentify().getDescriptions().get(0).getAny(), instanceOf(OaiIdentifier.class));
   }
 
   private OAIPMH verifyResponseWithErrors(RequestSpecification request, VerbType verb, int statusCode, int errorsCount) {
