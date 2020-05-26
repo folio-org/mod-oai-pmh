@@ -44,12 +44,6 @@ public class RepositoryConfigurationUtil {
   public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
     CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
-    if(!shouldConfigsBeLoaded(ctx)) {
-      ctx.remove(SHOULD_LOAD_CONFIGS);
-      future.complete(null);
-      return future;
-    }
-
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
@@ -104,11 +98,9 @@ public class RepositoryConfigurationUtil {
   public static String getProperty(String tenant, String name) {
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
-
     if (configs != null) {
       return configs.getString(name, defaultValue);
     }
-
     return defaultValue;
   }
 
@@ -116,27 +108,10 @@ public class RepositoryConfigurationUtil {
     String tenant = TenantTool.tenantId(okapiHeaders);
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
-
     if (configs != null) {
       return parseBoolean(configs.getString(name, defaultValue));
     }
-
     return parseBoolean(defaultValue);
-  }
-
-  /**
-   * Performs verification whether it is needed to load configs from mod-configuration. If context contains
-   * 'shouldLoadConfigs' param and value of ot equals false or if such param is absence then configs shouldn't be loaded,
-   * in opposite case should.
-   *
-   * @param context - vertx context
-   */
-  private static boolean shouldConfigsBeLoaded(Context context) {
-    Object config = context.get(SHOULD_LOAD_CONFIGS);
-    if(Objects.nonNull(config)) {
-      return (Boolean) config;
-    }
-    return true;
   }
 
 }

@@ -29,7 +29,7 @@ resourceTypes:
 /oai:
   displayName: OAIPMH Repository
   description: Service that processes OAI-PMH requests in RESTfull way
-  /verbs:
+  /records:
     displayName: Verb
     description: The endpoint is the first entry point which is used for request validation and redirection to a prticular verb endpoint for further request processing.
     get:
@@ -60,6 +60,11 @@ resourceTypes:
               example:
                 strict: false
                 value: !include examples/bad_verb_error.sample
+        500:
+          description: "Internal server error, e.g. due to misconfiguration"
+          body:
+            text/plain:
+              example: "Internal server error, contact administrator"
         503:
           description: "OAI-PMH service is disabled"
           body:
@@ -68,139 +73,4 @@ resourceTypes:
               example:
                 strict: false
                 value: !include examples/bad_verb_error.sample
-  /records:
-    displayName: Records
-    description: The endpoint for "ListRecords" OAI-PMH verb which is used to harvest records from a repository.
-    type:
-      list:
-        exampleCollection: !include examples/records.sample
-    get:
-      is: [ partionable, selective, metadataPrefix ]
-      responses:
-        404:
-          description: "Item with a given ID and selective harvesting params (if any) not found"
-          body:
-            text/xml:
-              #schema: oai-pmh
-              example:
-                strict: false
-                value: !include examples/no_records_error.sample
 
-    /{id}:
-      displayName: Record
-      description: The endpoint for "GetRecord" OAI-PMH verb which is used to retrieve an individual metadata record from a repository.
-      uriParameters:
-        id:
-          description: The unique identifier of the item in the repository
-          type: string
-      get:
-        description: Retrieve record with given Id
-        is: [ metadataPrefix ]
-        responses:
-          200:
-            description: "Returns item with a given ID"
-            body:
-              text/xml:
-                #schema: oai-pmh
-                example:
-                  strict: false
-                  value: !include examples/record.sample
-          400:
-            description: "Bad request, e.g. malformed query parameter. Details of the error (e.g. name of the parameter or line/character number with malformed data) provided in the response."
-            body:
-              text/xml:
-                #schema: oai-pmh
-                example:
-                  strict: false
-                  value: !include examples/metadata_prefix_error.sample
-          404:
-            description: "Item with a given ID and selective harvesting params (if any) not found"
-            body:
-              text/xml:
-                #schema: oai-pmh
-                example:
-                  strict: false
-                  value: !include examples/no_record_error.sample
-          500:
-            description: "Internal server error, e.g. due to misconfiguration"
-            body:
-              text/plain:
-                example: "Internal server error, contact administrator"
-
-  /identifiers:
-    displayName: Identifiers
-    description: The endpoint for "ListIdentifiers" OAI-PMH verb which is an abbreviated form of "ListRecords", retrieving only headers rather than records from a repository.
-    type:
-      list:
-        exampleCollection: !include examples/identifiers.sample
-    get:
-      is: [ partionable, selective, metadataPrefix ]
-      responses:
-        404:
-          description: "Item with a given ID and selective harvesting params (if any) not found"
-          body:
-            text/xml:
-              #schema: oai-pmh
-              example:
-                strict: false
-                value: !include examples/no_records_error.sample
-
-
-  /metadata_formats:
-    displayName: MetadataFormats
-    description: The endpoint for "ListMetadataFormats" OAI-PMH verb which is used to retrieve the metadata formats available from a repository.
-    type:
-      list:
-        exampleCollection: !include examples/metadata_formats.sample
-    get:
-      queryParameters:
-        identifier:
-          description: 'unique identifier of the item in the repository from which the record must be disseminated'
-          type: string
-          required: false
-      responses:
-        404:
-          description: "Item with a given ID and selective harvesting params (if any) not found"
-          body:
-            text/xml:
-              #schema: oai-pmh
-              example:
-                strict: false
-                value: !include examples/no_record_error.sample
-        422:
-          description: "The request was well-formed, but contains semantic errors"
-          body:
-            text/xml:
-              #schema: oai-pmh
-              example:
-                strict: false
-                value: !include examples/no_metadata_format_error.sample
-
-  /sets:
-    displayName: Sets
-    description: The endpoint for "ListSets" OAI-PMH verb which is used to retrieve the set structure of a repository.
-    type:
-      list:
-        exampleCollection: !include examples/sets.sample
-    get:
-      is: [ partionable ]
-
-  /repository_info:
-    displayName: RepositoryInfo
-    description: The endpoint for "Identify" OAI-PMH verb which is used to retrieve information about a repository.
-    get:
-      description: Returns information about a repository
-      responses:
-        200:
-          description: "Returns repository info"
-          body:
-            text/xml:
-              #schema: oai-pmh
-              example:
-                strict: false
-                value: !include examples/repository_info.sample
-        500:
-          description: "Internal server error, e.g. due to misconfiguration"
-          body:
-            text/plain:
-              example: "Internal server error, contact administrator"

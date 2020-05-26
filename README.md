@@ -9,7 +9,19 @@ Portions of this software may use XML schemas Copyright © 2011 [DCMI](http://du
 
 ## Introduction
 
-Backend Module implementing the Open Archives Initiative Protocol for Metadata Harvesting ([OAI-PMH Version 2.0](http://www.openarchives.org/OAI/openarchivesprotocol.html)), but providing more RESTful API than described in the specification. Refer to [oai-pmh.raml](ramls/oai-pmh.raml) for the details.
+Backend Module implementing the Open Archives Initiative Protocol for Metadata Harvesting ([OAI-PMH Version 2.0](http://www.openarchives.org/OAI/openarchivesprotocol.html)), but providing more RESTful API than described in the specification. 
+At the core places the /oai/records endpoint which accepts verb name as main parameter which defines what type of request is and which handler should ve invoked for processing the request.
+
+The following verbs are used: 
+
+Verb | Required parameters | Optional parameters | Exclusive parameters | Response status codes 
+------------ | ------------- | ------------- | ------------- | ------------- |
+Identify | - | - | - | 200, 400
+ListRecords | metadataPrefix | from,until,set| resumptionToken | 200, 400, 404, 422 
+ListIdentifiers | metadataPrefix | from,until,set| resumptionToken | 200, 400, 404, 422 
+ListSets | - | - | resumptionToken | 200, 400
+ListMetadataFormats | - | identifier | - | 200, 400, 404
+GetRecord | identifier, metadataPrefix | - | - | 200, 400, 404, 422
 
 The repository supports [oai_dc](https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore) and [marc21](http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm) metadata formats.
 The [OAI Identifier Format](http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm) is used for resource identifiers with the following pattern: `oai:<repositoryBaseUrl>:<tenantId>/<uuid of record>` e.g. ` oai:demo.folio.org:tenant123/fb857902-3ab2-4c34-9772-14ad7acdfe76`.
@@ -40,6 +52,8 @@ OAI-PMH | `repository.deletedRecords` | `no` | The manner in which the repositor
 OAI-PMH | `repository.maxRecordsPerResponse` | `100` | The maximum number of records returned in the List responses. The main intention is to implement [Flow Control](https://www.openarchives.org/OAI/openarchivesprotocol.html#FlowControl)
 OAI-PMH | `jaxb.marshaller.enableValidation` | `false` | Boolean value which defines if the response content should be validated against xsd schemas.
 OAI-PMH | `jaxb.marshaller.formattedOutput` | `false` | Boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation.
+OAI-PMH | `repository.errorsProcessing` | `500` | Defines in which way OAI-PMH level errors are going to be processed. `200` -  OAI-PMH level error is associated with HTTP status 200. `500` - OAI-PMH level error may be associated with HTTP error status (4xx or 5xx). 
+OAI-PMH | `repository.enableOaiService` | `true` | Defines whether an OAI-PMH module is accessible in the repository. If `false`, then all other OAI-PMH settings are disabled and repository responds with 503.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>
