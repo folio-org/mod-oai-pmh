@@ -1,4 +1,4 @@
-package org.folio.oaipmh.validator.impl;
+package org.folio.oaipmh.validator;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
@@ -7,11 +7,9 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.REQUEST_PARAMS;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
@@ -31,15 +29,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
 import com.google.common.collect.ImmutableList;
-
-import io.vertx.core.Context;
-import io.vertx.core.impl.EventLoopContext;
 
 @ExtendWith(MockitoExtension.class)
 class VerbValidatorTest {
@@ -58,8 +52,6 @@ class VerbValidatorTest {
 
   private VerbValidator validator = new VerbValidator();
 
-  @Mock
-  private Context context = new EventLoopContext(null, null, null, null, null, null, null);
 
   @After
   public void tearDown() {
@@ -68,14 +60,14 @@ class VerbValidatorTest {
 
   @Test
   void shouldAddErrorWhenRequestedVerbIsNotImplemented() {
-    List<OAIPMHerrorType> errors = validator.validate(UNKNOWN_VERB, context);
+    List<OAIPMHerrorType> errors = validator.validate(UNKNOWN_VERB, requestParams);
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_VERB, format(VERB_NOT_IMPLEMENTED_ERROR_MESSAGE, UNKNOWN_VERB));
   }
 
   @Test
   void shouldAddErrorWhenRequestedVerbIsNull() {
-    List<OAIPMHerrorType> errors = validator.validate(null, context);
+    List<OAIPMHerrorType> errors = validator.validate(null, requestParams);
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_VERB, format(VERB_NOT_IMPLEMENTED_ERROR_MESSAGE, DEFAULT_NAME_OF_NULL_VERB));
   }
@@ -83,9 +75,7 @@ class VerbValidatorTest {
   @ParameterizedTest()
   @MethodSource("getVerbsWithRequiredParams")
   void shouldAddErrorWhenRequiredParametersIsMissed(Verb verb) {
-    when(context.get(REQUEST_PARAMS)).thenReturn(requestParams);
-
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), context);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
     String missedRequiredParams = getRequiredParamsAsString(verb);
 
     assertTrue(isNotEmpty(errors));
@@ -95,12 +85,11 @@ class VerbValidatorTest {
   @ParameterizedTest
   @MethodSource("getVerbsWithExclusiveParams")
   void shouldAddErrorWhenParametersContainExclusiveAndAnotherOneWithIt(Verb verb) {
-    when(context.get(REQUEST_PARAMS)).thenReturn(requestParams);
     requestParams.put(RESUMPTION_TOKEN_PARAM, RESUMPTION_TOKEN_TEST_VALUE);
     requestParams.put(FROM_PARAM, LocalDateTime.now()
       .format(ISO_UTC_DATE_ONLY));
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), context);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
 
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_ARGUMENT, format(EXCLUSIVE_PARAM_ERROR_MESSAGE, verb.name(), verb.getExclusiveParam()));
@@ -109,11 +98,10 @@ class VerbValidatorTest {
   @ParameterizedTest
   @EnumSource(Verb.class)
   void shouldAddErrorWhenRequestParametersContainIllegalParameter(Verb verb) {
-    when(context.get(REQUEST_PARAMS)).thenReturn(requestParams);
     setUpRequiredRequestParametersForVerb(verb);
     requestParams.put(getIllegalParameterForVerb(verb), TEST_VALUE);
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), context);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
 
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_ARGUMENT,
@@ -123,10 +111,9 @@ class VerbValidatorTest {
   @ParameterizedTest
   @EnumSource(Verb.class)
   void shouldReturnEmptyErrorListWhenParametersAreValid(Verb verb) {
-    when(context.get(REQUEST_PARAMS)).thenReturn(requestParams);
     setUpRequiredRequestParametersForVerb(verb);
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), context);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
 
     assertTrue(isEmpty(errors));
   }
