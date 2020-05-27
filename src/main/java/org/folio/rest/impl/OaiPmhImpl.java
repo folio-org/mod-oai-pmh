@@ -9,7 +9,6 @@ import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.REQUEST_PARAMS;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -78,13 +77,13 @@ public class OaiPmhImpl implements Oai {
   }
 
   @Override
-  public void getOaiRecords(String verbName, String identifier, String resumptionToken, String from, String until, String set, String metadataPrefix, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRecords(String verb, String identifier, String resumptionToken, String from, String until, String set, String metadataPrefix, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
           Request.Builder requestBuilder = Request.builder()
             .okapiHeaders(okapiHeaders)
-            .verb(getVerb(verbName))
+            .verb(getVerb(verb))
             .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
           if (StringUtils.isNotEmpty(identifier)) {
@@ -108,17 +107,17 @@ public class OaiPmhImpl implements Oai {
           addParamToMapIfNotEmpty(SET_PARAM, set, requestParams);
           addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
-          List<OAIPMHerrorType> errors = validator.validate(verbName, requestParams);
+          List<OAIPMHerrorType> errors = validator.validate(verb, requestParams);
 
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
             asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
           } else {
-            HELPERS.get(VerbType.fromValue(verbName))
+            HELPERS.get(VerbType.fromValue(verb))
               .handle(request, vertxContext)
               .thenAccept(response -> {
-                logger.debug(verbName + " response: {}", response.getEntity());
+                logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
               }).exceptionally(handleError(asyncResultHandler));
           }

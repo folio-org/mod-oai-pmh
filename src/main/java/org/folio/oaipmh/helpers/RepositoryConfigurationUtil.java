@@ -5,10 +5,8 @@ import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.oaipmh.Constants.SHOULD_LOAD_CONFIGS;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;

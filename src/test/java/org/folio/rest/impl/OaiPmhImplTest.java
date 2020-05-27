@@ -20,7 +20,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
-import static org.folio.oaipmh.Constants.REQUEST_PARAMS;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
@@ -61,7 +60,6 @@ import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 import static org.openarchives.oai._2.VerbType.UNKNOWN;
-import static org.openarchives.oai._2.VerbType.VERB;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -141,12 +139,6 @@ class OaiPmhImplTest {
   // API paths
   private static final String ROOT_PATH = "/oai";
   private static final String RECORDS_PATH = ROOT_PATH + "/records";
-  private static final String GET_RECORD_PATH = RECORDS_PATH + "/{identifier}";
-  private static final String LIST_IDENTIFIERS_PATH = ROOT_PATH + "/identifiers";
-  private static final String LIST_METADATA_FORMATS_PATH = ROOT_PATH + "/metadata_formats";
-  private static final String LIST_SETS_PATH = ROOT_PATH + "/sets";
-  private static final String IDENTIFY_PATH = ROOT_PATH + "/repository_info";
-  private static final String VERB_PATH = ROOT_PATH + "/verbs";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -168,18 +160,8 @@ class OaiPmhImplTest {
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
 
-  private static final Map<VerbType, String> basePaths = new HashMap<>();
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
-
-  static {
-    basePaths.put(GET_RECORD, GET_RECORD_PATH);
-    basePaths.put(LIST_RECORDS, RECORDS_PATH);
-    basePaths.put(LIST_IDENTIFIERS, LIST_IDENTIFIERS_PATH);
-    basePaths.put(LIST_METADATA_FORMATS, LIST_METADATA_FORMATS_PATH);
-    basePaths.put(LIST_SETS, LIST_SETS_PATH);
-    basePaths.put(IDENTIFY, IDENTIFY_PATH);
-  }
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) {
