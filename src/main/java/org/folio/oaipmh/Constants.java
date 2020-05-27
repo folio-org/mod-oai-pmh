@@ -48,10 +48,10 @@ public final class Constants {
   public static final String RESUMPTION_TOKEN_PARAM = "resumptionToken";
   public static final String SET_PARAM = "set";
   public static final String UNTIL_PARAM = "until";
-  public static final String REQUEST_PARAMS = "requestParams";
+  public static final String OFFSET_PARAM = "offset";
+  public static final String TOTAL_RECORDS_PARAM = "totalRecords";
+  public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String VERB_PARAM = "verb";
-
-  public static final String SHOULD_LOAD_CONFIGS = "shouldLoadConfigs";
 
   public static final String DEFLATE = "deflate";
   public static final String GZIP = "gzip";

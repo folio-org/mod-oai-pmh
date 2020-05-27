@@ -8,11 +8,14 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -271,12 +274,12 @@ public abstract class AbstractHelper implements VerbHelper {
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
-      extraParams.put("totalRecords", String.valueOf(totalRecords));
-      extraParams.put("offset", String.valueOf(newOffset));
+      extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
+      extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
-      extraParams.put("nextRecordId", nextRecordId);
+      extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
-        extraParams.put("until", getUntilDate(request, request.getFrom()));
+        extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
       }
 
       resumptionToken = request.toResumptionToken(extraParams);

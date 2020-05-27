@@ -10,7 +10,9 @@ import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
@@ -24,6 +26,7 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
@@ -69,9 +72,7 @@ import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -480,9 +481,9 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, FROM_PARAM), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
     assertThat(getParamValue(params, UNTIL_PARAM), is((notNullValue())));
     assertThat(getParamValue(params, SET_PARAM), is(equalTo("all")));
-    assertThat(getParamValue(params, "offset"), is(equalTo("10")));
-    assertThat(getParamValue(params, "totalRecords"), is(equalTo("100")));
-    assertThat(getParamValue(params, "nextRecordId"), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
+    assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("10")));
+    assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
+    assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
 
   @ParameterizedTest
@@ -1357,7 +1358,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, LIST_SETS.value())
-      .param("resumptionToken", resumptionToken);
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
     OAIPMH oai = verifyResponseWithErrors(request, LIST_SETS, 400, 1);
 
