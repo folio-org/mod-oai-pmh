@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.DeletedRecordType;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
@@ -112,4 +113,11 @@ public class RepositoryConfigurationUtil {
     return parseBoolean(defaultValue);
   }
 
+  public static boolean isDeletedRecordsEnabled(Request request, String name){
+    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
+    String propertyName = getProperty(tenant, name);
+
+    return (DeletedRecordType.fromValue(propertyName)).equals(DeletedRecordType.PERSISTENT)
+      || (DeletedRecordType.fromValue(propertyName)).equals(DeletedRecordType.TRANSIENT);
+  }
 }

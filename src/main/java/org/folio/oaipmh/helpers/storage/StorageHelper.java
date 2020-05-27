@@ -81,7 +81,7 @@ public interface StorageHelper {
    * Returns base endpoint to get items
    * @return endpoint
    */
-  String buildRecordsEndpoint(Request request) throws UnsupportedEncodingException;
+  String buildRecordsEndpoint(Request request, boolean recordsPath) throws UnsupportedEncodingException;
 
   /**
    * Gets endpoint to search for record metadata by identifier
@@ -96,4 +96,15 @@ public interface StorageHelper {
    * @return String
    */
   boolean getSuppressedFromDiscovery(JsonObject entry);
+
+  JsonArray getRecordsItems(JsonObject entries);
+
+  String getId(JsonObject entry);
+
+  /**
+   * This method determines that the record is deleted by two criteria
+   * @param entry the entry returned by items storage service
+   * @return true if record marked as deleted
+   */
+  boolean isRecordMarkAsDeleted(JsonObject entry);
 }

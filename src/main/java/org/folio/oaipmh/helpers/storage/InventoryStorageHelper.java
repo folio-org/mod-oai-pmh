@@ -42,7 +42,7 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
-  public String buildRecordsEndpoint(Request request) throws UnsupportedEncodingException {
+  public String buildRecordsEndpoint(Request request, boolean recordsPath) throws UnsupportedEncodingException {
     return INSTANCES_URI + buildSearchQuery(request);
   }
 
@@ -84,5 +84,20 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
     return entry.getBoolean(DISCOVERY_SUPPRESS);
+  }
+
+  @Override
+  public boolean isRecordMarkAsDeleted(JsonObject entry) {
+    return false;
+  }
+
+  @Override
+  public JsonArray getRecordsItems(JsonObject entries) {
+    return getItems(entries);
+  }
+
+  @Override
+  public String getId(JsonObject entry) {
+    return getRecordId(entry);
   }
 }

@@ -1,5 +1,38 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.SetType;
+
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -13,10 +46,14 @@ import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
@@ -65,6 +102,18 @@ public abstract class AbstractHelper implements VerbHelper {
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
+
+  /**
+   * Creates basic {@link OAIPMH} with ResponseDate and Request details
+   * @param request {@link Request}
+   * @return basic {@link OAIPMH}
+   */
+  protected OAIPMH buildBaseResponse(Request request) {
+    return new OAIPMH()
+      // According to spec the nanoseconds should not be used so truncate to seconds
+      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
+      .withRequest(request.getOaiRequest());
+  }
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -258,6 +307,19 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
+   * The error codes required to define the http code to be returned in the http response
+   * @param oai OAIPMH response with errors
+   * @return set of error codes
+   */
+  protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
+    // According to oai-pmh.raml the service will return different http codes depending on the error
+    return oai.getErrors()
+              .stream()
+              .map(OAIPMHerrorType::getCode)
+              .collect(Collectors.toSet());
+  }
+
+  /**
    * Builds resumptionToken that is used to resume request sequence
    * in case the whole result set is partitioned.
    *
@@ -276,7 +338,12 @@ public abstract class AbstractHelper implements VerbHelper {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
-      String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
+      String nextRecordId;
+      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+        nextRecordId = storageHelper.getId((JsonObject) instances.remove(instances.size() - 1));
+      } else {
+        nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
+      }
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
         extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
@@ -315,6 +382,24 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
+  protected boolean filterInstance(Request request, JsonObject instance){
+    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+      return !storageHelper.isRecordMarkAsDeleted(instance);
+    } else {
+      return getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
+        || (!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && !storageHelper.getSuppressedFromDiscovery(instance))
+        || (!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && storageHelper.isRecordMarkAsDeleted(instance));
+    }
+  }
+
+  protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance){
+    HeaderType header = populateHeader(identifierPrefix, instance);
+    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+      header.setStatus(StatusType.DELETED);
+    }
+    return header;
+  }
+
   /**
    * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
    * <br/>
@@ -332,9 +417,11 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
+    String recordId = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)
+      ? storageHelper.getId(instances.getJsonObject(0)) : storageHelper.getRecordId(instances.getJsonObject(0));
     return instances != null && instances.size() > 0 &&
       (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), storageHelper.getRecordId(instances.getJsonObject(0))));
+        || StringUtils.equals(request.getNextRecordId(), recordId));
   }
 
   private List<String> getSupportedSetSpecs() {

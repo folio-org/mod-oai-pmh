@@ -6,11 +6,13 @@ import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
 import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
@@ -38,6 +40,7 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
 
 import io.vertx.core.Context;
 import io.vertx.core.json.JsonArray;
@@ -80,7 +83,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request);
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
 
       logger.debug("Sending message to {}", instanceEndpoint);
 
@@ -123,7 +126,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     requiresSuccessStorageResponse(instancesResponse);
 
     JsonObject body = instancesResponse.getBody();
-    JsonArray instances = storageHelper.getItems(body);
+    JsonArray instances;
+    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      instances = storageHelper.getRecordsItems(body);
+    } else {
+      instances = storageHelper.getItems(body);
+    }
     Integer totalRecords = storageHelper.getTotalRecords(body);
 
     logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
@@ -172,21 +180,33 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String recordId = storageHelper.getRecordId(instance);
+        String recordId;
+        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+          recordId = storageHelper.getId(instance);
+        } else {
+          recordId = storageHelper.getRecordId(instance);
+        }
         String identifierId = storageHelper.getIdentifierId(instance);
         if (StringUtils.isNotEmpty(identifierId)) {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
+          if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+            record.getHeader().setStatus(StatusType.DELETED);
+          }
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
             source = updateSourceWithDiscoverySuppressedDataIfNecessary(source, instance, request);
-            record.withMetadata(buildOaiMetadata(request, source));
+            if (record.getHeader().getStatus() == null) {
+              record.withMetadata(buildOaiMetadata(request, source));
+            }
           } else {
             context.put(recordId, instance);
           }
-          records.put(recordId, record);
+          if (filterInstance(request, instance)) {
+            records.put(recordId, record);
+          }
         }
       }
     }
@@ -300,13 +320,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
       records.forEach((id, record) -> {
-        if (Objects.isNull(record.getMetadata())) {
+        if (Objects.isNull(record.getMetadata()) && record.getHeader().getStatus() == null) {
           cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id).thenAccept(record::withMetadata));
         }
       });
       return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
                                    // Return only records with metadata populated
-                                   .thenApply(v -> filterEmptyRecords(records));
+                                   .thenApply(v -> filterEmptyRecords(records, ctx));
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
@@ -319,20 +339,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   .anyMatch(Objects::isNull);
   }
 
-  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
+  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records, Context ctx) {
     return records.entrySet()
                   .stream()
-                  .filter(this::hasMetadata)
                   .map(Map.Entry::getValue)
                   .collect(Collectors.toList());
-  }
-
-  private boolean hasMetadata(Map.Entry<String, RecordType> entry) {
-    boolean hasMetadata = Objects.nonNull(entry.getValue().getMetadata());
-    if (!hasMetadata) {
-      logger.warn(String.format("The record with '%s' storage's id has no metadata", entry.getKey()));
-    }
-    return hasMetadata;
   }
 
   /**
