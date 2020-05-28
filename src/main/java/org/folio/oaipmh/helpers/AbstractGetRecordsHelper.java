@@ -326,7 +326,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       });
       return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
                                    // Return only records with metadata populated
-                                   .thenApply(v -> filterEmptyRecords(records, ctx));
+                                   .thenApply(v -> filterEmptyRecords(records));
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
@@ -339,7 +339,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   .anyMatch(Objects::isNull);
   }
 
-  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records, Context ctx) {
+  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
     return records.entrySet()
                   .stream()
                   .map(Map.Entry::getValue)

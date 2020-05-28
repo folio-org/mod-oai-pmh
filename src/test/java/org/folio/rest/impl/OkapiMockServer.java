@@ -39,6 +39,7 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
+  public static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
@@ -171,7 +172,7 @@ public class OkapiMockServer {
   }
 
   private void handleSourceRecordStorageResponse(RoutingContext ctx){
-    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8")));
+    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
       if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         json = getRecordJsonWithDeletedTrue(json);
@@ -235,7 +236,7 @@ public class OkapiMockServer {
       } else if (query.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(filePath + INSTANCES_3));
         successResponse(ctx, json);
-      }else {
+      } else {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_11));
       }
       logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
