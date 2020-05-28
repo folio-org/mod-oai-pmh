@@ -8,7 +8,6 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
-
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -29,6 +28,8 @@ public final class Constants {
   public static final String REPOSITORY_STORAGE = "repository.storage";
   public static final String REPOSITORY_PROTOCOL_VERSION_2_0 = "2.0";
   public static final String REPOSITORY_SUPPRESSED_RECORDS_PROCESSING = "repository.suppressedRecordsProcessing";
+  public static final String REPOSITORY_ENABLE_OAI_SERVICE = "repository.enableOaiService";
+  public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
   public static final String INVENTORY_STORAGE = "INVENTORY";
@@ -47,6 +48,10 @@ public final class Constants {
   public static final String RESUMPTION_TOKEN_PARAM = "resumptionToken";
   public static final String SET_PARAM = "set";
   public static final String UNTIL_PARAM = "until";
+  public static final String OFFSET_PARAM = "offset";
+  public static final String TOTAL_RECORDS_PARAM = "totalRecords";
+  public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
+  public static final String VERB_PARAM = "verb";
 
   public static final String DEFLATE = "deflate";
   public static final String GZIP = "gzip";
@@ -55,8 +60,8 @@ public final class Constants {
   public static final String CANNOT_DISSEMINATE_FORMAT_ERROR = "The value of the MetadataPrefix argument is not supported by the repository";
   public static final String RESUMPTION_TOKEN_FORMAT_ERROR = "The value of the resumptionToken argument is invalid";
   public static final String RESUMPTION_TOKEN_FLOW_ERROR = "There were substantial changes to the repository and continuing may result in missing records.";
-  public static final String LIST_NO_REQUIRED_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix nor resumptionToken";
-  public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "The request includes resumptionToken and other argument(s)";
+  public static final String LIST_NO_REQUIRED_PARAM_ERROR = "Missing required parameters: metadataPrefix";
+  public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "Verb '%s', argument 'resumptionToken' is exclusive, no others maybe specified with it.";
   public static final String NO_RECORD_FOUND_ERROR = "There is no any record found matching search criteria";
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";

@@ -1,27 +1,24 @@
 package org.folio.oaipmh.helpers;
 
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
-import org.openarchives.oai._2.GetRecordType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
+import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.RECORD_METADATA_PREFIX_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.RECORD_NOT_FOUND_ERROR;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
-import static org.folio.oaipmh.Constants.*;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond200WithTextXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond400WithTextXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond404WithTextXml;
-import static org.folio.rest.jaxrs.resource.Oai.GetOaiRecordsByIdResponse.respond422WithTextXml;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.openarchives.oai._2.GetRecordType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
@@ -58,25 +55,6 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
     if (resumptionToken != null) {
       throw new UnsupportedOperationException("Control flow is not applicable for GetRecord verb.");
     }
-  }
-
-  @Override
-  protected Response buildResponseWithErrors(OAIPMH oai) {
-    String responseBody = ResponseHelper.getInstance().writeToString(oai);
-
-    // According to oai-pmh.raml the service will return different http codes depending on the error
-    Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oai);
-    if (errorCodes.contains(BAD_ARGUMENT)) {
-      return respond400WithTextXml(responseBody);
-    } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      return respond422WithTextXml(responseBody);
-    }
-    return respond404WithTextXml(responseBody);
-  }
-
-  @Override
-  protected Response buildSuccessResponse(OAIPMH oai) {
-    return respond200WithTextXml(ResponseHelper.getInstance().writeToString(oai));
   }
 
   @Override

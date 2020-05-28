@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2020-05-14T07:49:29Z</responseDate>
+    <request set="all" metadataPrefix="oai_dc">http://localhost:9701/oai/eyJzIjoiblo1NkYzTGVBYSIsInQiOiJkaWt1IiwidSI6ImRpa3VfYWRtaW4ifQ</request>
+    <error code="badVerb">Bad verb. Verb 'WrongVerbName' is not implemented</error>
+</OAI-PMH>

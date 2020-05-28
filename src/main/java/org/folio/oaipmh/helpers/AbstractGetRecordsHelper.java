@@ -30,7 +30,8 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
@@ -59,21 +60,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
-        OAIPMH oai = buildBaseResponse(request)
-          .withErrors(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_ILLEGAL_ARGUMENTS_ERROR));
-        future.complete(buildResponseWithErrors(oai));
+        ResponseHelper responseHelper = getResponseHelper();
+        OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
+        future.complete(responseHelper.buildFailureResponse(oaipmh, request));
         return future;
       }
 
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        OAIPMH oai = buildBaseResponse(request);
+        ResponseHelper responseHelper = getResponseHelper();
+        OAIPMH oai;
         if (request.isRestored()) {
-          oai.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(RESUMPTION_TOKEN_FORMAT_ERROR));
+          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
         } else {
-          oai.withErrors(errors);
+          oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
         }
-        future.complete(buildResponseWithErrors(oai));
+        future.complete(responseHelper.buildFailureResponse(oai, request));
         return future;
       }
 
@@ -99,9 +101,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return future;
   }
 
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh) {
+  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
-    return completedFuture(buildResponseWithErrors(oaipmh));
+    return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
   private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
@@ -128,10 +130,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     // In case the request is based on resumption token, the response should be validated if no missed records since previous response
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-      OAIPMH oaipmh = buildBaseResponse(request).withErrors(new OAIPMHerrorType()
+      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()  //
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
-      return completedFuture(buildResponseWithErrors(oaipmh));
+      return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
     }
 
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
@@ -140,19 +142,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
     * of any database query or search function necessary to answer the list request, rather than when the output is written.
     */
-    final OAIPMH oaipmh = buildBaseResponse(request);
+    final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
 
     // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
     return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
       .thenCompose(recordsMap -> {
         if (recordsMap.isEmpty()) {
-          return buildNoRecordsFoundOaiResponse(oaipmh);
+          return buildNoRecordsFoundOaiResponse(oaipmh, request);
         } else {
           return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
             .thenApply(records -> {
               addRecordsToOaiResponse(oaipmh, records);
               addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-              return buildResponse(oaipmh);
+              return buildResponse(oaipmh, request);
             });
         }
       });
@@ -201,7 +203,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * @return record source
    */
   private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
-    if(getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       JsonObject content = new JsonObject(source);
       JsonArray fields = content.getJsonArray(FIELDS);
       Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
@@ -251,8 +253,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int value = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
     generalInfoDataFieldSubfield.put(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE, value);
     subfields.add(generalInfoDataFieldSubfield);
-    generalInfoDataFieldContent.put("ind1", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
-    generalInfoDataFieldContent.put("ind2", GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put(INDEX_ONE, GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
+    generalInfoDataFieldContent.put(INDEX_TWO, GENERAL_INFO_DATA_FIELD_INDEX_VALUE);
     generalInfoDataFieldContent.put(SUBFIELDS, subfields);
     generalInfoDataField.put(GENERAL_INFO_DATA_FIELD_TAG_NUMBER, generalInfoDataFieldContent);
     list.add(generalInfoDataField);
@@ -289,7 +291,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     MetadataType metadata = new MetadataType();
     MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
     byte[] byteSource = metadataPrefix.convert(content);
-    Object record = ResponseHelper.getInstance().bytesToObject(byteSource);
+    Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
     metadata.setAny(record);
     return metadata;
   }
@@ -350,15 +352,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     future.completeExceptionally(e);
   }
 
-  private javax.ws.rs.core.Response buildResponse(OAIPMH oai) {
+  private javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
     if (!oai.getErrors().isEmpty()) {
-      return buildResponseWithErrors(oai);
+      return getResponseHelper().buildFailureResponse(oai, request);
     }
-    return buildSuccessResponse(oai);
+    return getResponseHelper().buildSuccessResponse(oai);
   }
 
-  protected abstract Response buildSuccessResponse(OAIPMH oai);
-  protected abstract Response buildResponseWithErrors(OAIPMH oai);
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
   protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
   protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);

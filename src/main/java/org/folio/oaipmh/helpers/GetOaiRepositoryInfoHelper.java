@@ -1,29 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Context;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseHelper;
-import org.folio.rest.jaxrs.resource.Oai.GetOaiRepositoryInfoResponse;
-import org.openarchives.oai._2.DeletedRecordType;
-import org.openarchives.oai._2.DescriptionType;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.IdentifyType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
-
-import javax.ws.rs.core.Response;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -32,6 +8,30 @@ import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_PROTOCOL_VERSION_2_0;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Request;
+import org.openarchives.oai._2.DeletedRecordType;
+import org.openarchives.oai._2.DescriptionType;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.IdentifyType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+
+import io.vertx.core.Context;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 
 /**
@@ -48,7 +48,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
     CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
     try {
       String tenant = request.getOkapiHeaders().get(OKAPI_TENANT);
-      OAIPMH oai = buildBaseResponse(request)
+      OAIPMH oai = getResponseHelper().buildBaseOaipmhResponse(request)
         .withIdentify(new IdentifyType()
           .withRepositoryName(getRepositoryName(tenant))
           .withBaseURL(request.getOaiRequest().getValue())
@@ -62,8 +62,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withCompressions(GZIP, DEFLATE)
           .withDescriptions(getDescriptions(request)));
 
-      String response = ResponseHelper.getInstance().writeToString(oai);
-      future.complete(GetOaiRepositoryInfoResponse.respond200WithTextXml(response));
+      future.complete(getResponseHelper().buildSuccessResponse(oai));
     } catch (Exception e) {
       logger.error("Error happened while processing Identify verb request", e);
       future.completeExceptionally(e);

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.folio.oaipmh.ResponseHelper;
+import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.resource.interfaces.InitAPI;
 
@@ -49,7 +49,7 @@ public class InitAPIs implements InitAPI {
       });
 
       // Initialize ResponseWriter and check if jaxb marshaller is ready to operate
-      if (!ResponseHelper.getInstance()
+      if (!ResponseConverter.getInstance()
         .isJaxbInitialized()) {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }

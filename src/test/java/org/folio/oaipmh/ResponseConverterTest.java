@@ -19,14 +19,16 @@ import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static org.junit.jupiter.api.Assertions.fail;
 
 
-class ResponseHelperTest {
+class ResponseConverterTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(ResponseHelperTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(ResponseConverterTest.class);
 
   @Test
   void validationException() {
+    ResponseConverter converter = ResponseConverter.getInstance();
+    OAIPMH oaipmh = new OAIPMH();
     try {
-      ResponseHelper.getInstance().writeToString(new OAIPMH());
+      converter.convertToString(oaipmh);
       fail("JAXBException is expected because validation is enabled");
     } catch (IllegalStateException e) {
       assertThat(e.getCause(), instanceOf(JAXBException.class));
@@ -38,8 +40,9 @@ class ResponseHelperTest {
 
   @Test
   void validateIllegalArgumentException() {
+    ResponseConverter converter = ResponseConverter.getInstance();
     try {
-      ResponseHelper.getInstance().writeToString(null);
+      converter.convertToString(null);
       fail("JAXBException is expected");
     } catch (IllegalArgumentException e) {
       // expected behavior
@@ -56,11 +59,11 @@ class ResponseHelperTest {
       .withRequest(new RequestType().withValue("oai"))
       .withErrors(new OAIPMHerrorType().withCode(OAIPMHerrorcodeType.BAD_VERB).withValue("error"));
 
-    String result = ResponseHelper.getInstance().writeToString(oaipmh);
+    String result = ResponseConverter.getInstance().convertToString(oaipmh);
     assertThat(result, not(isEmptyOrNullString()));
 
     // Unmarshal string to OAIPMH and verify that these objects equals
-    OAIPMH oaipmhFromString = ResponseHelper.getInstance().stringToOaiPmh(result);
+    OAIPMH oaipmhFromString = ResponseConverter.getInstance().stringToOaiPmh(result);
 
     assertThat(oaipmh, equalTo(oaipmhFromString));
   }

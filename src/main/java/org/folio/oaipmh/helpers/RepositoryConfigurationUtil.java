@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
@@ -41,12 +40,12 @@ public class RepositoryConfigurationUtil {
    * @return empty CompletableFuture
    */
   public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
+    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
@@ -97,23 +96,19 @@ public class RepositoryConfigurationUtil {
   public static String getProperty(String tenant, String name) {
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
-
     if (configs != null) {
       return configs.getString(name, defaultValue);
     }
-
     return defaultValue;
   }
 
-  public static boolean getBooleanProperty(Request request, String name) {
-    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
+  public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
+    String tenant = TenantTool.tenantId(okapiHeaders);
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
     String defaultValue = System.getProperty(name);
-
     if (configs != null) {
       return parseBoolean(configs.getString(name, defaultValue));
     }
-
     return parseBoolean(defaultValue);
   }
 

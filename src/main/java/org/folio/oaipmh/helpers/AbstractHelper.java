@@ -1,38 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.SetType;
-
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -41,15 +8,49 @@ import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.SetType;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -58,22 +59,12 @@ public abstract class AbstractHelper implements VerbHelper {
 
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
 
+  private ResponseHelper responseHelper = ResponseHelper.getInstance();
+
   /**
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
-
-  /**
-   * Creates basic {@link OAIPMH} with ResponseDate and Request details
-   * @param request {@link Request}
-   * @return basic {@link OAIPMH}
-   */
-  protected OAIPMH buildBaseResponse(Request request) {
-    return new OAIPMH()
-      // According to spec the nanoseconds should not be used so truncate to seconds
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.getOaiRequest());
-  }
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -267,19 +258,6 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * The error codes required to define the http code to be returned in the http response
-   * @param oai OAIPMH response with errors
-   * @return set of error codes
-   */
-  protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
-    // According to oai-pmh.raml the service will return different http codes depending on the error
-    return oai.getErrors()
-              .stream()
-              .map(OAIPMHerrorType::getCode)
-              .collect(Collectors.toSet());
-  }
-
-  /**
    * Builds resumptionToken that is used to resume request sequence
    * in case the whole result set is partitioned.
    *
@@ -296,12 +274,12 @@ public abstract class AbstractHelper implements VerbHelper {
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
-      extraParams.put("totalRecords", String.valueOf(totalRecords));
-      extraParams.put("offset", String.valueOf(newOffset));
+      extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
+      extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
-      extraParams.put("nextRecordId", nextRecordId);
+      extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
-        extraParams.put("until", getUntilDate(request, request.getFrom()));
+        extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
       }
 
       resumptionToken = request.toResumptionToken(extraParams);
@@ -364,4 +342,9 @@ public abstract class AbstractHelper implements VerbHelper {
                                  .map(SetType::getSetSpec)
                                  .collect(Collectors.toList());
   }
+
+  protected ResponseHelper getResponseHelper() {
+    return responseHelper;
+  }
+
 }

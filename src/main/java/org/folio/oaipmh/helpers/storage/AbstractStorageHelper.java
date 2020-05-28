@@ -5,6 +5,7 @@ import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
@@ -36,7 +37,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
 
   @Override
   public Integer getTotalRecords(JsonObject entries) {
-    return entries.getInteger("totalRecords");
+    return entries.getInteger(TOTAL_RECORDS_PARAM);
   }
 
   @Override
@@ -55,7 +56,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
-    if(!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if(!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       queryBuilder.and();
       addSuppressFromDiscovery(queryBuilder);
     }
