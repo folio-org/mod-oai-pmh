@@ -996,31 +996,6 @@ class OaiPmhImplTest {
     assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
   }
 
-//  @ParameterizedTest
-//  @MethodSource("metadataPrefixAndEncodingProvider")
-//  void getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(MetadataPrefix metadataPrefix, String encoding) {
-//    getLogger().debug(format("==== Starting getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) ====", metadataPrefix.name(), encoding));
-//
-//    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD;
-//    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//
-//    addAcceptEncodingHeader(request, encoding);
-//
-//    // Unmarshal string to OAIPMH and verify required data presents
-//    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-//
-//    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-//    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-//
-//    verifyListResponse(oaipmh, LIST_RECORDS, 3);
-//
-//    getLogger().debug(format("==== getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-//  }
-
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
@@ -1152,47 +1127,6 @@ class OaiPmhImplTest {
     verifyBaseResponse(oaipmh, GET_RECORD);
     assertThat(oaipmh.getGetRecord(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
-  }
-
-  @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
-  void getOaiListRecordsVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) {
-    String from = OkapiMockServer.DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD;
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
-
-    // The dates are of invalid format so they are not present in request
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
-    assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
-  }
-
-  @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
-  void getOaiGetRecordVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) {
-    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NOT_FOUND_RECORD_INSTANCE_ID;
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, GET_RECORD.value())
-      .param(IDENTIFIER_PARAM, identifier)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
-
-    // The dates are of invalid format so they are not present in request
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getIdentifier(), equalTo(identifier));
-
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(ID_DOES_NOT_EXIST));
   }
 
   @Test

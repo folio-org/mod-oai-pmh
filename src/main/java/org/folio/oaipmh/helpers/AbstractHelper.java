@@ -58,36 +58,8 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.SetType;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import org.openarchives.oai._2.StatusType;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -386,9 +358,10 @@ public abstract class AbstractHelper implements VerbHelper {
     if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
-      return getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
-        || (!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && !storageHelper.getSuppressedFromDiscovery(instance))
-        || (!getBooleanProperty(request, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && storageHelper.isRecordMarkAsDeleted(instance));
+      Map<String, String> okapiHeaders = request.getOkapiHeaders();
+      return getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
+        || (!getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && !storageHelper.getSuppressedFromDiscovery(instance))
+        || (!getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && storageHelper.isRecordMarkAsDeleted(instance));
     }
   }
 
