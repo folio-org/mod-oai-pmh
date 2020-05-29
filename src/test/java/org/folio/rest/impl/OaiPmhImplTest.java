@@ -36,6 +36,7 @@ import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
+import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -107,6 +108,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
@@ -370,6 +372,8 @@ class OaiPmhImplTest {
   @EnumSource(MetadataPrefix.class)
   void getOaiRecordsWithDateRange(MetadataPrefix metadataPrefix) {
     getLogger().debug("==== Starting getOaiRecordsWithDateRange() ====");
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
 
     String from = THREE_INSTANCES_DATE;
     String until = "2018-12-20";
@@ -391,7 +395,7 @@ class OaiPmhImplTest {
 
     verifyListResponse(oaipmh, LIST_RECORDS, 3);
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
-
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     getLogger().debug("==== getOaiRecordsWithDateRange() successfully completed ====");
   }
 
@@ -995,31 +999,6 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProvider")
-  void getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(MetadataPrefix metadataPrefix, String encoding) {
-    getLogger().debug(format("==== Starting getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) ====", metadataPrefix.name(), encoding));
-
-    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD;
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    addAcceptEncodingHeader(request, encoding);
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
-
-    getLogger().debug(format("==== getOaiListRecordsVerbWithOneNotFoundRecordFromStorage(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
     getLogger().debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -1149,47 +1128,6 @@ class OaiPmhImplTest {
     verifyBaseResponse(oaipmh, GET_RECORD);
     assertThat(oaipmh.getGetRecord(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_ARGUMENT));
-  }
-
-  @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
-  void getOaiListRecordsVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) {
-    String from = OkapiMockServer.DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD;
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
-
-    // The dates are of invalid format so they are not present in request
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(NO_RECORDS_MATCH));
-    assertThat(error.getValue(), equalTo(NO_RECORD_FOUND_ERROR));
-  }
-
-  @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
-  void getOaiGetRecordVerbWithOneInstanceButNotFoundRecordFromStorage(MetadataPrefix metadataPrefix) {
-    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NOT_FOUND_RECORD_INSTANCE_ID;
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, GET_RECORD.value())
-      .param(IDENTIFIER_PARAM, identifier)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
-
-    // The dates are of invalid format so they are not present in request
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getIdentifier(), equalTo(identifier));
-
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertThat(error.getCode(), equalTo(ID_DOES_NOT_EXIST));
   }
 
   @Test
@@ -1488,13 +1426,19 @@ class OaiPmhImplTest {
   }
 
   private void verifyRecord(RecordType record, MetadataPrefix metadataPrefix) {
-    assertThat(record.getMetadata(), is(notNullValue()));
-    if (metadataPrefix == MetadataPrefix.MARC21XML) {
-      assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
-    } else if (metadataPrefix == MetadataPrefix.DC) {
-      assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
+    if (record.getHeader().getStatus() == null) {
+      assertThat(record.getMetadata(), is(notNullValue()));
+      if (metadataPrefix == MetadataPrefix.MARC21XML) {
+        assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
+      } else if (metadataPrefix == MetadataPrefix.DC) {
+        assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
+      }
+      verifyHeader(record.getHeader());
+    } else {
+      if (record.getHeader().getStatus().equals(StatusType.DELETED)){
+        verifyHeader(record.getHeader());
+      }
     }
-    verifyHeader(record.getHeader());
   }
 
   private void verifyHeader(HeaderType header) {
@@ -1735,5 +1679,291 @@ class OaiPmhImplTest {
       "80000000-0000-4000-a000-000000000000",
       "90000000-0000-4000-a000-000000000000");
     //@formatter:on
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalse(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 3);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 2);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrue(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 3);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 2);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalse(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    if (verb.equals(LIST_RECORDS)) {
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+    }
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 404, 1);
+
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    if (verb.equals(LIST_RECORDS)) {
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+    }
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrue(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    if (verb.equals(LIST_RECORDS)) {
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+    }
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressTrueAndRecordMarkAsDeleted(VerbType verb) {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    verifyListResponse(oaipmh, verb, 1);
+    if (verb.equals(LIST_RECORDS)) {
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+    }
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 }

@@ -5,14 +5,20 @@ import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
+import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
+import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.DeletedRecordType;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
@@ -35,8 +41,9 @@ public class RepositoryConfigurationUtil {
 
   /**
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
+   *
    * @param okapiHeaders
-   * @param ctx the context
+   * @param ctx          the context
    * @return empty CompletableFuture
    */
   public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
@@ -63,7 +70,7 @@ public class RepositoryConfigurationUtil {
           body.toJsonObject()
             .getJsonArray(CONFIGS)
             .stream()
-            .map(object -> (JsonObject)object)
+            .map(object -> (JsonObject) object)
             .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
             .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 
@@ -89,8 +96,9 @@ public class RepositoryConfigurationUtil {
 
   /**
    * Gets value of the config either from shared config or from System properties as a fallback.
+   *
    * @param tenant tenant
-   * @param name config key
+   * @param name   config key
    * @return value of the config either from shared config if present. Or from System properties as fallback.
    */
   public static String getProperty(String tenant, String name) {
@@ -112,4 +120,15 @@ public class RepositoryConfigurationUtil {
     return parseBoolean(defaultValue);
   }
 
+  public static boolean isDeletedRecordsEnabled(Request request, String name) {
+    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
+    String propertyName = getProperty(tenant, name);
+    try {
+      DeletedRecordType deletedRecordType = DeletedRecordType.fromValue(propertyName);
+      return Arrays.asList(PERSISTENT, TRANSIENT).contains(deletedRecordType);
+    } catch (IllegalArgumentException ex) {
+      String defaultPropertyValue = System.getProperty(REPOSITORY_DELETED_RECORDS);
+      return Boolean.parseBoolean(defaultPropertyValue);
+    }
+  }
 }
