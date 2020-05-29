@@ -81,7 +81,7 @@ public interface StorageHelper {
    * Returns base endpoint to get items
    * @return endpoint
    */
-  String buildRecordsEndpoint(Request request, boolean recordsPath) throws UnsupportedEncodingException;
+  String buildRecordsEndpoint(Request request, boolean isRecordsPath) throws UnsupportedEncodingException;
 
   /**
    * Gets endpoint to search for record metadata by identifier

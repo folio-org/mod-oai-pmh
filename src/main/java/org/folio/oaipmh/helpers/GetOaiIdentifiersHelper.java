@@ -131,7 +131,6 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         .map(instance -> addHeader(identifierPrefix, request, instance))
         .forEach(identifiers::withHeaders);
 
-
       if (identifiers.getHeaders().isEmpty()) {
         OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
         return oaipmh.withErrors(createNoRecordsFoundError());

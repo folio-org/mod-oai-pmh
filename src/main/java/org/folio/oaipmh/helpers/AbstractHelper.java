@@ -31,12 +31,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -51,9 +49,7 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
@@ -74,19 +70,6 @@ public abstract class AbstractHelper implements VerbHelper {
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
-
-  /**
-   * Creates basic {@link OAIPMH} with ResponseDate and Request details
-   *
-   * @param request {@link Request}
-   * @return basic {@link OAIPMH}
-   */
-  protected OAIPMH buildBaseResponse(Request request) {
-    return new OAIPMH()
-      // According to spec the nanoseconds should not be used so truncate to seconds
-      .withResponseDate(Instant.now().truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.getOaiRequest());
-  }
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -285,20 +268,6 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * The error codes required to define the http code to be returned in the http response
-   *
-   * @param oai OAIPMH response with errors
-   * @return set of error codes
-   */
-  protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
-    // According to oai-pmh.raml the service will return different http codes depending on the error
-    return oai.getErrors()
-      .stream()
-      .map(OAIPMHerrorType::getCode)
-      .collect(Collectors.toSet());
-  }
-
-  /**
    * Builds resumptionToken that is used to resume request sequence
    * in case the whole result set is partitioned.
    *
@@ -319,9 +288,9 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
-        nextRecordId = storageHelper.getId((JsonObject) instances.remove(instances.size() - 1));
+        nextRecordId = storageHelper.getId(getLastInstance(instances));
       } else {
-        nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
+        nextRecordId = storageHelper.getRecordId(getLastInstance(instances));
       }
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
@@ -339,6 +308,10 @@ public abstract class AbstractHelper implements VerbHelper {
     }
 
     return null;
+  }
+
+  private JsonObject getLastInstance(JsonArray instances) {
+    return (JsonObject) instances.remove(instances.size() - 1);
   }
 
   /**
@@ -361,14 +334,23 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
+  /**
+   * Filter records from source-record-storage by the fields "deleted = true" or MARC Leader 05 is "d", "s" or "x"
+   * For old behavior (repository.deletedRecords is "no") fields are checked only according to the previously described criteria.
+   * In case when repository.deletedRecords is "persistent" or "transient" checked suppressedRecordsProcessing config setting
+   *
+   * @param request  OIA-PMH request
+   * @param instance record in JsonObject format
+   * @return true when a record should be present in oai-pmh response
+   */
   protected boolean filterInstance(Request request, JsonObject instance) {
     if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
       Map<String, String> okapiHeaders = request.getOkapiHeaders();
-      return getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
-        || (!getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && !storageHelper.getSuppressedFromDiscovery(instance))
-        || (!getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && storageHelper.isRecordMarkAsDeleted(instance));
+      boolean shouldProcessSuppressedRecords = getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      return shouldProcessSuppressedRecords
+        || (!shouldProcessSuppressedRecords && (!storageHelper.getSuppressedFromDiscovery(instance) || storageHelper.isRecordMarkAsDeleted(instance)));
     }
   }
 
@@ -398,10 +380,11 @@ public abstract class AbstractHelper implements VerbHelper {
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
     boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
+    int firstPosition = 0;
     return instances != null && instances.size() > 0 &&
       (totalRecords >= prevTotalRecords
         || StringUtils.equals(request.getNextRecordId(), isDeletedRecords
-        ? storageHelper.getId(instances.getJsonObject(0)) : storageHelper.getRecordId(instances.getJsonObject(0))));
+        ? storageHelper.getId(instances.getJsonObject(firstPosition)) : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
   }
 
   private List<String> getSupportedSetSpecs() {

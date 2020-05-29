@@ -73,8 +73,8 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
-  public String buildRecordsEndpoint(Request request, boolean recordsPath) throws UnsupportedEncodingException {
-    if (recordsPath) {
+  public String buildRecordsEndpoint(Request request, boolean isRecordsPath) throws UnsupportedEncodingException {
+    if (isRecordsPath) {
       return SOURCE_STORAGE_RECORD_PATH + buildSearchQuery(request);
     }
     return SOURCE_STORAGE_RESULT_URI + buildSearchQuery(request);
@@ -109,7 +109,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
     return Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
       .map(record -> record.getJsonObject(CONTENT))
       .map(content -> content.getString(LEADER))
-      .orElse(null);
+      .orElse("");
   }
 
   private boolean isLeaderValueContainsDeletedFlag(String leaderValue) {

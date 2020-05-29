@@ -42,7 +42,7 @@ public class InventoryStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
-  public String buildRecordsEndpoint(Request request, boolean recordsPath) throws UnsupportedEncodingException {
+  public String buildRecordsEndpoint(Request request, boolean isRecordsPath) throws UnsupportedEncodingException {
     return INSTANCES_URI + buildSearchQuery(request);
   }
 
