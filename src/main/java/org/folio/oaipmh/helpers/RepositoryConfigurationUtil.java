@@ -121,7 +121,7 @@ public class RepositoryConfigurationUtil {
   }
 
   public static boolean isDeletedRecordsEnabled(Request request, String name) {
-    String tenant  = TenantTool.tenantId(request.getOkapiHeaders());
+    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
     String propertyName = getProperty(tenant, name);
     try {
       DeletedRecordType deletedRecordType = DeletedRecordType.fromValue(propertyName);

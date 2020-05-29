@@ -85,7 +85,8 @@ public abstract class AbstractHelper implements VerbHelper {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT).withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));
+      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+        .withValue(LIST_NO_REQUIRED_PARAM_ERROR));
     }
 
     if (request.getSet() != null && !getSupportedSetSpecs().contains(request.getSet())) {
@@ -279,7 +280,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationUtil.getProperty
+    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
@@ -349,8 +350,8 @@ public abstract class AbstractHelper implements VerbHelper {
     } else {
       Map<String, String> okapiHeaders = request.getOkapiHeaders();
       boolean shouldProcessSuppressedRecords = getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-      return shouldProcessSuppressedRecords
-        || (!shouldProcessSuppressedRecords && (!storageHelper.getSuppressedFromDiscovery(instance) || storageHelper.isRecordMarkAsDeleted(instance)));
+      return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance)
+        || storageHelper.isRecordMarkAsDeleted(instance);
     }
   }
 
@@ -381,10 +382,10 @@ public abstract class AbstractHelper implements VerbHelper {
     Integer prevTotalRecords = request.getTotalRecords();
     boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
     int firstPosition = 0;
-    return instances != null && instances.size() > 0 &&
-      (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), isDeletedRecords
-        ? storageHelper.getId(instances.getJsonObject(firstPosition)) : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
+    return instances != null && instances.size() > 0
+        && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
+            isDeletedRecords ? storageHelper.getId(instances.getJsonObject(firstPosition))
+                : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
   }
 
   private List<String> getSupportedSetSpecs() {
