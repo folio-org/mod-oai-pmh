@@ -1,38 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.SetType;
-
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -58,8 +25,41 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.rest.tools.client.HttpClientFactory;
+import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -77,6 +77,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Creates basic {@link OAIPMH} with ResponseDate and Request details
+   *
    * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
@@ -89,6 +90,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
+   *
    * @param request the {link Request} with parameters to be validated
    * @return {@link List} of the {@link OAIPMHerrorType} if there is any validation error or empty list
    */
@@ -139,11 +141,11 @@ public abstract class AbstractHelper implements VerbHelper {
       // Both arguments must have the same granularity.
       if (from.getLeft() != until.getLeft()) {
         errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
-                                        .withValue("Invalid date range: 'from' must have the same granularity as 'until'."));
+          .withValue("Invalid date range: 'from' must have the same granularity as 'until'."));
       } else if (from.getRight().isAfter(until.getRight())) {
         // The from argument must be less than or equal to the until argument.
         errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
-                                        .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
+          .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
       }
     }
   }
@@ -159,7 +161,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * If the date is valid, {@link LocalDateTime} is returned. Otherwise {@link #parseDate(Pair, List)} is called because repository
    * must support {@linkplain GranularityType#YYYY_MM_DD YYYY_MM_DD} granularity and date might be in such format
    *
-   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
+   * @param date   {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
@@ -177,7 +179,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * Validates if the date is in {@link DateTimeFormatter#ISO_LOCAL_DATE} format.
    * If the date is valid, it is returned as {@link LocalDateTime} at time of midnight.
    * Otherwise {@literal null} is returned and validation error is added to errors list
-   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date
+   *
+   * @param date   {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
@@ -229,7 +232,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * Creates {@link HeaderType} and populates Identifier, Datestamp and Set
    *
    * @param identifierPrefix oai-identifier prefix
-   * @param instance the instance item returned by storage service
+   * @param instance         the instance item returned by storage service
    * @return populated {@link HeaderType}
    */
   protected HeaderType populateHeader(String identifierPrefix, JsonObject instance) {
@@ -251,6 +254,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Returns last modified or created date
+   *
    * @param instance the instance item returned by storage service
    * @return {@link Instant} based on updated or created date
    */
@@ -260,8 +264,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
+   *
    * @param identifierPrefix oai-identifier prefix
-   * @param instance the instance item returned by storage service
+   * @param instance         the instance item returned by storage service
    * @return oai-identifier
    */
   private String getIdentifier(String identifierPrefix, JsonObject instance) {
@@ -270,8 +275,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
+   *
    * @param identifierPrefix oai-identifier prefix
-   * @param storageId id of the instance returned by storage service
+   * @param storageId        id of the instance returned by storage service
    * @return oai-identifier
    */
   protected String getIdentifier(String identifierPrefix, String storageId) {
@@ -280,23 +286,24 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * The error codes required to define the http code to be returned in the http response
+   *
    * @param oai OAIPMH response with errors
    * @return set of error codes
    */
   protected Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
     // According to oai-pmh.raml the service will return different http codes depending on the error
     return oai.getErrors()
-              .stream()
-              .map(OAIPMHerrorType::getCode)
-              .collect(Collectors.toSet());
+      .stream()
+      .map(OAIPMHerrorType::getCode)
+      .collect(Collectors.toSet());
   }
 
   /**
    * Builds resumptionToken that is used to resume request sequence
    * in case the whole result set is partitioned.
    *
-   * @param request the initial request
-   * @param instances the array of instances returned from Instance Storage
+   * @param request      the initial request
+   * @param instances    the array of instances returned from Instance Storage
    * @param totalRecords the total number of records in the whole result set
    * @return resumptionToken value if partitioning is used and not all instances are processed yet,
    * empty string if partitioning is used and all instances are processed already,
@@ -311,7 +318,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
-      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
         nextRecordId = storageHelper.getId((JsonObject) instances.remove(instances.size() - 1));
       } else {
         nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
@@ -354,8 +361,8 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected boolean filterInstance(Request request, JsonObject instance){
-    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+  protected boolean filterInstance(Request request, JsonObject instance) {
+    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
       Map<String, String> okapiHeaders = request.getOkapiHeaders();
@@ -365,7 +372,7 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance){
+  protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
     HeaderType header = populateHeader(identifierPrefix, instance);
     if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
       header.setStatus(StatusType.DELETED);
@@ -390,17 +397,17 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
-    String recordId = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)
-      ? storageHelper.getId(instances.getJsonObject(0)) : storageHelper.getRecordId(instances.getJsonObject(0));
+    boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
     return instances != null && instances.size() > 0 &&
       (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), recordId));
+        || StringUtils.equals(request.getNextRecordId(), isDeletedRecords
+        ? storageHelper.getId(instances.getJsonObject(0)) : storageHelper.getRecordId(instances.getJsonObject(0))));
   }
 
   private List<String> getSupportedSetSpecs() {
     return getSupportedSetTypes().stream()
-                                 .map(SetType::getSetSpec)
-                                 .collect(Collectors.toList());
+      .map(SetType::getSetSpec)
+      .collect(Collectors.toList());
   }
 
   protected ResponseHelper getResponseHelper() {

@@ -22,7 +22,6 @@ import java.nio.file.Paths;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.MARC_JSON_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_PATH;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -85,6 +84,7 @@ public class OkapiMockServer {
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
+  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
 
   private static final String INSTANCE_STORAGE_BY_ID_MARC_JSON = String.format(MARC_JSON_RECORD_URI, ":instanceId");
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
@@ -285,15 +285,15 @@ public class OkapiMockServer {
     return null;
   }
 
-  private String getJsonWithRecordMarkAsDeleted(String json){
+  private String getJsonWithRecordMarkAsDeleted(String json) {
     return json.replace("00778nam a2200217 c 4500","00778dam a2200217 c 4500");
   }
 
-  private String getRecordJsonWithDeletedTrue(String json){
+  private String getRecordJsonWithDeletedTrue(String json) {
     return json.replace("\"deleted\": false", "\"deleted\": true");
   }
 
-  private String getRecordJsonWithSuppressedTrue(String json){
+  private String getRecordJsonWithSuppressedTrue(String json) {
     return json.replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
   }
 }

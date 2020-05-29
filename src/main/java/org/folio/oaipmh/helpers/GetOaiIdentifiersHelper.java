@@ -40,9 +40,9 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       ResponseHelper responseHelper = getResponseHelper();
       // 1. Restore request from resumptionToken if present
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
-          OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-          future.complete(getResponseHelper().buildFailureResponse(oai, request));
-          return future;
+        OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
+        future.complete(getResponseHelper().buildFailureResponse(oai, request));
+        return future;
       }
 
       // 2. Validate request
@@ -59,7 +59,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       }
 
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request,isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
 
       // 3. Search for instances
       VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
@@ -94,7 +94,8 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
   /**
    * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
-   * @param request request
+   *
+   * @param request           request
    * @param instancesResponse the response from the storage which contains items
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
@@ -107,11 +108,11 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
     ResponseHelper responseHelper = getResponseHelper();
     JsonArray instances;
-     if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
-       instances = storageHelper.getRecordsItems(instancesResponse.getBody());
-     } else {
-       instances = storageHelper.getItems(instancesResponse.getBody());
-     }
+    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      instances = storageHelper.getRecordsItems(instancesResponse.getBody());
+    } else {
+      instances = storageHelper.getItems(instancesResponse.getBody());
+    }
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
@@ -124,7 +125,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-        .map(object -> (JsonObject)object)
+        .map(object -> (JsonObject) object)
         .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
         .filter(instance -> filterInstance(request, instance))
         .map(instance -> addHeader(identifierPrefix, request, instance))

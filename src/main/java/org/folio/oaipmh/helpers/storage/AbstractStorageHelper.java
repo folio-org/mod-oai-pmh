@@ -58,7 +58,8 @@ public abstract class AbstractStorageHelper implements StorageHelper {
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
-    if(!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING) && !isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
+         && !isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
       queryBuilder.and();
       addSuppressFromDiscovery(queryBuilder);
     }
@@ -66,7 +67,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
       queryBuilder
         .and()
         .addStrictCriteria(getIdentifierName(), request.getStorageIdentifier());
-    } else if (request.getFrom() == null && request.getUntil() == null){
+    } else if (request.getFrom() == null && request.getUntil() == null) {
       queryBuilder
         .and()
         .dateRange(null, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_ONLY));
@@ -84,6 +85,8 @@ public abstract class AbstractStorageHelper implements StorageHelper {
   }
 
   abstract String getIdentifierName();
+
   abstract void addSource(CQLQueryBuilder queryBuilder);
+
   abstract void addSuppressFromDiscovery(CQLQueryBuilder queryBuilder);
 }

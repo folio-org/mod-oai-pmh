@@ -115,7 +115,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-                       .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
+        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
@@ -147,9 +147,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
     /*
-    * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
-    * of any database query or search function necessary to answer the list request, rather than when the output is written.
-    */
+     * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
+     * of any database query or search function necessary to answer the list request, rather than when the output is written.
+     */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
 
     // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
@@ -181,7 +181,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String recordId;
-        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)){
+        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
           recordId = storageHelper.getId(instance);
         } else {
           recordId = storageHelper.getRecordId(instance);
@@ -217,17 +217,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional subfield which holds data about record discovery
    * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite case.
    *
-   * @param source record source
+   * @param source      record source
    * @param sourceOwner record source owner
-   * @param request OAI-PMH request
+   * @param request     OAI-PMH request
    * @return record source
    */
   private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
-    if(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if (getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       JsonObject content = new JsonObject(source);
       JsonArray fields = content.getJsonArray(FIELDS);
       Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
-      if (generalInfoDataFieldOptional.isPresent()){
+      if (generalInfoDataFieldOptional.isPresent()) {
         updateDatafieldWithDiscoverySuppressedData(generalInfoDataFieldOptional.get(), sourceOwner);
       } else {
         appendGeneralInfoDatafieldWithDiscoverySuppressedData(fields, sourceOwner);
@@ -263,7 +263,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   @SuppressWarnings("unchecked")
-  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner){
+  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner) {
     List<Object> list = fields.getList();
     Map<String, Object> generalInfoDataField = new LinkedHashMap<>();
     Map<String, Object> generalInfoDataFieldContent = new LinkedHashMap<>();
@@ -282,9 +282,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   /**
    * Builds {@link MetadataType} if the response from storage service is successful
-   * @param context - holds json object that is a source owner which is used for building metadata
-   * @param id - source owner id
-   * @param request the request to get metadata prefix
+   *
+   * @param context        - holds json object that is a source owner which is used for building metadata
+   * @param id             - source owner id
+   * @param request        the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
@@ -325,8 +326,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         }
       });
       return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
-                                   // Return only records with metadata populated
-                                   .thenApply(v -> filterEmptyRecords(records));
+        // Return only records with metadata populated
+        .thenApply(v -> filterEmptyRecords(records));
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
@@ -334,21 +335,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
     return records.values()
-                  .stream()
-                  .map(RecordType::getMetadata)
-                  .anyMatch(Objects::isNull);
+      .stream()
+      .map(RecordType::getMetadata)
+      .anyMatch(Objects::isNull);
   }
 
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
     return records.entrySet()
-                  .stream()
-                  .map(Map.Entry::getValue)
-                  .collect(Collectors.toList());
+      .stream()
+      .map(Map.Entry::getValue)
+      .collect(Collectors.toList());
   }
 
   /**
    * In case the storage service could not return instances we have to send 500 back to client.
    * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
+   *
    * @param sourceResponse response from the storage
    */
   private void requiresSuccessStorageResponse(org.folio.rest.tools.client.Response sourceResponse) {
@@ -371,7 +373,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
+
   protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
+
   protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);
 
 }

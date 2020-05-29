@@ -114,7 +114,7 @@ public class RepositoryConfigurationUtil {
     return parseBoolean(defaultValue);
   }
 
-  public static boolean isDeletedRecordsEnabled(Request request, String name){
+  public static boolean isDeletedRecordsEnabled(Request request, String name) {
     String tenant = TenantTool.tenantId(request.getOkapiHeaders());
     String propertyName = getProperty(tenant, name);
 

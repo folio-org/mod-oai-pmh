@@ -41,7 +41,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.INSTANCES_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_PATH;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -62,6 +61,8 @@ class StorageHelperTest {
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
 
   @AfterEach
   void init() {
