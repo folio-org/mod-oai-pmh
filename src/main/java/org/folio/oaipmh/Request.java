@@ -2,13 +2,9 @@ package org.folio.oaipmh;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -31,11 +27,26 @@ public class Request {
   private static final char PARAMETER_SEPARATOR = '&';
   private static final String PARAMETER_VALUE_SEPARATOR = "=";
 
+  private final RequestType oaiRequest;
+  private final Map<String, String> okapiHeaders;
+  private final String tenant;
+  private final String okapiToken;
+  private final String okapiUrl;
+
+  /** The request restored from resumptionToken. */
+  private RequestType restoredOaiRequest;
+  /** The result offset used for partitioning. */
+  private int offset;
+  /** The previous total number of records used for partitioning. */
+  private int totalRecords;
+  /** The id of the first record in the next set of results used for partitioning. */
+  private String nextRecordId;
+
   /**
    * Builder used to build the request.
    */
   public static class Builder {
-    private RequestType oaiRequest = new RequestType();
+    private final RequestType oaiRequest = new RequestType();
     private Map<String, String> okapiHeaders;
 
     public Builder verb(VerbType verb) {
@@ -88,22 +99,14 @@ public class Request {
       return this;
     }
   }
-  private RequestType oaiRequest;
-
-  private Map<String, String> okapiHeaders;
-  /** The request restored from resumptionToken. */
-  private RequestType restoredOaiRequest;
-  /** The result offset used for partitioning. */
-  private int offset;
-  /** The previous total number of records used for partitioning. */
-  private int totalRecords;
-  /** The id of the first record in the next set of results used for partitioning. */
-  private String nextRecordId;
 
 
   private Request(RequestType oaiRequest, Map<String, String> okapiHeaders) {
     this.oaiRequest = oaiRequest;
     this.okapiHeaders = okapiHeaders;
+    this.tenant = okapiHeaders.get(OKAPI_TENANT);
+    this.okapiToken = okapiHeaders.get(OKAPI_TOKEN);
+    this.okapiUrl = okapiHeaders.get(OKAPI_URL);
   }
 
 
@@ -174,6 +177,18 @@ public class Request {
     return nextRecordId;
   }
 
+  public String getTenant() {
+    return tenant;
+  }
+
+  public String getOkapiToken() {
+    return okapiToken;
+  }
+
+  public String getOkapiUrl() {
+    return okapiUrl;
+  }
+
   /**
    * Factory method returning an instance of the builder.
    * @return {@link Builder} instance
@@ -200,19 +215,18 @@ public class Request {
     String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
       StandardCharsets.UTF_8);
 
-    Map<String, String> params;
-
-       params = URLEncodedUtils.parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
-        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+    Map<String, String> params = URLEncodedUtils
+      .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+      .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
     restoredOaiRequest = new RequestType();
-    restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));
-    restoredOaiRequest.setFrom(params.get(FROM_PARAM));
-    restoredOaiRequest.setUntil(params.get(UNTIL_PARAM));
-    restoredOaiRequest.setSet(params.get(SET_PARAM));
-    this.offset = Integer.parseInt(params.get(OFFSET_PARAM));
-    this.totalRecords = Integer.parseInt(params.get(TOTAL_RECORDS_PARAM));
-    this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
+    restoredOaiRequest.setMetadataPrefix(params.get("metadataPrefix"));
+    restoredOaiRequest.setFrom(params.get("from"));
+    restoredOaiRequest.setUntil(params.get("until"));
+    restoredOaiRequest.setSet(params.get("set"));
+    this.offset = Integer.parseInt(params.get("offset"));
+    this.totalRecords = Integer.parseInt(params.get("totalRecords"));
+    this.nextRecordId = params.get("nextRecordId");
 
     return true;
   }
@@ -234,10 +248,10 @@ public class Request {
    */
   public String toResumptionToken(Map<String, String> extraParams) {
     StringBuilder builder = new StringBuilder();
-    appendParam(builder, METADATA_PREFIX_PARAM, getMetadataPrefix());
-    appendParam(builder, FROM_PARAM, getFrom());
-    appendParam(builder, UNTIL_PARAM, getUntil());
-    appendParam(builder, SET_PARAM, getSet());
+    appendParam(builder, "metadataPrefix", getMetadataPrefix());
+    appendParam(builder, "from", getFrom());
+    appendParam(builder, "until", getUntil());
+    appendParam(builder, "set", getSet());
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())

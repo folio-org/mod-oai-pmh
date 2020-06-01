@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
@@ -14,6 +15,7 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -22,7 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -32,18 +36,32 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.VerbType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.parsetools.impl.JsonParserImpl;
+import io.vertx.ext.web.RoutingContext;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
@@ -55,15 +73,26 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String INDEX_TWO = "ind2";
   private static final String SUBFIELDS = "subfields";
 
+  protected final VerbType verbType;
+  protected final Context vertxContext;
+  protected final RoutingContext routingContext;
+
+  protected AbstractGetRecordsHelper(VerbType verbType, Context vertxContext, RoutingContext routingContext) {
+    this.verbType = verbType;
+    this.vertxContext = vertxContext;
+    this.routingContext = routingContext;
+  }
+
+
   @Override
-  public CompletableFuture<Response> handle(Request request, Context ctx) {
-    CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
+  public Future<Response> handle(Request request) {
+    Promise<Response> oaiPmhResponsePromise = Promise.promise();
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        future.complete(responseHelper.buildFailureResponse(oaipmh, request));
-        return future;
+        oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oaipmh, request));
+        return oaiPmhResponsePromise.future();
       }
 
       List<OAIPMHerrorType> errors = validateRequest(request);
@@ -75,30 +104,90 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
         }
-        future.complete(responseHelper.buildFailureResponse(oai, request));
-        return future;
+        oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oai, request));
+        return oaiPmhResponsePromise.future();
       }
+      //TODO MOVE HTTP CLIENTS TO OTHER CLASSES
+      final Vertx vertx = vertxContext.owner();
+      final HttpClient inventoryHttpClient = vertx.createHttpClient();
+      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
 
-      final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request);
+      //todo add params from request
+      String inventoryEndpoint = "/oai-pmh-view/instances";
+      final MultiMap edgeRequestParams = routingContext.request().params();
+      final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request, edgeRequestParams);
+      logger.debug("Sending message to {}", inventoryQuery);
+      final HttpClientRequest httpClientRequest = inventoryHttpClient.requestAbs(GET, inventoryQuery);
 
-      logger.debug("Sending message to {}", instanceEndpoint);
-
-      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
-        .thenAccept(value -> {
-          httpClient.closeClient();
-          future.complete(value);
-        })
-        .exceptionally(e -> {
-          httpClient.closeClient();
-          handleException(future, e);
-          return null;
+      //TODO WHAT IF NO RESUMPTION TOKEN
+      //final UUID uuid = UUID.randomUUID();
+      final Object o = vertxContext.get(request.getResumptionToken());
+      if (o == null) {
+        httpClientRequest.handler(resp -> {
+          JsonParser jp = new JsonParserImpl(resp);
+          jp.objectValueMode();
+          final BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, new CopyOnWriteArrayList<>());
+          jp.pipeTo(writeStream);
+          jp.endHandler(v -> {
+            vertxContext.remove(request.getResumptionToken());
+            //TODO NO RETURN RESUMPTION TOKEN
+          });
+          vertxContext.put(request.getResumptionToken(), writeStream);
         });
+      }
+      final Object contextWriteStream = vertxContext.get(request.getResumptionToken());
+      if (contextWriteStream instanceof BatchStreamWrapper) {
+        BatchStreamWrapper writeStream = (BatchStreamWrapper) contextWriteStream;
+
+        writeStream.handleBatch(mh -> {
+          //TODO BATCH SIZE?
+          final List<JsonEvent> batch = writeStream.getNext(100);
+
+          final Future<Map<Integer, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
+
+          //TODO MERGE INVENTORY AND SRS RESPONSES
+
+
+          //MAPPING TO OAI-PMH FIELDS
+
+          //          responseFuture.compose(srsResponse->{
+//
+//
+//
+//          });
+
+
+
+          //TODO RETURN TO THE CALLER
+          //oaiPmhResponsePromise.complete(responseFuture);
+
+        });
+      }
+//      inventoryHttpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
+//        .thenCompose(response -> buildRecordsResponse(vertxContext, inventoryHttpClient, request, response))
+//        .thenAccept(value -> {
+//          inventoryHttpClient.closeClient();
+//          future.complete(value);
+//        })
+//        .exceptionally(e -> {
+//          inventoryHttpClient.closeClient();
+//          handleException(future, e);
+//          return null;
+//        });
     } catch (Exception e) {
-      handleException(future, e);
+      handleException(oaiPmhResponsePromise.future(), e);
     }
-    return future;
+    return oaiPmhResponsePromise.future();
+  }
+
+
+  //TODO FROM
+  //TODO UNTIL
+  //TODO deletedrecordsupport
+  //TODO skipsuppressedfromdiscoveryrecords
+  //TODO CHECK THIS WORKS
+  private String buildInventoryQuery(String inventoryEndpoint, Request request, MultiMap edgeRequestParams) {
+    return String.format("%s?%s", inventoryEndpoint, edgeRequestParams);
   }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
@@ -112,12 +201,60 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-                       .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
+        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
+  //TODO RETURN TYPE
+  private Future<Map<Integer, JsonObject>> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
+                                                             List<JsonEvent> batch) {
+
+    Promise<HttpClientResponse> promise = Promise.promise();
+
+    //todo go to srs
+    //todo build query 'or'
+
+    final String srsRequest = buildSrsRequest(batch);
+
+    //TODO EMPTY RESPONSE?
+    //TODO ERROR?
+    try {
+      srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> {
+
+
+        rh.bodyHandler(bh -> {
+        });
+
+      });
+    } catch (UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
+
+
+    return promise.future();
+  }
+  //todo join instanceIds with OR
+  private String buildSrsRequest(List<JsonEvent> batch) {
+
+    final StringBuilder request = new StringBuilder("(");
+
+    for (JsonEvent jsonEvent : batch) {
+      final Object aggregatedInstanceObject = jsonEvent.value();
+      if (aggregatedInstanceObject instanceof JsonObject) {
+        JsonObject instance = (JsonObject) aggregatedInstanceObject;
+        final String identifier = instance.getString("identifier");
+        request.append("externalIdsHolder.identifier=");
+        request.append(identifier);
+      }
+    }
+    request.append(")");
+    return request.toString();
+  }
+
+
+  //TODO CHECK THIS IS NEEDED?
   private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
@@ -135,13 +272,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
     }
-
+    //TODO DO WE NEED RESUMPT8ION TOKEN?
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
     /*
-    * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
-    * of any database query or search function necessary to answer the list request, rather than when the output is written.
-    */
+     * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
+     * of any database query or search function necessary to answer the list request, rather than when the output is written.
+     */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
 
     // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
@@ -197,17 +334,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional subfield which holds data about record discovery
    * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite case.
    *
-   * @param source record source
+   * @param source      record source
    * @param sourceOwner record source owner
-   * @param request OAI-PMH request
+   * @param request     OAI-PMH request
    * @return record source
    */
   private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
-    if(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
+    if (getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       JsonObject content = new JsonObject(source);
       JsonArray fields = content.getJsonArray(FIELDS);
       Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
-      if (generalInfoDataFieldOptional.isPresent()){
+      if (generalInfoDataFieldOptional.isPresent()) {
         updateDatafieldWithDiscoverySuppressedData(generalInfoDataFieldOptional.get(), sourceOwner);
       } else {
         appendGeneralInfoDatafieldWithDiscoverySuppressedData(fields, sourceOwner);
@@ -243,7 +380,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   @SuppressWarnings("unchecked")
-  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner){
+  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner) {
     List<Object> list = fields.getList();
     Map<String, Object> generalInfoDataField = new LinkedHashMap<>();
     Map<String, Object> generalInfoDataFieldContent = new LinkedHashMap<>();
@@ -262,9 +399,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   /**
    * Builds {@link MetadataType} if the response from storage service is successful
-   * @param context - holds json object that is a source owner which is used for building metadata
-   * @param id - source owner id
-   * @param request the request to get metadata prefix
+   *
+   * @param context        - holds json object that is a source owner which is used for building metadata
+   * @param id             - source owner id
+   * @param request        the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
@@ -305,8 +443,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         }
       });
       return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
-                                   // Return only records with metadata populated
-                                   .thenApply(v -> filterEmptyRecords(records));
+        // Return only records with metadata populated
+        .thenApply(v -> filterEmptyRecords(records));
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
@@ -314,17 +452,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
     return records.values()
-                  .stream()
-                  .map(RecordType::getMetadata)
-                  .anyMatch(Objects::isNull);
+      .stream()
+      .map(RecordType::getMetadata)
+      .anyMatch(Objects::isNull);
   }
 
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
     return records.entrySet()
-                  .stream()
-                  .filter(this::hasMetadata)
-                  .map(Map.Entry::getValue)
-                  .collect(Collectors.toList());
+      .stream()
+      .filter(this::hasMetadata)
+      .map(Map.Entry::getValue)
+      .collect(Collectors.toList());
   }
 
   private boolean hasMetadata(Map.Entry<String, RecordType> entry) {
@@ -338,6 +476,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   /**
    * In case the storage service could not return instances we have to send 500 back to client.
    * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
+   *
    * @param sourceResponse response from the storage
    */
   private void requiresSuccessStorageResponse(org.folio.rest.tools.client.Response sourceResponse) {
@@ -347,9 +486,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private void handleException(CompletableFuture<Response> future, Throwable e) {
+  private void handleException(Future<Response> future, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
-    future.completeExceptionally(e);
+    future.fail(e);
   }
 
   private javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
@@ -360,7 +499,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
+
   protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
+
   protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);
 
 }

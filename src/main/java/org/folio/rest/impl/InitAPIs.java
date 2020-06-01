@@ -53,8 +53,6 @@ public class InitAPIs implements InitAPI {
         .isJaxbInitialized()) {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }
-
-      OaiPmhImpl.init(resultHandler);
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
       logger.error("Unable to populate system properties", e);

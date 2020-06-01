@@ -20,7 +20,6 @@ import static org.hamcrest.core.IsNull.nullValue;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.folio.oaipmh.Request;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;

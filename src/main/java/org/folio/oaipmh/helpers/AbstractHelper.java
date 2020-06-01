@@ -66,6 +66,9 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
 
+  //todo MOVE ALL HTTP COMMUNICATION TO THIS CLASS
+//  protected final RecordSource recordSource = RecordSourceStrategy.byDefault();
+
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
    * @param request the {link Request} with parameters to be validated
