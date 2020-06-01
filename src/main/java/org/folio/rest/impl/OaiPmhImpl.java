@@ -14,16 +14,9 @@ import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
-import static org.openarchives.oai._2.VerbType.GET_RECORD;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
-import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
-import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
-import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
-import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 import java.net.URLDecoder;
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,14 +26,8 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
-import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
-import org.folio.oaipmh.helpers.GetOaiRecordHelper;
-import org.folio.oaipmh.helpers.GetOaiRecordsHelper;
-import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
-import org.folio.oaipmh.helpers.GetOaiSetsHelper;
+import org.folio.oaipmh.helpers.HelperFactory;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
@@ -55,29 +42,19 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.RoutingContext;
 
 public class OaiPmhImpl implements Oai {
 
   private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
 
-  /** Map containing OAI-PMH verb and corresponding helper instance. */
-  private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
-
-  private VerbValidator validator = new VerbValidator();
-
-  public static void init(Handler<AsyncResult<Boolean>> resultHandler) {
-    HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
-    HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
-    HELPERS.put(LIST_RECORDS, new GetOaiRecordsHelper());
-    HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
-    HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
-    HELPERS.put(GET_RECORD, new GetOaiRecordHelper());
-
-    resultHandler.handle(succeededFuture(true));
-  }
+  private final VerbValidator validator = new VerbValidator();
 
   @Override
-  public void getOaiRecords(String verb, String identifier, String resumptionToken, String from, String until, String set, String metadataPrefix, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRecords(String verb, String identifier, String resumptionToken,
+                            String from, String until, String set, String metadataPrefix,
+                            RoutingContext routingContext, Map<String, String> okapiHeaders,
+                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
@@ -114,12 +91,14 @@ public class OaiPmhImpl implements Oai {
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
             asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
           } else {
-            HELPERS.get(VerbType.fromValue(verb))
-              .handle(request, vertxContext)
-              .thenAccept(response -> {
-                logger.debug(verb + " response: {}", response.getEntity());
-                asyncResultHandler.handle(succeededFuture(response));
-              }).exceptionally(handleError(asyncResultHandler));
+            HelperFactory.createVerbHelper(VerbType.fromValue(verb), vertxContext, routingContext)
+              .handle(request)
+              .compose(response -> {
+                  logger.debug(verb + " response: {}", response.getEntity());
+                  asyncResultHandler.handle(succeededFuture(response));
+                  return Future.succeededFuture();
+                }
+              ).onFailure(t-> handleError(asyncResultHandler));
           }
         } catch (Exception e) {
           asyncResultHandler.handle(getFutureWithErrorResponse());
@@ -140,7 +119,7 @@ public class OaiPmhImpl implements Oai {
   }
 
   private void addParamToMapIfNotEmpty(String paramName, String paramValue, Map<String, String> map) {
-    if(StringUtils.isNotEmpty(paramValue)) {
+    if (StringUtils.isNotEmpty(paramValue)) {
       map.put(paramName, paramValue);
     }
   }

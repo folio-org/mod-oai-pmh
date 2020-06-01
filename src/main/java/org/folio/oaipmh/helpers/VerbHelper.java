@@ -1,9 +1,10 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Context;
+import javax.ws.rs.core.Response;
+
 import org.folio.oaipmh.Request;
 
-import java.util.concurrent.CompletableFuture;
+import io.vertx.core.Future;
 
 /**
  * Interface for all OAI-PMH verbs business logic implementations.
@@ -14,8 +15,7 @@ public interface VerbHelper {
    * Performs verb specific business logic.
    *
    * @param request the OAI-PMH request
-   * @param ctx the context
    * @return CompletableFuture containing OAI-PMH response string representation.
    */
-  CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx);
+  Future<Response> handle(Request request);
 }
