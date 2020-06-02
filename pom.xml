@@ -115,11 +115,11 @@
 
   <dependencies>
 <!--TODO REMOVE?-->
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-reactive-streams</artifactId>
-      <version>${vertx.version}</version>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>io.vertx</groupId>-->
+<!--      <artifactId>vertx-reactive-streams</artifactId>-->
+<!--      <version>${vertx.version}</version>-->
+<!--    </dependency>-->
 <!--TODO REMOVE?-->
     <dependency>
       <groupId>org.folio</groupId>

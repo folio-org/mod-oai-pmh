@@ -13,13 +13,14 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,15 +38,15 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-//import org.folio.rest.client.SourceStorageClient;
+import org.folio.rest.client.SourceStorageClient;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.VerbType;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -54,7 +55,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -64,6 +64,8 @@ import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
 import io.vertx.ext.web.RoutingContext;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
+//import org.folio.rest.client.SourceStorageClient;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -111,14 +113,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       //TODO MOVE HTTP CLIENTS TO OTHER CLASSES
       final Vertx vertx = vertxContext.owner();
       final HttpClient inventoryHttpClient = vertx.createHttpClient();
-//      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
+      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
 
       //todo add params from request
       String inventoryEndpoint = "/oai-pmh-view/instances";
       final MultiMap edgeRequestParams = routingContext.request().params();
-      final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request, edgeRequestParams);
+      final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request);
       logger.debug("Sending message to {}", inventoryQuery);
-      final HttpClientRequest httpClientRequest = inventoryHttpClient.requestAbs(GET, inventoryQuery);
+      final HttpClientRequest httpClientRequest = inventoryHttpClient.request(GET, inventoryQuery);
 
       //TODO WHAT IF NO RESUMPTION TOKEN
       //final UUID uuid = UUID.randomUUID();
@@ -144,7 +146,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           //TODO BATCH SIZE?
           final List<JsonEvent> batch = writeStream.getNext(100);
 
-          final Future<Map<Integer, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
+          final Future<Map<String, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
 
           //TODO MERGE INVENTORY AND SRS RESPONSES
 
@@ -156,7 +158,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 //
 //
 //          });
-
 
 
           //TODO RETURN TO THE CALLER
@@ -181,15 +182,29 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return oaiPmhResponsePromise.future();
   }
 
+  private String buildInventoryQuery(String inventoryEndpoint, Request request) {
 
-  //TODO FROM
-  //TODO UNTIL
-  //TODO deletedrecordsupport
-  //TODO skipsuppressedfromdiscoveryrecords
-  //TODO CHECK THIS WORKS
-  private String buildInventoryQuery(String inventoryEndpoint, Request request, MultiMap edgeRequestParams) {
-    return String.format("%s?%s", inventoryEndpoint, edgeRequestParams);
+    Map<String, String> paramMap = new HashMap<>();
+    final String from = request.getFrom();
+    if (StringUtils.isNotEmpty(from)) {
+      paramMap.put("startDate", from);
+    }
+    final String until = request.getUntil();
+    if (StringUtils.isNotEmpty(until)) {
+      paramMap.put("endDate", until);
+    }
+    paramMap.put("deletedRecordSupport",
+      String.valueOf(RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)));
+    paramMap.put("skipSuppressedFromDiscoveryRecords",
+      String.valueOf(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
+
+    final String params = paramMap.entrySet().stream()
+      .map(e -> e.getKey() + "=" + e.getValue())
+      .collect(Collectors.joining("&"));
+
+    return String.format("%s?%s", inventoryEndpoint, params);
   }
+
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
@@ -209,10 +224,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   //TODO RETURN TYPE
-  private Future<Map<Integer, JsonObject>> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
-                                                             List<JsonEvent> batch) {
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
+                                                                  List<JsonEvent> batch) {
 
-    Promise<HttpClientResponse> promise = Promise.promise();
+    Promise<Map<String, JsonObject>> promise = Promise.promise();
 
     //todo go to srs
     //todo build query 'or'
@@ -226,6 +241,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
 
         rh.bodyHandler(bh -> {
+          System.out.println("bh = " + bh);
         });
 
       });
@@ -236,6 +252,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     return promise.future();
   }
+
   //todo join instanceIds with OR
   private String buildSrsRequest(List<JsonEvent> batch) {
 
@@ -262,7 +279,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     JsonObject body = instancesResponse.getBody();
     JsonArray instances;
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
       instances = storageHelper.getRecordsItems(body);
     } else {
       instances = storageHelper.getItems(body);
@@ -316,7 +333,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String recordId;
-        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+        if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
           recordId = storageHelper.getId(instance);
         } else {
           recordId = storageHelper.getRecordId(instance);
@@ -326,7 +343,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-          if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+          if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
             record.getHeader().setStatus(StatusType.DELETED);
           }
           // Some repositories like SRS can return record source data along with other info

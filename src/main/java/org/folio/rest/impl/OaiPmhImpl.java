@@ -51,6 +51,7 @@ public class OaiPmhImpl implements Oai {
   private final VerbValidator validator = new VerbValidator();
 
   @Override
+  //TODO INVENTORY & SRS ONLY IF METADATA PREFIX = MARC21WITHHODINGS
   public void getOaiRecords(String verb, String identifier, String resumptionToken,
                             String from, String until, String set, String metadataPrefix,
                             RoutingContext routingContext, Map<String, String> okapiHeaders,

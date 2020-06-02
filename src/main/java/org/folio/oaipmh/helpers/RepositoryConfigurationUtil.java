@@ -109,7 +109,7 @@ public class RepositoryConfigurationUtil {
     }
     return defaultValue;
   }
-
+  //TODO REFACTOR
   public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
     String tenant = TenantTool.tenantId(okapiHeaders);
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
@@ -119,7 +119,7 @@ public class RepositoryConfigurationUtil {
     }
     return parseBoolean(defaultValue);
   }
-
+  //TODO REFACTOR
   public static boolean isDeletedRecordsEnabled(Request request, String name) {
     String tenant = TenantTool.tenantId(request.getOkapiHeaders());
     String propertyName = getProperty(tenant, name);
