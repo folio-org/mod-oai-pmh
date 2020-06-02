@@ -88,6 +88,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
 
   @Override
+  //TODO ERROR HANDLING NOT WORKING
   public Future<Response> handle(Request request) {
     Promise<Response> oaiPmhResponsePromise = Promise.promise();
     try {
