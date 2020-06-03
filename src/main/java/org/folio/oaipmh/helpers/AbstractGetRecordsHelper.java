@@ -116,7 +116,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final HttpClient inventoryHttpClient = vertx.createHttpClient();
       final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
 
-      //todo add params from request
       String inventoryEndpoint = "/oai-pmh-view/instances";
       final MultiMap edgeRequestParams = routingContext.request().params();
       final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request);
@@ -147,7 +146,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           //TODO BATCH SIZE?
           final List<JsonEvent> batch = writeStream.getNext(100);
 
-          final Future<Map<String, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
+          final Map<String, JsonObject> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
+
+
 
           //TODO MERGE INVENTORY AND SRS RESPONSES
 
@@ -225,10 +226,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   //TODO RETURN TYPE
-  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
+  private Map<String, JsonObject> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
                                                                   List<JsonEvent> batch) {
 
-    Promise<Map<String, JsonObject>> promise = Promise.promise();
 
     //todo go to srs
     //todo build query 'or'
@@ -242,6 +242,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
 
         rh.bodyHandler(bh -> {
+          final Object o = bh.toJson();
+
+
           System.out.println("bh = " + bh);
         });
 
@@ -251,7 +254,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
 
 
-    return promise.future();
+    return new HashMap<>();
   }
 
   //todo join instanceIds with OR
