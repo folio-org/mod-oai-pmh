@@ -2,8 +2,10 @@
 //
 //import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 //import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+//import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 //import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 //import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+//import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 //import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 //import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 //
@@ -38,9 +40,9 @@
 //      ResponseHelper responseHelper = getResponseHelper();
 //      // 1. Restore request from resumptionToken if present
 //      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
-//          OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-//          future.complete(getResponseHelper().buildFailureResponse(oai, request));
-//          return future;
+//        OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
+//        future.complete(getResponseHelper().buildFailureResponse(oai, request));
+//        return future;
 //      }
 //
 //      // 2. Validate request
@@ -57,9 +59,10 @@
 //      }
 //
 //      HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
+//      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
 //
 //      // 3. Search for instances
-//      VertxCompletableFuture.from(ctx, httpClient.request(storageHelper.buildRecordsEndpoint(request), request.getOkapiHeaders(), false))
+//      VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
 //        // 4. Verify response and build list of identifiers
 //        .thenApply(response -> buildListIdentifiers(request, response))
 //        // 5. Build final response to client (potentially blocking operation thus running on worker thread)
@@ -91,7 +94,8 @@
 //
 //  /**
 //   * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
-//   * @param request request
+//   *
+//   * @param request           request
 //   * @param instancesResponse the response from the storage which contains items
 //   * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
 //   */
@@ -103,7 +107,12 @@
 //    }
 //
 //    ResponseHelper responseHelper = getResponseHelper();
-//    JsonArray instances = storageHelper.getItems(instancesResponse.getBody());
+//    JsonArray instances;
+//    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+//      instances = storageHelper.getRecordsItems(instancesResponse.getBody());
+//    } else {
+//      instances = storageHelper.getItems(instancesResponse.getBody());
+//    }
 //    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
 //    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
 //      return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
@@ -116,12 +125,20 @@
 //
 //      String identifierPrefix = request.getIdentifierPrefix();
 //      instances.stream()
-//        .map(object -> (JsonObject)object)
+//        .map(object -> (JsonObject) object)
 //        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
-//        .map(instance -> populateHeader(identifierPrefix, instance))
+//        .filter(instance -> filterInstance(request, instance))
+//        .map(instance -> addHeader(identifierPrefix, request, instance))
 //        .forEach(identifiers::withHeaders);
+//
+//      if (identifiers.getHeaders().isEmpty()) {
+//        OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
+//        return oaipmh.withErrors(createNoRecordsFoundError());
+//      }
+//
 //      return responseHelper.buildBaseOaipmhResponse(request).withListIdentifiers(identifiers);
 //    }
 //    return responseHelper.buildOaipmhResponseWithErrors(request, createNoRecordsFoundError());
 //  }
+//
 //}

@@ -35,6 +35,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -60,6 +61,8 @@ class StorageHelperTest {
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
 
   @AfterEach
   void init() {
@@ -143,10 +146,11 @@ class StorageHelperTest {
         try {
           System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
           System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+          System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           String formattedCurrentDate = getFormattedCurrentDate();
-          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
+          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build(), false), is
             (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse"
               + "+and+metadata.updatedDate%3C" + URLEncoder.encode(formattedCurrentDate,"UTF-8")
               + "&limit=11&offset=0")));
@@ -171,7 +175,7 @@ class StorageHelperTest {
           Map<String, String> okapiHeaders = new HashMap<>();
           okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
           String formattedCurrentDate = getFormattedCurrentDate();
-          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build()), is
+          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build(), false), is
             (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+metadata.updatedDate%3C"
               + URLEncoder.encode(formattedCurrentDate,"UTF-8") + "&limit=11&offset=0")));
           testContext.completeNow();
@@ -184,6 +188,29 @@ class StorageHelperTest {
     );
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
+  void getId(String storageType) {
+    JsonObject item = getJsonObjectFromFile(getDirPathWithPathRecordsInSRS(storageType) + "/instance.json");
+    assertThat(getStorageHelper(storageType).getId(item), not(isEmptyOrNullString()));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
+  void getRecordsItems(String storageType) {
+    JsonObject entries = getJsonObjectFromFile(getDirPathWithPathRecordsInSRS(storageType) + "/marc-e567b8e2-a45b-45f1-a85a-6b6312bdf4d8.json");
+    JsonArray items = getStorageHelper(storageType).getRecordsItems(entries);
+    assertThat(items, is(notNullValue()));
+    assertThat(items, is(iterableWithSize(1)));
+  }
+
+  @Test
+  void getIdentifierIdFromInventtoryStorage() {
+    JsonObject item = getJsonObjectFromFile(getDirPath(INSTANCES_URI)+"/instance.json");
+    assertThat(getStorageHelper(INVENTORY_STORAGE).getIdentifierId(item), not(isEmptyOrNullString()));
+  }
+
+
   private StorageHelper getStorageHelper(String storageType) {
     System.setProperty(REPOSITORY_STORAGE, storageType);
     return StorageHelper.getInstance();
@@ -191,6 +218,10 @@ class StorageHelperTest {
 
   private String getDirPath(String storageType) {
     return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RESULT_URI : INSTANCES_URI;
+  }
+
+  private String getDirPathWithPathRecordsInSRS(String storageType) {
+    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RECORD_PATH : INSTANCES_URI;
   }
 
   /**

@@ -1,5 +1,7 @@
 package org.folio.rest.impl;
 
+import static io.vertx.core.Future.succeededFuture;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,8 @@ public class InitAPIs implements InitAPI {
         .isJaxbInitialized()) {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");
       }
+
+      resultHandler.handle(succeededFuture(true));
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
       logger.error("Unable to populate system properties", e);

@@ -38,6 +38,7 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
+  public static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
@@ -58,6 +59,7 @@ public class OkapiMockServer {
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "2000-01-02T07:07:07Z";
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07.000Z";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
+  static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
   private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00.000Z";
@@ -82,6 +84,7 @@ public class OkapiMockServer {
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
+  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
 
   private static final String INSTANCE_STORAGE_BY_ID_MARC_JSON = String.format(MARC_JSON_RECORD_URI, ":instanceId");
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
@@ -108,6 +111,8 @@ public class OkapiMockServer {
           .handler(this::handleRecordStorageResultResponse);
     router.get(SOURCE_STORAGE_RECORD)
           .handler(this::handleSourceRecordStorageByIdResponse);
+    router.get(SOURCE_STORAGE_RECORD_PATH)
+      .handler(this::handleSourceRecordStorageResponse);
 
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
@@ -152,17 +157,33 @@ public class OkapiMockServer {
 
   private void handleSourceRecordStorageByIdResponse(RoutingContext ctx) {
     String recordId = ctx.request().getParam("id");
-    if (recordId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
-      failureResponse(ctx, 500, "Internal Server Error");
-    } else if (recordId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
-      failureResponse(ctx, 404, "Record not found");
-    } else {
-      String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", recordId)));
-      if (isNotEmpty(json)) {
-        successResponse(ctx, json);
+      if (recordId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
+        failureResponse(ctx, 500, "Internal Server Error");
+      } else if (recordId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
+        failureResponse(ctx, 404, "Record not found");
       } else {
-        fail("There is no mock response for recordId=" + recordId);
+        String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", recordId)));
+        if (isNotEmpty(json)) {
+          successResponse(ctx, json);
+        } else {
+          fail("There is no mock response for recordId=" + recordId);
+        }
       }
+  }
+
+  private void handleSourceRecordStorageResponse(RoutingContext ctx){
+    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
+    if (isNotEmpty(json)) {
+      if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+        json = getRecordJsonWithDeletedTrue(json);
+      } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10)) {
+        json = getRecordJsonWithSuppressedTrue(json);
+      } else if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
+        json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
+      }
+      successResponse(ctx, json);
+    } else {
+      fail("There is no mock response");
     }
   }
 
@@ -212,6 +233,9 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
       } else if (query.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_10));
+      } else if (query.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(filePath + INSTANCES_3));
+        successResponse(ctx, json);
       } else {
         successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_11));
       }
@@ -259,5 +283,17 @@ public class OkapiMockServer {
       fail(e.getMessage());
     }
     return null;
+  }
+
+  private String getJsonWithRecordMarkAsDeleted(String json) {
+    return json.replace("00778nam a2200217 c 4500","00778dam a2200217 c 4500");
+  }
+
+  private String getRecordJsonWithDeletedTrue(String json) {
+    return json.replace("\"deleted\": false", "\"deleted\": true");
+  }
+
+  private String getRecordJsonWithSuppressedTrue(String json) {
+    return json.replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
   }
 }

@@ -13,10 +13,14 @@ import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
@@ -49,6 +53,7 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
+import org.openarchives.oai._2.StatusType;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -69,6 +74,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
+   *
    * @param request the {link Request} with parameters to be validated
    * @return {@link List} of the {@link OAIPMHerrorType} if there is any validation error or empty list
    */
@@ -80,7 +86,8 @@ public abstract class AbstractHelper implements VerbHelper {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT).withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue(LIST_NO_REQUIRED_PARAM_ERROR));
+      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+        .withValue(LIST_NO_REQUIRED_PARAM_ERROR));
     }
 
     if (request.getSet() != null && !getSupportedSetSpecs().contains(request.getSet())) {
@@ -119,11 +126,11 @@ public abstract class AbstractHelper implements VerbHelper {
       // Both arguments must have the same granularity.
       if (from.getLeft() != until.getLeft()) {
         errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
-                                        .withValue("Invalid date range: 'from' must have the same granularity as 'until'."));
+          .withValue("Invalid date range: 'from' must have the same granularity as 'until'."));
       } else if (from.getRight().isAfter(until.getRight())) {
         // The from argument must be less than or equal to the until argument.
         errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
-                                        .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
+          .withValue("Invalid date range: 'from' must be less than or equal to 'until'."));
       }
     }
   }
@@ -139,7 +146,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * If the date is valid, {@link LocalDateTime} is returned. Otherwise {@link #parseDate(Pair, List)} is called because repository
    * must support {@linkplain GranularityType#YYYY_MM_DD YYYY_MM_DD} granularity and date might be in such format
    *
-   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
+   * @param date   {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date time
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
@@ -157,7 +164,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * Validates if the date is in {@link DateTimeFormatter#ISO_LOCAL_DATE} format.
    * If the date is valid, it is returned as {@link LocalDateTime} at time of midnight.
    * Otherwise {@literal null} is returned and validation error is added to errors list
-   * @param date {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date
+   *
+   * @param date   {@link Pair} where key (left element) is parameter name (i.e. from or until), value (right element) is date
    * @param errors list of errors to be updated if format is wrong
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
@@ -209,7 +217,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * Creates {@link HeaderType} and populates Identifier, Datestamp and Set
    *
    * @param identifierPrefix oai-identifier prefix
-   * @param instance the instance item returned by storage service
+   * @param instance         the instance item returned by storage service
    * @return populated {@link HeaderType}
    */
   protected HeaderType populateHeader(String identifierPrefix, JsonObject instance) {
@@ -231,6 +239,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Returns last modified or created date
+   *
    * @param instance the instance item returned by storage service
    * @return {@link Instant} based on updated or created date
    */
@@ -240,8 +249,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
+   *
    * @param identifierPrefix oai-identifier prefix
-   * @param instance the instance item returned by storage service
+   * @param instance         the instance item returned by storage service
    * @return oai-identifier
    */
   private String getIdentifier(String identifierPrefix, JsonObject instance) {
@@ -250,8 +260,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Builds oai-identifier
+   *
    * @param identifierPrefix oai-identifier prefix
-   * @param storageId id of the instance returned by storage service
+   * @param storageId        id of the instance returned by storage service
    * @return oai-identifier
    */
   protected String getIdentifier(String identifierPrefix, String storageId) {
@@ -262,8 +273,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * Builds resumptionToken that is used to resume request sequence
    * in case the whole result set is partitioned.
    *
-   * @param request the initial request
-   * @param instances the array of instances returned from Instance Storage
+   * @param request      the initial request
+   * @param instances    the array of instances returned from Instance Storage
    * @param totalRecords the total number of records in the whole result set
    * @return resumptionToken value if partitioning is used and not all instances are processed yet,
    * empty string if partitioning is used and all instances are processed already,
@@ -271,15 +282,20 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances,
     Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationUtil.getProperty
+    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
-      String nextRecordId = storageHelper
-        .getRecordId((JsonObject) instances.remove(instances.size() - 1));
+      String nextRecordId;
+      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+        nextRecordId = storageHelper.getId(getLastInstance(instances));
+      } else {
+        nextRecordId = storageHelper
+        .getRecordId(getLastInstance(instances));
+      }
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
         extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
@@ -296,6 +312,10 @@ public abstract class AbstractHelper implements VerbHelper {
     }
 
     return null;
+  }
+
+  private JsonObject getLastInstance(JsonArray instances) {
+    return (JsonObject) instances.remove(instances.size() - 1);
   }
 
   /**
@@ -319,6 +339,34 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
+   * Filter records from source-record-storage by the fields "deleted = true" or MARC Leader 05 is "d", "s" or "x"
+   * For old behavior (repository.deletedRecords is "no") fields are checked only according to the previously described criteria.
+   * In case when repository.deletedRecords is "persistent" or "transient" checked suppressedRecordsProcessing config setting
+   *
+   * @param request  OIA-PMH request
+   * @param instance record in JsonObject format
+   * @return true when a record should be present in oai-pmh response
+   */
+  protected boolean filterInstance(Request request, JsonObject instance) {
+    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      return !storageHelper.isRecordMarkAsDeleted(instance);
+    } else {
+      Map<String, String> okapiHeaders = request.getOkapiHeaders();
+      boolean shouldProcessSuppressedRecords = getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance)
+        || storageHelper.isRecordMarkAsDeleted(instance);
+    }
+  }
+
+  protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
+    HeaderType header = populateHeader(identifierPrefix, instance);
+    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+      header.setStatus(StatusType.DELETED);
+    }
+    return header;
+  }
+
+  /**
    * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
    * <br/>
    * The following state is an indicator that flow cannot be safely resumed:
@@ -335,15 +383,18 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
-    return instances != null && instances.size() > 0 &&
-      (totalRecords >= prevTotalRecords
-        || StringUtils.equals(request.getNextRecordId(), storageHelper.getRecordId(instances.getJsonObject(0))));
+    boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
+    int firstPosition = 0;
+    return instances != null && instances.size() > 0
+        && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
+            isDeletedRecords ? storageHelper.getId(instances.getJsonObject(firstPosition))
+                : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
   }
 
   private List<String> getSupportedSetSpecs() {
     return getSupportedSetTypes().stream()
-                                 .map(SetType::getSetSpec)
-                                 .collect(Collectors.toList());
+      .map(SetType::getSetSpec)
+      .collect(Collectors.toList());
   }
 
   protected ResponseHelper getResponseHelper() {

@@ -4,7 +4,6 @@ import javax.ws.rs.core.Response;
 
 import org.folio.oaipmh.Request;
 import org.folio.recordsource.AbstractRecordSource;
-import org.folio.rest.client.SourceStorageClient;
 
 import io.vertx.core.Future;
 
@@ -23,7 +22,7 @@ public class InventoryAndSRSRecordSource extends AbstractRecordSource {
 
   @Override
   public Future<Response> getAll() {
-    SourceStorageClient ssc = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
+//    SourceStorageClient ssc = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
 
 
 

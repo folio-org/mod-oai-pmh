@@ -7,6 +7,7 @@ import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_INDEX_VALUE;
 import static org.folio.oaipmh.Constants.GENERAL_INFO_DATA_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
@@ -15,31 +16,20 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.parsetools.impl.JsonParserImpl;
-import io.vertx.ext.web.RoutingContext;
 import java.io.UnsupportedEncodingException;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
@@ -56,7 +46,27 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.VerbType;
+
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.parsetools.impl.JsonParserImpl;
+import io.vertx.ext.web.RoutingContext;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+
+//import org.folio.rest.client.SourceStorageClient;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -80,7 +90,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
 
-  @Override
+   @Override
   public Future<Response> handle(Request request) {
     Promise<Response> oaiPmhResponsePromise = Promise.promise();
     try {
@@ -155,6 +165,30 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return oaiPmhResponsePromise.future();
   }
 
+  private String buildInventoryQuery(String inventoryEndpoint, Request request) {
+
+    Map<String, String> paramMap = new HashMap<>();
+    final String from = request.getFrom();
+    if (StringUtils.isNotEmpty(from)) {
+      paramMap.put("startDate", from);
+    }
+    final String until = request.getUntil();
+    if (StringUtils.isNotEmpty(until)) {
+      paramMap.put("endDate", until);
+    }
+    paramMap.put("deletedRecordSupport",
+      String.valueOf(RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)));
+    paramMap.put("skipSuppressedFromDiscoveryRecords",
+      String.valueOf(getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
+
+    final String params = paramMap.entrySet().stream()
+      .map(e -> e.getKey() + "=" + e.getValue())
+      .collect(Collectors.joining("&"));
+
+    return String.format("%s?%s", inventoryEndpoint, params);
+  }
+
+
   private BatchStreamWrapper createBatchStream(Request request, Promise<Response> oaiPmhResponsePromise) {
     final Vertx vertx = vertxContext.owner();
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
@@ -182,15 +216,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
 
-  //TODO FROM
-  //TODO UNTIL
-  //TODO deletedrecordsupport
-  //TODO skipsuppressedfromdiscoveryrecords
-  //TODO CHECK THIS WORKS
-  private String buildInventoryQuery(String inventoryEndpoint, Request request,
-    MultiMap edgeRequestParams) {
-    return String.format("%s?%s", inventoryEndpoint, edgeRequestParams);
-  }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh,
     Request request) {
@@ -213,11 +238,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   //TODO RETURN TYPE
-  private Future<Map<Integer, JsonObject>> requestSRSByIdentifiers(Context ctx,
-    SourceStorageClient srsClient, Request request,
-    List<JsonEvent> batch) {
+  private Map<String, JsonObject> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
+                                                                  List<JsonEvent> batch) {
 
-    Promise<Map<Integer, JsonObject>> promise = Promise.promise();
 
     //todo go to srs
     //todo build query 'or'
@@ -229,7 +252,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     try {
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> {
 
+
         rh.bodyHandler(bh -> {
+          final Object o = bh.toJson();
+
+
+          System.out.println("bh = " + bh);
         });
 
       });
@@ -237,7 +265,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       e.printStackTrace();
     }
 
-    return promise.future();
+
+    return new HashMap<>();
   }
 
   //todo join instanceIds with OR
@@ -259,13 +288,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
 
-  private CompletableFuture<Response> buildRecordsResponse(Context ctx,
-    HttpClientInterface httpClient, Request request,
-    org.folio.rest.tools.client.Response instancesResponse) {
+  //TODO CHECK THIS IS NEEDED?
+  private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
+                                                           org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
     JsonObject body = instancesResponse.getBody();
-    JsonArray instances = storageHelper.getItems(body);
+    JsonArray instances;
+    if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      instances = storageHelper.getRecordsItems(body);
+    } else {
+      instances = storageHelper.getItems(body);
+    }
     Integer totalRecords = storageHelper.getTotalRecords(body);
 
     logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0,
@@ -279,7 +313,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
     }
-
+    //TODO DO WE NEED RESUMPT8ION TOKEN?
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
     /*
@@ -317,21 +351,33 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String recordId = storageHelper.getRecordId(instance);
+        String recordId;
+        if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+          recordId = storageHelper.getId(instance);
+        } else {
+          recordId = storageHelper.getRecordId(instance);
+        }
         String identifierId = storageHelper.getIdentifierId(instance);
         if (StringUtils.isNotEmpty(identifierId)) {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
+          if (RepositoryConfigurationUtil.isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+            record.getHeader().setStatus(StatusType.DELETED);
+          }
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null) {
             source = updateSourceWithDiscoverySuppressedDataIfNecessary(source, instance, request);
-            record.withMetadata(buildOaiMetadata(request, source));
+            if (record.getHeader().getStatus() == null) {
+              record.withMetadata(buildOaiMetadata(request, source));
+            }
           } else {
             context.put(recordId, instance);
           }
-          records.put(recordId, record);
+          if (filterInstance(request, instance)) {
+            records.put(recordId, record);
+          }
         }
       }
     }
@@ -343,9 +389,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * holds data about record discovery suppression status. Additional subfield has code = 't' and
    * value = '0' if record is discovery suppressed and '1' at opposite case.
    *
-   * @param source record source
+   * @param source      record source
    * @param sourceOwner record source owner
-   * @param request OAI-PMH request
+   * @param request     OAI-PMH request
    * @return record source
    */
   private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source,
@@ -413,9 +459,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   /**
    * Builds {@link MetadataType} if the response from storage service is successful
    *
-   * @param context - holds json object that is a source owner which is used for building metadata
-   * @param id - source owner id
-   * @param request the request to get metadata prefix
+   * @param context        - holds json object that is a source owner which is used for building metadata
+   * @param id             - source owner id
+   * @param request        the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
@@ -453,7 +499,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
       records.forEach((id, record) -> {
-        if (Objects.isNull(record.getMetadata())) {
+        if (Objects.isNull(record.getMetadata()) && record.getHeader().getStatus() == null) {
           cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id)
             .thenAccept(record::withMetadata));
         }
@@ -477,7 +523,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
     return records.entrySet()
       .stream()
-      .filter(this::hasMetadata)
       .map(Map.Entry::getValue)
       .collect(Collectors.toList());
   }
@@ -495,6 +540,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * In case the storage service could not return instances we have to send 500 back to client. So
    * the method is intended to validate and throw {@link IllegalStateException} for failure
    * responses
+   *
+   * In case the storage service could not return instances we have to send 500 back to client.
+   * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
    *
    * @param sourceResponse response from the storage
    */
