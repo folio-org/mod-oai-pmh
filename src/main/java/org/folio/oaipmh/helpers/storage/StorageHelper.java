@@ -12,10 +12,6 @@ import org.folio.oaipmh.Request;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-/**
- * Deprecated because this hierarchy allows to query either inventory or SRS, not both
- */
-@Deprecated
 public interface StorageHelper {
 
   /**

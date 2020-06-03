@@ -25,8 +25,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -38,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -55,6 +54,9 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+
 /**
  * Abstract helper implementation that provides some common methods.
  */
@@ -68,9 +70,6 @@ public abstract class AbstractHelper implements VerbHelper {
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
-
-  //todo MOVE ALL HTTP COMMUNICATION TO THIS CLASS
-//  protected final RecordSource recordSource = RecordSourceStrategy.byDefault();
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -280,8 +279,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * empty string if partitioning is used and all instances are processed already,
    * null if the result set is not partitioned.
    */
-  protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances,
-    Integer totalRecords) {
+  protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
@@ -293,8 +291,7 @@ public abstract class AbstractHelper implements VerbHelper {
       if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
         nextRecordId = storageHelper.getId(getLastInstance(instances));
       } else {
-        nextRecordId = storageHelper
-        .getRecordId(getLastInstance(instances));
+        nextRecordId = storageHelper.getRecordId(getLastInstance(instances));
       }
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {

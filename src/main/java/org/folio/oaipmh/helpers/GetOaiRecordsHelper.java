@@ -9,16 +9,8 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.VerbType;
-
-import io.vertx.core.Context;
-import io.vertx.ext.web.RoutingContext;
 
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
-
-  public GetOaiRecordsHelper(VerbType verbType, Context vertxContext, RoutingContext routingContext) {
-    super(verbType, vertxContext, routingContext);
-  }
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {

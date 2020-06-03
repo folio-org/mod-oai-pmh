@@ -13,11 +13,11 @@ public class HelperFactory {
       case LIST_RECORDS:
         vh = new GetOaiRecordsHelper(verbType, vertxContext, routingContext);
         break;
-//      case IDENTIFY:
-//        vh = new GetOaiRepositoryInfoHelper();
-//        break;
-//      case LIST_IDENTIFIERS:
-//        vh = new GetOaiIdentifiersHelper();
+      case IDENTIFY:
+        vh = new GetOaiRepositoryInfoHelper();
+        break;
+/      case LIST_IDENTIFIERS:
+        vh = new GetOaiIdentifiersHelper();
 //        break;
 //      case LIST_SETS:
 //        vh = new GetOaiSetsHelper();

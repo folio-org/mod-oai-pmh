@@ -23,7 +23,11 @@ public enum MetadataPrefix {
   DC("oai_dc",
     new XSLTMapper("xslt/MARC21slim2OAIDC.xsl"),
     "http://www.openarchives.org/OAI/2.0/oai_dc.xsd",
-    "http://www.openarchives.org/OAI/2.0/oai_dc/");
+    "http://www.openarchives.org/OAI/2.0/oai_dc/"),
+  MARC21WITHHOLDINGS("marc21_withholdings",
+    new MarcXmlMapper(),
+    "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
+    "http://www.loc.gov/MARC21/slim");
 
   private String name;
   private Mapper mapper;
