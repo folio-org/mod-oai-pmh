@@ -1483,7 +1483,7 @@ class OaiPmhImplTest {
       .findFirst()
       .ifPresent(
         recordType -> {
-          if(metadataPrefix.equals(MetadataPrefix.MARC21XML)) {
+          if(metadataPrefix.equals(MetadataPrefix.MARC21XML) || metadataPrefix.equals(MetadataPrefix.MARC21WITHHOLDINGS)) {
             verifyForMarcRecord(recordType);
           } else {
             verifyForDcRecord(recordType);
@@ -1539,7 +1539,7 @@ class OaiPmhImplTest {
     if(Objects.isNull(records)) {
       fail("Can't verify specified verb: " + verbType);
     }
-    if (metadataPrefix.equals(MetadataPrefix.MARC21XML)) {
+    if (metadataPrefix.equals(MetadataPrefix.MARC21XML) || metadataPrefix.equals(MetadataPrefix.MARC21WITHHOLDINGS)) {
       verifySuppressedDiscoveryDataFieldForMarcRecords(records, shouldContainField);
     } else {
       verifySuppressedDiscoveryDataFieldForDcRecords(records, shouldContainField);
@@ -1965,5 +1965,42 @@ class OaiPmhImplTest {
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @Test
+  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent(VertxTestContext testContext) {
+    getLogger().info("=== Test Metadata Formats without identifier ===");
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_METADATA_FORMATS.value());
+
+    OAIPMH oaiPmhResponse = verify200WithXml(request, LIST_METADATA_FORMATS);
+
+    boolean isMarc21WithHoldingsPrefixPresent = oaiPmhResponse.getListMetadataFormats().getMetadataFormats()
+      .stream().anyMatch(metadataFormatType -> metadataFormatType.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
+
+    assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats(), is(notNullValue()));
+    assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats().size(), equalTo(3));
+    assertTrue(isMarc21WithHoldingsPrefixPresent);
+    assertThat(oaiPmhResponse.getErrors(), is(empty()));
+
+    testContext.completeNow();
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOiaRecordsAndIdentifiersWithMarc21WithHoldingsMetadataPrefix(VerbType verb){
+    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+
+    assertThat(oaipmh, is(notNullValue()));
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
+    verifyListResponse(oaipmh, verb, 3);
   }
 }
