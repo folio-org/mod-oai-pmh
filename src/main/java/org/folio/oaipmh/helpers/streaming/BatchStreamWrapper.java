@@ -1,32 +1,30 @@
 package org.folio.oaipmh.helpers.streaming;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 //TODO JAVADOC
 public class BatchStreamWrapper implements WriteStream<JsonEvent> {
+
   private final Vertx vertx;
 
   private Handler<Void> drainHandler;
-  private Handler<Void> myHandler;
-  private Handler<AsyncResult<Void>> endHandler;
+  private Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize = 10;
 
   private volatile boolean streamEnded = false;
 
-  private final List<JsonEvent> dataList;
+  private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
 
-  public BatchStreamWrapper(Vertx vertx, List<JsonEvent> dataList) {
+  public BatchStreamWrapper(Vertx vertx, int batchSize) {
     this.vertx = vertx;
-    this.dataList = dataList;
+    this.batchSize = batchSize;
   }
 
   @Override
@@ -40,45 +38,39 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public WriteStream<JsonEvent> write(JsonEvent data, Handler<AsyncResult<Void>> handler) {
-    vertx.executeBlocking(promise -> {
-      if (writeQueueFull()) {
-        Handler<Void> o1 = myHandler;
-        if (o1 != null) {
-          o1.handle(null);
-        }
-        myHandler = null;
-      }
-      dataList.add(data);
-      promise.complete();
-    }, false, ar -> {
-      if (handler != null) {
-        handler.handle(ar.mapEmpty());
-      }
-
-      if ((endHandler != null)) {
-
-        endHandler.handle(Future.succeededFuture());
-      }
-      if (!streamEnded) {
-
-        drainHandler.handle(null);
-      }
-    });
+  public synchronized WriteStream<JsonEvent> write(JsonEvent data,
+    Handler<AsyncResult<Void>> handler) {
+    if (writeQueueFull()) {
+      runBatchHandler();
+    }
+    dataList.add(data);
     return this;
+  }
+
+  private void runBatchHandler() {
+    vertx.executeBlocking(p -> {
+      synchronized (BatchStreamWrapper.this) {
+        if (batchReadyHandler != null) {
+          batchReadyHandler.handle(dataList);
+        }
+        batchReadyHandler = null;
+        dataList.clear();
+        p.complete();
+      }
+    }, e -> {
+    });
   }
 
   @Override
   public void end() {
+    runBatchHandler();
     streamEnded = true;
   }
 
   @Override
   public void end(Handler<AsyncResult<Void>> handler) {
-    streamEnded = true;
-    if (handler != null) {
-      endHandler = handler;
-    }
+    end();
+    handler.handle(null);
   }
 
   @Override
@@ -99,20 +91,15 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
 
-  public WriteStream<JsonEvent> handleBatch(Handler<Void> handler) {
+  public synchronized WriteStream<JsonEvent> handleBatch(Handler<List<JsonEvent>> handler) {
+    batchReadyHandler = handler;
     if (writeQueueFull()) {
-      handler.handle(null);
-    } else {
-      this.myHandler = handler;
+      runBatchHandler();
     }
     return this;
   }
 
-  public List<JsonEvent> getNext(int count) {
-    final List<JsonEvent> batch = dataList.subList(0, count);
-    //todo remove from list
-    dataList.removeAll(batch);
-    return batch;
-
+  public boolean isStreamEnded() {
+    return streamEnded;
   }
 }

@@ -15,6 +15,21 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.parsetools.impl.JsonParserImpl;
+import io.vertx.ext.web.RoutingContext;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,13 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
-
 import javax.ws.rs.core.Response;
-
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -46,26 +58,9 @@ import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.parsetools.impl.JsonParserImpl;
-import io.vertx.ext.web.RoutingContext;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
+  private static final int BATCH_SIZE = 1000;
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   private static final String FIELDS = "fields";
@@ -77,7 +72,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected final Context vertxContext;
   protected final RoutingContext routingContext;
 
-  protected AbstractGetRecordsHelper(VerbType verbType, Context vertxContext, RoutingContext routingContext) {
+  protected AbstractGetRecordsHelper(VerbType verbType, Context vertxContext,
+    RoutingContext routingContext) {
     this.verbType = verbType;
     this.vertxContext = vertxContext;
     this.routingContext = routingContext;
@@ -90,7 +86,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
+        OAIPMH oaipmh = responseHelper
+          .buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
         oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oaipmh, request));
         return oaiPmhResponsePromise.future();
       }
@@ -100,69 +97,47 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oai;
         if (request.isRestored()) {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
+          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
+            RESUMPTION_TOKEN_FORMAT_ERROR);
         } else {
           oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
         }
         oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oai, request));
         return oaiPmhResponsePromise.future();
       }
+
       //TODO MOVE HTTP CLIENTS TO OTHER CLASSES
-      final Vertx vertx = vertxContext.owner();
-      final HttpClient inventoryHttpClient = vertx.createHttpClient();
-      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken());
-
-      //todo add params from request
-      String inventoryEndpoint = "/oai-pmh-view/instances";
-      final MultiMap edgeRequestParams = routingContext.request().params();
-      final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request, edgeRequestParams);
-      logger.debug("Sending message to {}", inventoryQuery);
-      final HttpClientRequest httpClientRequest = inventoryHttpClient.requestAbs(GET, inventoryQuery);
-
-      //TODO WHAT IF NO RESUMPTION TOKEN
-      //final UUID uuid = UUID.randomUUID();
-      final Object o = vertxContext.get(request.getResumptionToken());
-      if (o == null) {
-        httpClientRequest.handler(resp -> {
-          JsonParser jp = new JsonParserImpl(resp);
-          jp.objectValueMode();
-          final BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, new CopyOnWriteArrayList<>());
-          jp.pipeTo(writeStream);
-          jp.endHandler(v -> {
-            vertxContext.remove(request.getResumptionToken());
-            //TODO NO RETURN RESUMPTION TOKEN
-          });
-          vertxContext.put(request.getResumptionToken(), writeStream);
-        });
+      BatchStreamWrapper writeStream;
+      if (request.getResumptionToken() == null) { // the first request from EDS
+        writeStream = createBatchStream(request, oaiPmhResponsePromise);
+      } else {
+        final Object writeStreamObj = vertxContext.get(request.getResumptionToken());
+        if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
+          handleException(oaiPmhResponsePromise.future(), new IllegalArgumentException(
+            "Resumption token +" + request.getResumptionToken() + "+ doesn't exist in context"));
+          return oaiPmhResponsePromise.future();
+        }
+        writeStream = (BatchStreamWrapper) writeStreamObj;
       }
-      final Object contextWriteStream = vertxContext.get(request.getResumptionToken());
-      if (contextWriteStream instanceof BatchStreamWrapper) {
-        BatchStreamWrapper writeStream = (BatchStreamWrapper) contextWriteStream;
 
-        writeStream.handleBatch(mh -> {
-          //TODO BATCH SIZE?
-          final List<JsonEvent> batch = writeStream.getNext(100);
+      writeStream.handleBatch(batch -> {
+              final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
+        final Future<Map<Integer, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext,
+          srsClient, request, batch);
+        boolean theLastBatch = batch.size() < BATCH_SIZE || writeStream.isStreamEnded();
 
-          final Future<Map<Integer, JsonObject>> mapFuture = requestSRSByIdentifiers(vertxContext, srsClient, request, batch);
+        //TODO MERGE INVENTORY AND SRS RESPONSES AND MAP TO OAI-PMH FIELDS
 
-          //TODO MERGE INVENTORY AND SRS RESPONSES
+        if (theLastBatch) {
+          vertxContext.remove(request.getResumptionToken()); //TODO NO RETURN RESUMPTION TOKEN
+        }
+/*
+         buildRecordsResponse(vertxContext, inventoryHttpClient, request, response))
+        oaiPmhResponsePromise.complete(responseFuture);
+*/
 
-
-          //MAPPING TO OAI-PMH FIELDS
-
-          //          responseFuture.compose(srsResponse->{
-//
-//
-//
-//          });
-
-
-
-          //TODO RETURN TO THE CALLER
-          //oaiPmhResponsePromise.complete(responseFuture);
-
-        });
-      }
+      });
 //      inventoryHttpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
 //        .thenCompose(response -> buildRecordsResponse(vertxContext, inventoryHttpClient, request, response))
 //        .thenAccept(value -> {
@@ -180,38 +155,69 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return oaiPmhResponsePromise.future();
   }
 
+  private BatchStreamWrapper createBatchStream(Request request, Promise<Response> oaiPmhResponsePromise) {
+    final Vertx vertx = vertxContext.owner();
+    final HttpClient inventoryHttpClient = vertx.createHttpClient();
+    //todo add params from request
+    BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, BATCH_SIZE);
+    //TODO: possibly set batch size from configuration
+    vertxContext.put(request.getResumptionToken(), writeStream);
+    String inventoryEndpoint = "/oai-pmh-view/instances";
+    final MultiMap edgeRequestParams = routingContext.request().params();
+    final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request,
+      edgeRequestParams);
+    logger.debug("Sending message to {}", inventoryQuery);
+    final HttpClientRequest httpClientRequest = inventoryHttpClient
+      .requestAbs(GET, inventoryQuery);
+    httpClientRequest.handler(resp -> {
+      JsonParser jp = new JsonParserImpl(resp);
+      jp.objectValueMode();
+      jp.pipeTo(writeStream);
+      jp.endHandler(e->{
+         inventoryHttpClient.close();
+      });
+    });
+    httpClientRequest.exceptionHandler(e->handleException(oaiPmhResponsePromise.future(), e));
+    return writeStream;
+  }
+
 
   //TODO FROM
   //TODO UNTIL
   //TODO deletedrecordsupport
   //TODO skipsuppressedfromdiscoveryrecords
   //TODO CHECK THIS WORKS
-  private String buildInventoryQuery(String inventoryEndpoint, Request request, MultiMap edgeRequestParams) {
+  private String buildInventoryQuery(String inventoryEndpoint, Request request,
+    MultiMap edgeRequestParams) {
     return String.format("%s?%s", inventoryEndpoint, edgeRequestParams);
   }
 
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh,
+    Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
-  private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
+  private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx,
+    HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
       logger.debug("Getting metadata info from {}", metadataEndpoint);
 
       return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
+        .thenCompose(
+          response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }
   }
 
   //TODO RETURN TYPE
-  private Future<Map<Integer, JsonObject>> requestSRSByIdentifiers(Context ctx, SourceStorageClient srsClient, Request request,
-                                                             List<JsonEvent> batch) {
+  private Future<Map<Integer, JsonObject>> requestSRSByIdentifiers(Context ctx,
+    SourceStorageClient srsClient, Request request,
+    List<JsonEvent> batch) {
 
-    Promise<HttpClientResponse> promise = Promise.promise();
+    Promise<Map<Integer, JsonObject>> promise = Promise.promise();
 
     //todo go to srs
     //todo build query 'or'
@@ -223,7 +229,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     try {
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> {
 
-
         rh.bodyHandler(bh -> {
         });
 
@@ -232,9 +237,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       e.printStackTrace();
     }
 
-
     return promise.future();
   }
+
   //todo join instanceIds with OR
   private String buildSrsRequest(List<JsonEvent> batch) {
 
@@ -254,25 +259,27 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
 
-  //TODO CHECK THIS IS NEEDED?
-  private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
-                                                           org.folio.rest.tools.client.Response instancesResponse) {
+  private CompletableFuture<Response> buildRecordsResponse(Context ctx,
+    HttpClientInterface httpClient, Request request,
+    org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
 
     JsonObject body = instancesResponse.getBody();
     JsonArray instances = storageHelper.getItems(body);
     Integer totalRecords = storageHelper.getTotalRecords(body);
 
-    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
+    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0,
+      totalRecords);
 
     // In case the request is based on resumption token, the response should be validated if no missed records since previous response
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()  //
-        .withCode(BAD_RESUMPTION_TOKEN)
-        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request)
+        .withErrors(new OAIPMHerrorType()  //
+          .withCode(BAD_RESUMPTION_TOKEN)
+          .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
     }
-    //TODO DO WE NEED RESUMPT8ION TOKEN?
+
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
 
     /*
@@ -298,10 +305,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   /**
-   * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
-   * otherwise empty map is returned
+   * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there
+   * is any, otherwise empty map is returned
    */
-  private Map<String, RecordType> buildRecords(Context context, Request request, JsonArray instances) {
+  private Map<String, RecordType> buildRecords(Context context, Request request,
+    JsonArray instances) {
     Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
       // Using LinkedHashMap just to rely on order returned by storage service
@@ -331,15 +339,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   /**
-   * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional subfield which holds data about record discovery
-   * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite case.
+   * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional subfield which
+   * holds data about record discovery suppression status. Additional subfield has code = 't' and
+   * value = '0' if record is discovery suppressed and '1' at opposite case.
    *
-   * @param source      record source
+   * @param source record source
    * @param sourceOwner record source owner
-   * @param request     OAI-PMH request
+   * @param request OAI-PMH request
    * @return record source
    */
-  private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source, JsonObject sourceOwner, Request request) {
+  private String updateSourceWithDiscoverySuppressedDataIfNecessary(String source,
+    JsonObject sourceOwner, Request request) {
     if (getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)) {
       JsonObject content = new JsonObject(source);
       JsonArray fields = content.getJsonArray(FIELDS);
@@ -369,8 +379,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   @SuppressWarnings("unchecked")
-  private void updateDatafieldWithDiscoverySuppressedData(JsonObject generalInfoDataField, JsonObject sourceOwner) {
-    JsonObject innerJsonField = generalInfoDataField.getJsonObject(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
+  private void updateDatafieldWithDiscoverySuppressedData(JsonObject generalInfoDataField,
+    JsonObject sourceOwner) {
+    JsonObject innerJsonField = generalInfoDataField
+      .getJsonObject(GENERAL_INFO_DATA_FIELD_TAG_NUMBER);
     JsonArray subfields = innerJsonField.getJsonArray(SUBFIELDS);
     Map<String, Object> map = new LinkedHashMap<>();
     int value = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
@@ -380,7 +392,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   @SuppressWarnings("unchecked")
-  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner) {
+  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields,
+    JsonObject sourceOwner) {
     List<Object> list = fields.getList();
     Map<String, Object> generalInfoDataField = new LinkedHashMap<>();
     Map<String, Object> generalInfoDataFieldContent = new LinkedHashMap<>();
@@ -400,13 +413,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   /**
    * Builds {@link MetadataType} if the response from storage service is successful
    *
-   * @param context        - holds json object that is a source owner which is used for building metadata
-   * @param id             - source owner id
-   * @param request        the request to get metadata prefix
+   * @param context - holds json object that is a source owner which is used for building metadata
+   * @param id - source owner id
+   * @param request the request to get metadata prefix
    * @param sourceResponse the response with {@link JsonObject} which contains record metadata
    * @return OAI record metadata
    */
-  private MetadataType buildOaiMetadata(Context context, String id, Request request, org.folio.rest.tools.client.Response sourceResponse) {
+  private MetadataType buildOaiMetadata(Context context, String id, Request request,
+    org.folio.rest.tools.client.Response sourceResponse) {
     if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
       logger.error("Record not found. Service responded with error: " + sourceResponse.getError());
 
@@ -434,15 +448,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return metadata;
   }
 
-  private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
+  private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx,
+    HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
       records.forEach((id, record) -> {
         if (Objects.isNull(record.getMetadata())) {
-          cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id).thenAccept(record::withMetadata));
+          cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id)
+            .thenAccept(record::withMetadata));
         }
       });
-      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
+      return VertxCompletableFuture
+        .from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
         // Return only records with metadata populated
         .thenApply(v -> filterEmptyRecords(records));
     } else {
@@ -468,14 +485,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private boolean hasMetadata(Map.Entry<String, RecordType> entry) {
     boolean hasMetadata = Objects.nonNull(entry.getValue().getMetadata());
     if (!hasMetadata) {
-      logger.warn(String.format("The record with '%s' storage's id has no metadata", entry.getKey()));
+      logger
+        .warn(String.format("The record with '%s' storage's id has no metadata", entry.getKey()));
     }
     return hasMetadata;
   }
 
   /**
-   * In case the storage service could not return instances we have to send 500 back to client.
-   * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
+   * In case the storage service could not return instances we have to send 500 back to client. So
+   * the method is intended to validate and throw {@link IllegalStateException} for failure
+   * responses
    *
    * @param sourceResponse response from the storage
    */
@@ -502,6 +521,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
 
-  protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);
+  protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh,
+    ResumptionTokenType resumptionToken);
 
 }

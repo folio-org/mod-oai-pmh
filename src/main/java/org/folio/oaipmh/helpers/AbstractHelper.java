@@ -21,6 +21,8 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -48,9 +49,6 @@ import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -271,7 +269,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * empty string if partitioning is used and all instances are processed already,
    * null if the result set is not partitioned.
    */
-  protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
+  protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances,
+    Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.valueOf(RepositoryConfigurationUtil.getProperty
       (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
@@ -279,7 +278,8 @@ public abstract class AbstractHelper implements VerbHelper {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
-      String nextRecordId = storageHelper.getRecordId((JsonObject) instances.remove(instances.size() - 1));
+      String nextRecordId = storageHelper
+        .getRecordId((JsonObject) instances.remove(instances.size() - 1));
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
         extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
