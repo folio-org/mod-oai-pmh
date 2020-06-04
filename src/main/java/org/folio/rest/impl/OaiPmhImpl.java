@@ -132,7 +132,7 @@ public class OaiPmhImpl implements Oai {
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return Future.succeededFuture();
-              }).onFailure(t-> handleError(asyncResultHandler));
+              }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse()));
           }
         } catch (Exception e) {
           asyncResultHandler.handle(getFutureWithErrorResponse());

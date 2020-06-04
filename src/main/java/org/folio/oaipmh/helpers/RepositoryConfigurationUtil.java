@@ -84,12 +84,12 @@ public class RepositoryConfigurationUtil {
           future.complete(null);
         } catch (Exception e) {
           logger.error("Error getting configuration for {} tenant", e, tenant);
-          future.complete(null);
+          future.completeExceptionally(e);
         }
       }));
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
-      future.complete(null);
+      future.completeExceptionally(e);
     }
     return future;
   }
