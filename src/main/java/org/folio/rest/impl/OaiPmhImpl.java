@@ -21,7 +21,6 @@ import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
-import io.vertx.ext.web.RoutingContext;
 import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -81,7 +80,7 @@ public class OaiPmhImpl implements Oai {
   @Override
   public void getOaiRecords(String verb, String identifier, String resumptionToken,
                             String from, String until, String set, String metadataPrefix,
-                            RoutingContext routingContext, Map<String, String> okapiHeaders,
+                            Map<String, String> okapiHeaders,
                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
@@ -128,10 +127,11 @@ public class OaiPmhImpl implements Oai {
             }
             verbHelper
               .handle(request, vertxContext)
-              .thenAccept(response -> {
+              .compose(response -> {
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
-              }).exceptionally(handleError(asyncResultHandler));
+                return Future.succeededFuture();
+              }).onFailure(t-> handleError(asyncResultHandler));
           }
         } catch (Exception e) {
           asyncResultHandler.handle(getFutureWithErrorResponse());

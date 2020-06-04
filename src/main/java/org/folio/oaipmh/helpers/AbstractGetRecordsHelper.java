@@ -43,6 +43,8 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -59,14 +61,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String SUBFIELDS = "subfields";
 
   @Override
-  public CompletableFuture<Response> handle(Request request, Context ctx) {
-    CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
+  public Future<Response> handle(Request request, Context ctx) {
+    Promise<Response> promise = Promise.promise();
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        future.complete(responseHelper.buildFailureResponse(oaipmh, request));
-        return future;
+        promise.complete(responseHelper.buildFailureResponse(oaipmh, request));
+        return promise.future();
       }
 
       List<OAIPMHerrorType> errors = validateRequest(request);
@@ -78,8 +80,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
         }
-        future.complete(responseHelper.buildFailureResponse(oai, request));
-        return future;
+        promise.complete(responseHelper.buildFailureResponse(oai, request));
+        return promise.future();
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
@@ -91,17 +93,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
         .thenAccept(value -> {
           httpClient.closeClient();
-          future.complete(value);
+          promise.complete(value);
         })
         .exceptionally(e -> {
           httpClient.closeClient();
-          handleException(future, e);
+          handleException(promise, e);
           return null;
         });
     } catch (Exception e) {
-      handleException(future, e);
+      handleException(promise, e);
     }
-    return future;
+    return promise.future();
   }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
@@ -360,9 +362,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private void handleException(CompletableFuture<Response> future, Throwable e) {
+  private void handleException(Promise<Response> future, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
-    future.completeExceptionally(e);
+    future.fail(e);
   }
 
   private javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {

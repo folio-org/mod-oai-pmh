@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import javax.ws.rs.core.Response;
 
@@ -29,9 +28,10 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 
 /**
@@ -44,8 +44,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
   private static final String STORAGE_IDENTIFIER_SAMPLE = "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc";
 
   @Override
-  public CompletableFuture<Response> handle(Request request, Context ctx) {
-    CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
+  public Future<Response> handle(Request request, Context ctx) {
+    Promise<Response> promise = Promise.promise();
     try {
       String tenant = request.getOkapiHeaders().get(OKAPI_TENANT);
       OAIPMH oai = getResponseHelper().buildBaseOaipmhResponse(request)
@@ -62,12 +62,12 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
           .withCompressions(GZIP, DEFLATE)
           .withDescriptions(getDescriptions(request)));
 
-      future.complete(getResponseHelper().buildSuccessResponse(oai));
+      promise.complete(getResponseHelper().buildSuccessResponse(oai));
     } catch (Exception e) {
       logger.error("Error happened while processing Identify verb request", e);
-      future.completeExceptionally(e);
+      promise.fail(e);
     }
-    return future;
+    return promise.future();
   }
 
   /**

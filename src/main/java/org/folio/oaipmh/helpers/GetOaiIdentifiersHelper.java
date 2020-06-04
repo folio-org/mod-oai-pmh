@@ -10,7 +10,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
@@ -22,6 +21,8 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -34,15 +35,15 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
   private static final String GENERIC_ERROR = "Error happened while processing ListIdentifiers verb request";
 
   @Override
-  public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
-    CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
+  public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
+    Promise<javax.ws.rs.core.Response> promise = Promise.promise();
     try {
       ResponseHelper responseHelper = getResponseHelper();
       // 1. Restore request from resumptionToken if present
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        future.complete(getResponseHelper().buildFailureResponse(oai, request));
-        return future;
+        promise.complete(getResponseHelper().buildFailureResponse(oai, request));
+        return promise.future();
       }
 
       // 2. Validate request
@@ -54,8 +55,8 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         } else {
           oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
         }
-        future.complete(getResponseHelper().buildFailureResponse(oai, request));
-        return future;
+        promise.complete(getResponseHelper().buildFailureResponse(oai, request));
+        return promise.future();
       }
 
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
@@ -67,18 +68,18 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         .thenApply(response -> buildListIdentifiers(request, response))
         // 5. Build final response to client (potentially blocking operation thus running on worker thread)
         .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai, request)))
-        .thenAccept(future::complete)
+        .thenAccept(promise::complete)
         .exceptionally(e -> {
           logger.error(GENERIC_ERROR, e);
-          future.completeExceptionally(e);
+          promise.fail(e);
           return null;
         });
     } catch (Exception e) {
       logger.error(GENERIC_ERROR, e);
-      future.completeExceptionally(e);
+      promise.fail(e);
     }
 
-    return future;
+    return promise.future();
   }
 
   /**

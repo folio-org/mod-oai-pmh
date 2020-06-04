@@ -110,17 +110,9 @@
     <restassured.version>4.2.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
     <srs.version>3.1.0</srs.version>
-    <generate_routing_context>/oai/records</generate_routing_context>
   </properties>
 
   <dependencies>
-<!--TODO REMOVE?-->
-<!--    <dependency>-->
-<!--      <groupId>io.vertx</groupId>-->
-<!--      <artifactId>vertx-reactive-streams</artifactId>-->
-<!--      <version>${vertx.version}</version>-->
-<!--    </dependency>-->
-<!--TODO REMOVE?-->
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>

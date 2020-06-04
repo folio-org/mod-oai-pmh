@@ -3,7 +3,6 @@ package org.folio.oaipmh.helpers;
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
@@ -16,11 +15,12 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
@@ -28,7 +28,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
-  public CompletableFuture<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
+  public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
     return retrieveMetadataFormats(request, ctx);
   }
 
@@ -36,30 +36,30 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request with identifier
    * @return future with {@link OAIPMH} response
    */
-  private CompletableFuture<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
+  private Future<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
     if (request.getIdentifier() == null) {
-      return VertxCompletableFuture.completedFuture(retrieveMetadataFormats(request));
+      return Future.succeededFuture(retrieveMetadataFormats(request));
     } else if (!validateIdentifier(request)) {
-      return VertxCompletableFuture.completedFuture(buildBadArgumentResponse(request));
+      return Future.succeededFuture(buildBadArgumentResponse(request));
     }
 
-    CompletableFuture<javax.ws.rs.core.Response> future = new VertxCompletableFuture<>(ctx);
+    Promise<javax.ws.rs.core.Response> promise = Promise.promise();
     Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
       String endpoint = storageHelper.buildRecordsEndpoint(request, false);
       getOkapiClient(okapiHeaders)
         .request(HttpMethod.GET, endpoint, okapiHeaders)
         .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
-        .thenAccept(future::complete)
+        .thenAccept(promise::complete)
         .exceptionally(t -> {
-          future.completeExceptionally(t);
+          promise.fail(t);
           return null;
         });
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
-      future.completeExceptionally(e);
+      promise.fail(e);
     }
-    return future;
+    return promise.future();
   }
 
   /**

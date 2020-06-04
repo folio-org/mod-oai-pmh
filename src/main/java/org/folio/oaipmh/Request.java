@@ -2,9 +2,16 @@ package org.folio.oaipmh;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -220,13 +227,13 @@ public class Request {
       .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
     restoredOaiRequest = new RequestType();
-    restoredOaiRequest.setMetadataPrefix(params.get("metadataPrefix"));
-    restoredOaiRequest.setFrom(params.get("from"));
-    restoredOaiRequest.setUntil(params.get("until"));
-    restoredOaiRequest.setSet(params.get("set"));
-    this.offset = Integer.parseInt(params.get("offset"));
-    this.totalRecords = Integer.parseInt(params.get("totalRecords"));
-    this.nextRecordId = params.get("nextRecordId");
+    restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));
+    restoredOaiRequest.setFrom(params.get(FROM_PARAM));
+    restoredOaiRequest.setUntil(params.get(UNTIL_PARAM));
+    restoredOaiRequest.setSet(params.get(SET_PARAM));
+    this.offset = Integer.parseInt(params.get(OFFSET_PARAM));
+    this.totalRecords = Integer.parseInt(params.get(TOTAL_RECORDS_PARAM));
+    this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
 
     return true;
   }
@@ -248,10 +255,10 @@ public class Request {
    */
   public String toResumptionToken(Map<String, String> extraParams) {
     StringBuilder builder = new StringBuilder();
-    appendParam(builder, "metadataPrefix", getMetadataPrefix());
-    appendParam(builder, "from", getFrom());
-    appendParam(builder, "until", getUntil());
-    appendParam(builder, "set", getSet());
+    appendParam(builder, METADATA_PREFIX_PARAM, getMetadataPrefix());
+    appendParam(builder, FROM_PARAM, getFrom());
+    appendParam(builder, UNTIL_PARAM, getUntil());
+    appendParam(builder, SET_PARAM, getSet());
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
