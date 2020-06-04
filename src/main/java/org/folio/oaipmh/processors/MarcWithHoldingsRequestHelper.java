@@ -83,7 +83,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return oaiPmhResponsePromise.future();
       }
 
-      //TODO MOVE HTTP CLIENTS TO OTHER CLASSES
       BatchStreamWrapper writeStream;
       if (request.getResumptionToken() == null) { // the first request from EDS
         writeStream = createBatchStream(request, oaiPmhResponsePromise, vertxContext);

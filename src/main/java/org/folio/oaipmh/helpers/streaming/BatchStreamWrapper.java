@@ -8,14 +8,16 @@ import io.vertx.core.streams.WriteStream;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-//TODO JAVADOC
+/**
+ * WriteStream wrapper to read from the stream in batches.
+ */
 public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   private final Vertx vertx;
 
   private Handler<Void> drainHandler;
   private Handler<List<JsonEvent>> batchReadyHandler;
-  private volatile int batchSize = 10;
+  private volatile int batchSize;
 
   private volatile boolean streamEnded = false;
 

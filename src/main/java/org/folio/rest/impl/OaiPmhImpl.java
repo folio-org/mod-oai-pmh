@@ -32,6 +32,7 @@ import java.util.function.Function;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
@@ -120,7 +121,7 @@ public class OaiPmhImpl implements Oai {
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-            if(verbType.equals(LIST_RECORDS) /*&& TODO: PREFIX = MARC21WITHHODINGS*/) {
+            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(metadataPrefix)) {
               verbHelper = MarcWithHoldingsRequestHelper.getInstance(); //TODO: in 2020Q3 change it common approach for all helpers
             } else {
               verbHelper = HELPERS.get(verbType);
