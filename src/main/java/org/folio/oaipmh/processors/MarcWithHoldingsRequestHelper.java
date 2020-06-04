@@ -1,6 +1,5 @@
 package org.folio.oaipmh.processors;
 
-import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
@@ -14,6 +13,28 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang.StringUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.rest.client.SourceStorageClient;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.ResumptionTokenType;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -26,25 +47,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import javax.ws.rs.core.Response;
-import org.apache.commons.lang.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.rest.client.SourceStorageClient;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.ResumptionTokenType;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
@@ -164,7 +166,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(Collectors.joining("&"));
 
 
-    return String.format("%s?%s", inventoryEndpoint, params);
+    return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
   }
 
 
@@ -177,11 +179,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
     vertxContext.put(resumptionToken, writeStream);
 
-    final String inventoryQuery = buildInventoryQuery(request);
+    String inventoryQuery = buildInventoryQuery(request);
     logger.info("Sending request to {0}", inventoryQuery);
 
     final HttpClientRequest httpClientRequest = inventoryHttpClient
-      .get(inventoryQuery);
+      .getAbs(inventoryQuery);
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
@@ -191,6 +193,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       });
     });
     httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));
+    httpClientRequest.end();
     return writeStream;
   }
 
