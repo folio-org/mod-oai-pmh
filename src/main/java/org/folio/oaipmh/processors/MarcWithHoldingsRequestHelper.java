@@ -143,7 +143,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private String buildInventoryQuery(Request request) {
     final String inventoryEndpoint = "/oai-pmh-view/instances";
-
     Map<String, String> paramMap = new HashMap<>();
     final String from = request.getFrom();
     if (StringUtils.isNotEmpty(from)) {
@@ -164,6 +163,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
 
+
     return String.format("%s?%s", inventoryEndpoint, params);
   }
 
@@ -178,10 +178,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     vertxContext.put(resumptionToken, writeStream);
 
     final String inventoryQuery = buildInventoryQuery(request);
-    logger.debug("Sending message to {}", inventoryQuery);
+    logger.info("Sending request to {0}", inventoryQuery);
 
     final HttpClientRequest httpClientRequest = inventoryHttpClient
-      .requestAbs(GET, inventoryQuery);
+      .get(inventoryQuery);
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
