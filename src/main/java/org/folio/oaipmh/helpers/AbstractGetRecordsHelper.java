@@ -73,15 +73,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oai;
-        if (request.isRestored()) {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
-        } else {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
-        }
-        promise.complete(responseHelper.buildFailureResponse(oai, request));
-        return promise.future();
+        return buildResponseWithErrors(request, promise, errors);
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);

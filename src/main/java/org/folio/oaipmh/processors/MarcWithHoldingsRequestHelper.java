@@ -4,12 +4,31 @@ import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+
+import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang.StringUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.rest.client.SourceStorageClient;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -23,26 +42,9 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
-import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import javax.ws.rs.core.Response;
-import org.apache.commons.lang.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.rest.client.SourceStorageClient;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int BATCH_SIZE = 1000;
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
@@ -52,46 +54,35 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return INSTANCE;
   }
 
-
-  protected ResponseHelper getResponseHelper() {
-    return ResponseHelper.getInstance();
-  }
-
   @Override
   public Future<Response> handle(Request request, Context vertxContext) {
-    Promise<Response> oaiPmhResponsePromise = Promise.promise();
+    Promise<Response> promise = Promise.promise();
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oaipmh = responseHelper
+        OAIPMH oaipmh = getResponseHelper()
           .buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oaipmh, request));
-        return oaiPmhResponsePromise.future();
+        promise.complete(responseHelper.buildFailureResponse(oaipmh, request));
+        return promise.future();
       }
 
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
-        ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oai;
-        if (request.isRestored()) {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
-            RESUMPTION_TOKEN_FORMAT_ERROR);
-        } else {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
-        }
-        oaiPmhResponsePromise.complete(responseHelper.buildFailureResponse(oai, request));
-        return oaiPmhResponsePromise.future();
+        return buildResponseWithErrors(request, promise, errors);
       }
 
       BatchStreamWrapper writeStream;
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getOkapiHeaders().get(OKAPI_TENANT),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       if (request.getResumptionToken() == null) { // the first request from EDS
-        writeStream = createBatchStream(request, oaiPmhResponsePromise, vertxContext);
+        writeStream = createBatchStream(request, promise, vertxContext, batchSize);
       } else {
         final Object writeStreamObj = vertxContext.get(request.getResumptionToken());
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
-          handleException(oaiPmhResponsePromise.future(), new IllegalArgumentException(
+          handleException(promise.future(), new IllegalArgumentException(
             "Resumption token +" + request.getResumptionToken() + "+ doesn't exist in context"));
-          return oaiPmhResponsePromise.future();
+          return promise.future();
         }
         writeStream = (BatchStreamWrapper) writeStreamObj;
       }
@@ -101,19 +92,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           request.getTenant(), request.getOkapiToken());
         Map<String, JsonObject> mapFuture = requestSRSByIdentifiers(vertxContext,
           srsClient, request, batch);
-        boolean theLastBatch = batch.size() < BATCH_SIZE || writeStream.isStreamEnded();
+        boolean theLastBatch = batch.size() < batchSize || writeStream.isStreamEnded();
 
         //TODO MERGE INVENTORY AND SRS RESPONSES AND MAP TO OAI-PMH FIELDS
 
-        oaiPmhResponsePromise.complete(buildRecordsResponse(batch, mapFuture, !theLastBatch));
+        promise.complete(buildRecordsResponse(batch, mapFuture, !theLastBatch));
         if (theLastBatch) {
           vertxContext.remove(request.getResumptionToken());
         }
       });
     } catch (Exception e) {
-      handleException(oaiPmhResponsePromise.future(), e);
+      handleException(promise.future(), e);
     }
-    return oaiPmhResponsePromise.future();
+    return promise.future();
   }
 
   private Response buildRecordsResponse(
@@ -121,7 +112,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return null;
   }
 
-  private String buildInventoryQuery(String inventoryEndpoint, Request request) {
+  private String buildInventoryQuery(Request request) {
+    final String inventoryEndpoint = "/oai-pmh-view/instances";
 
     Map<String, String> paramMap = new HashMap<>();
     final String from = request.getFrom();
@@ -148,16 +140,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
   private BatchStreamWrapper createBatchStream(Request request,
-    Promise<Response> oaiPmhResponsePromise, Context vertxContext) {
+                                               Promise<Response> oaiPmhResponsePromise,
+                                               Context vertxContext, int batchSize) {
     final Vertx vertx = vertxContext.owner();
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
-    //todo add params from request
-    BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, BATCH_SIZE);
-    //TODO: possibly set batch size from configuration
+
+    BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
+
     vertxContext.put(request.getResumptionToken(), writeStream);
-    String inventoryEndpoint = "/oai-pmh-view/instances";
-    final String inventoryQuery = buildInventoryQuery(inventoryEndpoint, request);
+
+    final String inventoryQuery = buildInventoryQuery(request);
     logger.debug("Sending message to {}", inventoryQuery);
+
     final HttpClientRequest httpClientRequest = inventoryHttpClient
       .requestAbs(GET, inventoryQuery);
     httpClientRequest.handler(resp -> {
