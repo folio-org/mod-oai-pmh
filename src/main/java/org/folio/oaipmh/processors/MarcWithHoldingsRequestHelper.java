@@ -78,9 +78,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (request.getResumptionToken() == null) { // the first request from EDS
         writeStream = createBatchStream(request, promise, vertxContext, batchSize);
       } else {
-        final Object writeStreamObj = vertxContext.get(request.getResumptionToken());
+        //TODO WHAT IF NO RESUMPTION TOKEN?
+        final Object writeStreamObj = vertxContext.get("request.getResumptionToken()");
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
-          handleException(promise.future(), new IllegalArgumentException(
+          handleException(promise, new IllegalArgumentException(
             "Resumption token +" + request.getResumptionToken() + "+ doesn't exist in context"));
           return promise.future();
         }
@@ -102,7 +103,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
       });
     } catch (Exception e) {
-      handleException(promise.future(), e);
+      handleException(promise, e);
     }
     return promise.future();
   }
@@ -146,8 +147,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
 
     BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
-
-    vertxContext.put(request.getResumptionToken(), writeStream);
+    //TODO WHAT IF NO RESUMPTION TOKEN?
+    vertxContext.put("request.getResumptionToken()", writeStream);
 
     final String inventoryQuery = buildInventoryQuery(request);
     logger.debug("Sending message to {}", inventoryQuery);
@@ -162,7 +163,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         inventoryHttpClient.close();
       });
     });
-    httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise.future(), e));
+    httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));
     return writeStream;
   }
 
@@ -221,9 +222,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void handleException(Future<Response> future, Throwable e) {
+  private void handleException(Promise<Response> promise, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
-    future.fail(e);
+    promise.fail(e);
   }
 
 
