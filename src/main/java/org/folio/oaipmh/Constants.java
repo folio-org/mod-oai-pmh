@@ -35,8 +35,13 @@ public final class Constants {
   public static final String INVENTORY_STORAGE = "INVENTORY";
   public static final String PARSED_RECORD = "parsedRecord";
   public static final String CONTENT = "content";
-  public static final String GENERAL_INFO_DATA_FIELD_INDEX_VALUE = "f";
-  public static final String GENERAL_INFO_DATA_FIELD_TAG_NUMBER = "999";
+  public static final String FIELDS = "fields";
+  public static final String SUBFIELDS = "subfields";
+  public static final String FIRST_INDICATOR = "ind1";
+  public static final String SECOND_INDICATOR = "ind2";
+
+  //TODO may be would be better to move such constants to RecordMetadataManager
+  public static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
   public static final String SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE = "t";
 
   public static final String CONFIGS = "configs";
