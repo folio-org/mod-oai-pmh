@@ -187,7 +187,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
-      jp.pipeTo(writeStream);
+      jp.pipeTo(writeStream, ar->{
+        //TODO - end of stream here
+      });
       jp.endHandler(e -> {
         inventoryHttpClient.close();
       });
@@ -213,6 +215,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     //todo build query 'or'
 
     final String srsRequest = buildSrsRequest(batch);
+    logger.info("Request to SRS: {0}", srsRequest);
 
     //TODO EMPTY RESPONSE?
     //TODO ERROR?
