@@ -55,7 +55,7 @@ public class RecordMetadataManager {
   private final Predicate<JsonObject> generalInfoFieldPredicate;
   private static RecordMetadataManager instance;
 
-  {
+  private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
     indicatorsMap.put("No display constant generated", "4,8");
     indicatorsMap.put("", "4, ");
@@ -63,19 +63,16 @@ public class RecordMetadataManager {
     indicatorsMap.put("Resource", "4,0");
     indicatorsMap.put("Version of resource", "4,1");
 
-    generalInfoFieldPredicate = (jsonObject) -> {
+    generalInfoFieldPredicate = jsonObject -> {
       if (jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER)) {
         JsonObject dataFieldContent = jsonObject.getJsonObject(GENERAL_INFO_FIELD_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
         return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator)
-            && firstIndicator.equals(secondIndicator) && firstIndicator.equals(INDICATOR_VALUE);
+          && firstIndicator.equals(secondIndicator) && firstIndicator.equals(INDICATOR_VALUE);
       }
       return false;
     };
-  }
-
-  private RecordMetadataManager() {
   }
 
   public static RecordMetadataManager getInstance() {
@@ -253,11 +250,19 @@ public class RecordMetadataManager {
   }
 
   private enum EffectiveLocationSubFields {
-    INSTITUTION_NAME("a", "institutionName"), CAMPUS_NAME("b", "campusName"), LIBRARY_NAME("c", "libraryName"),
+    INSTITUTION_NAME("a", "institutionName"),
+    CAMPUS_NAME("b", "campusName"),
+    LIBRARY_NAME("c", "libraryName"),
     LOCATION_NAME("d", "name"), // check default
-    CALL_NUMBER("e", "callNumber"), CALL_NUMBER_PREFIX("f", "prefix"), CALL_NUMBER_SUFFIX("g", "suffix"),
-    CALL_NUMBER_TYPE("h", "typeId"), MATERIAL_TYPE("i", "materialType"), VOLUME("j", "volume"), ENUMERATION("k", "enumeration"),
-    CHRONOLOGY("l", "chronology"), BARCODE("m", "barcode");
+    CALL_NUMBER("e", "callNumber"),
+    CALL_NUMBER_PREFIX("f", "prefix"),
+    CALL_NUMBER_SUFFIX("g", "suffix"),
+    CALL_NUMBER_TYPE("h", "typeId"),
+    MATERIAL_TYPE("i", "materialType"),
+    VOLUME("j", "volume"),
+    ENUMERATION("k", "enumeration"),
+    CHRONOLOGY("l", "chronology"),
+    BARCODE("m", "barcode");
 
     private String subFieldCode;
     private String jsonPropertyPath;
@@ -289,8 +294,10 @@ public class RecordMetadataManager {
   }
 
   private enum ElectronicAccessSubFields {
-    URI("u", "uri"), LINK_TEXT("y", "linkText"), MATERIAL_TYPE("3", "materialsSpecification"), PUBLIC_NOTE("z", "publicNote"); // check
-                                                                                                                               // default
+    URI("u", "uri"),
+    LINK_TEXT("y", "linkText"),
+    MATERIAL_TYPE("3", "materialsSpecification"),
+    PUBLIC_NOTE("z", "publicNote");
 
     private String subFieldCode;
     private String jsonPropertyPath;

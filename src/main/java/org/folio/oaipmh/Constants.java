@@ -40,7 +40,6 @@ public final class Constants {
   public static final String FIRST_INDICATOR = "ind1";
   public static final String SECOND_INDICATOR = "ind2";
 
-  //TODO may be would be better to move such constants to RecordMetadataManager
   public static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
   public static final String SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE = "t";
 

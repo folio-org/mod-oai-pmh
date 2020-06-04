@@ -38,11 +38,11 @@ public class FieldBuilder {
   public Map<String, Object> build() {
     Map<String, Object> field = new LinkedHashMap<>();
     Map<String, Object> fieldContent = new LinkedHashMap<>();
-    List<Object> subFields = new ArrayList<>();
+    List<Object> subfields = new ArrayList<>();
 
-    subFields.add(this.subFields);
+    subfields.add(this.subFields);
     indicators.forEach(fieldContent::put);
-    fieldContent.put(SUBFIELDS, subFields);
+    fieldContent.put(SUBFIELDS, subfields);
     field.put(fieldTagNumber, fieldContent);
     return field;
   }
