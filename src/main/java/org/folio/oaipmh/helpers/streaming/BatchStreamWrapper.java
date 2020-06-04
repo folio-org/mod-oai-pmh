@@ -7,6 +7,7 @@ import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -22,6 +23,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private volatile boolean streamEnded = false;
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
+
+  private final LongAdder count = new LongAdder();
 
 
   public BatchStreamWrapper(Vertx vertx, int batchSize) {
@@ -56,6 +59,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           batchReadyHandler.handle(dataList);
         }
         batchReadyHandler = null;
+        count.add(dataList.size());
         dataList.clear();
         p.complete();
       }
@@ -104,4 +108,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   public boolean isStreamEnded() {
     return streamEnded;
   }
+
+
+  public Long getCount() {
+    return count.longValue();
+  }
+
 }

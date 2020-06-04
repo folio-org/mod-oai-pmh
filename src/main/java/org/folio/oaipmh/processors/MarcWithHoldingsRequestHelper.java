@@ -4,31 +4,15 @@ import static io.vertx.core.http.HttpMethod.GET;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-
-import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.lang.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.rest.client.SourceStorageClient;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -42,6 +26,25 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import javax.ws.rs.core.Response;
+import org.apache.commons.lang.StringUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.rest.client.SourceStorageClient;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
@@ -58,7 +61,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public Future<Response> handle(Request request, Context vertxContext) {
     Promise<Response> promise = Promise.promise();
     try {
-      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
+      String resumptionToken = request.getResumptionToken();
+      if (resumptionToken != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oaipmh = getResponseHelper()
           .buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
@@ -75,14 +79,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getOkapiHeaders().get(OKAPI_TENANT),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-      if (request.getResumptionToken() == null) { // the first request from EDS
-        writeStream = createBatchStream(request, promise, vertxContext, batchSize);
+      String requestId =
+        (resumptionToken == null || request.getNextRecordId() == null) ? UUID
+          .randomUUID().toString() : request.getNextRecordId();
+      if (resumptionToken == null
+        || request.getNextRecordId() == null) { // the first request from EDS
+        writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
       } else {
-        //TODO WHAT IF NO RESUMPTION TOKEN?
-        final Object writeStreamObj = vertxContext.get("request.getResumptionToken()");
+        final Object writeStreamObj = vertxContext.get(resumptionToken);
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
-            "Resumption token +" + request.getResumptionToken() + "+ doesn't exist in context"));
+            "Resumption token +" + resumptionToken + "+ doesn't exist in context"));
           return promise.future();
         }
         writeStream = (BatchStreamWrapper) writeStreamObj;
@@ -97,9 +104,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         //TODO MERGE INVENTORY AND SRS RESPONSES AND MAP TO OAI-PMH FIELDS
 
-        promise.complete(buildRecordsResponse(batch, mapFuture, !theLastBatch));
+        promise.complete(buildRecordsResponse(request, requestId, batch, mapFuture,
+          writeStream.getCount(), !theLastBatch));
         if (theLastBatch) {
-          vertxContext.remove(request.getResumptionToken());
+          vertxContext.remove(requestId);
         }
       });
     } catch (Exception e) {
@@ -108,8 +116,28 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
+  private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
+    long offset) {
+    Map<String, String> extraParams = new HashMap<>();
+    extraParams.put(OFFSET_PARAM, String.valueOf(offset));
+    extraParams.put(NEXT_RECORD_ID_PARAM, id);
+    if (request.getUntil() == null) {
+      extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
+    }
+
+    String resumptionToken = request.toResumptionToken(extraParams);
+
+    return new ResumptionTokenType()
+      .withValue(resumptionToken)
+      .withCursor(
+        request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+  }
+
   private Response buildRecordsResponse(
-    List<JsonEvent> batch, Map<String, JsonObject> mapFuture, boolean returnResumptionToken) {
+    Request request, String requestId, List<JsonEvent> batch,
+    Map<String, JsonObject> mapFuture, long count,
+    boolean returnResumptionToken) {
+    buildResumptionTokenFromRequest(request, requestId, count);
     return null;
   }
 
@@ -141,14 +169,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
   private BatchStreamWrapper createBatchStream(Request request,
-                                               Promise<Response> oaiPmhResponsePromise,
-                                               Context vertxContext, int batchSize) {
+    Promise<Response> oaiPmhResponsePromise,
+    Context vertxContext, int batchSize, String resumptionToken) {
     final Vertx vertx = vertxContext.owner();
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
 
     BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
-    //TODO WHAT IF NO RESUMPTION TOKEN?
-    vertxContext.put("request.getResumptionToken()", writeStream);
+    vertxContext.put(resumptionToken, writeStream);
 
     final String inventoryQuery = buildInventoryQuery(request);
     logger.debug("Sending message to {}", inventoryQuery);

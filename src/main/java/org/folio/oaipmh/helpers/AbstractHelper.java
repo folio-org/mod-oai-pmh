@@ -332,7 +332,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param from    - from parameter
    * @return string representation of built LocalDateTime object
    */
-  private String getUntilDate(Request request, String from) {
+  protected String getUntilDate(Request request, String from) {
     boolean isDateOnly = isDateOnlyGranularity(request);
     if (isDateOnly) {
       return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
