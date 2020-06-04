@@ -249,6 +249,10 @@ public class RecordMetadataManager {
     list.add(generalInfoDataField);
   }
 
+  public Predicate<JsonObject> getGeneralInfoFieldPredicate() {
+    return generalInfoFieldPredicate;
+  }
+
   private enum EffectiveLocationSubFields {
     INSTITUTION_NAME("a", "institutionName"),
     CAMPUS_NAME("b", "campusName"),
