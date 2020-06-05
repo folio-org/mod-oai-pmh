@@ -219,7 +219,6 @@ public class RecordMetadataManager {
   private Optional<JsonObject> getGeneralInfoDataField(JsonArray fields) {
     return fields.stream()
       .map(obj -> (JsonObject) obj)
-      .filter(jsonObject -> jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER))
       .filter(generalInfoFieldPredicate)
       .findFirst();
   }
