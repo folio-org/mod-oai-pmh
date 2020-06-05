@@ -16,7 +16,8 @@
             "inventory-storage.instances.source-record.marc-json.get",
             "source-storage.records.get",
             "source-storage.sourceRecords.get",
-            "configuration.entries.collection.get"
+            "configuration.entries.collection.get",
+            "inventory-storage.oai-pmh-view.instances.collection.get"
           ]
         }
       ]
