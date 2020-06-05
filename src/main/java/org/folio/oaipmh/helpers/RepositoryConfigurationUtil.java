@@ -119,10 +119,10 @@ public class RepositoryConfigurationUtil {
     }
     return parseBoolean(defaultValue);
   }
-  //TODO REFACTOR
-  public static boolean isDeletedRecordsEnabled(Request request, String name) {
+
+  public static boolean isDeletedRecordsEnabled(Request request) {
     String tenant = TenantTool.tenantId(request.getOkapiHeaders());
-    String propertyName = getProperty(tenant, name);
+    String propertyName = getProperty(tenant, REPOSITORY_DELETED_RECORDS);
     try {
       DeletedRecordType deletedRecordType = DeletedRecordType.fromValue(propertyName);
       return Arrays.asList(PERSISTENT, TRANSIENT).contains(deletedRecordType);

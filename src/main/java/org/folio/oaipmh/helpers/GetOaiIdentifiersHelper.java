@@ -60,7 +60,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       }
 
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
       // 3. Search for instances
       VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
@@ -109,7 +109,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
     ResponseHelper responseHelper = getResponseHelper();
     JsonArray instances;
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (isDeletedRecordsEnabled(request)) {
       instances = storageHelper.getRecordsItems(instancesResponse.getBody());
     } else {
       instances = storageHelper.getItems(instancesResponse.getBody());

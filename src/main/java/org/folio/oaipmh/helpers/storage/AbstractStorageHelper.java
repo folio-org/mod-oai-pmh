@@ -59,7 +59,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
     if (!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
-         && !isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+         && !isDeletedRecordsEnabled(request)) {
       queryBuilder.and();
       addSuppressFromDiscovery(queryBuilder);
     }

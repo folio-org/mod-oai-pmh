@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -46,6 +47,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -53,8 +55,10 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
@@ -295,7 +299,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
-      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      if (isDeletedRecordsEnabled(request)) {
         nextRecordId = storageHelper.getId(getLastInstance(instances));
       } else {
         nextRecordId = storageHelper.getRecordId(getLastInstance(instances));
@@ -352,7 +356,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return true when a record should be present in oai-pmh response
    */
   protected boolean filterInstance(Request request, JsonObject instance) {
-    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (!isDeletedRecordsEnabled(request)) {
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
       Map<String, String> okapiHeaders = request.getOkapiHeaders();
@@ -364,7 +368,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
     HeaderType header = populateHeader(identifierPrefix, instance);
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+    if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
       header.setStatus(StatusType.DELETED);
     }
     return header;
@@ -387,7 +391,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
-    boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
+    boolean isDeletedRecords = isDeletedRecordsEnabled(request);
     int firstPosition = 0;
     return instances != null && instances.size() > 0
         && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
@@ -417,4 +421,21 @@ public abstract class AbstractHelper implements VerbHelper {
     promise.complete(responseHelper.buildFailureResponse(oai, request));
     return promise.future();
   }
+
+  protected MetadataType buildOaiMetadata(Request request, String content) {
+    MetadataType metadata = new MetadataType();
+    MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
+    byte[] byteSource = metadataPrefix.convert(content);
+    Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
+    metadata.setAny(record);
+    return metadata;
+  }
+
+  protected boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
+    return records.values()
+      .stream()
+      .map(RecordType::getMetadata)
+      .anyMatch(Objects::isNull);
+  }
+
 }

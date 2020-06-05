@@ -67,7 +67,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
       logger.debug("Sending message to {}", instanceEndpoint);
 
@@ -111,7 +111,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     JsonObject body = instancesResponse.getBody();
     JsonArray instances;
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (isDeletedRecordsEnabled(request)) {
       instances = storageHelper.getRecordsItems(body);
     } else {
       instances = storageHelper.getItems(body);
@@ -166,7 +166,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String recordId;
-        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+        if (isDeletedRecordsEnabled(request)) {
           recordId = storageHelper.getId(instance);
         } else {
           recordId = storageHelper.getRecordId(instance);
@@ -176,7 +176,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-          if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+          if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
             record.getHeader().setStatus(StatusType.DELETED);
           }
           // Some repositories like SRS can return record source data along with other info
@@ -227,15 +227,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return buildOaiMetadata(request, source);
   }
 
-  private MetadataType buildOaiMetadata(Request request, String content) {
-    MetadataType metadata = new MetadataType();
-    MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
-    byte[] byteSource = metadataPrefix.convert(content);
-    Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
-    metadata.setAny(record);
-    return metadata;
-  }
-
   private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
@@ -250,13 +241,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
-  }
-
-  private boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
-    return records.values()
-      .stream()
-      .map(RecordType::getMetadata)
-      .anyMatch(Objects::isNull);
   }
 
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
