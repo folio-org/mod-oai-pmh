@@ -140,6 +140,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Map<String, JsonObject> mapFuture, long count,
     boolean returnResumptionToken) {
     buildResumptionTokenFromRequest(request, requestId, count);
+
+//    for (JsonEvent jsonEvent : batch) {
+//      //inventory instance
+//      final JsonObject inventoryInstance = (JsonObject)jsonEvent.value();
+//
+//      final String instanceId = ((JsonObject) inventoryInstance).getString("instanceId");
+//
+//
+//      final JsonObject srsResponse = mapFuture.get(instanceId);
+//
+//
+//      JsonObject updtatedinstance = call your code(srsResponse, inventoryInstance );
+//
+//
+//
+//      //build PMH response
+//
+//
+
+
     return null;
   }
 
