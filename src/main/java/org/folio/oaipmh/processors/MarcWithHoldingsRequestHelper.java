@@ -1,11 +1,14 @@
 package org.folio.oaipmh.processors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -20,11 +23,13 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -37,6 +42,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.rest.client.SourceStorageClient;
+import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -45,12 +51,15 @@ import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 
+import com.google.common.collect.Maps;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -106,7 +115,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .randomUUID().toString() : request.getNextRecordId();
       if (resumptionToken == null
         || request.getNextRecordId() == null) { // the first request from EDS
-        writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
+        //TODO change batch size
+        writeStream = createBatchStream(request, promise, vertxContext, 2, requestId);
       } else {
         final Object writeStreamObj = vertxContext.get(resumptionToken);
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
@@ -117,21 +127,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         writeStream = (BatchStreamWrapper) writeStreamObj;
       }
 
+      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
       writeStream.handleBatch(batch -> {
-        SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
-          request.getTenant(), request.getOkapiToken());
-        Map<String, JsonObject> mapFuture = requestSRSByIdentifiers(vertxContext,
-          srsClient, request, batch);
+        //TODO SRS CLIENT SENDS REQUEST TO /RECORDS, THIS IS WITHOUT METADATA
         boolean theLastBatch = batch.size() < batchSize || writeStream.isStreamEnded();
-
-        //TODO MERGE INVENTORY AND SRS RESPONSES AND MAP TO OAI-PMH FIELDS
-
-        promise.complete(buildRecordsResponse(request, requestId, batch, mapFuture,
-          writeStream.getCount(), !theLastBatch));
         if (theLastBatch) {
           vertxContext.remove(requestId);
         }
+        //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
+        final Map<String, JsonObject> srsResponse = requestSRSByIdentifiers(srsClient, batch);
+        final Response response = buildRecordsResponse(request, requestId, batch, srsResponse,
+          writeStream.getCount(), !theLastBatch);
+        promise.complete(response);
       });
+
     } catch (Exception e) {
       handleException(promise, e);
     }
@@ -157,10 +167,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Response buildRecordsResponse(
     Request request, String requestId, List<JsonEvent> batch,
-    Map<String, JsonObject> mapFuture, long count,
+    Map<String, JsonObject> srsResponse, long count,
     boolean returnResumptionToken) {
 
-    List<RecordType> records = buildRecordsList(request, batch, mapFuture);
+    List<RecordType> records = buildRecordsList(request, batch, srsResponse);
 
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
@@ -184,16 +194,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return response;
   }
 
-  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> mapFuture) {
+  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
     final boolean isDeletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
 
     List<RecordType> records = new ArrayList<>();
 
-    batch.forEach(jsonEvent -> {
+    for (JsonEvent jsonEvent : batch) {
       final JsonObject inventoryInstance = (JsonObject) jsonEvent.value();
       final String instanceId = inventoryInstance.getString("instanceid");
-      final JsonObject srsInstance = mapFuture.get(instanceId);
+      final JsonObject srsInstance = srsResponse.get(instanceId);
 
       JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
       String identifierPrefix = request.getIdentifierPrefix();
@@ -211,7 +221,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         record.withMetadata(buildOaiMetadata(request, source));
       }
       records.add(record);
-    });
+    }
     return records;
   }
 
@@ -252,97 +262,99 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
     }
 
+  private BatchStreamWrapper createBatchStream(Request request,
+    Promise<Response> oaiPmhResponsePromise,
+    Context vertxContext, int batchSize, String resumptionToken) {
+    final Vertx vertx = vertxContext.owner();
 
-    private BatchStreamWrapper createBatchStream (Request request,
-      Promise < Response > oaiPmhResponsePromise,
-      Context vertxContext,int batchSize, String resumptionToken){
-      final Vertx vertx = vertxContext.owner();
-      final HttpClient inventoryHttpClient = vertx.createHttpClient();
+    BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
+    vertxContext.put(resumptionToken, writeStream);
 
-      BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
-      vertxContext.put(resumptionToken, writeStream);
+    final HttpClient inventoryHttpClient = vertx.createHttpClient();
+    final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient, request);
 
-      String inventoryQuery = buildInventoryQuery(request);
-      logger.info("Sending request to {0}", inventoryQuery);
-
-      final HttpClientRequest httpClientRequest = inventoryHttpClient
-        .getAbs(inventoryQuery);
-      httpClientRequest.handler(resp -> {
-        JsonParser jp = new JsonParserImpl(resp);
-        jp.objectValueMode();
-        jp.pipeTo(writeStream, ar -> {
-          //TODO - end of stream here
-        });
-        jp.endHandler(e -> {
-          inventoryHttpClient.close();
-        });
+    httpClientRequest.handler(resp -> {
+      JsonParser jp = new JsonParserImpl(resp);
+      jp.objectValueMode();
+      jp.pipeTo(writeStream);
+      jp.endHandler(e -> {
+        inventoryHttpClient.close();
       });
-      httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));
-      httpClientRequest.end();
-      return writeStream;
-    }
+    });
 
+    httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));
+    httpClientRequest.sendHead();
+    return writeStream;
+  }
 
+  private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, Request request) {
+    String inventoryQuery =  buildInventoryQuery(request);
+
+    logger.info("Sending request to {0}", inventoryQuery);
+    final HttpClientRequest httpClientRequest = httpClient
+      .getAbs(inventoryQuery);
+
+    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+
+    return httpClientRequest;
+  }
+
+    //TODO USE IT WHEN INVENTORY HAS NO RECORDS OR REMOVE
     private CompletableFuture<Response> buildNoRecordsFoundOaiResponse (OAIPMH
     oaipmh,
       Request request){
       oaipmh.withErrors(createNoRecordsFoundError());
       return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
     }
-
-    //TODO RETURN TYPE
-    private Map<String, JsonObject> requestSRSByIdentifiers (Context ctx,
-      SourceStorageClient srsClient, Request request,
-      List < JsonEvent > batch){
-
-      //todo go to srs
-      //todo build query 'or'
-
+    //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
+    private Map<String, JsonObject> requestSRSByIdentifiers(SourceStorageClient srsClient,
+                                                            List<JsonEvent> batch) {
       final String srsRequest = buildSrsRequest(batch);
       logger.info("Request to SRS: {0}", srsRequest);
-
-      //TODO EMPTY RESPONSE?
-      //TODO ERROR?
+      final HashMap<String, JsonObject> result = Maps.newHashMap();
+      CompletableFuture<String> cf = new CompletableFuture<>();
       try {
-        srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> {
-
-          rh.bodyHandler(bh -> {
+        srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
             final Object o = bh.toJson();
+            if (o instanceof JsonObject) {
+              JsonObject entries = (JsonObject) o;
+              final JsonArray records = entries.getJsonArray("records");
+              records.stream()
+                .map(r -> (JsonObject) r)
+                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
+            } else {
+              logger.debug("Can't process response from SRS: {0}", bh.toString());
+            }
+            cf.complete("REFACTOR THIS PLEASE");
+          }
 
-            System.out.println("bh = " + bh);
-          });
-
-        });
+        ));
       } catch (UnsupportedEncodingException e) {
+        logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
+      }
+      try {
+        cf.get(2, TimeUnit.SECONDS);
+      } catch (InterruptedException | ExecutionException | TimeoutException e) {
         e.printStackTrace();
       }
-
-      return new HashMap<>();
+      return result;
     }
 
-    //todo join instanceIds with OR
-    private String buildSrsRequest (List < JsonEvent > batch) {
+  private String buildSrsRequest(List<JsonEvent> batch) {
 
-      final StringBuilder request = new StringBuilder("(");
-
-      for (JsonEvent jsonEvent : batch) {
-        final Object aggregatedInstanceObject = jsonEvent.value();
-        if (aggregatedInstanceObject instanceof JsonObject) {
-          JsonObject instance = (JsonObject) aggregatedInstanceObject;
-          final String identifier = instance.getString("identifier");
-          request.append("externalIdsHolder.identifier=");
-          request.append(identifier);
-        }
-      }
-      request.append(")");
-      return request.toString();
-    }
-
-
-    private void handleException (Promise < Response > promise, Throwable e){
-      logger.error(GENERIC_ERROR_MESSAGE, e);
-      promise.fail(e);
-    }
-
-
+    return batch.stream().map(JsonEvent::value).
+      filter(aggregatedInstanceObject -> aggregatedInstanceObject instanceof JsonObject)
+      .map(aggregatedInstanceObject -> (JsonObject) aggregatedInstanceObject)
+      .map(instance -> instance.getString("instanceid"))
+      .map(identifier -> "externalIdsHolder.instanceId==" + identifier)
+      .collect(Collectors.joining(" or ", "(", ")"));
   }
+
+
+  private void handleException(Promise<Response> promise, Throwable e) {
+    logger.error(GENERIC_ERROR_MESSAGE, e);
+    promise.fail(e);
+  }
+}

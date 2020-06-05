@@ -45,10 +45,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   @Override
   public synchronized WriteStream<JsonEvent> write(JsonEvent data,
     Handler<AsyncResult<Void>> handler) {
+    dataList.add(data);
     if (writeQueueFull()) {
       runBatchHandler();
     }
-    dataList.add(data);
     return this;
   }
 
