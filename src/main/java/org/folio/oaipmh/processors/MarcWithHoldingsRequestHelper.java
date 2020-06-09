@@ -213,7 +213,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       RecordType record = new RecordType()
         .withHeader(createHeader(inventoryInstance)
-          .withIdentifier(getIdentifier(instanceId, identifierPrefix)));
+          .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
 
       if (isDeletedRecordsEnabled && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
         record.getHeader().setStatus(StatusType.DELETED);
