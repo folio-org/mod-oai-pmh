@@ -204,7 +204,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final JsonObject inventoryInstance = (JsonObject) jsonEvent.value();
       final String instanceId = inventoryInstance.getString("instanceid");
       final JsonObject srsInstance = srsResponse.get(instanceId);
-
       JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
       String identifierPrefix = request.getIdentifierPrefix();
       RecordType record = new RecordType()
@@ -335,7 +334,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
       }
       try {
-        cf.get(2, TimeUnit.SECONDS);
+        cf.get(5, TimeUnit.SECONDS);
       } catch (InterruptedException | ExecutionException | TimeoutException e) {
         e.printStackTrace();
       }

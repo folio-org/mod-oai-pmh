@@ -93,10 +93,11 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance, JsonObject inventoryInstance) {
     JsonObject itemsAndHoldings;
     JsonArray items = null;
-    //Empty string is returned if there are no items and holdings
-    if (StringUtils.isNotEmpty(inventoryInstance.getString(ITEMS_AND_HOLDINGS_FIELDS))) {
+    try {
       itemsAndHoldings = inventoryInstance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS);
       items = itemsAndHoldings.getJsonArray(ITEMS);
+    } catch (ClassCastException e) {
+      //this means that inventory instance has no items and holdings
     }
     if (Objects.nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
