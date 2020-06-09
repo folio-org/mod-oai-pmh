@@ -369,7 +369,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiRecordsWithDateRange(MetadataPrefix metadataPrefix) {
     getLogger().debug("==== Starting getOaiRecordsWithDateRange() ====");
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -628,13 +628,13 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     String set = "all";
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(METADATA_PREFIX_PARAM, prefix.getName())
       .param(SET_PARAM, set);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
@@ -656,40 +656,12 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithoutFromAndWithMetadataPrefixDCAndResumptionToken(VerbType verb) {
-    String set = "all";
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiRecordsWithFromAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
-      .param(SET_PARAM, set);
-
-    OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 9);
-    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
-    assertThat(actualResumptionToken, is(notNullValue()));
-    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
-
-    RequestSpecification requestWithResumptionToken = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
-
-    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
-    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
-    assertThat(nextResumptionToken, is(notNullValue()));
-    assertThat(nextResumptionToken.getValue(),is(""));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithFromAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(METADATA_PREFIX_PARAM, prefix.getName())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
@@ -711,39 +683,12 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithFromAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiRecordsWithFromAndUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
-      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME);
-
-    OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 10);
-    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
-    assertThat(actualResumptionToken, is(notNullValue()));
-    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
-
-    RequestSpecification requestWithResumptionToken = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
-
-    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
-    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
-    assertThat(nextResumptionToken, is(notNullValue()));
-    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithFromAndUntilAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
+      .param(METADATA_PREFIX_PARAM, prefix.getName())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
       .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
@@ -766,67 +711,12 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithFromAndUntilAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiRecordsWithUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
-      .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
-      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
-
-    OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 10);
-    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
-    assertThat(actualResumptionToken, is(notNullValue()));
-    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
-
-    RequestSpecification requestWithResumptionToken = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
-
-    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
-    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
-    assertThat(nextResumptionToken, is(notNullValue()));
-    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithUntilAndMetadataPrefixMarc21AndResumptionToken(VerbType verb) {
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName())
-      .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
-
-    OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 9);
-    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
-    assertThat(actualResumptionToken, is(notNullValue()));
-    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
-
-    RequestSpecification requestWithResumptionToken = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
-
-    OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
-    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
-    assertThat(nextResumptionToken, is(notNullValue()));
-    assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiRecordsWithUntilAndMetadataPrefixDCAndResumptionToken(VerbType verb) {
-    RequestSpecification request = createBaseRequest(RECORDS_PATH)
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(METADATA_PREFIX_PARAM, prefix.getName())
       .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
@@ -1083,7 +973,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(MetadataPrefix.class)
+  @MethodSource("metadataPrefixAndEncodingProvider")
   void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
     getLogger().debug(format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
 
@@ -1637,7 +1527,9 @@ class OaiPmhImplTest {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
       for (String encoding : ENCODINGS) {
-        builder.add(Arguments.arguments(prefix, encoding));
+        if (!prefix.getName().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName())) {
+          builder.add(Arguments.arguments(prefix, encoding));
+        }
       }
     }
     return builder.build();
@@ -1647,7 +1539,9 @@ class OaiPmhImplTest {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
       for (VerbType verb : LIST_VERBS) {
-        builder.add(Arguments.arguments(prefix, verb));
+        if (!prefix.getName().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName())) {
+          builder.add(Arguments.arguments(prefix, verb));
+        }
       }
     }
     return builder.build();
@@ -1682,8 +1576,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalse(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
@@ -1693,7 +1587,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1704,8 +1598,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
@@ -1715,7 +1609,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1726,8 +1620,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrue(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
@@ -1737,7 +1631,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1748,8 +1642,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
@@ -1759,7 +1653,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1770,8 +1664,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalse(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
@@ -1781,7 +1675,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1792,8 +1686,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
@@ -1803,7 +1697,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1820,8 +1714,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
@@ -1831,7 +1725,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 404, 1);
 
@@ -1842,8 +1736,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
@@ -1853,7 +1747,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1870,8 +1764,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrue(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
@@ -1881,7 +1775,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1892,8 +1786,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
@@ -1903,7 +1797,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1919,8 +1813,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
@@ -1930,7 +1824,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1941,8 +1835,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressTrueAndRecordMarkAsDeleted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
@@ -1952,7 +1846,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, THREE_INSTANCES_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -1986,21 +1880,61 @@ class OaiPmhImplTest {
 
     testContext.completeNow();
   }
-
-  @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOiaRecordsAndIdentifiersWithMarc21WithHoldingsMetadataPrefix(VerbType verb){
-    String from = OkapiMockServer.THREE_INSTANCES_DATE;
+  @Test
+  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndSRSandInventoryReturn3Records(VertxTestContext testContext){
+    //String from = OkapiMockServer.THREE_INSTANCES_DATE;
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
-      .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, from)
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      //.param(FROM_PARAM, from)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
-    OAIPMH oaipmh = verify200WithXml(request, verb);
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
     assertThat(oaipmh, is(notNullValue()));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, LIST_RECORDS, 9);
   }
+
+  @Test
+  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndNoRecordsInInventoryAndSRS(VertxTestContext testContext){
+    String from = OkapiMockServer.NO_RECORDS_DATE;
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
+  }
+
+  @Test
+  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken(VertxTestContext testContext) {
+    //String set = "all";
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+      //.param(SET_PARAM, set);
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+    ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+    RequestSpecification requestWithResumptionToken = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+    OAIPMH oai = verify200WithXml(requestWithResumptionToken, LIST_RECORDS);
+    ResumptionTokenType nextResumptionToken = getResumptionToken(oai, LIST_RECORDS);
+    assertThat(nextResumptionToken, is(notNullValue()));
+    assertThat(nextResumptionToken.getValue(),is(""));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
+  }
+
 }

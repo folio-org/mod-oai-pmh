@@ -54,7 +54,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   public Future<Response> handle(Request request, Context ctx) {
     Promise<Response> promise = Promise.promise();
     try {
-      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
+      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken(request)) {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
         promise.complete(responseHelper.buildFailureResponse(oaipmh, request));

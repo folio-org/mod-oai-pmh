@@ -85,6 +85,7 @@ public class OkapiMockServer {
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
+  private static final String INVENTORY_PATH = "/oai-pmh-view/instances";
 
   private static final String INSTANCE_STORAGE_BY_ID_MARC_JSON = String.format(MARC_JSON_RECORD_URI, ":instanceId");
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
@@ -116,7 +117,23 @@ public class OkapiMockServer {
 
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
+
+    router.get(INVENTORY_PATH)
+      .handler(this::handleInventoryResponse);
     return router;
+  }
+
+  private void handleInventoryResponse(RoutingContext ctx) {
+    if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
+      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_3.json"));
+    } else if (ctx.request().absoluteURI().contains(NO_RECORDS_DATE)) {
+      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json"));
+    } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10_STORAGE)) {
+      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_1.json"));
+    } else {
+      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_1.json"));
+    }
+    //successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_1.json"));
   }
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
@@ -180,6 +197,8 @@ public class OkapiMockServer {
         json = getRecordJsonWithSuppressedTrue(json);
       } else if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
         json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
+      } else if (ctx.request().absoluteURI().contains(NO_RECORDS_DATE)) {
+        json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
       }
       successResponse(ctx, json);
     } else {
