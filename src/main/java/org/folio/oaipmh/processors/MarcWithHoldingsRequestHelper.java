@@ -206,7 +206,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final JsonObject inventoryInstance = (JsonObject) jsonEvent.value();
       final String instanceId = inventoryInstance.getString("instanceid");
       final JsonObject srsInstance = srsResponse.get(instanceId);
-      if (srsInstance == null){
+      if (srsInstance == null) {
         continue;
       }
       JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
@@ -224,7 +224,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, updatedSrsInstance, request);
         record.withMetadata(buildOaiMetadata(request, source));
       }
-      records.add(record);
+
+      if(!isDeletedRecordsEnabled && record.getHeader().getStatus() != StatusType.DELETED) {
+        records.add(record);
+      }
     }
     return records;
   }
