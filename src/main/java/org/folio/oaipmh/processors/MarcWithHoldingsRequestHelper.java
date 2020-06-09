@@ -220,12 +220,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
       String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
 
-      if (source != null && record.getHeader().getStatus() != StatusType.DELETED) {
+      if (source != null && record.getHeader().getStatus() == null) {
         source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, updatedSrsInstance, request);
         record.withMetadata(buildOaiMetadata(request, source));
       }
 
-      if(!isDeletedRecordsEnabled && record.getHeader().getStatus() != StatusType.DELETED) {
+      if(filterInstance(request, srsInstance)) {
         records.add(record);
       }
     }
