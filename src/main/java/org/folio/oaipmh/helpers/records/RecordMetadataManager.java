@@ -266,7 +266,8 @@ public class RecordMetadataManager {
     CALL_NUMBER("e", "callNumber"),
     CALL_NUMBER_PREFIX("f", "prefix"),
     CALL_NUMBER_SUFFIX("g", "suffix"),
-    CALL_NUMBER_TYPE("h", "typeId"),
+    //todo this will work when inventory changes
+    CALL_NUMBER_TYPE("h", "typeName"),
     MATERIAL_TYPE("i", "materialType"),
     VOLUME("j", "volume"),
     ENUMERATION("k", "enumeration"),
