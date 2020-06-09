@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.AbstractHelper;
@@ -130,13 +131,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
       writeStream.handleBatch(batch -> {
-        //TODO SRS CLIENT SENDS REQUEST TO /RECORDS, THIS IS WITHOUT METADATA
         boolean theLastBatch = batch.size() < batchSize || writeStream.isStreamEnded();
         if (theLastBatch) {
           vertxContext.remove(requestId);
         }
-        //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
-        final Map<String, JsonObject> srsResponse = requestSRSByIdentifiers(srsClient, batch);
+        Map<String, JsonObject> srsResponse = Maps.newHashMap();
+        if (CollectionUtils.isNotEmpty(batch)){
+          //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
+          srsResponse = requestSRSByIdentifiers(srsClient, batch);
+        }
         final Response response = buildRecordsResponse(request, requestId, batch, srsResponse,
           writeStream.getCount(), !theLastBatch);
         promise.complete(response);
@@ -175,7 +178,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
     if(records.isEmpty()) {
-      oaipmh.withErrors(createNoRecordsFoundError());
+      buildNoRecordsFoundOaiResponse(oaipmh, request);
     } else {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     }
@@ -277,6 +280,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       jp.objectValueMode();
       jp.pipeTo(writeStream);
       jp.endHandler(e -> {
+        writeStream.end();
         inventoryHttpClient.close();
       });
     });
