@@ -1926,6 +1926,8 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken() {
+    //TODO
+    System.setProperty("repository.maxRecordsPerResponse", "1");
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
