@@ -1098,6 +1098,21 @@ class OaiPmhImplTest {
     getLogger().debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
   }
 
+  //TODO test actually works but this is broken because there no mocks for inner requests. Batch stream should be mocked
+  @Test
+  void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance() {
+    String set = "all";
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
+      .param(SET_PARAM, set);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+  }
+
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiIdentifiersWithErrorFromStorage(VerbType verb) {
