@@ -1877,7 +1877,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent(VertxTestContext testContext) {
+  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent() {
     getLogger().info("=== Test Metadata Formats without identifier ===");
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
@@ -1892,11 +1892,10 @@ class OaiPmhImplTest {
     assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats().size(), equalTo(3));
     assertTrue(isMarc21WithHoldingsPrefixPresent);
     assertThat(oaiPmhResponse.getErrors(), is(empty()));
-
-    testContext.completeNow();
   }
+
   @Test
-  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndSRSandInventoryReturn3Records(VertxTestContext testContext){
+  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndSRSandInventoryReturn3Records(){
     //String from = OkapiMockServer.THREE_INSTANCES_DATE;
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
@@ -1912,7 +1911,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndNoRecordsInInventoryAndSRS(VertxTestContext testContext){
+  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndNoRecordsInInventoryAndSRS(){
     String from = OkapiMockServer.NO_RECORDS_DATE;
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
@@ -1926,7 +1925,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken(VertxTestContext testContext) {
+  void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken() {
     //String set = "all";
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
