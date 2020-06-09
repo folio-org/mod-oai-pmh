@@ -214,8 +214,8 @@ public class Request {
    *
    * @return true if the request was restored, false otherwise.
    */
-  public boolean restoreFromResumptionToken(Request request) {
-    if (oaiRequest.getResumptionToken() == null || !isResumptionTokenExclusive(request)) {
+  public boolean restoreFromResumptionToken() {
+    if (oaiRequest.getResumptionToken() == null || !isResumptionTokenExclusive()) {
       return false;
     }
 
@@ -285,9 +285,9 @@ public class Request {
    * with one that only contains the resumptionToken.
    * @return true is resumptionToken is exclusive, false otherwise
    */
-  private boolean isResumptionTokenExclusive(Request request) {
+  private boolean isResumptionTokenExclusive() {
     Request exclusiveParamRequest = Request.builder()
-      .okapiHeaders(request.getOkapiHeaders())
+      .okapiHeaders(getOkapiHeaders())
       .resumptionToken(oaiRequest.getResumptionToken())
       .baseURL(oaiRequest.getValue())
       .verb(oaiRequest.getVerb())

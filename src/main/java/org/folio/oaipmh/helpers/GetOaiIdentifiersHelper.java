@@ -40,7 +40,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     try {
       ResponseHelper responseHelper = getResponseHelper();
       // 1. Restore request from resumptionToken if present
-      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken(request)) {
+      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
         promise.complete(getResponseHelper().buildFailureResponse(oai, request));
         return promise.future();
