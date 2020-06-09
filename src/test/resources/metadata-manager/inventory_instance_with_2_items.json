@@ -21,7 +21,7 @@
         "callNumber": {
           "prefix": "prefix",
           "suffix": "suffix",
-          "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
+          "typeName": "512173a7-bd09-490e-b773-17d83f2b63fe",
           "callNumber": "Call number 1_2_1"
         },
         "enumeration": "Enumeration 1_2_1",
@@ -56,7 +56,7 @@
         "callNumber": {
           "prefix": "prefix",
           "suffix": "suffix",
-          "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
+          "typeName": "512173a7-bd09-490e-b773-17d83f2b63fe",
           "callNumber": "Call number 1_2_1"
         },
         "enumeration": "Enumeration 1_2_1",
