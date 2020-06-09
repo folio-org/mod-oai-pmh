@@ -16,9 +16,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNull.nullValue;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -121,13 +123,12 @@ class RepositoryConfigurationUtilTest {
   void testGetConfigurationWithMissingOkapiHeader(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.remove(OKAPI_URL);
 
-    vertx.runOnContext(event ->
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-        testContext.verify(() -> {
-          assertThat(Vertx.currentContext().config(), is(emptyIterable()));
-          testContext.completeNow();
-        })
-      ));
+    vertx.runOnContext(event -> testContext.verify(() -> {
+        CompletableFuture future = RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext());
+        assertTrue(future.isCompletedExceptionally());
+        testContext.completeNow();
+      })
+    );
   }
 
   @Test
