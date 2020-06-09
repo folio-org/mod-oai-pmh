@@ -116,8 +116,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .randomUUID().toString() : request.getNextRecordId();
       if (resumptionToken == null
         || request.getNextRecordId() == null) { // the first request from EDS
-        //TODO change batch size
-        writeStream = createBatchStream(request, promise, vertxContext, 2, requestId);
+        writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
       } else {
         final Object writeStreamObj = vertxContext.get(resumptionToken);
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
@@ -207,6 +206,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final JsonObject inventoryInstance = (JsonObject) jsonEvent.value();
       final String instanceId = inventoryInstance.getString("instanceid");
       final JsonObject srsInstance = srsResponse.get(instanceId);
+      if (srsInstance == null){
+        continue;
+      }
       JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
       String identifierPrefix = request.getIdentifierPrefix();
       RecordType record = new RecordType()
