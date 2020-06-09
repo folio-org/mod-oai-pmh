@@ -1926,12 +1926,10 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken() {
-    //String set = "all";
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-      //.param(SET_PARAM, set);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 9);

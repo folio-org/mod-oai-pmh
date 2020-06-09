@@ -1,6 +1,20 @@
 package org.folio.rest.impl;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -10,21 +24,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
-import org.folio.oaipmh.helpers.storage.InventoryStorageHelper;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.MARC_JSON_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
@@ -86,6 +85,7 @@ public class OkapiMockServer {
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
+  private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
 
   public static final String ERROR_TENANT = "error";
@@ -112,7 +112,26 @@ public class OkapiMockServer {
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
 
+    router.get(STREAMING_INVENTORY_ENDPOINT)
+      .handler(this::handleStreamingInventoryResponse);
     return router;
+  }
+
+  private void handleStreamingInventoryResponse(RoutingContext ctx){
+    String path = "metadata-manager/electronic_access-empty.json";
+    //TODO
+    if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
+//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_3.json"));
+    } else if (ctx.request().absoluteURI().contains(NO_RECORDS_DATE)) {
+//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json"));
+    } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10_STORAGE)) {
+//      successResponse(ctx,  getJsonObjectFromFile("/metadata_manager" + "/instances_1.json"));
+    } else {
+//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_1.json"));
+    }
+
+    final Buffer buffer = vertx.fileSystem().readFileBlocking(path);
+    ctx.response().end(buffer);
   }
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
@@ -217,6 +236,10 @@ public class OkapiMockServer {
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private String getIdParamName(String filePath) {
+    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "externalIdsHolder.instanceId" : "id";
   }
 
   private void successResponse(RoutingContext ctx, String body) {
