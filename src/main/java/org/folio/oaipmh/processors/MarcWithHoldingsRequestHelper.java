@@ -118,7 +118,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         || request.getNextRecordId() == null) { // the first request from EDS
         writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
       } else {
-        final Object writeStreamObj = vertxContext.get(requestId);
+        final Object writeStreamObj = vertxContext.get(resumptionToken);
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Resumption token +" + resumptionToken + "+ doesn't exist in context"));
@@ -138,8 +138,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         Future<Map<String, JsonObject>> srsResponse = Future.future();
         if (CollectionUtils.isNotEmpty(batch)){
           srsResponse = requestSRSByIdentifiers(srsClient, batch);
-        }else{
-          srsResponse.complete();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
           writeStream.getCount(), !theLastBatch).onSuccess(promise::complete));
@@ -327,9 +325,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     logger.info("Request to SRS: {0}", srsRequest);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
-      final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
-
+        final Map<String, JsonObject> result = Maps.newHashMap();
         final Object o = bh.toJson();
           if (o instanceof JsonObject) {
             JsonObject entries = (JsonObject) o;
