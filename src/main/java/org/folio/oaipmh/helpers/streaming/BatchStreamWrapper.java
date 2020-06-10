@@ -1,15 +1,14 @@
 package org.folio.oaipmh.helpers.streaming;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.LongAdder;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -48,7 +47,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   public synchronized WriteStream<JsonEvent> write(JsonEvent data,
     Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
-    if (writeQueueFull()) {
+    if (dataList.size() >= batchSize) {
       runBatchHandler();
     }
     return this;
@@ -58,12 +57,14 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     vertx.executeBlocking(p -> {
       synchronized (BatchStreamWrapper.this) {
         if (batchReadyHandler != null) {
-          batchReadyHandler.handle(new ArrayList<>(dataList));
+          ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, batchSize));
+          batchReadyHandler.handle(batch);
+          batchReadyHandler = null;
+          count.add(batch.size());
+          dataList.subList(0, batchSize).clear();
+          p.complete();
+          drainHandler.handle(null);
         }
-        batchReadyHandler = null;
-        count.add(dataList.size());
-        dataList.clear();
-        p.complete();
       }
     }, e -> {
     });
@@ -89,7 +90,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public boolean writeQueueFull() {
-    return dataList.size() == batchSize;
+    return dataList.size() > batchSize * 2;
   }
 
   @Override
@@ -101,7 +102,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public synchronized WriteStream<JsonEvent> handleBatch(Handler<List<JsonEvent>> handler) {
     batchReadyHandler = handler;
-    if (writeQueueFull()) {
+    if (dataList.size() >= batchSize) {
       runBatchHandler();
     }
     return this;
