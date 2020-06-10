@@ -1878,7 +1878,6 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent() {
-    getLogger().info("=== Test Metadata Formats without identifier ===");
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, LIST_METADATA_FORMATS.value());
@@ -1895,7 +1894,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndSRSandInventoryReturn3Records(){
+  void getOiaRecordsMarc21WithHoldingsAndSRSandInventoryReturn3Records(){
     //String from = OkapiMockServer.THREE_INSTANCES_DATE;
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
@@ -1911,7 +1910,21 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOiaRecordsAndIdentifiersMarc21WithHoldingsAndNoRecordsInInventoryAndSRS(){
+  void getOiaRecordsMarc21WithHoldingsAndNoRecordsInInventoryAndSRS(){
+    String from = OkapiMockServer.NO_RECORDS_DATE;
+    RequestSpecification request = createBaseRequest(RECORDS_PATH)
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, from)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
+  }
+
+  @Test
+  void getOiaRecordsMarc21WithHoldingsWhenNoRecordsInInventory(){
     String from = OkapiMockServer.NO_RECORDS_DATE;
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
@@ -1926,8 +1939,8 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21WithHoldingsAndCheckResumptionToken() {
-    //TODO
-    System.setProperty("repository.maxRecordsPerResponse", "1");
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
     RequestSpecification request = createBaseRequest(RECORDS_PATH)
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -1949,6 +1962,8 @@ class OaiPmhImplTest {
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(),is(""));
     assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
 }

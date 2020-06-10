@@ -309,46 +309,46 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpClientRequest;
   }
 
-    //TODO USE IT WHEN INVENTORY HAS NO RECORDS OR REMOVE
-    private CompletableFuture<Response> buildNoRecordsFoundOaiResponse (OAIPMH
-    oaipmh,
-      Request request){
-      oaipmh.withErrors(createNoRecordsFoundError());
-      return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
-    }
-    //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
-    private Map<String, JsonObject> requestSRSByIdentifiers(SourceStorageClient srsClient,
-                                                            List<JsonEvent> batch) {
-      final String srsRequest = buildSrsRequest(batch);
-      logger.info("Request to SRS: {0}", srsRequest);
-      final HashMap<String, JsonObject> result = Maps.newHashMap();
-      CompletableFuture<String> cf = new CompletableFuture<>();
-      try {
-        srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
-            final Object o = bh.toJson();
-            if (o instanceof JsonObject) {
-              JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("records");
-              records.stream()
-                .map(r -> (JsonObject) r)
-                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-            } else {
-              logger.debug("Can't process response from SRS: {0}", bh.toString());
-            }
-            cf.complete("REFACTOR THIS PLEASE");
-          }
+  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH
+                                                                       oaipmh,
+                                                                     Request request) {
+    oaipmh.withErrors(createNoRecordsFoundError());
+    return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
+  }
 
-        ));
-      } catch (UnsupportedEncodingException e) {
-        logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
-      }
-      try {
-        cf.get(5, TimeUnit.SECONDS);
-      } catch (InterruptedException | ExecutionException | TimeoutException e) {
-        e.printStackTrace();
-      }
-      return result;
+  //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
+  private Map<String, JsonObject> requestSRSByIdentifiers(SourceStorageClient srsClient,
+                                                          List<JsonEvent> batch) {
+    final String srsRequest = buildSrsRequest(batch);
+    logger.info("Request to SRS: {0}", srsRequest);
+    final HashMap<String, JsonObject> result = Maps.newHashMap();
+    CompletableFuture<String> cf = new CompletableFuture<>();
+    try {
+      srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
+          final Object o = bh.toJson();
+          if (o instanceof JsonObject) {
+            JsonObject entries = (JsonObject) o;
+            final JsonArray records = entries.getJsonArray("records");
+            records.stream()
+              .map(r -> (JsonObject) r)
+              .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
+          } else {
+            logger.debug("Can't process response from SRS: {0}", bh.toString());
+          }
+          cf.complete("REFACTOR THIS PLEASE");
+        }
+
+      ));
+    } catch (UnsupportedEncodingException e) {
+      logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
     }
+    try {
+      cf.get(5, TimeUnit.SECONDS);
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+      e.printStackTrace();
+    }
+    return result;
+  }
 
   private String buildSrsRequest(List<JsonEvent> batch) {
 

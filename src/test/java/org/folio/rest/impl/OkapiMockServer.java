@@ -119,18 +119,10 @@ public class OkapiMockServer {
 
   private void handleStreamingInventoryResponse(RoutingContext ctx){
     String path = "metadata-manager/electronic_access-empty.json";
-    //TODO
-    if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
-//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_3.json"));
-    } else if (ctx.request().absoluteURI().contains(NO_RECORDS_DATE)) {
-//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json"));
-    } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10_STORAGE)) {
-//      successResponse(ctx,  getJsonObjectFromFile("/metadata_manager" + "/instances_1.json"));
-    } else {
-//      successResponse(ctx,  getJsonObjectFromFile("/instance-storage.instances" + "/instances_1.json"));
+    Buffer buffer = Buffer.buffer();
+    if (ctx.request().params().get("from").equals(NO_RECORDS_DATE)) {
+      buffer = Buffer.buffer();
     }
-
-    final Buffer buffer = vertx.fileSystem().readFileBlocking(path);
     ctx.response().end(buffer);
   }
 
@@ -236,10 +228,6 @@ public class OkapiMockServer {
     } else {
       throw new UnsupportedOperationException();
     }
-  }
-
-  private String getIdParamName(String filePath) {
-    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "externalIdsHolder.instanceId" : "id";
   }
 
   private void successResponse(RoutingContext ctx, String body) {
