@@ -257,7 +257,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
       paramMap.put("skipSuppressedFromDiscoveryRecords",
         String.valueOf(
-          getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
+          !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
 
       final String params = paramMap.entrySet().stream()
         .map(e -> e.getKey() + "=" + e.getValue())
