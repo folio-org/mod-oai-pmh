@@ -118,7 +118,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         || request.getNextRecordId() == null) { // the first request from EDS
         writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
       } else {
-        final Object writeStreamObj = vertxContext.get(resumptionToken);
+        final Object writeStreamObj = vertxContext.get(requestId);
         if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Resumption token +" + resumptionToken + "+ doesn't exist in context"));
@@ -343,7 +343,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.complete(result);
         }
       ));
-      promise.complete(result);
     } catch (UnsupportedEncodingException e) {
       logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
       promise.fail(e);

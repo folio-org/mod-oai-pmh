@@ -1,0 +1,551 @@
+{
+  "records": [
+    {
+      "id": "ec53a386-9616-428b-92a9-e1f07756ea1f",
+      "snapshotId": "00000000-0000-0000-0000-000000000000",
+      "matchedId": "ec53a386-9616-428b-92a9-e1f07756ea1f",
+      "generation": 0,
+      "recordType": "MARC",
+      "rawRecord": {
+        "id": "ec53a386-9616-428b-92a9-e1f07756ea1f",
+        "content": "{\"leader\":\"01227nam a2200277 ca4500\",\"fields\":[{\"001\":\"inst000000000010\"},{\"003\":\"DE-601\"},{\"005\":\"20180615212835.0\"},{\"007\":\"hu\\\\uuu\\\\\\\\\\\\uuuu\"},{\"008\":\"171211s1993\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\000\\\\0\\\\eng\\\\d\"},{\"035\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"(DE-599)GBV1008673218\"}]}},{\"035\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"1008673218\"}]}},{\"040\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"b\":\"ger\"},{\"c\":\"GBVCP\"},{\"e\":\"rda\"}]}},{\"041\":{\"ind1\":\"0\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"eng\"}]}},{\"100\":{\"ind1\":\"1\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"Matwiejczyk-Montgomery, Marian Ann J.\"},{\"e\":\"VerfasserIn\"},{\"4\":\"aut\"}]}},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Concepts of fashion 1921 - 1987\"},{\"h\":\"microform\"},{\"b\":\"a study of garments worn by selected winners of the Miss America Pageant\"},{\"c\":\"Marian Ann J. Matwiejczyk-Montgomery\"}]}},{\"264\":{\"ind1\":\"3\",\"ind2\":\"1\",\"subfields\":[{\"a\":\"Ann Arbor, MI\"},{\"b\":\"University Microfims International\"},{\"c\":\"1993\"}]}},{\"336\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"Text\"},{\"b\":\"txt\"},{\"2\":\"rdacontent\"}]}},{\"337\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"Mikroform\"},{\"b\":\"h\"},{\"2\":\"rdamedia\"}]}},{\"338\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"Mikrofiche\"},{\"b\":\"he\"},{\"2\":\"rdacarrier\"}]}},{\"502\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"b\":\"Dissertation\"},{\"c\":\"New York University\"},{\"d\":\"1993\"}]}},{\"533\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"Mikrofiche-Ausgabe\"}]}},{\"655\":{\"ind1\":\"0\",\"ind2\":\"7\",\"subfields\":[{\"0\":\"(DE-588)4113937-9\"},{\"a\":\"Hochschulschrift\"},{\"2\":\"gnd-content\"}]}},{\"900\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"a\":\"GBV\"},{\"b\":\"PKB (Museen) Berlin\"},{\"d\":\"!KB LIPP RARA! R-MF-Lipp Mc 101 f kl\"},{\"x\":\"N\"},{\"z\":\"N\"},{\"s\":\"3181/011\"},{\"g\":\"R-MF-Lipp:Mc:101:f:kl:\"}]}},{\"954\":{\"ind1\":\"\\\\\",\"ind2\":\"\\\\\",\"subfields\":[{\"0\":\"PKB (Museen) Berlin\"},{\"a\":\"181\"},{\"b\":\"1729698859\"},{\"c\":\"10\"},{\"f\":\"KB LIPP RARA\"},{\"d\":\"R-MF-Lipp Mc 101 f kl\"},{\"e\":\"i\"},{\"d\":\"R-MF-Lipp:Mc:101:f:kl:\"},{\"x\":\"3181/011\"}]}},{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"s\":\"ec53a386-9616-428b-92a9-e1f07756ea1f\"},{\"i\":\"5b1eb450-ff9f-412d-a9e7-887f6eaeb5b4\"}]}}]}"
+      },
+      "parsedRecord": {
+        "id": "ec53a386-9616-428b-92a9-e1f07756ea1f",
+        "content": {
+          "fields": [
+            {
+              "001": "inst000000000010"
+            },
+            {
+              "003": "DE-601"
+            },
+            {
+              "005": "20180615212835.0"
+            },
+            {
+              "007": "hu\\uuu\\\\\\uuuu"
+            },
+            {
+              "008": "171211s1993\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\000\\0\\eng\\d"
+            },
+            {
+              "035": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "(DE-599)GBV1008673218"
+                  }
+                ]
+              }
+            },
+            {
+              "035": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "1008673218"
+                  }
+                ]
+              }
+            },
+            {
+              "040": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "b": "ger"
+                  },
+                  {
+                    "c": "GBVCP"
+                  },
+                  {
+                    "e": "rda"
+                  }
+                ]
+              }
+            },
+            {
+              "041": {
+                "ind1": "0",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "eng"
+                  }
+                ]
+              }
+            },
+            {
+              "100": {
+                "ind1": "1",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "Matwiejczyk-Montgomery, Marian Ann J."
+                  },
+                  {
+                    "e": "VerfasserIn"
+                  },
+                  {
+                    "4": "aut"
+                  }
+                ]
+              }
+            },
+            {
+              "245": {
+                "ind1": "1",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "a": "Concepts of fashion 1921 - 1987"
+                  },
+                  {
+                    "h": "microform"
+                  },
+                  {
+                    "b": "a study of garments worn by selected winners of the Miss America Pageant"
+                  },
+                  {
+                    "c": "Marian Ann J. Matwiejczyk-Montgomery"
+                  }
+                ]
+              }
+            },
+            {
+              "264": {
+                "ind1": "3",
+                "ind2": "1",
+                "subfields": [
+                  {
+                    "a": "Ann Arbor, MI"
+                  },
+                  {
+                    "b": "University Microfims International"
+                  },
+                  {
+                    "c": "1993"
+                  }
+                ]
+              }
+            },
+            {
+              "336": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "Text"
+                  },
+                  {
+                    "b": "txt"
+                  },
+                  {
+                    "2": "rdacontent"
+                  }
+                ]
+              }
+            },
+            {
+              "337": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "Mikroform"
+                  },
+                  {
+                    "b": "h"
+                  },
+                  {
+                    "2": "rdamedia"
+                  }
+                ]
+              }
+            },
+            {
+              "338": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "Mikrofiche"
+                  },
+                  {
+                    "b": "he"
+                  },
+                  {
+                    "2": "rdacarrier"
+                  }
+                ]
+              }
+            },
+            {
+              "502": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "b": "Dissertation"
+                  },
+                  {
+                    "c": "New York University"
+                  },
+                  {
+                    "d": "1993"
+                  }
+                ]
+              }
+            },
+            {
+              "533": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "Mikrofiche-Ausgabe"
+                  }
+                ]
+              }
+            },
+            {
+              "655": {
+                "ind1": "0",
+                "ind2": "7",
+                "subfields": [
+                  {
+                    "0": "(DE-588)4113937-9"
+                  },
+                  {
+                    "a": "Hochschulschrift"
+                  },
+                  {
+                    "2": "gnd-content"
+                  }
+                ]
+              }
+            },
+            {
+              "900": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "a": "GBV"
+                  },
+                  {
+                    "b": "PKB (Museen) Berlin"
+                  },
+                  {
+                    "d": "!KB LIPP RARA! R-MF-Lipp Mc 101 f kl"
+                  },
+                  {
+                    "x": "N"
+                  },
+                  {
+                    "z": "N"
+                  },
+                  {
+                    "s": "3181/011"
+                  },
+                  {
+                    "g": "R-MF-Lipp:Mc:101:f:kl:"
+                  }
+                ]
+              }
+            },
+            {
+              "954": {
+                "ind1": "\\",
+                "ind2": "\\",
+                "subfields": [
+                  {
+                    "0": "PKB (Museen) Berlin"
+                  },
+                  {
+                    "a": "181"
+                  },
+                  {
+                    "b": "1729698859"
+                  },
+                  {
+                    "c": "10"
+                  },
+                  {
+                    "f": "KB LIPP RARA"
+                  },
+                  {
+                    "d": "R-MF-Lipp Mc 101 f kl"
+                  },
+                  {
+                    "e": "i"
+                  },
+                  {
+                    "d": "R-MF-Lipp:Mc:101:f:kl:"
+                  },
+                  {
+                    "x": "3181/011"
+                  }
+                ]
+              }
+            },
+            {
+              "999": {
+                "ind1": "f",
+                "ind2": "f",
+                "subfields": [
+                  {
+                    "s": "ec53a386-9616-428b-92a9-e1f07756ea1f"
+                  },
+                  {
+                    "i": "5b1eb450-ff9f-412d-a9e7-887f6eaeb5b4"
+                  }
+                ]
+              }
+            }
+          ],
+          "leader": "01227nam a2200277 ca4500"
+        }
+      },
+      "deleted": false,
+      "externalIdsHolder": {
+        "instanceId": "30fcc8e7-a019-43f4-b642-2edc389f4501"
+      },
+      "additionalInfo": {
+        "suppressDiscovery": false
+      },
+      "state": "ACTUAL"
+    },
+    {
+      "id": "c1d3be12-ecec-4fab-9237-baf728575185",
+      "snapshotId": "dfa3e164-2cdf-43bc-8175-78587067c2ae",
+      "recordType": "MARC",
+      "deleted": false,
+      "externalIdsHolder": {
+        "instanceId": "5bf370e0-8cca-4d9c-82e4-5170ab2a0a39"
+      },
+      "rawRecord": {
+        "id": "2dbb4878-ddf4-4c34-b0eb-7d955c979e06",
+        "content": "62ca5b43-0f11-40af-a6b4-1a9ee2db33cb"
+      },
+      "parsedRecord": {
+        "id": "694c7b24-4a4b-4ae5-a61f-5263adc09a0d",
+        "content": {
+          "leader": "00778nam a2200217 c 4500",
+          "fields": [
+            {
+              "001": "53957015X"
+            },
+            {
+              "003": "DE-601"
+            },
+            {
+              "005": "20070817075301.0"
+            },
+            {
+              "007": "hu uuu   uuuu"
+            },
+            {
+              "008": "070816s1955    xxu           000 0 eng d"
+            },
+            {
+              "035": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "(DE-599)GBV53957015X"
+                  }
+                ]
+              }
+            },
+            {
+              "040": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "b": "ger"
+                  },
+                  {
+                    "c": "GBVCP"
+                  }
+                ]
+              }
+            },
+            {
+              "041": {
+                "ind1": "0",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "eng"
+                  }
+                ]
+              }
+            },
+            {
+              "100": {
+                "ind1": "1",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "Stavrou, C.N."
+                  }
+                ]
+              }
+            },
+            {
+              "245": {
+                "ind1": "1",
+                "ind2": "4",
+                "subfields": [
+                  {
+                    "a": "The Neurotic Heroine in Tennessee Williams"
+                  },
+                  {
+                    "h": "microform"
+                  },
+                  {
+                    "c": "C.N. Stavrou"
+                  }
+                ]
+              }
+            },
+            {
+              "264": {
+                "ind1": "3",
+                "ind2": "1",
+                "subfields": [
+                  {
+                    "a": "New York"
+                  },
+                  {
+                    "b": "Columbia University"
+                  },
+                  {
+                    "c": "1955"
+                  }
+                ]
+              }
+            },
+            {
+              "300": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "1 Mikrofilm"
+                  },
+                  {
+                    "a": "26-34 S."
+                  }
+                ]
+              }
+            },
+            {
+              "533": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "Mikrofilm-Ausg."
+                  },
+                  {
+                    "d": "1957"
+                  },
+                  {
+                    "e": "1 Mikrofilm"
+                  },
+                  {
+                    "7": "|1957||||||||||"
+                  }
+                ]
+              }
+            },
+            {
+              "773": {
+                "ind1": "0",
+                "ind2": "8",
+                "subfields": [
+                  {
+                    "i": "Aus: "
+                  },
+                  {
+                    "t": "Literature and Psychology, 5 (1955) 26.-34."
+                  }
+                ]
+              }
+            },
+            {
+              "900": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "GBV"
+                  },
+                  {
+                    "b": "UB Kiel <8>"
+                  },
+                  {
+                    "g": "!8/55! WIL | STA | Neu"
+                  },
+                  {
+                    "x": "N"
+                  },
+                  {
+                    "z": "N"
+                  },
+                  {
+                    "g": "Bibliothekszimmer"
+                  }
+                ]
+              }
+            },
+            {
+              "954": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "0": "UB Kiel <8>"
+                  },
+                  {
+                    "a": "24"
+                  },
+                  {
+                    "b": "830721037"
+                  },
+                  {
+                    "c": "01"
+                  },
+                  {
+                    "f": "8/55"
+                  },
+                  {
+                    "d": "WIL | STA | Neu"
+                  },
+                  {
+                    "e": "i"
+                  },
+                  {
+                    "d": "Bibliothekszimmer"
+                  },
+                  {
+                    "x": "0008"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "totalRecords": 2
+}

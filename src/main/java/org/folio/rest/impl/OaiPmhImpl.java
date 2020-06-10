@@ -100,7 +100,7 @@ public class OaiPmhImpl implements Oai {
           if (!getBooleanProperty(okapiHeaders, REPOSITORY_ENABLE_OAI_SERVICE)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.SERVICE_UNAVAILABLE, "OAI-PMH service is disabled");
-            asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
+            asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
             return;
           }
 
@@ -117,11 +117,16 @@ public class OaiPmhImpl implements Oai {
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
-            asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
+            asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(metadataPrefix)) {
+
+            String targetMetadataPrefix = metadataPrefix;
+            if (request.restoreFromResumptionToken()){
+              targetMetadataPrefix = request.getMetadataPrefix();
+            }
+            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
               verbHelper = MarcWithHoldingsRequestHelper.getInstance(); //TODO: in 2020Q3 change it common approach for all helpers
             } else {
               verbHelper = HELPERS.get(verbType);
@@ -131,7 +136,7 @@ public class OaiPmhImpl implements Oai {
               .compose(response -> {
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
-                return Future.succeededFuture();
+                return succeededFuture();
               }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse()));
           }
         } catch (Exception e) {
