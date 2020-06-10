@@ -1,13 +1,15 @@
 package org.folio.oaipmh.helpers.streaming;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.LongAdder;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.LongAdder;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -56,7 +58,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     vertx.executeBlocking(p -> {
       synchronized (BatchStreamWrapper.this) {
         if (batchReadyHandler != null) {
-          batchReadyHandler.handle(dataList);
+          batchReadyHandler.handle(new ArrayList<>(dataList));
         }
         batchReadyHandler = null;
         count.add(dataList.size());

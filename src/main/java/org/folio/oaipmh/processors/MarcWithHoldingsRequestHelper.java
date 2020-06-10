@@ -134,14 +134,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (theLastBatch) {
           vertxContext.remove(requestId);
         }
-        Map<String, JsonObject> srsResponse = Maps.newHashMap();
+
+        Future<Map<String, JsonObject>> srsResponse = Future.future();
         if (CollectionUtils.isNotEmpty(batch)){
-          //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
           srsResponse = requestSRSByIdentifiers(srsClient, batch);
+        }else{
+          srsResponse.complete();
         }
-        final Response response = buildRecordsResponse(request, requestId, batch, srsResponse,
-          writeStream.getCount(), !theLastBatch);
-        promise.complete(response);
+        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
+          writeStream.getCount(), !theLastBatch).onSuccess(promise::complete));
+        srsResponse.onFailure(t-> handleException(promise, t));
       });
 
     } catch (Exception e) {
@@ -167,33 +169,36 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
   }
 
-  private Response buildRecordsResponse(
+  private Future<Response> buildRecordsResponse(
     Request request, String requestId, List<JsonEvent> batch,
     Map<String, JsonObject> srsResponse, long count,
     boolean returnResumptionToken) {
 
+    Promise<Response> promise = Promise.promise();
     List<RecordType> records = buildRecordsList(request, batch, srsResponse);
 
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-    if(records.isEmpty()) {
+    if (records.isEmpty()) {
       buildNoRecordsFoundOaiResponse(oaipmh, request);
     } else {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     }
 
-    if(returnResumptionToken) {
+    if (returnResumptionToken) {
       ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId, count);
       oaipmh.getListRecords().withResumptionToken(resumptionToken);
     }
 
     Response response;
-    if(oaipmh.getErrors().isEmpty()) {
+    if (oaipmh.getErrors().isEmpty()) {
       response = responseHelper.buildSuccessResponse(oaipmh);
     } else {
       response = responseHelper.buildFailureResponse(oaipmh, request);
     }
-    return response;
+
+    promise.complete(response);
+    return promise.future();
   }
 
   private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse) {
@@ -316,16 +321,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
-  //TODO REFACTOR WAITING FOR SRS RESPONSE COMPLETION
-  private Map<String, JsonObject> requestSRSByIdentifiers(SourceStorageClient srsClient,
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,
                                                           List<JsonEvent> batch) {
     final String srsRequest = buildSrsRequest(batch);
     logger.info("Request to SRS: {0}", srsRequest);
-    final HashMap<String, JsonObject> result = Maps.newHashMap();
-    CompletableFuture<String> cf = new CompletableFuture<>();
+    Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
+      final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
-          final Object o = bh.toJson();
+
+        final Object o = bh.toJson();
           if (o instanceof JsonObject) {
             JsonObject entries = (JsonObject) o;
             final JsonArray records = entries.getJsonArray("records");
@@ -335,19 +340,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           } else {
             logger.debug("Can't process response from SRS: {0}", bh.toString());
           }
-          cf.complete("REFACTOR THIS PLEASE");
+          promise.complete(result);
         }
-
       ));
+      promise.complete(result);
     } catch (UnsupportedEncodingException e) {
       logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
+      promise.fail(e);
     }
-    try {
-      cf.get(5, TimeUnit.SECONDS);
-    } catch (InterruptedException | ExecutionException | TimeoutException e) {
-      e.printStackTrace();
-    }
-    return result;
+
+    return promise.future();
   }
 
   private String buildSrsRequest(List<JsonEvent> batch) {
