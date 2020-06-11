@@ -122,6 +122,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
+      writeStream.exceptionHandler(e-> handleException(promise, e));
       writeStream.handleBatch(batch -> {
         boolean theLastBatch = batch.size() < batchSize || writeStream.isStreamEnded();
         if (theLastBatch) {

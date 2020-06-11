@@ -18,6 +18,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private final Vertx vertx;
 
   private Handler<Void> drainHandler;
+  private Handler<Throwable> exceptionHandler;
   private Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize;
 
@@ -35,6 +36,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public WriteStream<JsonEvent> exceptionHandler(Handler<Throwable> handler) {
+    exceptionHandler = handler;
     return this;
   }
 
@@ -67,8 +69,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           drainHandler.handle(null);
         }
       }
-    }, e -> {
-    });
+    }, e -> exceptionHandler.handle(e.cause()));
   }
 
   @Override
