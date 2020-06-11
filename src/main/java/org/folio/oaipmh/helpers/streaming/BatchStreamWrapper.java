@@ -57,11 +57,12 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     vertx.executeBlocking(p -> {
       synchronized (BatchStreamWrapper.this) {
         if (batchReadyHandler != null) {
-          ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, batchSize));
+          int size = Math.min(dataList.size(), batchSize);
+          ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           batchReadyHandler.handle(batch);
           batchReadyHandler = null;
           count.add(batch.size());
-          dataList.subList(0, batchSize).clear();
+          dataList.subList(0, batch.size()).clear();
           p.complete();
           drainHandler.handle(null);
         }
