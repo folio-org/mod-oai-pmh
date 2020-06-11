@@ -287,10 +287,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
       jp.pipeTo(writeStream);
-      writeStream.drainHandler(e -> {
-        jp.resume();
-        httpClientRequest.resume();
-      });
       jp.endHandler(e -> {
         writeStream.end();
         inventoryHttpClient.close();
