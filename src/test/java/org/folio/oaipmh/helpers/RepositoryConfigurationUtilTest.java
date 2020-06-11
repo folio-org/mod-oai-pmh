@@ -172,7 +172,6 @@ class RepositoryConfigurationUtilTest {
     existConfig2.put(REPOSITORY_NAME, "FOLIO_OAI_Repository_mock");
     existConfig2.put(REPOSITORY_BASE_URL, "http://test.folio.org/oai");
     existConfig2.put(REPOSITORY_ADMIN_EMAILS, "oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org");
-    existConfig2.put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     result.put(EXIST_CONFIG_TENANT_2, existConfig2);
 
     return result;
