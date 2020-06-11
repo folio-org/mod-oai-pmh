@@ -283,6 +283,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
     final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient, request);
 
+
+
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
@@ -291,6 +293,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         writeStream.end();
         inventoryHttpClient.close();
       });
+    }).exceptionHandler(e->{logger.error(e.getMessage());
+     vertxContext.remove(resumptionToken);
     });
 
     httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));

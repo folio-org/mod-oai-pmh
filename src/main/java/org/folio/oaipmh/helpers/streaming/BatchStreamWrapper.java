@@ -66,10 +66,9 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           count.add(batch.size());
           dataList.subList(0, batch.size()).clear();
           p.complete();
-          invokeDrainHandler();
         }
       }
-    }, e -> exceptionHandler.handle(e.cause()));
+    }, e -> invokeDrainHandler());
   }
 
   private synchronized void invokeDrainHandler() {
