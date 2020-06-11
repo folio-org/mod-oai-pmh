@@ -9,7 +9,7 @@ import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -171,9 +171,7 @@ public class OaiPmhImpl implements Oai {
     final Response errorResponse;
     if (t instanceof IllegalArgumentException) {
       final ResponseHelper rh = ResponseHelper.getInstance();
-      OAIPMH oaipmh = rh.buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
-        .withCode(BAD_RESUMPTION_TOKEN)
-        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+      OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
       errorResponse = rh.buildFailureResponse(oaipmh, request);
     } else {
       errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(t.getMessage());
