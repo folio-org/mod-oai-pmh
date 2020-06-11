@@ -133,7 +133,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import io.vertx.junit5.VertxTestContext;`
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
@@ -989,19 +989,20 @@ class OaiPmhImplTest {
     getLogger().debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
   }
 
-  //TODO test actually works but this is broken because there no mocks for inner requests. Batch stream should be mocked
   @Test
-  void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance() {
-    String set = "all";
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
-      .param(SET_PARAM, set);
+  void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
+    vertx.runOnContext(e->{
+      String set = "all";
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
+        .param(SET_PARAM, set);
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+      OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+      OAIPMHerrorType error = oaipmh.getErrors().get(0);
+      assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+    });
   }
 
   @ParameterizedTest
@@ -1878,54 +1879,61 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent() {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_METADATA_FORMATS.value());
+  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent(Vertx vertx) {
+    vertx.runOnContext(e->{
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_METADATA_FORMATS.value());
 
-    OAIPMH oaiPmhResponse = verify200WithXml(request, LIST_METADATA_FORMATS);
+      OAIPMH oaiPmhResponse = verify200WithXml(request, LIST_METADATA_FORMATS);
 
-    boolean isMarc21WithHoldingsPrefixPresent = oaiPmhResponse.getListMetadataFormats().getMetadataFormats()
-      .stream().anyMatch(metadataFormatType -> metadataFormatType.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
+      boolean isMarc21WithHoldingsPrefixPresent = oaiPmhResponse.getListMetadataFormats().getMetadataFormats()
+        .stream().anyMatch(metadataFormatType -> metadataFormatType.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
 
-    assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats(), is(notNullValue()));
-    assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats().size(), equalTo(3));
-    assertTrue(isMarc21WithHoldingsPrefixPresent);
-    assertThat(oaiPmhResponse.getErrors(), is(empty()));
+      assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats(), is(notNullValue()));
+      assertThat(oaiPmhResponse.getListMetadataFormats().getMetadataFormats().size(), equalTo(3));
+      assertTrue(isMarc21WithHoldingsPrefixPresent);
+      assertThat(oaiPmhResponse.getErrors(), is(empty()));
+    });
   }
 
   @Test
-  void getOiaRecordsMarc21WithHoldingsReturnsValidXmlResponse(){
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, OkapiMockServer.INVENTORY_INSTANCE_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+  void getOiaRecordsMarc21WithHoldingsReturnsValidXmlResponse(Vertx vertx){
+    vertx.runOnContext(e->{
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(FROM_PARAM, OkapiMockServer.INVENTORY_INSTANCE_DATE)
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+      OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
-    assertThat(oaipmh, is(notNullValue()));
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
+      assertThat(oaipmh, is(notNullValue()));
+      assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
+      verifyListResponse(oaipmh, LIST_RECORDS, 2);
+    });
   }
 
   @Test
-  void getOiaRecordsMarc21WithHoldingsWhenNoRecordsInInventory(){
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, OkapiMockServer.NO_RECORDS_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+  void getOiaRecordsMarc21WithHoldingsWhenNoRecordsInInventory(Vertx vertx){
+    vertx.runOnContext(e->{
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(FROM_PARAM, OkapiMockServer.NO_RECORDS_DATE)
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+      OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
 
-    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
+      assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
+    });
   }
 
   @Test
-  void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
+  void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken(Vertx vertx) {
+    vertx.runOnContext(e->{
+      final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+      System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
 
       RequestSpecification request = createBaseRequest()
         .with()
@@ -1949,6 +1957,6 @@ class OaiPmhImplTest {
       assertThat(nextResumptionToken, is(nullValue()));
 
       System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-
+    });
   }
 }
