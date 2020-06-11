@@ -19,7 +19,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   private Handler<Void> drainHandler;
   private Handler<Throwable> exceptionHandler;
-  private Handler<List<JsonEvent>> batchReadyHandler;
+  private volatile Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize;
 
   private volatile boolean streamEnded = false;
@@ -73,7 +73,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public void end() {
+  public synchronized void end() {
     runBatchHandler();
     streamEnded = true;
   }
