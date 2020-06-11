@@ -5,6 +5,7 @@ import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.rest.impl.OkapiMockServer.ERROR_TENANT;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.folio.oaipmh.Request;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,6 +31,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.codegen.annotations.Nullable;
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -136,22 +140,22 @@ class RepositoryConfigurationUtilTest {
     String expectedValue = "test value";
     System.setProperty(REPOSITORY_BASE_URL, expectedValue);
     vertx.runOnContext(event -> testContext.verify(() -> {
-          String propertyValue = RepositoryConfigurationUtil.getProperty(NON_EXIST_CONFIG_TENANT, REPOSITORY_BASE_URL);
-          assertThat(propertyValue, is(equalTo(expectedValue)));
-          System.clearProperty(REPOSITORY_BASE_URL);
-          testContext.completeNow();
-        })
-      );
+        String propertyValue = RepositoryConfigurationUtil.getProperty(NON_EXIST_CONFIG_TENANT, REPOSITORY_BASE_URL);
+        assertThat(propertyValue, is(equalTo(expectedValue)));
+        System.clearProperty(REPOSITORY_BASE_URL);
+        testContext.completeNow();
+      })
+    );
   }
 
   @Test
   void testConfigurationGetBooleanProperty(Vertx vertx, VertxTestContext testContext) {
     boolean expectedValue = true;
     System.setProperty(REPOSITORY_TEST_BOOLEAN_PROPERTY, Boolean.toString(expectedValue));
-    vertx.runOnContext(event -> testContext.verify(() ->{
-      Map<String, String> okapiHeaders = new HashMap<>();
-      okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
-        boolean propertyValue = RepositoryConfigurationUtil.getBooleanProperty(okapiHeaders, REPOSITORY_TEST_BOOLEAN_PROPERTY );
+    vertx.runOnContext(event -> testContext.verify(() -> {
+        Map<String, String> okapiHeaders = new HashMap<>();
+        okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
+        boolean propertyValue = RepositoryConfigurationUtil.getBooleanProperty(okapiHeaders, REPOSITORY_TEST_BOOLEAN_PROPERTY);
         assertThat(propertyValue, is(equalTo(expectedValue)));
         System.clearProperty(REPOSITORY_TEST_BOOLEAN_PROPERTY);
         testContext.completeNow();
@@ -177,4 +181,20 @@ class RepositoryConfigurationUtilTest {
     return result;
   }
 
+  @Test
+  void testDeletedRecordsSettingForTenant(Vertx vertx, VertxTestContext testContext) {
+    okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
+    vertx.runOnContext(event -> {
+      final String configValue = "true";
+      System.setProperty(REPOSITORY_DELETED_RECORDS, configValue);
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
+        testContext.verify(() -> {
+          final Request request = Request.builder().okapiHeaders(okapiHeaders).build();
+          final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+          assertThat(deletedRecordsEnabled, is(true));
+          testContext.completeNow();
+        })
+      );
+    });
+  }
 }
