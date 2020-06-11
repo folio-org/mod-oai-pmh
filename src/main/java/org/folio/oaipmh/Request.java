@@ -237,8 +237,8 @@ public class Request {
     restoredOaiRequest.setUntil(params.get(UNTIL_PARAM));
     restoredOaiRequest.setSet(params.get(SET_PARAM));
     this.offset = Integer.parseInt(params.get(OFFSET_PARAM));
-    final String totalRecords = params.get(TOTAL_RECORDS_PARAM);
-    this.totalRecords = totalRecords == null ? 0 : Integer.parseInt(totalRecords);
+    final String value = params.get(TOTAL_RECORDS_PARAM);
+    this.totalRecords = value == null ? 0 : Integer.parseInt(value);
     this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
 
     return true;

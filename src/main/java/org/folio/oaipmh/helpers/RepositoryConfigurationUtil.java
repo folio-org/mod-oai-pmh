@@ -109,7 +109,7 @@ public class RepositoryConfigurationUtil {
     }
     return defaultValue;
   }
-  //TODO REFACTOR
+
   public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
     String tenant = TenantTool.tenantId(okapiHeaders);
     JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);

@@ -29,16 +29,16 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
-    return retrieveMetadataFormats(request, ctx);
+    return retrieveMetadataFormats(request);
   }
 
   /**
    * Processes request with identifier
    * @return future with {@link OAIPMH} response
    */
-  private Future<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request, Context ctx) {
+  private Future<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request) {
     if (request.getIdentifier() == null) {
-      return Future.succeededFuture(retrieveMetadataFormats(request));
+      return Future.succeededFuture(retrieveMetadataFormatsWithNoIdentifier(request));
     } else if (!validateIdentifier(request)) {
       return Future.succeededFuture(buildBadArgumentResponse(request));
     }
@@ -66,7 +66,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * Processes request without identifier
    * @return future with {@link OAIPMH} response
    */
-  private javax.ws.rs.core.Response retrieveMetadataFormats(Request request) {
+  private javax.ws.rs.core.Response retrieveMetadataFormatsWithNoIdentifier(Request request) {
     OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withListMetadataFormats(getMetadataFormatTypes());
     return getResponseHelper().buildSuccessResponse(oaipmh);
   }
@@ -80,7 +80,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     if (Response.isSuccess(response.getCode())) {
       JsonArray instances = storageHelper.getItems(response.getBody());
       if (instances != null && !instances.isEmpty()) {
-        return retrieveMetadataFormats(request);
+        return retrieveMetadataFormatsWithNoIdentifier(request);
       }
     } else {
       // The storage service could not return an instance so we have to send 500 back to client

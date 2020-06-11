@@ -409,7 +409,6 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   protected Future<Response> buildResponseWithErrors(Request request, Promise<Response> promise, List<OAIPMHerrorType> errors) {
-    ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oai;
     if (request.isRestored()) {
       oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
