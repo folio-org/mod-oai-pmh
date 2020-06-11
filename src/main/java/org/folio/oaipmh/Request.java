@@ -222,9 +222,14 @@ public class Request {
     String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
       StandardCharsets.UTF_8);
 
-    Map<String, String> params = URLEncodedUtils
-      .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
-      .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+    Map<String, String> params;
+    try {
+      params = URLEncodedUtils
+        .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+    } catch (Exception e) {
+      throw new IllegalArgumentException(e.getMessage());
+    }
 
     restoredOaiRequest = new RequestType();
     restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));

@@ -1946,9 +1946,7 @@ class OaiPmhImplTest {
 
       OAIPMH oai = verify200WithXml(requestWithResumptionToken, LIST_RECORDS);
       ResumptionTokenType nextResumptionToken = getResumptionToken(oai, LIST_RECORDS);
-      assertThat(nextResumptionToken, is(notNullValue()));
-      assertThat(nextResumptionToken.getValue(), is(""));
-      assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(1))));
+      assertThat(nextResumptionToken, is(nullValue()));
 
       System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
 

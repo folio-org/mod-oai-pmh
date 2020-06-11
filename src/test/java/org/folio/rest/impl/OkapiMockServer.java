@@ -89,7 +89,8 @@ public class OkapiMockServer {
   private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
 
-  private static final String INVENTORY_INSTANCE_ID = "30fcc8e7-a019-43f4-b642-2edc389f4501";
+  private static final String INVENTORY_INSTANCE_ID1 = "7dc209ac-799f-459b-8e17-93e88ab02779";
+  private static final String INVENTORY_INSTANCE_ID2 = "e7fdbe7a-abda-11ea-bb37-0242ac130002";
 
   public static final String ERROR_TENANT = "error";
 
@@ -121,7 +122,7 @@ public class OkapiMockServer {
   }
 
   private void handleStreamingInventoryResponse(RoutingContext ctx) {
-    String path = "inventory/inventory_instances.json";
+    String path = "inventory_view/inventory_instances.json";
     Buffer buffer = Buffer.buffer();
     final String startDate = ctx.request().params().get("startDate");
     if (startDate != null) {
@@ -171,15 +172,16 @@ public class OkapiMockServer {
   private void handleSourceRecordStorageResponse(RoutingContext ctx){
     String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
-      if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+      final String uri = ctx.request().absoluteURI();
+      if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         json = getRecordJsonWithDeletedTrue(json);
-      } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
         json = getRecordJsonWithSuppressedTrue(json);
-      } else if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
+      } else if (uri.contains(THREE_INSTANCES_DATE)) {
         json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
-      } else if (ctx.request().absoluteURI().contains(NO_RECORDS_DATE)) {
+      } else if (uri.contains(NO_RECORDS_DATE)) {
         json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
-      } else if (ctx.request().absoluteURI().contains(INVENTORY_INSTANCE_ID)) {
+      } else if (uri.contains(INVENTORY_INSTANCE_ID1) || uri.contains(INVENTORY_INSTANCE_ID2)) {
         json = getJsonObjectFromFile("/source-storage/records/srs_instances.json");
       }
       successResponse(ctx, json);

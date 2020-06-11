@@ -9,11 +9,13 @@ import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
@@ -123,8 +125,13 @@ public class OaiPmhImpl implements Oai {
             VerbHelper verbHelper;
 
             String targetMetadataPrefix = metadataPrefix;
-            if (request.restoreFromResumptionToken()){
-              targetMetadataPrefix = request.getMetadataPrefix();
+            try {
+              if (request.restoreFromResumptionToken()){
+                targetMetadataPrefix = request.getMetadataPrefix();
+              }
+            } catch (Exception e) {
+               asyncResultHandler.handle(getFutureWithErrorResponse(e, request));
+               return;
             }
             if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
               verbHelper = MarcWithHoldingsRequestHelper.getInstance(); //TODO: in 2020Q3 change it common approach for all helpers
@@ -137,7 +144,7 @@ public class OaiPmhImpl implements Oai {
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
-              }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse()));
+              }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));
           }
         } catch (Exception e) {
           asyncResultHandler.handle(getFutureWithErrorResponse());
@@ -150,6 +157,20 @@ public class OaiPmhImpl implements Oai {
       asyncResultHandler.handle(getFutureWithErrorResponse());
       return null;
     };
+  }
+
+  private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
+    final Response errorResponse;
+    if (t instanceof IllegalArgumentException) {
+      final ResponseHelper rh = ResponseHelper.getInstance();
+      OAIPMH oaipmh = rh.buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
+        .withCode(BAD_RESUMPTION_TOKEN)
+        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+      errorResponse = rh.buildFailureResponse(oaipmh, request);
+    } else {
+      errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(t.getMessage());
+    }
+    return succeededFuture(errorResponse);
   }
 
   private Future<Response> getFutureWithErrorResponse() {
