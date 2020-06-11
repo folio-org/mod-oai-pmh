@@ -9,11 +9,13 @@ import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
@@ -32,6 +34,7 @@ import java.util.function.Function;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
 import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
@@ -42,6 +45,7 @@ import org.folio.oaipmh.helpers.GetOaiSetsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.OAIPMH;
@@ -77,7 +81,10 @@ public class OaiPmhImpl implements Oai {
   }
 
   @Override
-  public void getOaiRecords(String verb, String identifier, String resumptionToken, String from, String until, String set, String metadataPrefix, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRecords(String verb, String identifier, String resumptionToken,
+                            String from, String until, String set, String metadataPrefix,
+                            Map<String, String> okapiHeaders,
+                            Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
       .thenAccept(v -> {
         try {
@@ -95,7 +102,7 @@ public class OaiPmhImpl implements Oai {
           if (!getBooleanProperty(okapiHeaders, REPOSITORY_ENABLE_OAI_SERVICE)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.SERVICE_UNAVAILABLE, "OAI-PMH service is disabled");
-            asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
+            asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
             return;
           }
 
@@ -112,14 +119,28 @@ public class OaiPmhImpl implements Oai {
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
-            asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
+            asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
           } else {
-            HELPERS.get(VerbType.fromValue(verb))
+            VerbType verbType = VerbType.fromValue(verb);
+            VerbHelper verbHelper;
+
+            String targetMetadataPrefix = getMetadataPrefixFromResumtionToken(request, metadataPrefix, t -> {
+              asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
+            });
+
+            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
+              //in 2020Q3 change it common approach for all helpers
+              verbHelper = MarcWithHoldingsRequestHelper.getInstance();
+            } else {
+              verbHelper = HELPERS.get(verbType);
+            }
+            verbHelper
               .handle(request, vertxContext)
-              .thenAccept(response -> {
+              .compose(response -> {
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
-              }).exceptionally(handleError(asyncResultHandler));
+                return succeededFuture();
+              }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));
           }
         } catch (Exception e) {
           asyncResultHandler.handle(getFutureWithErrorResponse());
@@ -132,6 +153,30 @@ public class OaiPmhImpl implements Oai {
       asyncResultHandler.handle(getFutureWithErrorResponse());
       return null;
     };
+  }
+
+  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<Throwable> errorHandler) {
+    String targetMetadataPrefix = metadataPrefix;
+    try {
+      if (request.restoreFromResumptionToken()) {
+        targetMetadataPrefix = request.getMetadataPrefix();
+      }
+    } catch (Exception e) {
+      errorHandler.handle(e);
+    }
+    return targetMetadataPrefix;
+  }
+
+  private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
+    final Response errorResponse;
+    if (t instanceof IllegalArgumentException) {
+      final ResponseHelper rh = ResponseHelper.getInstance();
+      OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
+      errorResponse = rh.buildFailureResponse(oaipmh, request);
+    } else {
+      errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(t.getMessage());
+    }
+    return succeededFuture(errorResponse);
   }
 
   private Future<Response> getFutureWithErrorResponse() {

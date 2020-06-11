@@ -98,7 +98,7 @@
     <!-- Plugin versions -->
     <aspectj.version>1.9.4</aspectj.version>
     <raml-module-builder.version>30.0.0</raml-module-builder.version>
-    <vertx.version>3.8.5</vertx.version>
+    <vertx.version>3.9.0</vertx.version>
     <vertx-completable-future.version>0.1.2</vertx-completable-future.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
     <apache-commons-lang3.version>3.9</apache-commons-lang3.version>
@@ -109,9 +109,22 @@
     <log4j-slf4j.version>2.13.0</log4j-slf4j.version>
     <restassured.version>4.2.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
+    <srs.version>3.1.0</srs.version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>mod-source-record-storage-client</artifactId>
+      <version>${srs.version}</version>
+      <type>jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.ws.rs</groupId>
+          <artifactId>jsr311-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <!-- org.folio:domain-models-api-interfaces dependency goes with org.folio:domain-models-runtime -->
     <dependency>
       <groupId>org.folio</groupId>

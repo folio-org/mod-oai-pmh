@@ -1,6 +1,20 @@
 package org.folio.rest.impl;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
+import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -10,21 +24,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
-import org.folio.oaipmh.helpers.storage.InventoryStorageHelper;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.MARC_JSON_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
@@ -38,7 +37,8 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
-  public static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
+  private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
+  private static final String ID_PARAM = "externalIdsHolder.instanceId";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
@@ -60,6 +60,7 @@ public class OkapiMockServer {
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07.000Z";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
+  static final String INVENTORY_INSTANCE_DATE = "2020-01-01";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
   private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00.000Z";
@@ -85,9 +86,11 @@ public class OkapiMockServer {
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
-
-  private static final String INSTANCE_STORAGE_BY_ID_MARC_JSON = String.format(MARC_JSON_RECORD_URI, ":instanceId");
+  private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
+
+  private static final String INVENTORY_INSTANCE_ID1 = "7dc209ac-799f-459b-8e17-93e88ab02779";
+  private static final String INVENTORY_INSTANCE_ID2 = "e7fdbe7a-abda-11ea-bb37-0242ac130002";
 
   public static final String ERROR_TENANT = "error";
 
@@ -102,10 +105,6 @@ public class OkapiMockServer {
   private Router defineRoutes() {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    router.get(InventoryStorageHelper.INSTANCES_URI)
-          .handler(this::handleInstancesInventoryStorageResponse);
-    router.get(INSTANCE_STORAGE_BY_ID_MARC_JSON)
-          .handler(this::handleMarcJsonInventoryStorageResponse);
 
     router.get(SOURCE_STORAGE_RESULT_URI)
           .handler(this::handleRecordStorageResultResponse);
@@ -116,7 +115,22 @@ public class OkapiMockServer {
 
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
+
+    router.get(STREAMING_INVENTORY_ENDPOINT)
+      .handler(this::handleStreamingInventoryResponse);
     return router;
+  }
+
+  private void handleStreamingInventoryResponse(RoutingContext ctx) {
+    String path = "inventory_view/inventory_instances.json";
+    Buffer buffer = Buffer.buffer();
+    final String startDate = ctx.request().params().get("startDate");
+    if (startDate != null) {
+      if (startDate.equals(INVENTORY_INSTANCE_DATE)) {
+        buffer = vertx.fileSystem().readFileBlocking(path);
+      }
+    }
+    ctx.response().end(buffer);
   }
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
@@ -139,22 +153,6 @@ public class OkapiMockServer {
     }
   }
 
-  private void handleMarcJsonInventoryStorageResponse(RoutingContext ctx) {
-    String instanceId = ctx.request().getParam("instanceId");
-    if (instanceId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
-      failureResponse(ctx, 500, "Internal Server Error");
-    } else if (instanceId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
-      failureResponse(ctx, 404, "Record not found");
-    } else {
-      String json = getJsonObjectFromFile(String.format("/instance-storage/instances/marc-%s.json", instanceId));
-      if (isNotEmpty(json)) {
-        successResponse(ctx, json);
-      } else {
-        successResponse(ctx, getJsonObjectFromFile("/instance-storage/instances/marc.json"));
-      }
-    }
-  }
-
   private void handleSourceRecordStorageByIdResponse(RoutingContext ctx) {
     String recordId = ctx.request().getParam("id");
       if (recordId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
@@ -174,12 +172,17 @@ public class OkapiMockServer {
   private void handleSourceRecordStorageResponse(RoutingContext ctx){
     String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
-      if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+      final String uri = ctx.request().absoluteURI();
+      if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         json = getRecordJsonWithDeletedTrue(json);
-      } else if (ctx.request().absoluteURI().contains(DATE_FOR_INSTANCES_10)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
         json = getRecordJsonWithSuppressedTrue(json);
-      } else if (ctx.request().absoluteURI().contains(THREE_INSTANCES_DATE)) {
+      } else if (uri.contains(THREE_INSTANCES_DATE)) {
         json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
+      } else if (uri.contains(NO_RECORDS_DATE)) {
+        json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
+      } else if (uri.contains(INVENTORY_INSTANCE_ID1) || uri.contains(INVENTORY_INSTANCE_ID2)) {
+        json = getJsonObjectFromFile("/source-storage/records/srs_instances.json");
       }
       successResponse(ctx, json);
     } else {
@@ -196,57 +199,45 @@ public class OkapiMockServer {
     }));
   }
 
-  private void handleInstancesInventoryStorageResponse(RoutingContext ctx) {
-    handleResultResponse(ctx, InventoryStorageHelper.INSTANCES_URI);
-  }
-
   private void handleRecordStorageResultResponse(RoutingContext ctx) {
-    handleResultResponse(ctx, SOURCE_STORAGE_RESULT_URI);
-  }
-
-  private void handleResultResponse(RoutingContext ctx, String filePath) {
     String query = ctx.request().getParam("query");
 
     if (query != null)
     {
-      if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), EXISTING_IDENTIFIER))) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_1));
-      } else if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), NON_EXISTING_IDENTIFIER))) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_0));
+      if (query.endsWith(String.format("%s==%s", ID_PARAM, EXISTING_IDENTIFIER))) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
+      } else if (query.endsWith(String.format("%s==%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
       } else if (query.contains(NO_RECORDS_DATE_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_0));
-      } else if (query.endsWith(String.format("%s==%s", getIdParamName(filePath), ERROR_IDENTIFIER))) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+      } else if (query.endsWith(String.format("%s==%s", ID_PARAM, ERROR_IDENTIFIER))) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (query.contains(PARTITIONABLE_RECORDS_DATE_TIME_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_11));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_11));
       } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_1_NO_RECORD_SOURCE));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_NO_RECORD_SOURCE));
       } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_2));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_2));
       } else if (query.contains(THREE_INSTANCES_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
       } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_4));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
       } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
       } else if (query.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_10));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
       } else if (query.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
-        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(filePath + INSTANCES_3));
+        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
       } else {
-        successResponse(ctx, getJsonObjectFromFile(filePath + INSTANCES_10_TOTAL_RECORDS_11));
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
       logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
     } else {
       throw new UnsupportedOperationException();
     }
-  }
-
-  private String getIdParamName(String filePath) {
-    return SOURCE_STORAGE_RESULT_URI.equals(filePath) ? "externalIdsHolder.instanceId" : "id";
   }
 
   private void successResponse(RoutingContext ctx, String body) {

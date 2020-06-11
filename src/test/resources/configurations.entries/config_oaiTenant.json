@@ -44,21 +44,6 @@
         "updatedDate": "2018-11-06T14:34:37.631+0000",
         "updatedByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de"
       }
-    },
-    {
-      "id": "0b28dc28-1e72-4630-b3be-47f7c6d12b12",
-      "module": "OAI-PMH",
-      "configName": "test_config",
-      "description": "Repository base url",
-      "default": true,
-      "enabled": true,
-      "value": "{\"maxRecordsPerResponse\":\"10\"}",
-      "metadata": {
-        "createdDate": "2018-11-06T14:35:06.433+0000",
-        "createdByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de",
-        "updatedDate": "2018-11-06T14:35:06.433+0000",
-        "updatedByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de"
-      }
     }
   ],
   "totalRecords": 4,

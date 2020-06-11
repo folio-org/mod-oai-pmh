@@ -84,12 +84,12 @@ public class RepositoryConfigurationUtil {
           future.complete(null);
         } catch (Exception e) {
           logger.error("Error getting configuration for {} tenant", e, tenant);
-          future.complete(null);
+          future.completeExceptionally(e);
         }
       }));
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
-      future.complete(null);
+      future.completeExceptionally(e);
     }
     return future;
   }
@@ -120,9 +120,9 @@ public class RepositoryConfigurationUtil {
     return parseBoolean(defaultValue);
   }
 
-  public static boolean isDeletedRecordsEnabled(Request request, String name) {
+  public static boolean isDeletedRecordsEnabled(Request request) {
     String tenant = TenantTool.tenantId(request.getOkapiHeaders());
-    String propertyName = getProperty(tenant, name);
+    String propertyName = getProperty(tenant, REPOSITORY_DELETED_RECORDS);
     try {
       DeletedRecordType deletedRecordType = DeletedRecordType.fromValue(propertyName);
       return Arrays.asList(PERSISTENT, TRANSIENT).contains(deletedRecordType);

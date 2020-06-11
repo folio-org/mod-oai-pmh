@@ -4,9 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -24,9 +22,7 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
-import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
@@ -38,6 +34,8 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -49,31 +47,23 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   @Override
-  public CompletableFuture<Response> handle(Request request, Context ctx) {
-    CompletableFuture<Response> future = new VertxCompletableFuture<>(ctx);
+  public Future<Response> handle(Request request, Context ctx) {
+    Promise<Response> promise = Promise.promise();
     try {
       if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
         ResponseHelper responseHelper = getResponseHelper();
         OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        future.complete(responseHelper.buildFailureResponse(oaipmh, request));
-        return future;
+        promise.complete(responseHelper.buildFailureResponse(oaipmh, request));
+        return promise.future();
       }
 
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
-        ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oai;
-        if (request.isRestored()) {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);
-        } else {
-          oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
-        }
-        future.complete(responseHelper.buildFailureResponse(oai, request));
-        return future;
+        return buildResponseWithErrors(request, promise, errors);
       }
 
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS));
+      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
       logger.debug("Sending message to {}", instanceEndpoint);
 
@@ -81,17 +71,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
         .thenAccept(value -> {
           httpClient.closeClient();
-          future.complete(value);
+          promise.complete(value);
         })
         .exceptionally(e -> {
           httpClient.closeClient();
-          handleException(future, e);
+          handleException(promise, e);
           return null;
         });
     } catch (Exception e) {
-      handleException(future, e);
+      handleException(promise, e);
     }
-    return future;
+    return promise.future();
   }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
@@ -117,7 +107,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     JsonObject body = instancesResponse.getBody();
     JsonArray instances;
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (isDeletedRecordsEnabled(request)) {
       instances = storageHelper.getRecordsItems(body);
     } else {
       instances = storageHelper.getItems(body);
@@ -172,7 +162,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
         String recordId;
-        if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+        if (isDeletedRecordsEnabled(request)) {
           recordId = storageHelper.getId(instance);
         } else {
           recordId = storageHelper.getRecordId(instance);
@@ -182,7 +172,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           RecordType record = new RecordType()
             .withHeader(createHeader(instance)
               .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-          if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+          if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
             record.getHeader().setStatus(StatusType.DELETED);
           }
           // Some repositories like SRS can return record source data along with other info
@@ -233,15 +223,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return buildOaiMetadata(request, source);
   }
 
-  private MetadataType buildOaiMetadata(Request request, String content) {
-    MetadataType metadata = new MetadataType();
-    MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
-    byte[] byteSource = metadataPrefix.convert(content);
-    Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
-    metadata.setAny(record);
-    return metadata;
-  }
-
   private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
@@ -256,13 +237,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else {
       return CompletableFuture.completedFuture(records.values());
     }
-  }
-
-  private boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
-    return records.values()
-      .stream()
-      .map(RecordType::getMetadata)
-      .anyMatch(Objects::isNull);
   }
 
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
@@ -285,9 +259,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private void handleException(CompletableFuture<Response> future, Throwable e) {
+  private void handleException(Promise<Response> future, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
-    future.completeExceptionally(e);
+    future.fail(e);
   }
 
   private javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {

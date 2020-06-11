@@ -1,5 +1,5 @@
 {
-  "instanceid": "2f7f23be-81a6-4227-85ba-7c1c81272ee1",
+  "instanceid": "54cc0262-76df-4cac-acca-b10e9bc5c79a",
   "instanceupdateddate": "2020-06-01T10:56:10.118Z",
   "deleted": "false",
   "itemsandholdingsfields": {
@@ -21,7 +21,7 @@
         "callNumber": {
           "prefix": "prefix",
           "suffix": "suffix",
-          "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
+          "typeName": "512173a7-bd09-490e-b773-17d83f2b63fe",
           "callNumber": "Call number 1_2_1"
         },
         "enumeration": "Enumeration 1_2_1",

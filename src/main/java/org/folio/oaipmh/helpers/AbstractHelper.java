@@ -13,15 +13,16 @@ import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
@@ -35,13 +36,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.tools.client.HttpClientFactory;
@@ -49,11 +54,16 @@ import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.MetadataType;
+import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -288,7 +298,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
-      if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+      if (isDeletedRecordsEnabled(request)) {
         nextRecordId = storageHelper.getId(getLastInstance(instances));
       } else {
         nextRecordId = storageHelper.getRecordId(getLastInstance(instances));
@@ -325,7 +335,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * @param from    - from parameter
    * @return string representation of built LocalDateTime object
    */
-  private String getUntilDate(Request request, String from) {
+  protected String getUntilDate(Request request, String from) {
     boolean isDateOnly = isDateOnlyGranularity(request);
     if (isDateOnly) {
       return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
@@ -345,7 +355,7 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return true when a record should be present in oai-pmh response
    */
   protected boolean filterInstance(Request request, JsonObject instance) {
-    if (!isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS)) {
+    if (!isDeletedRecordsEnabled(request)) {
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
       Map<String, String> okapiHeaders = request.getOkapiHeaders();
@@ -357,7 +367,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
     HeaderType header = populateHeader(identifierPrefix, instance);
-    if (isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS) && storageHelper.isRecordMarkAsDeleted(instance)) {
+    if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
       header.setStatus(StatusType.DELETED);
     }
     return header;
@@ -380,7 +390,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
-    boolean isDeletedRecords = isDeletedRecordsEnabled(request, REPOSITORY_DELETED_RECORDS);
+    boolean isDeletedRecords = isDeletedRecordsEnabled(request);
     int firstPosition = 0;
     return instances != null && instances.size() > 0
         && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
@@ -396,6 +406,34 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected ResponseHelper getResponseHelper() {
     return responseHelper;
+  }
+
+  protected Future<Response> buildResponseWithErrors(Request request, Promise<Response> promise, List<OAIPMHerrorType> errors) {
+    OAIPMH oai;
+    if (request.isRestored()) {
+      oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
+        RESUMPTION_TOKEN_FORMAT_ERROR);
+    } else {
+      oai = responseHelper.buildOaipmhResponseWithErrors(request, errors);
+    }
+    promise.complete(responseHelper.buildFailureResponse(oai, request));
+    return promise.future();
+  }
+
+  protected MetadataType buildOaiMetadata(Request request, String content) {
+    MetadataType metadata = new MetadataType();
+    MetadataPrefix metadataPrefix = MetadataPrefix.fromName(request.getMetadataPrefix());
+    byte[] byteSource = metadataPrefix.convert(content);
+    Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
+    metadata.setAny(record);
+    return metadata;
+  }
+
+  protected boolean hasRecordsWithoutMetadata(Map<String, RecordType> records) {
+    return records.values()
+      .stream()
+      .map(RecordType::getMetadata)
+      .anyMatch(Objects::isNull);
   }
 
 }

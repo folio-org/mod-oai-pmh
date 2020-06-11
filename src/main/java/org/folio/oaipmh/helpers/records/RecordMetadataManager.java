@@ -91,8 +91,14 @@ public class RecordMetadataManager {
    */
   @SuppressWarnings("unchecked")
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance, JsonObject inventoryInstance) {
-    JsonObject itemsAndHoldings = inventoryInstance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS);
-    JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
+    JsonObject itemsAndHoldings;
+    JsonArray items = null;
+    try {
+      itemsAndHoldings = inventoryInstance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS);
+      items = itemsAndHoldings.getJsonArray(ITEMS);
+    } catch (ClassCastException e) {
+      //this means that inventory instance has no items and holdings
+    }
     if (Objects.nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
       JsonObject content = parsedRecord.getJsonObject(CONTENT);
@@ -260,7 +266,8 @@ public class RecordMetadataManager {
     CALL_NUMBER("e", "callNumber"),
     CALL_NUMBER_PREFIX("f", "prefix"),
     CALL_NUMBER_SUFFIX("g", "suffix"),
-    CALL_NUMBER_TYPE("h", "typeId"),
+    //this will work when inventory changes
+    CALL_NUMBER_TYPE("h", "typeName"),
     MATERIAL_TYPE("i", "materialType"),
     VOLUME("j", "volume"),
     ENUMERATION("k", "enumeration"),
