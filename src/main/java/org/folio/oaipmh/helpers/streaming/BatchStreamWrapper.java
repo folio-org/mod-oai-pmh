@@ -104,7 +104,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public synchronized WriteStream<JsonEvent> handleBatch(Handler<List<JsonEvent>> handler) {
     batchReadyHandler = handler;
-    if (dataList.size() >= batchSize) {
+    if (dataList.size() >= batchSize || streamEnded) {
       runBatchHandler();
     }
     return this;
