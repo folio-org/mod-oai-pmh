@@ -159,7 +159,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withValue(resumptionToken)
         .withCursor(
           request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
-    }else{
+    } else {
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(
@@ -178,19 +178,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
     if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
-      buildNoRecordsFoundOaiResponse(oaipmh, request);
+      oaipmh.withErrors(createNoRecordsFoundError());
     } else {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     }
 
-    ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-      stream.getReturnedCount(), returnResumptionToken);
-    oaipmh.getListRecords().withResumptionToken(resumptionToken);
     stream.addReturnedCount(records.size());
 
     Response response;
     if (oaipmh.getErrors().isEmpty()) {
       response = responseHelper.buildSuccessResponse(oaipmh);
+      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
+        stream.getReturnedCount(), returnResumptionToken);
+      oaipmh.getListRecords().withResumptionToken(resumptionToken);
     } else {
       response = responseHelper.buildFailureResponse(oaipmh, request);
     }
@@ -316,13 +316,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
 
     return httpClientRequest;
-  }
-
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH
-                                                                       oaipmh,
-    Request request) {
-    oaipmh.withErrors(createNoRecordsFoundError());
-    return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,

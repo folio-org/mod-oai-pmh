@@ -1896,21 +1896,6 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOiaRecordsMarc21WithHoldingsReturnsValidXmlResponse() {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, OkapiMockServer.INVENTORY_INSTANCE_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-
-    assertThat(oaipmh, is(notNullValue()));
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
-  }
-
-  @Test
   void getOiaRecordsMarc21WithHoldingsWhenNoRecordsInInventory() {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1935,7 +1920,7 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 2);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(actualResumptionToken, is(nullValue()));
+    assertThat(actualResumptionToken, is(notNullValue()));
 
   }
   @Test
