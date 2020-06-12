@@ -155,22 +155,6 @@ public class OaiPmhImpl implements Oai {
     };
   }
 
-  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<AsyncResult<Response>> asyncResultHandler) {
-    String targetMetadataPrefix = metadataPrefix;
-    if (request.getResumptionToken() != null) {
-      if(request.isResumptionTokenParsableAndValid()) {
-        targetMetadataPrefix = request.getMetadataPrefix();
-      } else {
-        ResponseHelper responseHelper = ResponseHelper.getInstance();
-        OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
-        return null;
-      }
-      targetMetadataPrefix = request.getMetadataPrefix();
-    }
-    return targetMetadataPrefix;
-  }
-
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
     final Response errorResponse;
     if (t instanceof IllegalArgumentException) {
