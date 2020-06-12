@@ -1,3 +1,35 @@
+## 3.0.0 (Released)
+
+This release includes improvements of the current module functionality and enrichment with new functionality which involves support of a new metadata format marc 21 with holdings and items, update RMB version to 30.0.0, moving request validation from edge module, support of the next settings: discovery suppressed records processing, enabling OAI service, deleted records processing, error processing. Added possibility to manipulate OAI-PMH settings from user interface.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v2.2.0...v2.2.1)
+
+### Stories
+
+* [MODOAIPMH-131](https://issues.folio.org/browse/MODOAIPMH-131) Move request validation and configuration settings logic from edge to mod-oai-pmh
+* [MODOAIPMH-102](https://issues.folio.org/browse/MODOAIPMH-102) Form ListRecords response enriched with holdings/items fields
+* [MODOAIPMH-68](https://issues.folio.org/browse/MODOAIPMH-68) Suppress instance records from discovery
+* [MODOAIPMH-141](https://issues.folio.org/browse/MODOAIPMH-141) Add marc21_withholdings to ListMetadataFormats
+* [MODOAIPMH-106](https://issues.folio.org/browse/MODOAIPMH-106) Associate OAI-PMH level errors with 200 HTTP status
+* [MODOAIPMH-137](https://issues.folio.org/browse/MODOAIPMH-137) Update to RMB v30
+* [MODOAIPMH-109](https://issues.folio.org/browse/MODOAIPMH-109) Reflect holdings and items deletion in OAI-PMH response
+* [MODOAIPMH-114](https://issues.folio.org/browse/MODOAIPMH-114) Add the suppressDiscovery flag into OAI-PMH feed
+* [MODOAIPMH-110](https://issues.folio.org/browse/MODOAIPMH-110) Integrate front-end with back-end to manipulate OAI-PMH settings
+* [MODOAIPMH-100](https://issues.folio.org/browse/MODOAIPMH-100) Make OAI-PMH settings access-able from back-end
+* [MODOAIPMH-115](https://issues.folio.org/browse/MODOAIPMH-115) Create API to read from new inventory-storage views
+* [MODOAIPMH-108](https://issues.folio.org/browse/MODOAIPMH-108) Make deleted instance records support configurable
+* [MODOAIPMH-103](https://issues.folio.org/browse/MODOAIPMH-103) Implement "Enable OAI service" setting
+* [MODOAIPMH-126](https://issues.folio.org/browse/MODOAIPMH-126) Add suppressed removed records as 'deleted' to the feed
+* [MODOAIPMH-124](https://issues.folio.org/browse/MODOAIPMH-124) Add the suppressDiscovery flag into OAI-PMH feed for oai_dc
+* [MODOAIPMH-117](https://issues.folio.org/browse/MODOAIPMH-117) Request holdings and items fields from inventory
+* [MODOAIPMH-111](https://issues.folio.org/browse/MODOAIPMH-111) Perform validation for OAI-PMH settings
+* [MODOAIPMH-69](https://issues.folio.org/browse/MODOAIPMH-69) Change record identifier to use the UUID of the instance record
+* [MODOAIPMH-97](https://issues.folio.org/browse/MODOAIPMH-97) Implement UI for OAI-PMH settings
+
+### Bug Fixes
+
+* [MODOAIPMH-121](https://issues.folio.org/browse/MODOAIPMH-121) Fix possibility to complete requests chain with resumptionToken
+* [MODOAIPMH-112](https://issues.folio.org/browse/MODOAIPMH-112) Fix possibility to complete requests chain without time borders
 * [MODOAIPMH-100](https://issues.folio.org/browse/MODOAIPMH-100) Support configurations management from UI & change the way of working with configurations & splitting configuration into groups.
 
 ## 2.1.0 (Released)
