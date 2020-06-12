@@ -187,10 +187,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     Response response;
     if (oaipmh.getErrors().isEmpty()) {
-      response = responseHelper.buildSuccessResponse(oaipmh);
       ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
         stream.getReturnedCount(), returnResumptionToken);
       oaipmh.getListRecords().withResumptionToken(resumptionToken);
+      response = responseHelper.buildSuccessResponse(oaipmh);
     } else {
       response = responseHelper.buildFailureResponse(oaipmh, request);
     }
