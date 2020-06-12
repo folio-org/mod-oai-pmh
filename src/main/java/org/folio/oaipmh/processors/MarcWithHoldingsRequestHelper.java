@@ -69,8 +69,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
-   * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and
-   * "+HH:MM"
+   * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
    */
   private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
     .parseCaseInsensitive()
@@ -123,7 +122,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
-      writeStream.exceptionHandler(e -> {
+      writeStream.exceptionHandler(e-> {
         if (e != null) {
           handleException(promise, e);
         }
@@ -152,7 +151,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-    long offset) {
+                                                              long offset) {
     Map<String, String> extraParams = new HashMap<>();
     extraParams.put(OFFSET_PARAM, String.valueOf(offset));
     extraParams.put(NEXT_RECORD_ID_PARAM, id);
@@ -201,11 +200,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch,
-    Map<String, JsonObject> srsResponse) {
+  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-    final boolean isDeletedRecordsEnabled = RepositoryConfigurationUtil
-      .isDeletedRecordsEnabled(request);
+    final boolean isDeletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
 
     List<RecordType> records = new ArrayList<>();
 
@@ -229,13 +226,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
 
       if (source != null && record.getHeader().getStatus() == null) {
-        source = metadataManager
-          .updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, updatedSrsInstance,
-            request);
+        source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, updatedSrsInstance, request);
         record.withMetadata(buildOaiMetadata(request, source));
       }
 
-      if (filterInstance(request, srsInstance)) {
+      if(filterInstance(request, srsInstance)) {
         records.add(record);
       }
     }
@@ -253,7 +248,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .withSetSpecs("all");
   }
 
-  private String buildInventoryQuery(Request request) {
+    private String buildInventoryQuery(Request request) {
     final String inventoryEndpoint = "/oai-pmh-view/instances";
     Map<String, String> paramMap = new HashMap<>();
     final String from = request.getFrom();
@@ -271,11 +266,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String.valueOf(
         !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
 
-    final String params = paramMap.entrySet().stream()
-      .map(e -> e.getKey() + "=" + e.getValue())
-      .collect(Collectors.joining("&"));
+      final String params = paramMap.entrySet().stream()
+        .map(e -> e.getKey() + "=" + e.getValue())
+        .collect(Collectors.joining("&"));
 
-    return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
+
+      return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
   }
 
   private BatchStreamWrapper createBatchStream(Request request,
@@ -330,36 +326,34 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH
-    oaipmh,
+                                                                       oaipmh,
     Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,
-    List<JsonEvent> batch) {
+                                                          List<JsonEvent> batch) {
     final String srsRequest = buildSrsRequest(batch);
     logger.info("Request to SRS: {0}", srsRequest);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient
-        .getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
+      srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
 
-            final Object o = bh.toJson();
-            if (o instanceof JsonObject) {
-              JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("records");
-              records.stream()
-                .map(r -> (JsonObject) r)
-                .forEach(jo -> result
-                  .put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-            } else {
-              logger.debug("Can't process response from SRS: {0}", bh.toString());
-            }
-            promise.complete(result);
+        final Object o = bh.toJson();
+          if (o instanceof JsonObject) {
+            JsonObject entries = (JsonObject) o;
+            final JsonArray records = entries.getJsonArray("records");
+            records.stream()
+              .map(r -> (JsonObject) r)
+              .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
+          } else {
+            logger.debug("Can't process response from SRS: {0}", bh.toString());
           }
-        ));
+          promise.complete(result);
+        }
+      ));
     } catch (UnsupportedEncodingException e) {
       logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
       promise.fail(e);
