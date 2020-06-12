@@ -87,13 +87,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Response> promise = Promise.promise();
     try {
       String resumptionToken = request.getResumptionToken();
-      if (resumptionToken != null && !request.isResumptionTokenParsableAndValid()) {
-        ResponseHelper responseHelper = getResponseHelper();
-        OAIPMH oaipmh = getResponseHelper()
-          .buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        promise.complete(responseHelper.buildFailureResponse(oaipmh, request));
-        return promise.future();
-      }
 
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
