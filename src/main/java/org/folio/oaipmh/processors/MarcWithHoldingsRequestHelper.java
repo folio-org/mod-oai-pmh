@@ -134,14 +134,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
 
         Future<Map<String, JsonObject>> srsResponse = Future.future();
-        if (CollectionUtils.isNotEmpty(batch)){
+        if (CollectionUtils.isNotEmpty(batch)) {
           srsResponse = requestSRSByIdentifiers(srsClient, batch);
-        }else{
+        } else {
           srsResponse.complete();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
-          writeStream.getCount(), !theLastBatch).onSuccess(promise::complete));
-        srsResponse.onFailure(t-> handleException(promise, t));
+          writeStream, !theLastBatch).onSuccess(promise::complete));
+        srsResponse.onFailure(t -> handleException(promise, t));
       });
 
     } catch (Exception e) {
@@ -169,7 +169,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Future<Response> buildRecordsResponse(
     Request request, String requestId, List<JsonEvent> batch,
-    Map<String, JsonObject> srsResponse, long count,
+    Map<String, JsonObject> srsResponse, BatchStreamWrapper stream,
     boolean returnResumptionToken) {
 
     Promise<Response> promise = Promise.promise();
@@ -177,16 +177,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-    if (records.isEmpty()) {
+    if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
       buildNoRecordsFoundOaiResponse(oaipmh, request);
     } else {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     }
 
     if (returnResumptionToken) {
-      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId, count);
+      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
+        stream.getReturnedCount());
       oaipmh.getListRecords().withResumptionToken(resumptionToken);
     }
+
+    stream.addReturnedCount(records.size());
 
     Response response;
     if (oaipmh.getErrors().isEmpty()) {
@@ -212,7 +215,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (srsInstance == null) {
         continue;
       }
-      JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
+      JsonObject updatedSrsInstance = metadataManager
+        .populateMetadataWithItemsData(srsInstance, inventoryInstance);
       String identifierPrefix = request.getIdentifierPrefix();
       RecordType record = new RecordType()
         .withHeader(createHeader(inventoryInstance)
@@ -246,23 +250,23 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .withSetSpecs("all");
   }
 
-    private String buildInventoryQuery (Request request){
-      final String inventoryEndpoint = "/oai-pmh-view/instances";
-      Map<String, String> paramMap = new HashMap<>();
-      final String from = request.getFrom();
-      if (StringUtils.isNotEmpty(from)) {
-        paramMap.put("startDate", from);
-      }
-      final String until = request.getUntil();
-      if (StringUtils.isNotEmpty(until)) {
-        paramMap.put("endDate", until);
-      }
-      paramMap.put("deletedRecordSupport",
-        String.valueOf(
-          RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
-      paramMap.put("skipSuppressedFromDiscoveryRecords",
-        String.valueOf(
-          !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
+    private String buildInventoryQuery(Request request) {
+    final String inventoryEndpoint = "/oai-pmh-view/instances";
+    Map<String, String> paramMap = new HashMap<>();
+    final String from = request.getFrom();
+    if (StringUtils.isNotEmpty(from)) {
+      paramMap.put("startDate", from);
+    }
+    final String until = request.getUntil();
+    if (StringUtils.isNotEmpty(until)) {
+      paramMap.put("endDate", until);
+    }
+    paramMap.put("deletedRecordSupport",
+      String.valueOf(
+        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
+    paramMap.put("skipSuppressedFromDiscoveryRecords",
+      String.valueOf(
+        !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
 
       final String params = paramMap.entrySet().stream()
         .map(e -> e.getKey() + "=" + e.getValue())
@@ -270,7 +274,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
       return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
-    }
+  }
 
   private BatchStreamWrapper createBatchStream(Request request,
     Promise<Response> oaiPmhResponsePromise,
@@ -281,29 +285,36 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     vertxContext.put(resumptionToken, writeStream);
 
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
-    final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient, request);
+    final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient,
+      request);
 
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
       jp.pipeTo(writeStream);
-      writeStream.drainHandler(e -> {
-        jp.resume();
-        httpClientRequest.resume();
-      });
       jp.endHandler(e -> {
         writeStream.end();
         inventoryHttpClient.close();
       });
-    });
+    }).exceptionHandler(e -> {
+      ;
+      vertxContext.remove(resumptionToken);
+    }).continueHandler((e) -> {
+        logger.info("continue");
+      }
+    );
 
-    httpClientRequest.exceptionHandler(e -> handleException(oaiPmhResponsePromise, e));
+    httpClientRequest.exceptionHandler(e -> {
+      logger.error(e.getMessage(), e);
+      vertxContext.remove(resumptionToken);
+      handleException(oaiPmhResponsePromise, e);
+    });
     httpClientRequest.sendHead();
     return writeStream;
   }
 
   private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, Request request) {
-    String inventoryQuery =  buildInventoryQuery(request);
+    String inventoryQuery = buildInventoryQuery(request);
 
     logger.info("Sending request to {0}", inventoryQuery);
     final HttpClientRequest httpClientRequest = httpClient
@@ -318,7 +329,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH
                                                                        oaipmh,
-                                                                     Request request) {
+    Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }

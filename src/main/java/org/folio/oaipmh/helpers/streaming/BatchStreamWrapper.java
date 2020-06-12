@@ -26,7 +26,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
-  private final LongAdder count = new LongAdder();
+  private final LongAdder inventoryCount = new LongAdder();
+  private final LongAdder returnedCount = new LongAdder();
 
 
   public BatchStreamWrapper(Vertx vertx, int batchSize) {
@@ -63,13 +64,18 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           batchReadyHandler.handle(batch);
           batchReadyHandler = null;
-          count.add(batch.size());
+          inventoryCount.add(batch.size());
           dataList.subList(0, batch.size()).clear();
           p.complete();
-          drainHandler.handle(null);
         }
       }
-    }, e -> exceptionHandler.handle(e.cause()));
+    }, e -> invokeDrainHandler());
+  }
+
+  private synchronized void invokeDrainHandler() {
+    if (drainHandler != null) {
+      drainHandler.handle(null);
+    }
   }
 
   @Override
@@ -115,8 +121,15 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
 
-  public Long getCount() {
-    return count.longValue();
+  public Long getInventoryCount() {
+    return inventoryCount.longValue();
   }
 
+  public Long getReturnedCount() {
+    return returnedCount.longValue();
+  }
+
+  public void addReturnedCount(int addition) {
+    returnedCount.add(addition);
+  }
 }
