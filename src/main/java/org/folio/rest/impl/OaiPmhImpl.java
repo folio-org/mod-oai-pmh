@@ -114,7 +114,7 @@ public class OaiPmhImpl implements Oai {
           addParamToMapIfNotEmpty(SET_PARAM, set, requestParams);
           addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
-          List<OAIPMHerrorType> errors = validator.validate(verb, requestParams);
+          List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
 
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
@@ -124,9 +124,7 @@ public class OaiPmhImpl implements Oai {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
 
-            String targetMetadataPrefix = getMetadataPrefixFromResumtionToken(request, metadataPrefix, t -> {
-              asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
-            });
+            String targetMetadataPrefix = request.getMetadataPrefix();
 
             if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
               //in 2020Q3 change it common approach for all helpers
@@ -153,18 +151,6 @@ public class OaiPmhImpl implements Oai {
       asyncResultHandler.handle(getFutureWithErrorResponse());
       return null;
     };
-  }
-
-  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<Throwable> errorHandler) {
-    String targetMetadataPrefix = metadataPrefix;
-    try {
-      if (request.restoreFromResumptionToken()) {
-        targetMetadataPrefix = request.getMetadataPrefix();
-      }
-    } catch (Exception e) {
-      errorHandler.handle(e);
-    }
-    return targetMetadataPrefix;
   }
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {

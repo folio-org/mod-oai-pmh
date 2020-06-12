@@ -214,33 +214,28 @@ public class Request {
    *
    * @return true if the request was restored, false otherwise.
    */
-  public boolean restoreFromResumptionToken() {
-    if (oaiRequest.getResumptionToken() == null || !isResumptionTokenExclusive()) {
-      return false;
-    }
-
+  public boolean isResumptionTokenParsableAndValid() {
+    try {
     String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
       StandardCharsets.UTF_8);
 
     Map<String, String> params;
-    try {
       params = URLEncodedUtils
         .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
         .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+
+      restoredOaiRequest = new RequestType();
+      restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));
+      restoredOaiRequest.setFrom(params.get(FROM_PARAM));
+      restoredOaiRequest.setUntil(params.get(UNTIL_PARAM));
+      restoredOaiRequest.setSet(params.get(SET_PARAM));
+      this.offset = Integer.parseInt(params.get(OFFSET_PARAM));
+      final String value = params.get(TOTAL_RECORDS_PARAM);
+      this.totalRecords = value == null ? 0 : Integer.parseInt(value);
+      this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
     } catch (Exception e) {
-      throw new IllegalArgumentException(e.getMessage());
+      return false;
     }
-
-    restoredOaiRequest = new RequestType();
-    restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));
-    restoredOaiRequest.setFrom(params.get(FROM_PARAM));
-    restoredOaiRequest.setUntil(params.get(UNTIL_PARAM));
-    restoredOaiRequest.setSet(params.get(SET_PARAM));
-    this.offset = Integer.parseInt(params.get(OFFSET_PARAM));
-    final String value = params.get(TOTAL_RECORDS_PARAM);
-    this.totalRecords = value == null ? 0 : Integer.parseInt(value);
-    this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
-
     return true;
   }
 
@@ -284,21 +279,5 @@ public class Request {
       }
       builder.append(name).append(PARAMETER_VALUE_SEPARATOR).append(value);
     }
-  }
-
-  /**
-   * Checks if the resumptionToken is provided exclusively by comparing this request
-   * with one that only contains the resumptionToken.
-   * @return true is resumptionToken is exclusive, false otherwise
-   */
-  private boolean isResumptionTokenExclusive() {
-    Request exclusiveParamRequest = Request.builder()
-      .okapiHeaders(getOkapiHeaders())
-      .resumptionToken(oaiRequest.getResumptionToken())
-      .baseURL(oaiRequest.getValue())
-      .verb(oaiRequest.getVerb())
-      .build();
-
-    return exclusiveParamRequest.getOaiRequest().equals(oaiRequest);
   }
 }

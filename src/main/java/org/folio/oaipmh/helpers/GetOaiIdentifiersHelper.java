@@ -38,14 +38,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
     Promise<javax.ws.rs.core.Response> promise = Promise.promise();
     try {
       ResponseHelper responseHelper = getResponseHelper();
-      // 1. Restore request from resumptionToken if present
-      if (request.getResumptionToken() != null && !request.restoreFromResumptionToken()) {
-        OAIPMH oai = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        promise.complete(getResponseHelper().buildFailureResponse(oai, request));
-        return promise.future();
-      }
-
-      // 2. Validate request
+      // 1. Validate request
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
         OAIPMH oai;
@@ -61,11 +54,11 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
       final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
-      // 3. Search for instances
+      // 2. Search for instances
       VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
-        // 4. Verify response and build list of identifiers
+        // 3. Verify response and build list of identifiers
         .thenApply(response -> buildListIdentifiers(request, response))
-        // 5. Build final response to client (potentially blocking operation thus running on worker thread)
+        // 4. Build final response to client (potentially blocking operation thus running on worker thread)
         .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai, request)))
         .thenAccept(promise::complete)
         .exceptionally(e -> {
