@@ -5,7 +5,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
@@ -16,7 +15,6 @@ import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
@@ -153,22 +151,6 @@ public class OaiPmhImpl implements Oai {
       asyncResultHandler.handle(getFutureWithErrorResponse());
       return null;
     };
-  }
-
-  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<AsyncResult<Response>> asyncResultHandler) {
-    String targetMetadataPrefix = metadataPrefix;
-    if (request.getResumptionToken() != null) {
-      if(request.isResumptionTokenParsableAndValid()) {
-        targetMetadataPrefix = request.getMetadataPrefix();
-      } else {
-        ResponseHelper responseHelper = ResponseHelper.getInstance();
-        OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
-        asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
-        return null;
-      }
-      targetMetadataPrefix = request.getMetadataPrefix();
-    }
-    return targetMetadataPrefix;
   }
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
