@@ -5,6 +5,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
@@ -15,6 +16,7 @@ import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
@@ -114,7 +116,7 @@ public class OaiPmhImpl implements Oai {
           addParamToMapIfNotEmpty(SET_PARAM, set, requestParams);
           addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
-          List<OAIPMHerrorType> errors = validator.validate(verb, requestParams);
+          List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
 
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
@@ -124,9 +126,7 @@ public class OaiPmhImpl implements Oai {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
 
-            String targetMetadataPrefix = getMetadataPrefixFromResumtionToken(request, metadataPrefix, t -> {
-              asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
-            });
+            String targetMetadataPrefix = request.getMetadataPrefix();
 
             if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
               //in 2020Q3 change it common approach for all helpers
@@ -155,14 +155,18 @@ public class OaiPmhImpl implements Oai {
     };
   }
 
-  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<Throwable> errorHandler) {
+  private String getMetadataPrefixFromResumtionToken(Request request, String metadataPrefix, Handler<AsyncResult<Response>> asyncResultHandler) {
     String targetMetadataPrefix = metadataPrefix;
-    try {
-      if (request.restoreFromResumptionToken()) {
+    if (request.getResumptionToken() != null) {
+      if(request.isResumptionTokenParsableAndValid()) {
         targetMetadataPrefix = request.getMetadataPrefix();
+      } else {
+        ResponseHelper responseHelper = ResponseHelper.getInstance();
+        OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, BAD_ARGUMENT, LIST_ILLEGAL_ARGUMENTS_ERROR);
+        asyncResultHandler.handle(Future.succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
+        return null;
       }
-    } catch (Exception e) {
-      errorHandler.handle(e);
+      targetMetadataPrefix = request.getMetadataPrefix();
     }
     return targetMetadataPrefix;
   }

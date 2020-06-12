@@ -1,8 +1,11 @@
 package org.folio.oaipmh.validator;
 
 import static java.lang.String.format;
+import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
 import java.util.ArrayList;
@@ -14,6 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.domain.Verb;
 import org.openarchives.oai._2.OAIPMHerrorType;
 
@@ -31,13 +35,13 @@ public class VerbValidator {
    * @param requestParams - map with request parameters
    * @return list of errors.
    */
-  public List<OAIPMHerrorType> validate(Object object, Map<String, String> requestParams) {
+  public List<OAIPMHerrorType> validate(Object object, Map<String, String> requestParams, Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
     String verbName = Objects.nonNull(object) ? object.toString() : "empty";
     Verb verb = Verb.fromName(verbName);
     if (Objects.nonNull(verb)) {
       validateRequiredParams(requestParams, verb, errors);
-      validateExclusiveParam(verb, requestParams, errors);
+      validateExclusiveParam(verb, requestParams, request, errors);
       validateIllegalParams(verb, requestParams, errors);
     } else {
       errors.add(new OAIPMHerrorType().withCode(BAD_VERB)
@@ -51,11 +55,13 @@ public class VerbValidator {
    * will be added to error list.
    *
    * @param verb   - verb
-   * @param ctx    - vertx context
+   * @param requestParams    - request parameters
+   * @param request - oai-pmh request
    * @param errors - list of errors
    */
-  private void validateExclusiveParam(Verb verb, Map<String, String> requestParams, List<OAIPMHerrorType> errors) {
-    if (verb.getExclusiveParam() != null && requestParams.get(verb.getExclusiveParam()) != null) {
+  private void validateExclusiveParam(Verb verb, Map<String, String> requestParams, Request request, List<OAIPMHerrorType> errors) {
+    String resumptionToken = requestParams.get(verb.getExclusiveParam());
+    if (verb.getExclusiveParam() != null && resumptionToken != null) {
       requestParams.keySet()
         .stream()
         .filter(p -> !verb.getExcludedParams().contains(p))
@@ -67,13 +73,19 @@ public class VerbValidator {
               .withValue(format(EXCLUSIVE_PARAM_ERROR_MESSAGE, verb.name(), verb.getExclusiveParam())));
           }
         });
+      if (!request.isResumptionTokenParsableAndValid()) {
+        OAIPMHerrorType error = new OAIPMHerrorType()
+          .withCode(BAD_RESUMPTION_TOKEN)
+          .withValue(format(INVALID_RESUMPTION_TOKEN, verb.name()));
+        errors.add(error);
+      }
     }
   }
 
   /**
    * Verifies that any of the required parameters is not missing.
    *
-   * @param context - vertx context
+   * @param requestParams - vertx context
    * @param verb    - request verb
    * @param errors  - errors list
    */

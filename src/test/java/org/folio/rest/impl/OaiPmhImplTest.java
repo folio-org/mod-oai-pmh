@@ -769,7 +769,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, metadataPrefix)
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 2);
 
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix));

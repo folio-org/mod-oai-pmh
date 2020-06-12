@@ -11,6 +11,7 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.junit.Assert.assertTrue;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Constants;
+import org.folio.oaipmh.Request;
 import org.folio.oaipmh.domain.Verb;
 import org.junit.After;
 import org.junit.jupiter.api.Test;
@@ -47,11 +50,15 @@ class VerbValidatorTest {
   private static final String RESUMPTION_TOKEN_TEST_VALUE = "resumptionTokenTestValue";
   private static final String EXCLUSIVE_PARAM_ERROR_MESSAGE = "Verb '%s', argument '%s' is exclusive, no others maybe specified with it.";
   private static final String TEST_VALUE = "test";
+  private static final String VALID_RESUMPTION_TOKEN = "offset=5&metadataPrefix=marc21&totalRecords=100";
+  private static final String INVALID_RESUMPTION_TOKEN = "abc";
 
   private Map<String, String> requestParams = new HashMap<>();
+  private Request request = Request.builder()
+  .okapiHeaders(requestParams)
+  .build();
 
   private VerbValidator validator = new VerbValidator();
-
 
   @After
   public void tearDown() {
@@ -60,14 +67,14 @@ class VerbValidatorTest {
 
   @Test
   void shouldAddErrorWhenRequestedVerbIsNotImplemented() {
-    List<OAIPMHerrorType> errors = validator.validate(UNKNOWN_VERB, requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(UNKNOWN_VERB, requestParams, request);
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_VERB, format(VERB_NOT_IMPLEMENTED_ERROR_MESSAGE, UNKNOWN_VERB));
   }
 
   @Test
   void shouldAddErrorWhenRequestedVerbIsNull() {
-    List<OAIPMHerrorType> errors = validator.validate(null, requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(null, requestParams, request);
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_VERB, format(VERB_NOT_IMPLEMENTED_ERROR_MESSAGE, DEFAULT_NAME_OF_NULL_VERB));
   }
@@ -75,7 +82,7 @@ class VerbValidatorTest {
   @ParameterizedTest()
   @MethodSource("getVerbsWithRequiredParams")
   void shouldAddErrorWhenRequiredParametersIsMissed(Verb verb) {
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams, request);
     String missedRequiredParams = getRequiredParamsAsString(verb);
 
     assertTrue(isNotEmpty(errors));
@@ -85,14 +92,25 @@ class VerbValidatorTest {
   @ParameterizedTest
   @MethodSource("getVerbsWithExclusiveParams")
   void shouldAddErrorWhenParametersContainExclusiveAndAnotherOneWithIt(Verb verb) {
-    requestParams.put(RESUMPTION_TOKEN_PARAM, RESUMPTION_TOKEN_TEST_VALUE);
+    requestParams.put(RESUMPTION_TOKEN_PARAM, VALID_RESUMPTION_TOKEN);
     requestParams.put(FROM_PARAM, LocalDateTime.now()
       .format(ISO_UTC_DATE_ONLY));
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams, request);
 
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_ARGUMENT, format(EXCLUSIVE_PARAM_ERROR_MESSAGE, verb.name(), verb.getExclusiveParam()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("getVerbsWithExclusiveParams")
+  void shouldAddErrorWhenExclusiveParameterIsInvalid(Verb verb) {
+    requestParams.put(RESUMPTION_TOKEN_PARAM, INVALID_RESUMPTION_TOKEN);
+
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams, request);
+
+    assertTrue(isNotEmpty(errors));
+    verifyContainsError(errors, BAD_RESUMPTION_TOKEN, format(Constants.INVALID_RESUMPTION_TOKEN, verb.name()));
   }
 
   @ParameterizedTest
@@ -101,7 +119,7 @@ class VerbValidatorTest {
     setUpRequiredRequestParametersForVerb(verb);
     requestParams.put(getIllegalParameterForVerb(verb), TEST_VALUE);
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams, request);
 
     assertTrue(isNotEmpty(errors));
     verifyContainsError(errors, BAD_ARGUMENT,
@@ -113,7 +131,7 @@ class VerbValidatorTest {
   void shouldReturnEmptyErrorListWhenParametersAreValid(Verb verb) {
     setUpRequiredRequestParametersForVerb(verb);
 
-    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams);
+    List<OAIPMHerrorType> errors = validator.validate(verb.toString(), requestParams, request);
 
     assertTrue(isEmpty(errors));
   }
