@@ -151,20 +151,27 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-                                                              long offset) {
-    Map<String, String> extraParams = new HashMap<>();
-    extraParams.put(OFFSET_PARAM, String.valueOf(offset));
-    extraParams.put(NEXT_RECORD_ID_PARAM, id);
-    if (request.getUntil() == null) {
-      extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
+                                                              long offset, boolean returnResumptionToken) {
+    if (returnResumptionToken) {
+      Map<String, String> extraParams = new HashMap<>();
+      extraParams.put(OFFSET_PARAM, String.valueOf(offset));
+      extraParams.put(NEXT_RECORD_ID_PARAM, id);
+      if (request.getUntil() == null) {
+        extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
+      }
+
+      String resumptionToken = request.toResumptionToken(extraParams);
+
+      return new ResumptionTokenType()
+        .withValue(resumptionToken)
+        .withCursor(
+          request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+    }else{
+      return new ResumptionTokenType()
+        .withValue("")
+        .withCursor(
+          BigInteger.valueOf(offset));
     }
-
-    String resumptionToken = request.toResumptionToken(extraParams);
-
-    return new ResumptionTokenType()
-      .withValue(resumptionToken)
-      .withCursor(
-        request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
   }
 
   private Future<Response> buildRecordsResponse(
@@ -183,12 +190,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     }
 
-    if (returnResumptionToken) {
-      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-        stream.getReturnedCount());
-      oaipmh.getListRecords().withResumptionToken(resumptionToken);
-    }
-
+    ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
+      stream.getReturnedCount(), returnResumptionToken);
+    oaipmh.getListRecords().withResumptionToken(resumptionToken);
     stream.addReturnedCount(records.size());
 
     Response response;
