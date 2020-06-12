@@ -72,7 +72,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   private synchronized void invokeDrainHandler() {
-    if(drainHandler!=null) {
+    if (drainHandler != null) {
       drainHandler.handle(null);
     }
   }
