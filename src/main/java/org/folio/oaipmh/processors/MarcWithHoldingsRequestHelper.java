@@ -140,7 +140,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           srsResponse.complete();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
-          writeStream.getCount(), !theLastBatch).onSuccess(promise::complete));
+          writeStream, !theLastBatch).onSuccess(promise::complete));
         srsResponse.onFailure(t -> handleException(promise, t));
       });
 
@@ -169,7 +169,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Future<Response> buildRecordsResponse(
     Request request, String requestId, List<JsonEvent> batch,
-    Map<String, JsonObject> srsResponse, long count,
+    Map<String, JsonObject> srsResponse, BatchStreamWrapper stream,
     boolean returnResumptionToken) {
 
     Promise<Response> promise = Promise.promise();
@@ -177,7 +177,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     ResponseHelper responseHelper = getResponseHelper();
     OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-    if (records.isEmpty()) {
+    if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
       buildNoRecordsFoundOaiResponse(oaipmh, request);
     } else {
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
@@ -185,9 +185,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     if (returnResumptionToken) {
       ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-        count);
+        stream.getReturnedCount());
       oaipmh.getListRecords().withResumptionToken(resumptionToken);
     }
+
+    stream.addReturnedCount(records.size());
 
     Response response;
     if (oaipmh.getErrors().isEmpty()) {
