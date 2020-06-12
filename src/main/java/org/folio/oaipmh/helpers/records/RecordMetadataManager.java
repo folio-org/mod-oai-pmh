@@ -13,7 +13,11 @@ import static org.folio.oaipmh.Constants.SUBFIELDS;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
+import com.google.common.collect.ImmutableMap;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,16 +25,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
-
-import com.google.common.collect.ImmutableMap;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Is used for manipulating with record metadata. Updates, constructs the new fields or already presented fields.
@@ -143,13 +141,17 @@ public class RecordMetadataManager {
       electronicAccessArray.forEach(electronicAccess -> {
         Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
         FieldBuilder fieldBuilder = new FieldBuilder();
+
         List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
-        Map<String, Object> electronicAccessField = fieldBuilder.withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
-          .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
-          .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
-          .withSubFields(electronicAccessSubFields)
-          .build();
-        marcRecordFields.add(electronicAccessField);
+        if (CollectionUtils.isNotEmpty(indicators)) {
+          Map<String, Object> electronicAccessField = fieldBuilder
+            .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
+            .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
+            .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
+            .withSubFields(electronicAccessSubFields)
+            .build();
+          marcRecordFields.add(electronicAccessField);
+        }
       });
     }
   }
@@ -158,7 +160,11 @@ public class RecordMetadataManager {
     String name = electronicAccess.getString(NAME);
     String key = StringUtils.isNotEmpty(name) ? name : EMPTY;
     String indicatorsInString = indicatorsMap.get(key);
-    return Arrays.asList(indicatorsInString.split(","));
+    if(indicatorsInString!=null) {
+      return Arrays.asList(indicatorsInString.split(","));
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {

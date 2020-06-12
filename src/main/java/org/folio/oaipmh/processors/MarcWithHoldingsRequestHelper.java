@@ -296,13 +296,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         writeStream.end();
         inventoryHttpClient.close();
       });
-    }).exceptionHandler(e -> {
-      ;
-      vertxContext.remove(resumptionToken);
-    }).continueHandler((e) -> {
-        logger.info("continue");
-      }
-    );
+    });
 
     httpClientRequest.exceptionHandler(e -> {
       logger.error(e.getMessage(), e);
