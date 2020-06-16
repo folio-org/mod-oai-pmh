@@ -48,7 +48,11 @@ public class InitAPIs implements InitAPI {
         });
       });
 
-      // Initialize ResponseWriter and check if jaxb marshaller is ready to operate
+
+       Vertx.vertx().exceptionHandler(e -> logger.error("Uncaught exception: "
+         + e.getMessage(), e));
+
+         // Initialize ResponseWriter and check if jaxb marshaller is ready to operate
       if (!ResponseConverter.getInstance()
         .isJaxbInitialized()) {
         throw new IllegalStateException("The jaxb marshaller failed initialization.");

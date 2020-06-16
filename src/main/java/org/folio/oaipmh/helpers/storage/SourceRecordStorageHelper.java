@@ -102,7 +102,8 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
 
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
-    return entry.getJsonObject(ADDITIONAL_INFO).getBoolean(SUPPRESS_DISCOVERY);
+    JsonObject jsonObject = entry.getJsonObject(ADDITIONAL_INFO);
+    return jsonObject != null && jsonObject.getBoolean(SUPPRESS_DISCOVERY);
   }
 
   private String getLeaderValue(JsonObject entry) {
