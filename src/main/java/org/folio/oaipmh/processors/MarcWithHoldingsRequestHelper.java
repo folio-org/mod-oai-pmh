@@ -143,8 +143,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-                                                              long offset, boolean returnEmptyToken) {
-    if (returnEmptyToken) {
+                                                              long offset, boolean returnResumptionToken) {
+    if (!returnResumptionToken) {
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(

@@ -1920,7 +1920,7 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 2);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(actualResumptionToken, is(nullValue()));
+    assertThat(actualResumptionToken, is(notNullValue()));
 
   }
   @Test
@@ -1958,7 +1958,7 @@ class OaiPmhImplTest {
 
       OAIPMH oai = verify200WithXml(requestWithResumptionToken, LIST_RECORDS);
       ResumptionTokenType nextResumptionToken = getResumptionToken(oai, LIST_RECORDS);
-      assertThat(nextResumptionToken, is(nullValue()));
+      assertThat(nextResumptionToken, is(notNullValue()));
 
       System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
 
