@@ -81,6 +81,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public Future<Response> handle(Request request, Context vertxContext) {
     Promise<Response> promise = Promise.promise();
     try {
+      request.isResumptionTokenParsableAndValid();
       String resumptionToken = request.getResumptionToken();
 
       List<OAIPMHerrorType> errors = validateListRequest(request);
