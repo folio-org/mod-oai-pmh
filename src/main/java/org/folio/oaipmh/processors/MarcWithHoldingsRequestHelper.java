@@ -1,10 +1,8 @@
 package org.folio.oaipmh.processors;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -13,7 +11,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.Context;
@@ -29,7 +26,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -40,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 import org.apache.commons.collections4.CollectionUtils;
@@ -115,7 +110,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
-      writeStream.exceptionHandler(e-> {
+      writeStream.exceptionHandler(e -> {
         if (e != null) {
           handleException(promise, e);
         }
@@ -189,14 +184,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       Response response;
       if (oaipmh.getErrors().isEmpty()) {
         ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-        stream.getReturnedCount(), returnResumptionToken);
-      oaipmh.getListRecords().withResumptionToken(resumptionToken);
-      response = responseHelper.buildSuccessResponse(oaipmh);
-    } else {
-      response = responseHelper.buildFailureResponse(oaipmh, request);
-    }
+          stream.getReturnedCount(), returnResumptionToken);
+        oaipmh.getListRecords().withResumptionToken(resumptionToken);
+        response = responseHelper.buildSuccessResponse(oaipmh);
+      } else {
+        response = responseHelper.buildFailureResponse(oaipmh, request);
+      }
 
-    promise.complete(response);
+      promise.complete(response);
     } catch (Exception e) {
       promise.fail(e);
     }
@@ -233,7 +228,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         record.withMetadata(buildOaiMetadata(request, source));
       }
 
-      if(filterInstance(request, srsInstance)) {
+      if (filterInstance(request, srsInstance)) {
         records.add(record);
       }
     }
@@ -251,7 +246,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .withSetSpecs("all");
   }
 
-    private String buildInventoryQuery(Request request) {
+  private String buildInventoryQuery(Request request) {
     final String inventoryEndpoint = "/oai-pmh-view/instances";
     Map<String, String> paramMap = new HashMap<>();
     final String from = request.getFrom();
@@ -269,17 +264,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String.valueOf(
         !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
 
-      final String params = paramMap.entrySet().stream()
-        .map(e -> e.getKey() + "=" + e.getValue())
-        .collect(Collectors.joining("&"));
+    final String params = paramMap.entrySet().stream()
+      .map(e -> e.getKey() + "=" + e.getValue())
+      .collect(Collectors.joining("&"));
 
 
-      return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
+    return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
   }
 
   private BatchStreamWrapper createBatchStream(Request request,
-    Promise<Response> oaiPmhResponsePromise,
-    Context vertxContext, int batchSize, String resumptionToken) {
+                                               Promise<Response> oaiPmhResponsePromise,
+                                               Context vertxContext, int batchSize, String resumptionToken) {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
@@ -323,29 +318,29 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,
-                                                          List<JsonEvent> batch) {
+                                                                  List<JsonEvent> batch) {
     final String srsRequest = buildSrsRequest(batch);
     logger.info("Request to SRS: {0}", srsRequest);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
-        try {
-        final Object o = bh.toJson();
-          if (o instanceof JsonObject) {
-            JsonObject entries = (JsonObject) o;
-            final JsonArray records = entries.getJsonArray("records");
-            records.stream()
-              .map(r -> (JsonObject) r)
-              .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-          } else {
-            logger.debug("Can't process response from SRS: {0}", bh.toString());
+          try {
+            final Object o = bh.toJson();
+            if (o instanceof JsonObject) {
+              JsonObject entries = (JsonObject) o;
+              final JsonArray records = entries.getJsonArray("records");
+              records.stream()
+                .map(r -> (JsonObject) r)
+                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
+            } else {
+              logger.debug("Can't process response from SRS: {0}", bh.toString());
+            }
+            promise.complete(result);
+          } catch (Exception e) {
+            logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
+            promise.fail(e);
           }
-        } catch (Exception e) {
-           logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
-           promise.fail(e);
-        }
-        promise.complete(result);
         }
       ));
     } catch (Exception e) {
