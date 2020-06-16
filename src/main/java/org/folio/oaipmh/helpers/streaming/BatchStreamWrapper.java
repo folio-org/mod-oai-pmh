@@ -26,8 +26,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
-  private final LongAdder inventoryCount = new LongAdder();
   private final LongAdder returnedCount = new LongAdder();
+  private final LongAdder page = new LongAdder();
 
 
   public BatchStreamWrapper(Vertx vertx, int batchSize) {
@@ -62,9 +62,9 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
         if (batchReadyHandler != null) {
           int size = Math.min(dataList.size(), batchSize);
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
+          page.increment();
           batchReadyHandler.handle(batch);
           batchReadyHandler = null;
-          inventoryCount.add(batch.size());
           dataList.subList(0, batch.size()).clear();
           p.complete();
         }
@@ -120,13 +120,12 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return streamEnded;
   }
 
-
-  public Long getInventoryCount() {
-    return inventoryCount.longValue();
-  }
-
   public Long getReturnedCount() {
     return returnedCount.longValue();
+  }
+
+  public Long getPage() {
+    return page.longValue();
   }
 
   public void addReturnedCount(int addition) {

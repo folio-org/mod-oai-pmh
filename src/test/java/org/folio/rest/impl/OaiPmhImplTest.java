@@ -1920,7 +1920,7 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 2);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken, is(nullValue()));
 
   }
   @Test
@@ -1933,4 +1933,35 @@ class OaiPmhImplTest {
     final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
+
+    @Test
+  void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
+
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(FROM_PARAM, INVENTORY_INSTANCE_DATE)
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+      OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+      verifyListResponse(oaipmh, LIST_RECORDS, 1);
+      ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+      assertThat(actualResumptionToken, is(notNullValue()));
+      assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+
+      RequestSpecification requestWithResumptionToken = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+
+      OAIPMH oai = verify200WithXml(requestWithResumptionToken, LIST_RECORDS);
+      ResumptionTokenType nextResumptionToken = getResumptionToken(oai, LIST_RECORDS);
+      assertThat(nextResumptionToken, is(notNullValue()));
+
+      System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+
+  }
+
 }
