@@ -173,21 +173,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     boolean returnResumptionToken) {
 
     Promise<Response> promise = Promise.promise();
-    List<RecordType> records = buildRecordsList(request, batch, srsResponse);
+    try {
+      List<RecordType> records = buildRecordsList(request, batch, srsResponse);
 
-    ResponseHelper responseHelper = getResponseHelper();
-    OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-    if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
-      oaipmh.withErrors(createNoRecordsFoundError());
-    } else {
-      oaipmh.withListRecords(new ListRecordsType().withRecords(records));
-    }
+      ResponseHelper responseHelper = getResponseHelper();
+      OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
+      if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
+        oaipmh.withErrors(createNoRecordsFoundError());
+      } else {
+        oaipmh.withListRecords(new ListRecordsType().withRecords(records));
+      }
 
-    stream.addReturnedCount(records.size());
+      stream.addReturnedCount(records.size());
 
-    Response response;
-    if (oaipmh.getErrors().isEmpty()) {
-      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
+      Response response;
+      if (oaipmh.getErrors().isEmpty()) {
+        ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
         stream.getReturnedCount(), returnResumptionToken);
       oaipmh.getListRecords().withResumptionToken(resumptionToken);
       response = responseHelper.buildSuccessResponse(oaipmh);
@@ -196,6 +197,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
 
     promise.complete(response);
+    } catch (Exception e) {
+      promise.fail(e);
+    }
     return promise.future();
   }
 
@@ -326,7 +330,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
-
+        try {
         final Object o = bh.toJson();
           if (o instanceof JsonObject) {
             JsonObject entries = (JsonObject) o;
@@ -337,11 +341,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           } else {
             logger.debug("Can't process response from SRS: {0}", bh.toString());
           }
-          promise.complete(result);
+        } catch (Exception e) {
+           logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
+           promise.fail(e);
+        } finally {
+           promise.complete(result);
+        }
         }
       ));
-    } catch (UnsupportedEncodingException e) {
-      logger.debug("Can't process response from SRS. Error: {0}", e.getMessage());
+    } catch (Exception e) {
+      logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
       promise.fail(e);
     }
 
