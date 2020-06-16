@@ -1920,7 +1920,7 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 2);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(actualResumptionToken, is(notNullValue()));
+    assertThat(actualResumptionToken, is(nullValue()));
 
   }
   @Test
