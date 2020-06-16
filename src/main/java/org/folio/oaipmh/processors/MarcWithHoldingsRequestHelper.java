@@ -160,10 +160,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withCursor(
           request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
     } else {
-      return new ResumptionTokenType()
-        .withValue("")
-        .withCursor(
-          BigInteger.valueOf(offset));
+      return null;
     }
   }
 
