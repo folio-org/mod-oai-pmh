@@ -193,7 +193,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       promise.complete(response);
     } catch (Exception e) {
-      promise.fail(e);
+      handleException(promise, e);
     }
     return promise.future();
   }
@@ -338,14 +338,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             }
             promise.complete(result);
           } catch (Exception e) {
-            logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
-            promise.fail(e);
+             handleException(promise, e);
           }
         }
       ));
     } catch (Exception e) {
-      logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
-      promise.fail(e);
+       handleException(promise, e);
     }
 
     return promise.future();
@@ -362,8 +360,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void handleException(Promise<Response> promise, Throwable e) {
-    logger.error(GENERIC_ERROR_MESSAGE, e);
+  private void handleException(Promise<?> promise, Throwable e) {
+    logger.error(e.getMessage(), e);
     promise.fail(e);
   }
 }
