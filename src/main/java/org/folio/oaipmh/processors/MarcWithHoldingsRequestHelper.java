@@ -344,9 +344,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         } catch (Exception e) {
            logger.warn("Can't process response from SRS. Error: {0}", e.getMessage());
            promise.fail(e);
-        } finally {
-           promise.complete(result);
         }
+        promise.complete(result);
         }
       ));
     } catch (Exception e) {
