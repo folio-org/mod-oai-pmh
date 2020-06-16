@@ -144,8 +144,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-                                                              long offset, boolean returnResumptionToken) {
-    if (returnResumptionToken) {
+    long offset) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(OFFSET_PARAM, String.valueOf(offset));
       extraParams.put(NEXT_RECORD_ID_PARAM, id);
@@ -159,9 +158,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withValue(resumptionToken)
         .withCursor(
           request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
-    } else {
-      return null;
-    }
   }
 
   private Future<Response> buildRecordsResponse(
@@ -184,9 +180,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     Response response;
     if (oaipmh.getErrors().isEmpty()) {
-      ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-        stream.getReturnedCount(), returnResumptionToken);
-      oaipmh.getListRecords().withResumptionToken(resumptionToken);
+      if(returnResumptionToken) {
+        ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
+          stream.getReturnedCount());
+        oaipmh.getListRecords().withResumptionToken(resumptionToken);
+      }
       response = responseHelper.buildSuccessResponse(oaipmh);
     } else {
       response = responseHelper.buildFailureResponse(oaipmh, request);
