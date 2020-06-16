@@ -1,3 +1,12 @@
+## 3.0.1 (Released)
+
+Bugfixes 
+
+## Stories
+* [MODOAIPMH-167](https://issues.folio.org/browse/MODOAIPMH-167) Empty resumption token
+* [MODOAIPMH-168](https://issues.folio.org/browse/MODOAIPMH-168) marc21_withholdings prefix response timeout
+
+
 ## 3.0.0 (Released)
 
 This release includes improvements of the current module functionality and enrichment with new functionality which involves support of a new metadata format marc 21 with holdings and items, update RMB version to 30.0.0, moving request validation from edge module, support of the next settings: discovery suppressed records processing, enabling OAI service, deleted records processing, error processing. Added possibility to manipulate OAI-PMH settings from user interface.
