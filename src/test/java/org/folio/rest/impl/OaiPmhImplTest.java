@@ -48,6 +48,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.isEmptyString;
 import static org.hamcrest.Matchers.isIn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -71,6 +72,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -1909,7 +1911,9 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponse() {
+  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
 
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1918,10 +1922,12 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
+    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
   @Test
   void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
@@ -1934,34 +1940,60 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
 
-    @Test
+  @Test
   void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "7");
 
-      RequestSpecification request = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(FROM_PARAM, INVENTORY_INSTANCE_DATE)
-        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+    List<HeaderType> totalRecords = new ArrayList<>();
 
-      OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-      verifyListResponse(oaipmh, LIST_RECORDS, 1);
-      ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-      assertThat(actualResumptionToken, is(notNullValue()));
-      assertThat(actualResumptionToken.getValue(), is(notNullValue()));
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVENTORY_INSTANCE_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(resumptionToken, is(notNullValue()));
+    assertThat(resumptionToken.getValue(), is(notNullValue()));
 
-      RequestSpecification requestWithResumptionToken = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(RESUMPTION_TOKEN_PARAM, actualResumptionToken.getValue());
+    List<HeaderType> records = oaipmh.getListRecords().getRecords().stream()
+      .map(RecordType::getHeader)
+      .collect(Collectors.toList());
+    totalRecords.addAll(records);
 
-      OAIPMH oai = verify200WithXml(requestWithResumptionToken, LIST_RECORDS);
-      ResumptionTokenType nextResumptionToken = getResumptionToken(oai, LIST_RECORDS);
-      assertThat(nextResumptionToken, is(notNullValue()));
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 3);
 
-      System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
 
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 1);
+
+    assertThat(resumptionToken.getValue(), is(isEmptyString()));
+
+    assertThat(totalRecords.size(), is(9));
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
+  private ResumptionTokenType makeRequestsAndVerifyCount(List<HeaderType> totalRecords,
+                                                         ResumptionTokenType resumptionToken, int desiredCount) {
+    RequestSpecification request;
+    OAIPMH oaipmh;
+    List<HeaderType> records;
+    request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
+    oaipmh = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, desiredCount);
+    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    records = oaipmh.getListRecords().getRecords().stream()
+      .map(RecordType::getHeader)
+      .collect(Collectors.toList());
+    totalRecords.addAll(records);
+    return resumptionToken;
+  }
 }
