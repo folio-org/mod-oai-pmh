@@ -48,6 +48,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.isEmptyString;
 import static org.hamcrest.Matchers.isIn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -1967,6 +1968,8 @@ class OaiPmhImplTest {
     resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
 
     resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 1);
+
+    assertThat(resumptionToken.getValue(), is(isEmptyString()));
 
     assertThat(totalRecords.size(), is(9));
 

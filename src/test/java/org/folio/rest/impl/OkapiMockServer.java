@@ -90,11 +90,6 @@ public class OkapiMockServer {
   private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
 
-  private static final String INVENTORY_INSTANCE_ID1 = "7dc209ac-799f-459b-8e17-93e88ab02779";
-  private static final String INVENTORY_INSTANCE_ID2 = "e7fdbe7a-abda-11ea-bb37-0242ac130002";
-
-
-
   private static final String[] STREAMING_INVENTORY_IDS = {
     "00f10ab9-d845-4334-92d2-ff55862bf4f9",
     "04489a01-f3cd-4f9e-9be4-d9c198703f45",
@@ -113,7 +108,6 @@ public class OkapiMockServer {
     "6eee8eb9-db1a-46e2-a8ad-780f19974efa",
     "7ab22f0a-c9cd-449a-9137-c76e5055ca37",
     "81825729-e824-4d52-9d15-1695e9bf1831",
-    //"8be05cf5-fb4f-4752-8094-8e179d08fb99",
     "a317b304-528c-424f-961c-39174933b454",
     "a89eccf0-57a6-495e-898d-32b9b2210f2f",
     "bbd4a5e1-c9f3-44b9-bfdf-d184e04f0ba0",
