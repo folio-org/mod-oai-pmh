@@ -120,6 +120,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return streamEnded;
   }
 
+  public int getItemsInQueueCount() {
+    return dataList.size();
+  }
+
   public Long getReturnedCount() {
     return returnedCount.longValue();
   }

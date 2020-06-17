@@ -1962,46 +1962,35 @@ class OaiPmhImplTest {
       .collect(Collectors.toList());
     totalRecords.addAll(records);
 
-    request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-    oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(resumptionToken, is(notNullValue()));
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 3);
 
-    records = oaipmh.getListRecords().getRecords().stream()
-      .map(RecordType::getHeader)
-      .collect(Collectors.toList());
-    totalRecords.addAll(records);
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
 
-    request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-    oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
-    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(resumptionToken, is(notNullValue()));
-
-    records = oaipmh.getListRecords().getRecords().stream()
-      .map(RecordType::getHeader)
-      .collect(Collectors.toList());
-    totalRecords.addAll(records);
-
-    request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-
-    oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 1);
-    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(resumptionToken, is(notNullValue()));
+    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 1);
 
     assertThat(totalRecords.size(), is(9));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  private ResumptionTokenType makeRequestsAndVerifyCount(List<HeaderType> totalRecords,
+                                                         ResumptionTokenType resumptionToken, int desiredCount) {
+    RequestSpecification request;
+    OAIPMH oaipmh;
+    List<HeaderType> records;
+    request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
+    oaipmh = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, desiredCount);
+    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(resumptionToken, is(notNullValue()));
+
+    records = oaipmh.getListRecords().getRecords().stream()
+      .map(RecordType::getHeader)
+      .collect(Collectors.toList());
+    totalRecords.addAll(records);
+    return resumptionToken;
   }
 }

@@ -120,7 +120,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
       });
       writeStream.handleBatch(batch -> {
-        boolean theLastBatch = batch.size() < batchSize || writeStream.isStreamEnded();
+        boolean theLastBatch = batch.size() < batchSize ||
+          (writeStream.isStreamEnded()
+            && writeStream.getItemsInQueueCount() <= batchSize);
         if (theLastBatch) {
           vertxContext.remove(requestId);
         }
