@@ -1909,7 +1909,9 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponse() {
+  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
 
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1918,10 +1920,12 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
+    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
   @Test
   void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
@@ -1934,10 +1938,10 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
 
-    @Test
+  @Test
   void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "1");
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "7");
 
       RequestSpecification request = createBaseRequest()
         .with()
@@ -1946,7 +1950,7 @@ class OaiPmhImplTest {
         .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
       OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-      verifyListResponse(oaipmh, LIST_RECORDS, 1);
+      verifyListResponse(oaipmh, LIST_RECORDS, 3);
       ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
       assertThat(actualResumptionToken, is(notNullValue()));
       assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -1961,7 +1965,5 @@ class OaiPmhImplTest {
       assertThat(nextResumptionToken, is(notNullValue()));
 
       System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-
   }
-
 }
