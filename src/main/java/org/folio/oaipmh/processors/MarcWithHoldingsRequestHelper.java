@@ -33,7 +33,7 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.rest.client.SourceStorageClient;
+import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
@@ -112,7 +112,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         writeStream = (BatchStreamWrapper) writeStreamObj;
       }
 
-      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
+      final SourceStorageRecordsClient srsClient = new SourceStorageRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
       writeStream.exceptionHandler(e -> {
         if (e != null) {
@@ -324,14 +324,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpClientRequest;
   }
 
-  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageRecordsClient srsClient,
                                                                   List<JsonEvent> batch) {
     final String srsRequest = buildSrsRequest(batch);
     logger.info("Request to SRS: {0}", srsRequest);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
+      srsClient.getSourceStorageRecords(null, null, null, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
           try {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
