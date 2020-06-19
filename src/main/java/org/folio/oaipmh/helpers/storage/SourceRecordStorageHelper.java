@@ -28,7 +28,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   //2 TODO FIND WHERE SOURCE_STORAGE_RECORD_URI IS USED
   //3 TODO FIND WHERE SOURCE_STORAGE_RECORD_PATH IS USED
   //4 TODO FIND WHERE CqlQueryBuilder
-  //5 TODO WHEN YOU SEE HHTPCLIENTINTERFACE MARK IS WITH TODO CHANGE
+  //5 TODO WHEN YOU SEE HttpClientInterface MARK IS WITH TODO CHANGE
   //TODO FIND WHICH QUERY IS RETURNED IN EACH CASE
   public static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/sourceRecords";
   public static final String SOURCE_STORAGE_RECORD_URI = "/source-storage/records/%s";
@@ -87,11 +87,13 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
     return SOURCE_STORAGE_RESULT_URI + buildSearchQuery(request);
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   @Override
   protected void addSource(CQLQueryBuilder queryBuilder) {
     queryBuilder.addStrictCriteria("recordType", "MARC");
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   @Override
   void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
     queryBuilder.addStrictCriteria(ADDITIONAL_INFO + "." + SUPPRESS_DISCOVERY, "false");

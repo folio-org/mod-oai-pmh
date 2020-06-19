@@ -55,7 +55,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         return buildResponseWithErrors(request, promise, errors);
       }
 
-      //TODO CHANGE
+      //TODO: HttpClientInstance occurrence. Need changes.
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
@@ -83,6 +83,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
@@ -95,6 +96,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
                                                            org.folio.rest.tools.client.Response instancesResponse) {
     requiresSuccessStorageResponse(instancesResponse);
@@ -217,6 +219,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return buildOaiMetadata(request, source);
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();

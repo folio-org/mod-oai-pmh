@@ -206,6 +206,7 @@ public abstract class AbstractHelper implements VerbHelper {
     return sets;
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   /**
    * Creates Okapi client getting Okapi URL from headers. The connection will be closed automatically if idle
    */
@@ -213,6 +214,7 @@ public abstract class AbstractHelper implements VerbHelper {
     return getOkapiClient(okapiHeaders, true);
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   /**
    * Creates Okapi client getting Okapi URL from headers.
    */

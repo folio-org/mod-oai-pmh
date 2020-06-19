@@ -356,6 +356,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
+  // TODO: Needs to pay attention, should be rewritten
   private String buildSrsRequest(List<JsonEvent> batch) {
 
     return batch.stream().map(JsonEvent::value).

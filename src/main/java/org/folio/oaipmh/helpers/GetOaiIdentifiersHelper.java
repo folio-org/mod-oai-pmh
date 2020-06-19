@@ -51,7 +51,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         return promise.future();
       }
 
-      //TODO CHANGE
+      //TODO: HttpClientInstance occurrence. Needs changes.
       HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
       final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 
