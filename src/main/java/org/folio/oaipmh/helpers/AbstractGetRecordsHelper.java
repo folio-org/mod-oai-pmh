@@ -55,6 +55,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         return buildResponseWithErrors(request, promise, errors);
       }
 
+      //TODO CHANGE
       final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
       final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
 

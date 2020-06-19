@@ -53,8 +53,10 @@ public abstract class AbstractStorageHelper implements StorageHelper {
     }
     return datetime.truncatedTo(ChronoUnit.SECONDS);
   }
-
+  //TODO FIND WHERE CqlQueryBuilder
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
+    //TODO WHAT STRING IS RETURNED ?
+
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     addSource(queryBuilder);
     if (!getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)
