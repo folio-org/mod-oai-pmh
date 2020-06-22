@@ -1,20 +1,18 @@
 package org.folio.oaipmh.helpers;
 
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
+import java.util.Date;
 import java.util.List;
+
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.rest.tools.client.Response;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -26,7 +24,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class GetOaiIdentifiersHelper extends AbstractHelper {
 
@@ -51,27 +48,62 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         return promise.future();
       }
 
-      //TODO: HttpClientInstance occurrence. Needs changes.
-      HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders());
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
+      //TODO: returns query string (parts in [] are optional, depending on the properties of tenant|env, @name - it's an attribute of request etc.):
+      // ?query=recordType==MARC [and additionalInfo.suppressDiscovery==false]
+      // [and externalIdsHolder.instanceId==@identifier] [and metadata.updatedDate<UNTIL_DATE_STR]
+      // [and metadata.updatedDate>=FROM_DATA_STR and metadata.updatedDate<UNTIL_DATE_STR]
+      //TODO SHOULD SUPPRESS FROM DISCOVERY BE TAKEN FROM CONFIG?
+      //TODO ADD DELETED RECORD SUPPORT WHEN IT'S READY
+      //TODO OFFSET & LIMIT???
+      //TODO REVIEW BY FOLIJET
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
 
-      // 2. Search for instances
-      VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
-        // 3. Verify response and build list of identifiers
-        .thenApply(response -> buildListIdentifiers(request, response))
-        // 4. Build final response to client (potentially blocking operation thus running on worker thread)
-        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai, request)))
-        .thenAccept(promise::complete)
-        .exceptionally(e -> {
-          logger.error(GENERIC_ERROR, e);
-          promise.fail(e);
-          return null;
-        });
+      srsClient.getSourceStorageSourceRecords(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        updatedAfter,
+        updatedBefore,
+        null,
+        0,
+        Integer.MAX_VALUE,
+        response -> response.bodyHandler(bh -> {
+          try {
+            final OAIPMH oaipmh = buildListIdentifiers(request, bh.toJsonObject());
+            final Response response1 = buildResponse(oaipmh, request);
+            promise.complete(response1);
+          } catch (Exception e) {
+            logger.error("Exception getting list of identifiers", e);
+            promise.fail(e);
+          }
+        }));
+
+
+//      //region REMOVE IT
+//      // 2. Search for instances
+//       VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
+//        // 3. Verify response and build list of identifiers
+//        .thenApply(response -> buildListIdentifiers(request, response))
+//        // 4. Build final response to client (potentially blocking operation thus running on worker thread)
+//        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai, request)))
+//        .thenAccept(promise::complete)
+//        .exceptionally(e -> {
+//          logger.error(GENERIC_ERROR, e);
+//          promise.fail(e);
+//          return null;
+//        });
     } catch (Exception e) {
       logger.error(GENERIC_ERROR, e);
       promise.fail(e);
     }
-
+    //endregion
     return promise.future();
   }
 
@@ -93,21 +125,11 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
    * @param instancesResponse the response from the storage which contains items
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
-  private OAIPMH buildListIdentifiers(Request request, Response instancesResponse) {
-    if (!Response.isSuccess(instancesResponse.getCode())) {
-      logger.error("No instances found. Service responded with error: " + instancesResponse.getError());
-      // The storage service could not return instances so we have to send 500 back to client
-      throw new IllegalStateException(instancesResponse.getError().toString());
-    }
+  private OAIPMH buildListIdentifiers(Request request, JsonObject instancesResponse) {
 
     ResponseHelper responseHelper = getResponseHelper();
-    JsonArray instances;
-    if (isDeletedRecordsEnabled(request)) {
-      instances = storageHelper.getRecordsItems(instancesResponse.getBody());
-    } else {
-      instances = storageHelper.getItems(instancesResponse.getBody());
-    }
-    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse.getBody());
+    JsonArray instances = storageHelper.getItems(instancesResponse);
+    Integer totalRecords = storageHelper.getTotalRecords(instancesResponse);
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
     }

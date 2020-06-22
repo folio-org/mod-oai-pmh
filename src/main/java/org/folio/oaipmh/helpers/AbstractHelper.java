@@ -30,9 +30,11 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +189,18 @@ public abstract class AbstractHelper implements VerbHelper {
         .withCode(BAD_ARGUMENT)
         .withValue(String.format(BAD_DATESTAMP_FORMAT_ERROR, date.getKey(), date.getValue())));
       return null;
+    }
+  }
+
+  protected Date convertStringToDate(String dateTimeString) {
+    try {
+      if (dateTimeString.isEmpty()) {
+        return null;
+      }
+      LocalDateTime localDt = LocalDate.parse(dateTimeString).atStartOfDay();
+      return Date.from(localDt.atOffset(ZoneOffset.UTC).toInstant());
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException(e.toString(), e);
     }
   }
 
