@@ -94,7 +94,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       BatchStreamWrapper writeStream;
       int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getOkapiHeaders().get(OKAPI_TENANT),
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       String requestId =
         (resumptionToken == null || request.getNextRecordId() == null) ? UUID
@@ -323,7 +323,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     return httpClientRequest;
   }
-
+  //TODO SUPPRESS FROM DISCOVERY = skip suppressed or not
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonEvent> batch) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);

@@ -54,6 +54,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
     return datetime.truncatedTo(ChronoUnit.SECONDS);
   }
   // TODO: CqlQueryBuilder occurrence. Need changes.
+  @Deprecated
   protected String buildSearchQuery(Request request) throws UnsupportedEncodingException {
     //TODO: returns query string (parts in [] are optional, depending on the properties of tenant|env, @name - it's an attribute of request etc.):
     // ?query=recordType==MARC [and additionalInfo.suppressDiscovery==false]
@@ -90,7 +91,8 @@ public abstract class AbstractStorageHelper implements StorageHelper {
 
   abstract String getIdentifierName();
 
+  @Deprecated
   abstract void addSource(CQLQueryBuilder queryBuilder);
-
+  @Deprecated
   abstract void addSuppressFromDiscovery(CQLQueryBuilder queryBuilder);
 }
