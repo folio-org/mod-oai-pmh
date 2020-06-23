@@ -1,7 +1,10 @@
 package org.folio.oaipmh.helpers;
 
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 import java.util.Date;
@@ -50,30 +53,30 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
       final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
-      //TODO: returns query string (parts in [] are optional, depending on the properties of tenant|env, @name - it's an attribute of request etc.):
-      // ?query=recordType==MARC [and additionalInfo.suppressDiscovery==false]
-      // [and externalIdsHolder.instanceId==@identifier] [and metadata.updatedDate<UNTIL_DATE_STR]
-      // [and metadata.updatedDate>=FROM_DATA_STR and metadata.updatedDate<UNTIL_DATE_STR]
-      //TODO SHOULD SUPPRESS FROM DISCOVERY BE TAKEN FROM CONFIG?
-      //TODO ADD DELETED RECORD SUPPORT WHEN IT'S READY
-      //TODO OFFSET & LIMIT???
-      //TODO REVIEW BY FOLIJET
+
+      final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      final boolean skipSuppressedRecords = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
       final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
       final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
-
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0
+      //TODO OFFSET & LIMIT???
+      //TODO REVIEW BY FOLIJET
       srsClient.getSourceStorageSourceRecords(
         null,
         null,
         null,
         null,
-        null,
-        false,
+        skipSuppressedRecords,
+        deletedRecordsEnabled,
         null,
         updatedAfter,
         updatedBefore,
         null,
-        0,
-        Integer.MAX_VALUE,
+        request.getOffset(),
+        batchSize,
         response -> response.bodyHandler(bh -> {
           try {
             final OAIPMH oaipmh = buildListIdentifiers(request, bh.toJsonObject());
