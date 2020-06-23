@@ -43,8 +43,10 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       //TODO REVIEW BY FOLIJET
       final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       final boolean skipSuppressedRecords = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
       final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
       final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+
       final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
       //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0

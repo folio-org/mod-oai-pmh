@@ -56,13 +56,14 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
 
       final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       final boolean skipSuppressedRecords = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
       final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
       final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0
-      //TODO OFFSET & LIMIT???
       //TODO REVIEW BY FOLIJET
       srsClient.getSourceStorageSourceRecords(
         null,
@@ -80,8 +81,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         response -> response.bodyHandler(bh -> {
           try {
             final OAIPMH oaipmh = buildListIdentifiers(request, bh.toJsonObject());
-            final Response response1 = buildResponse(oaipmh, request);
-            promise.complete(response1);
+            promise.complete(buildResponse(oaipmh, request));
           } catch (Exception e) {
             logger.error("Exception getting list of identifiers", e);
             promise.fail(e);
