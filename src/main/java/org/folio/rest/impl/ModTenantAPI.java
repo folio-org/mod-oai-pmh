@@ -2,6 +2,9 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static org.folio.oaipmh.Constants.CONFIGS;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,9 +40,6 @@ import io.vertx.core.logging.LoggerFactory;
 public class ModTenantAPI extends TenantAPI {
   private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
 
-  private static final String X_OKAPI_URL = "x-okapi-url";
-  private static final String X_OKAPI_TENANT = "x-okapi-tenant";
-  private static final String X_OKAPI_TOKEN = "x-okapi-token";
   private static final String CONFIG_DIR_PATH = "config";
   private static final String QUERY = "module==OAIPMH and configName==%s";
   private static final String MODULE_NAME = "OAIPMH";
@@ -51,9 +51,9 @@ public class ModTenantAPI extends TenantAPI {
       final Handler<AsyncResult<Response>> handlers, final Context context) {
     List<String> configsSet = Arrays.asList("behavior", "general", "technical");
 
-    String okapiUrl = headers.get(X_OKAPI_URL);
-    String tenant = headers.get(X_OKAPI_TENANT);
-    String token = headers.get(X_OKAPI_TOKEN);
+    String okapiUrl = headers.get(OKAPI_URL);
+    String tenant = headers.get(OKAPI_TENANT);
+    String token = headers.get(OKAPI_TOKEN);
 
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
 
@@ -95,7 +95,6 @@ public class ModTenantAPI extends TenantAPI {
       });
       return;
     }
-
     response.bodyHandler(body -> {
       JsonObject jsonConfig = body.toJsonObject();
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
