@@ -331,7 +331,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.postSourceStorageSourceRecords("INSTANCE", listOfIds, rh -> rh.bodyHandler(bh -> {
+      srsClient.postSourceStorageSourceRecords("INSTANCE", true, listOfIds, rh -> rh.bodyHandler(bh -> {
           try {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
