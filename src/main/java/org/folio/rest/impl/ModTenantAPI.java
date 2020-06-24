@@ -1,7 +1,6 @@
 package org.folio.rest.impl;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.CONFIGS;
 
 import java.util.ArrayList;
@@ -60,14 +59,13 @@ public class ModTenantAPI extends TenantAPI {
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, headers)));
     CompositeFuture.all(futures)
       .onComplete(future -> {
-        Response response;
+        String message;
         if (future.succeeded()) {
-          response = buildResponse(HttpStatus.SC_OK, EMPTY);
+          message = "Configurations has been set up successfully";
         } else {
-          response = buildResponse(HttpStatus.SC_INTERNAL_SERVER_ERROR, future.cause()
-            .getMessage());
+          message = future.cause().getMessage();
         }
-        handlers.handle(Future.succeededFuture(response));
+        handlers.handle(Future.succeededFuture(buildResponse(message)));
       });
   }
 
@@ -80,6 +78,7 @@ public class ModTenantAPI extends TenantAPI {
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
 
     try {
+      logger.info("Getting configurations with configName = {}", configName);
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
           response -> handleModConfigurationGetResponse(response, client, configName, promise));
     } catch (Exception e) {
@@ -92,8 +91,10 @@ public class ModTenantAPI extends TenantAPI {
   private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
       Promise promise) {
     if (response.statusCode() != 200) {
-      logger.error("Cannot get and post configs. Status code: {}, cause: {}", response.statusCode(), response.statusMessage());
-      promise.complete();
+      response.handler(buffer -> {
+        logger.error(buffer.toString());
+        promise.fail(buffer.toString());
+      });
       return;
     }
 
@@ -101,8 +102,10 @@ public class ModTenantAPI extends TenantAPI {
       JsonObject jsonConfig = body.toJsonObject();
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
+        logger.info("Configuration group with configName {} isn't exist. Posting default configs for {} configuration group", configName, configName);
         postConfig(client, configName, promise);
       } else {
+        logger.info("Configurations has been got successfully, applying configurations to module system properties");
         populateSystemPropertiesWithConfig(jsonConfig);
         promise.complete();
       }
@@ -163,12 +166,10 @@ public class ModTenantAPI extends TenantAPI {
     return configEntryValueField.encode();
   }
 
-  private Response buildResponse(int statusCode, String body) {
-    Response.ResponseBuilder builder = Response.status(statusCode);
-    if (!body.isEmpty()) {
-      builder = builder.header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
-        .entity(body);
-    }
+  private Response buildResponse(String body) {
+    Response.ResponseBuilder builder = Response.status(HttpStatus.SC_OK)
+      .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
+      .entity(body);
     return builder.build();
   }
 
