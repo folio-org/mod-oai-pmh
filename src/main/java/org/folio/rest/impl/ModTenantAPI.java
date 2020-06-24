@@ -58,7 +58,7 @@ public class ModTenantAPI extends TenantAPI {
     List<Future> futures = new ArrayList<>();
 
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, headers)));
-    CompositeFuture.join(futures)
+    CompositeFuture.all(futures)
       .onComplete(future -> {
         Response response;
         if (future.succeeded()) {
@@ -98,6 +98,7 @@ public class ModTenantAPI extends TenantAPI {
         postConfig(client, configName, promise);
       } else {
         populateSystemPropertiesWithConfig(jsonConfig);
+        promise.complete();
       }
     });
   }
@@ -113,16 +114,14 @@ public class ModTenantAPI extends TenantAPI {
         if (resp.statusCode() != 201) {
           logger.error("Invalid response from mod-configuration. Cannot post config '{}': {} {}", configName, resp.statusCode(),
               resp.statusMessage());
-          resp.bodyHandler(body -> {
-            logger.error("Response body of post: {}", body.toJsonObject()
-              .encode());
-          });
           promise.fail(new IllegalStateException("Cannot post config. " + resp.statusMessage()));
         }
       });
     } catch (Exception e) {
       promise.fail(e);
+      return;
     }
+    promise.complete();
   }
 
   private void populateSystemPropertiesWithConfig(JsonObject jsonResponse) {
