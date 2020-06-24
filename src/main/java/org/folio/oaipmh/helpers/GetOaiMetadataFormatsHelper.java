@@ -1,6 +1,7 @@
 package org.folio.oaipmh.helpers;
 
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
@@ -39,30 +40,33 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
     Promise<javax.ws.rs.core.Response> promise = Promise.promise();
     try {
+      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-      //TODO REVIEW BY FOLIJET
-      final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
-      final boolean skipSuppressedRecords = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
 
       final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
       final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
 
-      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-        request.getTenant(), request.getOkapiToken());
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0
       srsClient.getSourceStorageSourceRecords(
        null,
         null,
         request.getStorageIdentifier(),
         "MARC",
-        skipSuppressedRecords,
-        deletedRecordsEnabled,
+        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        deletedRecordsSupport,
         null,
         updatedAfter,
         updatedBefore,
          null,
-         0,
-        1,
+        request.getOffset(),
+        batchSize,
          response -> {
           try {
             if (Response.isSuccess(response.statusCode())) {

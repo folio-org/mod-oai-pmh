@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
@@ -19,9 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -63,8 +59,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
 
-      final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
-      final boolean skipSuppressedRecords = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
       final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
       final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
@@ -74,14 +70,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
       //source-storage/records?query=recordType%3D%3DMARC+and+metadata.updatedDate%3E%3D3999-01-01T00%3A00%3A00.000Z&limit=51&offset=0
-      //TODO REVIEW BY FOLIJET
       srsClient.getSourceStorageSourceRecords(
         null,
         null,
         null,
         "MARC",
-        skipSuppressedRecords,
-        deletedRecordsEnabled,
+        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        deletedRecordsSupport,
         null,
         updatedAfter,
         updatedBefore,
@@ -92,14 +88,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           try {
             if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
               response.bodyHandler(bh -> {
-                final CompletableFuture<Response> responseCompletableFuture = buildRecordsResponse(ctx, request, bh.toJsonObject());
-                try {
-                  //TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!REWRITE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                  final Response response1 = responseCompletableFuture.get(5, TimeUnit.SECONDS);
-                  promise.complete(response1);
-                } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                  e.printStackTrace();
-                }
+                final Response responseCompletableFuture = buildRecordsResponse(ctx, request, bh.toJsonObject());
+                promise.complete(responseCompletableFuture);
               });
             } else {
               logger.error("ListRecords response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
@@ -130,9 +120,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
-    return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
   // TODO: HttpClientInstance occurrence. Need changes.
@@ -149,7 +139,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
 
-  private CompletableFuture<Response> buildRecordsResponse(Context ctx, Request request,
+  private Response buildRecordsResponse(Context ctx, Request request,
                                                            JsonObject instancesResponseBody) {
     JsonArray instances = storageHelper.getItems(instancesResponseBody);
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
@@ -161,7 +151,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()  //
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
-      return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
+      return getResponseHelper().buildFailureResponse(oaipmh, request);
     }
 
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
@@ -171,24 +161,29 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
      * of any database query or search function necessary to answer the list request, rather than when the output is written.
      */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
-
-    // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
-    //TODO REMOVE HTTPCLIENT
-    //TODO IS updateRecordsWithoutMetadata NEEDED? @ILLIA
-    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
-      .thenCompose(recordsMap -> {
-        if (recordsMap.isEmpty()) {
-          return buildNoRecordsFoundOaiResponse(oaipmh, request);
-        } else {
-
-          return updateRecordsWithoutMetadata(ctx, null, request, recordsMap)
-            .thenApply(records -> {
-              addRecordsToOaiResponse(oaipmh, records);
-              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-              return buildResponse(oaipmh, request);
-            });
-        }
-      });
+    final Map<String, RecordType> recordsMap = buildRecords(ctx, request, instances);
+    if (recordsMap.isEmpty()) {
+      return buildNoRecordsFoundOaiResponse(oaipmh, request);
+    } else {
+      addRecordsToOaiResponse(oaipmh, recordsMap.values());
+      addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+      return buildResponse(oaipmh, request);
+    }
+    //TODO REMOVE IT
+//    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
+//      .thenCompose(recordsMap -> {
+//        if (recordsMap.isEmpty()) {
+//          return buildNoRecordsFoundOaiResponse(oaipmh, request);
+//        } else {
+//
+//          return updateRecordsWithoutMetadata(ctx, null, request, recordsMap)
+//            .thenApply(records -> {
+//              addRecordsToOaiResponse(oaipmh, records);
+//              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+//              return buildResponse(oaipmh, request);
+//            });
+//        }
+//      });
   }
 
   /**

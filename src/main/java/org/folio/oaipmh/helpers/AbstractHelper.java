@@ -27,10 +27,10 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FOR
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import java.math.BigInteger;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -68,6 +69,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -75,6 +78,12 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractHelper implements VerbHelper {
 
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
+  private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
+
+  private static final String[] dateFormats = {
+    org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),
+    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+  };
 
   private ResponseHelper responseHelper = ResponseHelper.getInstance();
 
@@ -197,10 +206,11 @@ public abstract class AbstractHelper implements VerbHelper {
       if (dateTimeString.isEmpty()) {
         return null;
       }
-      LocalDateTime localDt = LocalDate.parse(dateTimeString).atStartOfDay();
-      return Date.from(localDt.atOffset(ZoneOffset.UTC).toInstant());
-    } catch (DateTimeParseException e) {
-      throw new IllegalArgumentException(e.toString(), e);
+      return DateUtils.parseDate(dateTimeString, dateFormats);
+    } catch (DateTimeParseException | ParseException e) {
+      logger.error(e);
+      return null;
+
     }
   }
 

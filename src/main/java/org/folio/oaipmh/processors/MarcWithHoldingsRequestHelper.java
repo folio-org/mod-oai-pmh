@@ -323,7 +323,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     return httpClientRequest;
   }
-  //TODO SUPPRESS FROM DISCOVERY = skip suppressed or not
+
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonEvent> batch) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);

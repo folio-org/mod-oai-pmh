@@ -19,7 +19,7 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
-//TODO CHECK THIS IS WORKING @ILLIA
+
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
   @Override
