@@ -91,6 +91,12 @@ public class ModTenantAPI extends TenantAPI {
 
   private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
       Promise promise) {
+    if (response.statusCode() != 200) {
+      logger.error("Cannot get and post configs. Status code: {}, cause: {}", response.statusCode(), response.statusMessage());
+      promise.complete();
+      return;
+    }
+
     response.bodyHandler(body -> {
       JsonObject jsonConfig = body.toJsonObject();
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
@@ -114,7 +120,7 @@ public class ModTenantAPI extends TenantAPI {
         if (resp.statusCode() != 201) {
           logger.error("Invalid response from mod-configuration. Cannot post config '{}': {} {}", configName, resp.statusCode(),
               resp.statusMessage());
-          promise.fail(new IllegalStateException("Cannot post config. " + resp.statusMessage()));
+          promise.fail("Cannot post config. " + resp.statusMessage());
         }
       });
     } catch (Exception e) {
