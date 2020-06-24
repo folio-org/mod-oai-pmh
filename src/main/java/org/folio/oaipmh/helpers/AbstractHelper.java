@@ -27,12 +27,14 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FOR
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import java.math.BigInteger;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -66,6 +69,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -73,6 +78,12 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractHelper implements VerbHelper {
 
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
+  private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
+
+  private static final String[] dateFormats = {
+    org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),
+    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+  };
 
   private ResponseHelper responseHelper = ResponseHelper.getInstance();
 
@@ -190,6 +201,19 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
+  protected Date convertStringToDate(String dateTimeString) {
+    try {
+      if (dateTimeString.isEmpty()) {
+        return null;
+      }
+      return DateUtils.parseDate(dateTimeString, dateFormats);
+    } catch (DateTimeParseException | ParseException e) {
+      logger.error(e);
+      return null;
+
+    }
+  }
+
   protected boolean validateIdentifier(Request request) {
     return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
   }
@@ -206,6 +230,7 @@ public abstract class AbstractHelper implements VerbHelper {
     return sets;
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   /**
    * Creates Okapi client getting Okapi URL from headers. The connection will be closed automatically if idle
    */
@@ -213,6 +238,7 @@ public abstract class AbstractHelper implements VerbHelper {
     return getOkapiClient(okapiHeaders, true);
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   /**
    * Creates Okapi client getting Okapi URL from headers.
    */

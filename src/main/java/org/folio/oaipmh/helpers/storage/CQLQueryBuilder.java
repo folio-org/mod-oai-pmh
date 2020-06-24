@@ -32,6 +32,7 @@ public class CQLQueryBuilder {
     prefix = addQuestionMark ? "?query=" : "&query=";
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   /**
    * Adds a statement to search by key with strict value to the query.
    *
@@ -44,6 +45,7 @@ public class CQLQueryBuilder {
     return this;
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   /**
    * Adds a statement to search by date range (or just lower/upper bound) to the query.
    * The query is being updated with metadata.updatedDate checks only.
@@ -109,6 +111,7 @@ public class CQLQueryBuilder {
     return dateTime;
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   public CQLQueryBuilder and() {
     builder.append(" and ");
     return this;

@@ -33,7 +33,7 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.rest.client.SourceStorageClient;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
@@ -94,7 +94,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       BatchStreamWrapper writeStream;
       int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getOkapiHeaders().get(OKAPI_TENANT),
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       String requestId =
         (resumptionToken == null || request.getNextRecordId() == null) ? UUID
@@ -112,7 +112,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         writeStream = (BatchStreamWrapper) writeStreamObj;
       }
 
-      final SourceStorageClient srsClient = new SourceStorageClient(request.getOkapiUrl(),
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
       writeStream.exceptionHandler(e -> {
         if (e != null) {
@@ -324,19 +324,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpClientRequest;
   }
 
-  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageClient srsClient,
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonEvent> batch) {
-    final String srsRequest = buildSrsRequest(batch);
-    logger.info("Request to SRS: {0}", srsRequest);
+    final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
+    logger.info("Request to SRS: {0}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.getSourceStorageRecords(srsRequest, 0, batch.size(), null, rh -> rh.bodyHandler(bh -> {
+      srsClient.postSourceStorageSourceRecords("INSTANCE", true, listOfIds, rh -> rh.bodyHandler(bh -> {
           try {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
               JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("records");
+              final JsonArray records = entries.getJsonArray("sourceRecords");
               records.stream()
                 .map(r -> (JsonObject) r)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
@@ -356,14 +356,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private String buildSrsRequest(List<JsonEvent> batch) {
+  private List<String> extractListOfIdsForSRSRequest(List<JsonEvent> batch) {
 
     return batch.stream().map(JsonEvent::value).
       filter(aggregatedInstanceObject -> aggregatedInstanceObject instanceof JsonObject)
       .map(aggregatedInstanceObject -> (JsonObject) aggregatedInstanceObject)
       .map(instance -> instance.getString("instanceid"))
-      .map(identifier -> "externalIdsHolder.instanceId==" + identifier)
-      .collect(Collectors.joining(" or ", "(", ")"));
+      .collect(Collectors.toList());
   }
 
 

@@ -1,13 +1,17 @@
 package org.folio.oaipmh.helpers;
 
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
-import java.util.Map;
+import java.util.Date;
 
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.MetadataFormatType;
@@ -17,7 +21,6 @@ import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -29,14 +32,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
-    return retrieveMetadataFormats(request);
-  }
-
-  /**
-   * Processes request with identifier
-   * @return future with {@link OAIPMH} response
-   */
-  private Future<javax.ws.rs.core.Response> retrieveMetadataFormats(Request request) {
     if (request.getIdentifier() == null) {
       return Future.succeededFuture(retrieveMetadataFormatsWithNoIdentifier(request));
     } else if (!validateIdentifier(request)) {
@@ -44,17 +39,64 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
     }
 
     Promise<javax.ws.rs.core.Response> promise = Promise.promise();
-    Map<String, String> okapiHeaders = request.getOkapiHeaders();
     try {
-      String endpoint = storageHelper.buildRecordsEndpoint(request, false);
-      getOkapiClient(okapiHeaders)
-        .request(HttpMethod.GET, endpoint, okapiHeaders)
-        .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
-        .thenAccept(promise::complete)
-        .exceptionally(t -> {
-          promise.fail(t);
-          return null;
+      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
+
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0
+      srsClient.getSourceStorageSourceRecords(
+       null,
+        null,
+        request.getStorageIdentifier(),
+        "MARC",
+        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        deletedRecordsSupport,
+        null,
+        updatedAfter,
+        updatedBefore,
+         null,
+        request.getOffset(),
+        batchSize,
+         response -> {
+          try {
+            if (Response.isSuccess(response.statusCode())) {
+              response.bodyHandler(bh -> {
+                JsonArray instances = storageHelper.getItems(bh.toJsonObject());
+                if (instances != null && !instances.isEmpty()) {
+                  promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
+                }else{
+                  promise.complete(buildIdentifierNotFoundResponse(request));
+                }
+              });
+            } else {
+              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+              throw new IllegalStateException(response.statusMessage());
+            }
+
+          } catch (Exception e) {
+            logger.error("Exception getting list of identifiers", e);
+            promise.fail(e);
+          }
         });
+//      String endpoint = storageHelper.buildRecordsEndpoint(request, false);
+//      getOkapiClient(okapiHeaders)
+//        .request(HttpMethod.GET, endpoint, okapiHeaders)
+//        .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
+//        .thenAccept(promise::complete)
+//        .exceptionally(t -> {
+//          promise.fail(t);
+//          return null;
+//        });
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
       promise.fail(e);
@@ -76,6 +118,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
    * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
    * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
    */
+  @Deprecated
   private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
     if (Response.isSuccess(response.getCode())) {
       JsonArray instances = storageHelper.getItems(response.getBody());

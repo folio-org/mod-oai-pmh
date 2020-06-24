@@ -67,6 +67,7 @@ public class ModTenantAPI extends TenantAPI {
     String okapiUrl = headers.get(X_OKAPI_URL);
     String tenant = headers.get(X_OKAPI_TENANT);
 
+    // TODO: HttpClientInstance occurrence. Need changes.
     HttpClientInterface httpClient = HttpClientFactory.getHttpClient(okapiUrl, tenant, true);
     List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
 
@@ -84,6 +85,7 @@ public class ModTenantAPI extends TenantAPI {
     return future;
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<Map.Entry<String, JsonObject>> requestConfig(Context context, HttpClientInterface httpClient,
       Map<String, String> headers, String configName) {
     try {
@@ -95,6 +97,7 @@ public class ModTenantAPI extends TenantAPI {
     }
   }
 
+  // TODO: CQLQueryBuilder used here. Need changes.
   private String getConfigUrl(String configName) throws UnsupportedEncodingException {
     CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
     queryBuilder.addStrictCriteria(CONFIG_NAME, configName)
@@ -103,6 +106,7 @@ public class ModTenantAPI extends TenantAPI {
     return MOD_CONFIGURATION_ENTRIES_URI.concat(queryBuilder.build());
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<Map.Entry<String, JsonObject>> postConfigIfAbsent(Context context, HttpClientInterface httpClient,
       Map<String, String> headers, Map.Entry<String, JsonObject> configPair) {
     JsonObject config = configPair.getValue();

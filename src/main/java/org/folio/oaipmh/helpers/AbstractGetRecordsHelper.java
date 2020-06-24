@@ -1,17 +1,18 @@
 package org.folio.oaipmh.helpers;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,7 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
@@ -55,33 +56,76 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         return buildResponseWithErrors(request, promise, errors);
       }
 
-      final HttpClientInterface httpClient = getOkapiClient(request.getOkapiHeaders(), false);
-      final String instanceEndpoint = storageHelper.buildRecordsEndpoint(request, isDeletedRecordsEnabled(request));
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
 
-      logger.debug("Sending message to {}", instanceEndpoint);
+      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
-        .thenAccept(value -> {
-          httpClient.closeClient();
-          promise.complete(value);
-        })
-        .exceptionally(e -> {
-          httpClient.closeClient();
-          handleException(promise, e);
-          return null;
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+
+      //source-storage/records?query=recordType%3D%3DMARC+and+metadata.updatedDate%3E%3D3999-01-01T00%3A00%3A00.000Z&limit=51&offset=0
+      srsClient.getSourceStorageSourceRecords(
+        null,
+        null,
+        null,
+        "MARC",
+        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        deletedRecordsSupport,
+        null,
+        updatedAfter,
+        updatedBefore,
+        null,
+        request.getOffset(),
+        batchSize,
+        response -> {
+          try {
+            if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
+              response.bodyHandler(bh -> {
+                final Response responseCompletableFuture = buildRecordsResponse(ctx, request, bh.toJsonObject());
+                promise.complete(responseCompletableFuture);
+              });
+            } else {
+              logger.error("ListRecords response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+              throw new IllegalStateException(response.statusMessage());
+            }
+          } catch (Exception e) {
+            logger.error("Exception getting ListRecords", e);
+            promise.fail(e);
+          }
         });
+
+       //region REMOVE IT
+//      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
+//        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
+//        .thenAccept(value -> {
+//          httpClient.closeClient();
+//          promise.complete(value);
+//        })
+//        .exceptionally(e -> {
+//          httpClient.closeClient();
+//          handleException(promise, e);
+//          return null;
+//        });
+      //endregion
     } catch (Exception e) {
       handleException(promise, e);
     }
     return promise.future();
   }
 
-  private CompletableFuture<Response> buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
-    return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
     try {
       String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
@@ -94,18 +138,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private CompletableFuture<Response> buildRecordsResponse(Context ctx, HttpClientInterface httpClient, Request request,
-                                                           org.folio.rest.tools.client.Response instancesResponse) {
-    requiresSuccessStorageResponse(instancesResponse);
 
-    JsonObject body = instancesResponse.getBody();
-    JsonArray instances;
-    if (isDeletedRecordsEnabled(request)) {
-      instances = storageHelper.getRecordsItems(body);
-    } else {
-      instances = storageHelper.getItems(body);
-    }
-    Integer totalRecords = storageHelper.getTotalRecords(body);
+  private Response buildRecordsResponse(Context ctx, Request request,
+                                                           JsonObject instancesResponseBody) {
+    JsonArray instances = storageHelper.getItems(instancesResponseBody);
+    Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
 
     logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
 
@@ -114,7 +151,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()  //
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
-      return completedFuture(getResponseHelper().buildFailureResponse(oaipmh, request));
+      return getResponseHelper().buildFailureResponse(oaipmh, request);
     }
 
     ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
@@ -124,21 +161,29 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
      * of any database query or search function necessary to answer the list request, rather than when the output is written.
      */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
-
-    // In case the response is quite large, time to process might be significant. So running in worker thread to not block event loop
-    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
-      .thenCompose(recordsMap -> {
-        if (recordsMap.isEmpty()) {
-          return buildNoRecordsFoundOaiResponse(oaipmh, request);
-        } else {
-          return updateRecordsWithoutMetadata(ctx, httpClient, request, recordsMap)
-            .thenApply(records -> {
-              addRecordsToOaiResponse(oaipmh, records);
-              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-              return buildResponse(oaipmh, request);
-            });
-        }
-      });
+    final Map<String, RecordType> recordsMap = buildRecords(ctx, request, instances);
+    if (recordsMap.isEmpty()) {
+      return buildNoRecordsFoundOaiResponse(oaipmh, request);
+    } else {
+      addRecordsToOaiResponse(oaipmh, recordsMap.values());
+      addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+      return buildResponse(oaipmh, request);
+    }
+    //TODO REMOVE IT
+//    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
+//      .thenCompose(recordsMap -> {
+//        if (recordsMap.isEmpty()) {
+//          return buildNoRecordsFoundOaiResponse(oaipmh, request);
+//        } else {
+//
+//          return updateRecordsWithoutMetadata(ctx, null, request, recordsMap)
+//            .thenApply(records -> {
+//              addRecordsToOaiResponse(oaipmh, records);
+//              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+//              return buildResponse(oaipmh, request);
+//            });
+//        }
+//      });
   }
 
   /**
@@ -216,6 +261,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return buildOaiMetadata(request, source);
   }
 
+  // TODO: HttpClientInstance occurrence. Need changes.
   private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
     if (hasRecordsWithoutMetadata(records)) {
       List<CompletableFuture<Void>> cfs = new ArrayList<>();
