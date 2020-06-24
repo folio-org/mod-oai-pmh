@@ -41,7 +41,7 @@ public class ModTenantAPI extends TenantAPI {
   private static final String X_OKAPI_TENANT = "x-okapi-tenant";
   private static final String X_OKAPI_TOKEN = "x-okapi-token";
   private static final String CONFIG_DIR_PATH = "config";
-  private static final String QUERY = "module==OAIPMH+and+configName==%s";
+  private static final String QUERY = "module==OAIPMH and configName==%s";
   private static final String MODULE_NAME = "OAIPMH";
   private static final int CONFIG_JSON_BODY = 0;
   private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
@@ -58,7 +58,7 @@ public class ModTenantAPI extends TenantAPI {
     List<Future> futures = new ArrayList<>();
 
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, headers)));
-    CompositeFuture.all(futures)
+    CompositeFuture.join(futures)
       .onComplete(future -> {
         Response response;
         if (future.succeeded()) {
@@ -114,7 +114,8 @@ public class ModTenantAPI extends TenantAPI {
           logger.error("Invalid response from mod-configuration. Cannot post config '{}': {} {}", configName, resp.statusCode(),
               resp.statusMessage());
           resp.bodyHandler(body -> {
-            logger.error("Response body of post: {}", body.toJsonObject().encode());
+            logger.error("Response body of post: {}", body.toJsonObject()
+              .encode());
           });
           promise.fail(new IllegalStateException("Cannot post config. " + resp.statusMessage()));
         }
