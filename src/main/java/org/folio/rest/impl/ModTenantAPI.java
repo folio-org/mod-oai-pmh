@@ -73,21 +73,21 @@ public class ModTenantAPI extends TenantAPI {
       });
   }
 
-  private Future processConfigurationByConfigName(String configName, ConfigurationsClient client) {
-    Promise promise = Promise.promise();
+  private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
+    Promise<String> promise = Promise.promise();
     try {
       logger.info("Getting configurations with configName = {}", configName);
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
           response -> handleModConfigurationGetResponse(response, client, configName, promise));
     } catch (Exception e) {
-      logger.error("Error while processing config with configName '{}'. {}", configName, e.getMessage());
-      promise.fail(e);
+      logger.error("Error while processing config with configName '{}'. {}", configName, e.getMessage(), e);
+      promise.fail(e.getMessage());
     }
     return promise.future();
   }
 
   private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
-      Promise promise) {
+      Promise<String> promise) {
     if (response.statusCode() != 200) {
       response.handler(buffer -> {
         logger.error(buffer.toString());
@@ -110,7 +110,7 @@ public class ModTenantAPI extends TenantAPI {
     });
   }
 
-  private void postConfig(ConfigurationsClient client, String configName, Promise promise) {
+  private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
     Config config = new Config();
     config.setConfigName(configName);
     config.setEnabled(true);
@@ -125,7 +125,8 @@ public class ModTenantAPI extends TenantAPI {
         }
       });
     } catch (Exception e) {
-      promise.fail(e);
+      logger.error(e.getMessage(), e);
+      promise.fail(e.getMessage());
       return;
     }
     promise.complete();
