@@ -77,6 +77,7 @@
 //import java.util.Base64;
 //import java.util.Collections;
 //import java.util.List;
+//import java.util.Map;
 //import java.util.Objects;
 //import java.util.Optional;
 //import java.util.function.Predicate;
@@ -1069,37 +1070,37 @@
 //    testContext.completeNow();
 //  }
 //
-//  @ParameterizedTest
-//  @EnumSource(MetadataPrefix.class)
-//  void getOaiGetRecordVerbWithExistingIdentifier(MetadataPrefix metadataPrefix) {
-//    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, GET_RECORD.value())
-//      .param(IDENTIFIER_PARAM, identifier)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
-//    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
-//    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
-//    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
-//    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
-//  }
+////  @ParameterizedTest
+////  @EnumSource(MetadataPrefix.class)
+////  void getOaiGetRecordVerbWithExistingIdentifier(MetadataPrefix metadataPrefix) {
+////    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+////    RequestSpecification request = createBaseRequest()
+////      .with()
+////      .param(VERB_PARAM, GET_RECORD.value())
+////      .param(IDENTIFIER_PARAM, identifier)
+////      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+////    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+////    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+////    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
+////    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+////    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+////  }
 //
-//  @ParameterizedTest
-//  @EnumSource(MetadataPrefix.class)
-//  void getOaiGetRecordVerbWithNonExistingIdentifier(MetadataPrefix metadataPrefix) {
-//    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, GET_RECORD.value())
-//      .param(IDENTIFIER_PARAM, identifier)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//
-//    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
-//    assertThat(oaipmh.getGetRecord(), is(nullValue()));
-//    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
-//
-//  }
+////  @ParameterizedTest
+////  @EnumSource(MetadataPrefix.class)
+////  void getOaiGetRecordVerbWithNonExistingIdentifier(MetadataPrefix metadataPrefix) {
+////    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
+////    RequestSpecification request = createBaseRequest()
+////      .with()
+////      .param(VERB_PARAM, GET_RECORD.value())
+////      .param(IDENTIFIER_PARAM, identifier)
+////      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+////
+////    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
+////    assertThat(oaipmh.getGetRecord(), is(nullValue()));
+////    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
+////
+////  }
 //
 //  @Test
 //  void getOaiMetadataFormats(VertxTestContext testContext) {
@@ -1855,32 +1856,32 @@
 //    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
 //  }
 //
-//  @ParameterizedTest
-//  @MethodSource("metadataPrefixAndVerbProvider")
-//  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
-//    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-//    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
-//    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
-//    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
-//
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, verb.value())
-//      .param(FROM_PARAM, THREE_INSTANCES_DATE)
-//      .param(METADATA_PREFIX_PARAM, prefix.getName());
-//
-//    OAIPMH oaipmh = verify200WithXml(request, verb);
-//
-//    verifyListResponse(oaipmh, verb, 1);
-//    if (verb.equals(LIST_RECORDS)) {
-//      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
-//    } else {
-//      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
-//    }
-//
-//    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
-//    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
-//  }
+////  @ParameterizedTest
+////  @MethodSource("metadataPrefixAndVerbProvider")
+////  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
+////    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+////    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+////    System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
+////    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+////
+////    RequestSpecification request = createBaseRequest()
+////      .with()
+////      .param(VERB_PARAM, verb.value())
+////      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+////      .param(METADATA_PREFIX_PARAM, prefix.getName());
+////
+////    OAIPMH oaipmh = verify200WithXml(request, verb);
+////
+////    verifyListResponse(oaipmh, verb, 1);
+////    if (verb.equals(LIST_RECORDS)) {
+////      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+////    } else {
+////      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+////    }
+////
+////    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+////    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+////  }
 //
 //  @Test
 //  void getOaiMetadataFormatsAndCheckMarc21WithHoldingsMetadataPrefixIsPresent() {

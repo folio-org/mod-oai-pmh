@@ -88,15 +88,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
             promise.fail(e);
           }
         });
-//      String endpoint = storageHelper.buildRecordsEndpoint(request, false);
-//      getOkapiClient(okapiHeaders)
-//        .request(HttpMethod.GET, endpoint, okapiHeaders)
-//        .thenApply(response -> verifyAndGetOaiPmhResponse(request, response))
-//        .thenAccept(promise::complete)
-//        .exceptionally(t -> {
-//          promise.fail(t);
-//          return null;
-//        });
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
       promise.fail(e);

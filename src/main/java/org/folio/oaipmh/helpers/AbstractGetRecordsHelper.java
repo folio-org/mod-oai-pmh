@@ -199,12 +199,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       for (Object entity : instances) {
         JsonObject instance = (JsonObject) entity;
-        String recordId;
-        if (isDeletedRecordsEnabled(request)) {
-          recordId = storageHelper.getId(instance);
-        } else {
-          recordId = storageHelper.getRecordId(instance);
-        }
+        String recordId = storageHelper.getRecordId(instance);
         String identifierId = storageHelper.getIdentifierId(instance);
         if (StringUtils.isNotEmpty(identifierId)) {
           RecordType record = new RecordType()
