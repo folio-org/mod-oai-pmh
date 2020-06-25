@@ -18,6 +18,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -39,32 +40,32 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
   private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
-  private static final String ID_PARAM = "externalIdsHolder.instanceId";
+  private static final String ID_PARAM = "instanceId";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
-  private static final String NO_RECORDS_DATE_STORAGE = "2011-11-11T11:11:11.000Z";
+  private static final String NO_RECORDS_DATE_STORAGE = "2011-11-11T11:11:11";
   static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01";
   static final String PARTITIONABLE_RECORDS_DATE_TIME = "2003-01-01T00:00:00Z";
-  private static final String PARTITIONABLE_RECORDS_DATE_TIME_STORAGE = "2003-01-01T00:00:00.000Z";
+  private static final String PARTITIONABLE_RECORDS_DATE_TIME_STORAGE = "2003-01-01T00:00:00";
   static final String ERROR_UNTIL_DATE = "2010-10-10T10:10:10Z";
   // 1 second should be added to storage until date time
-  private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:11.000Z";
+  private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:10";
   static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE = "2001-01-01T01:01:01Z";
   // 1 second should be added to storage until date time
-  private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02.000Z";
+  private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02";
   static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
-  private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00.000Z";
+  private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00";
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
-  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05.000Z";
+  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05";
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "2000-01-02T07:07:07Z";
-  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07.000Z";
+  private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
   static final String INVENTORY_INSTANCE_DATE = "2020-01-01";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
-  private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00.000Z";
+  private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -87,6 +88,7 @@ public class OkapiMockServer {
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
+  private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
   private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
 
@@ -219,6 +221,18 @@ public class OkapiMockServer {
     }
   }
 
+  private void handleSourceStorageSourceRecordsResponse(RoutingContext ctx) {
+    HttpServerRequest request = ctx.request();
+    final String uri = request.absoluteURI();
+    String json = "";
+    if(uri.contains(NON_EXISTING_IDENTIFIER)) {
+      json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0);
+    } else if (uri.contains(EXISTING_IDENTIFIER)) {
+      json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1);
+    }
+    successResponse(ctx, json);
+  }
+
   public void start(VertxTestContext context) {
     HttpServer server = vertx.createHttpServer();
 
@@ -229,35 +243,34 @@ public class OkapiMockServer {
   }
 
   private void handleRecordStorageResultResponse(RoutingContext ctx) {
-    String query = ctx.request().getParam("query");
-
-    if (query != null)
+    String uri = ctx.request().absoluteURI();
+    if (uri != null)
     {
-      if (query.endsWith(String.format("%s==%s", ID_PARAM, EXISTING_IDENTIFIER))) {
+      if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
-      } else if (query.endsWith(String.format("%s==%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
+      } else if (uri.contains(String.format("%s=%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
-      } else if (query.contains(NO_RECORDS_DATE_STORAGE)) {
+      } else if (uri.contains(NO_RECORDS_DATE_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
-      } else if (query.endsWith(String.format("%s==%s", ID_PARAM, ERROR_IDENTIFIER))) {
+      } else if (uri.contains(String.format("%s=%s", ID_PARAM, ERROR_IDENTIFIER))) {
         failureResponse(ctx, 500, "Internal Server Error");
-      } else if (query.contains(ERROR_UNTIL_DATE_STORAGE)) {
+      } else if (uri.contains(ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
-      } else if (query.contains(PARTITIONABLE_RECORDS_DATE_TIME_STORAGE)) {
+      } else if (uri.contains(PARTITIONABLE_RECORDS_DATE_TIME_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_11));
-      } else if (query.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || query.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
+      } else if (uri.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || uri.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_NO_RECORD_SOURCE));
-      } else if (query.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
+      } else if (uri.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_2));
-      } else if (query.contains(THREE_INSTANCES_DATE)) {
+      } else if (uri.contains(THREE_INSTANCES_DATE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
-      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
+      } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
-      } else if (query.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
+      } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
-      } else if (query.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
-      } else if (query.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+      } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
       } else {
