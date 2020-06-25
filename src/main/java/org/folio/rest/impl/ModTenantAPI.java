@@ -1,146 +1,155 @@
 package org.folio.rest.impl;
 
 import static java.lang.String.format;
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyAsync;
-import static org.folio.oaipmh.Constants.VALUE;
+import static org.folio.oaipmh.Constants.CONFIGS;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.http.HttpStatus;
-import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
-import org.folio.oaipmh.helpers.storage.CQLQueryBuilder;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpMethod;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class ModTenantAPI extends TenantAPI {
   private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
 
-  private static final String SHOULD_NOT_UPDATE_PROPS = "shouldUpdateProps";
-  private static final String X_OKAPI_URL = "x-okapi-url";
-  private static final String X_OKAPI_TENANT = "x-okapi-tenant";
-  private static final String MOD_CONFIGURATION_ENTRIES_URI = "/configurations/entries";
-  private static final String CONFIG_NAME = "configName";
-  private static final String ENABLED = "enabled";
   private static final String CONFIG_DIR_PATH = "config";
+  private static final String QUERY = "module==OAIPMH and configName==%s";
+  private static final String MODULE_NAME = "OAIPMH";
   private static final int CONFIG_JSON_BODY = 0;
   private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
-    loadConfigData(headers, context).thenAccept(response -> handlers.handle(Future.succeededFuture(response)))
-      .exceptionally(handleError(handlers));
-  }
+    List<String> configsSet = Arrays.asList("behavior", "general", "technical");
 
-  private CompletableFuture<Response> loadConfigData(Map<String, String> headers, Context context) {
-    VertxCompletableFuture<Response> future = new VertxCompletableFuture<>(context);
-    List<String> configsSet = Arrays.asList("behavior","general","technical");
+    String okapiUrl = headers.get(OKAPI_URL);
+    String tenant = headers.get(OKAPI_TENANT);
+    String token = headers.get(OKAPI_TOKEN);
 
-    String okapiUrl = headers.get(X_OKAPI_URL);
-    String tenant = headers.get(X_OKAPI_TENANT);
+    ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
 
-    // TODO: HttpClientInstance occurrence. Need changes.
-    HttpClientInterface httpClient = HttpClientFactory.getHttpClient(okapiUrl, tenant, true);
-    List<CompletableFuture<Void>> completableFutures = new ArrayList<>();
+    List<Future> futures = new ArrayList<>();
 
-    configsSet.forEach(config -> completableFutures.add(requestConfig(context, httpClient, headers, config)
-      .thenCompose(configPair -> postConfigIfAbsent(context, httpClient, headers, configPair))
-      .thenAccept(configEntry -> populateSystemProperties(context, configEntry))));
-
-    VertxCompletableFuture.allOf(context, completableFutures.toArray(new CompletableFuture[0]))
-      .thenCompose(v -> buildSuccessResponse(context))
-      .thenAccept(future::complete)
-      .exceptionally(throwable -> {
-        handleException(future, throwable);
-        return null;
+    configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, client)));
+    CompositeFuture.all(futures)
+      .onComplete(future -> {
+        String message;
+        if (future.succeeded()) {
+          message = "Configurations has been set up successfully";
+        } else {
+          message = Optional.ofNullable(future.cause()).map(Throwable::getMessage)
+            .orElse("Error has been occurred while communicating to mod-configuration");
+        }
+        handlers.handle(Future.succeededFuture(buildResponse(message)));
       });
-    return future;
   }
 
-  // TODO: HttpClientInstance occurrence. Need changes.
-  private CompletableFuture<Map.Entry<String, JsonObject>> requestConfig(Context context, HttpClientInterface httpClient,
-      Map<String, String> headers, String configName) {
+  private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
+    Promise<String> promise = Promise.promise();
     try {
-      return httpClient.request(getConfigUrl(configName), headers)
-        .thenCompose(response -> supplyAsync(context, () -> new HashMap.SimpleImmutableEntry<>(configName, response.getBody())));
-    } catch (Exception ex) {
-      logger.error(format("Cannot get config with configName - %s. %s", configName, ex.getMessage()));
-      throw new IllegalStateException(ex);
+      logger.info("Getting configurations with configName = {}", configName);
+      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
+          response -> handleModConfigurationGetResponse(response, client, configName, promise));
+    } catch (Exception e) {
+      logger.error("Error while processing config with configName '{}'. {}", configName, e.getMessage(), e);
+      promise.fail(e.getMessage());
     }
+    return promise.future();
   }
 
-  // TODO: CQLQueryBuilder used here. Need changes.
-  private String getConfigUrl(String configName) throws UnsupportedEncodingException {
-    CQLQueryBuilder queryBuilder = new CQLQueryBuilder();
-    queryBuilder.addStrictCriteria(CONFIG_NAME, configName)
-      .and();
-    queryBuilder.addStrictCriteria(ENABLED, Boolean.TRUE.toString());
-    return MOD_CONFIGURATION_ENTRIES_URI.concat(queryBuilder.build());
-  }
-
-  // TODO: HttpClientInstance occurrence. Need changes.
-  private CompletableFuture<Map.Entry<String, JsonObject>> postConfigIfAbsent(Context context, HttpClientInterface httpClient,
-      Map<String, String> headers, Map.Entry<String, JsonObject> configPair) {
-    JsonObject config = configPair.getValue();
-    JsonArray configs = config.getJsonArray(Constants.CONFIGS);
-    if (configs.isEmpty()) {
-      JsonObject configToPost = prepareJsonToPost(configPair.getKey().concat(".json"));
-      try {
-        headers.put(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString());
-        return httpClient.request(HttpMethod.POST, configToPost, MOD_CONFIGURATION_ENTRIES_URI, headers)
-          .thenCompose(
-              response -> supplyAsync(context, () -> new HashMap.SimpleImmutableEntry<>(configPair.getKey(), response.getBody()
-                .put(SHOULD_NOT_UPDATE_PROPS, true))));
-      } catch (Exception ex) {
-        logger.error(format("Cannot post config. %s", ex.getMessage()));
-        throw new IllegalStateException(ex);
+  private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
+      Promise<String> promise) {
+    if (response.statusCode() != 200) {
+      response.handler(buffer -> {
+        logger.error(buffer.toString());
+        promise.fail(buffer.toString());
+      });
+      return;
+    }
+    response.bodyHandler(body -> {
+      JsonObject jsonConfig = body.toJsonObject();
+      JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
+      if (configs.isEmpty()) {
+        logger.info("Configuration group with configName {} isn't exist. Posting default configs for {} configuration group", configName, configName);
+        postConfig(client, configName, promise);
+      } else {
+        logger.info("Configurations has been got successfully, applying configurations to module system properties");
+        populateSystemPropertiesWithConfig(jsonConfig);
+        promise.complete();
       }
-    } else {
-      return CompletableFuture.completedFuture(configPair);
+    });
+  }
+
+  private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
+    Config config = new Config();
+    config.setConfigName(configName);
+    config.setEnabled(true);
+    config.setModule(MODULE_NAME);
+    config.setValue(getConfigValue(configName));
+    try {
+      client.postConfigurationsEntries(null, config, resp -> {
+        if (resp.statusCode() != 201) {
+          logger.error("Invalid response from mod-configuration. Cannot post config '{}': {} {}", configName, resp.statusCode(),
+              resp.statusMessage());
+          promise.fail("Cannot post config. " + resp.statusMessage());
+        }
+      });
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+      promise.fail(e.getMessage());
+      return;
     }
+    promise.complete();
+  }
+
+  private void populateSystemPropertiesWithConfig(JsonObject jsonResponse) {
+    JsonObject configBody = jsonResponse.getJsonArray(CONFIGS)
+      .getJsonObject(CONFIG_JSON_BODY);
+    Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(configBody);
+    Properties sysProps = System.getProperties();
+    sysProps.putAll(configKeyValueMap);
   }
 
   /**
-   * Substitutes default values of json configuration(within value field) with values specified through JVM. In case get request to
-   * mod-configuration doesn't return config entry then default json with default configuration values will be posted but if JVM
-   * property has been specified for one of it default values then such default value should be replaced with value specified via
-   * JVM.
+   * Composes the json which contains configuration keys values. If some of configurations have been already specified via JVM then
+   * such values will be used and further posted instead of defaults.
    *
-   * @param jsonConfigFileName - json file with default configurations that is placed under the resource folder.
-   * @return json object with replaced values with specified via JVM if they were specified
+   * @param configName - json file with default configurations that is placed under the resource folder.
+   * @return string representation of json object
    */
-  private JsonObject prepareJsonToPost(String jsonConfigFileName) {
+  private String getConfigValue(String configName) {
     Properties systemProperties = System.getProperties();
     String configPath = systemProperties.getProperty("configPath", CONFIG_DIR_PATH);
-    JsonObject jsonConfigEntry = configurationHelper.getJsonConfigFromResources(configPath, jsonConfigFileName);
+    JsonObject jsonConfigEntry = configurationHelper.getJsonConfigFromResources(configPath, configName + ".json");
     Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfigEntry);
 
     JsonObject configEntryValueField = new JsonObject();
@@ -152,60 +161,14 @@ public class ModTenantAPI extends TenantAPI {
         configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key), configDefaultValue);
       }
     });
-    jsonConfigEntry.put(VALUE, configEntryValueField.encode());
-    return jsonConfigEntry;
+    return configEntryValueField.encode();
   }
 
-  /**
-   * Updates system properties with values that has been returned from GET request to mod-configuration since they has the
-   * highest priority. If GET returns nothing then default values (partially may be replaced with specified via JVM) are posted
-   * {@link ModTenantAPI#postConfigIfAbsent(Context, HttpClientInterface, Map, Map.Entry)} and system properties already has been
-   * updated with these posted values during {@link InitAPIs#init(Vertx, Context, Handler)}, so there no necessity of updating sys.
-   * props. with them again and {@link ModTenantAPI#SHOULD_NOT_UPDATE_PROPS} tells about it.
-   *
-   * @param context - context
-   * @param configEntry - configEntry returned from GET or POST request to mod-configuration
-   * @return CompletableFuture.
-   */
-  private CompletableFuture<Map.Entry<String, JsonObject>> populateSystemProperties(Context context,
-      Map.Entry<String, JsonObject> configEntry) {
-    return VertxCompletableFuture.supplyBlockingAsync(context, () -> {
-      JsonObject config = configEntry.getValue();
-      if (config.containsKey(SHOULD_NOT_UPDATE_PROPS)) {
-        return configEntry;
-      }
-      JsonObject configBody = config.getJsonArray(Constants.CONFIGS)
-        .getJsonObject(CONFIG_JSON_BODY);
-      Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(configBody);
-      Properties sysProps = System.getProperties();
-      sysProps.putAll(configKeyValueMap);
-      return configEntry;
-    });
-  }
-
-  private CompletableFuture<Response> buildSuccessResponse(Context context) {
-    return VertxCompletableFuture.supplyAsync(context, Response.noContent()
-      .status(HttpStatus.SC_NO_CONTENT)::build);
-  }
-
-  private Future<Response> buildFailureResponse(String message) {
-    Response response = Response.status(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+  private Response buildResponse(String body) {
+    Response.ResponseBuilder builder = Response.status(HttpStatus.SC_OK)
       .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
-      .entity(message)
-      .build();
-    return Future.succeededFuture(response);
-  }
-
-  private void handleException(CompletableFuture<Response> future, Throwable throwable) {
-    logger.error(format("Cannot enable module: %s", throwable.getMessage()));
-    future.completeExceptionally(throwable);
-  }
-
-  private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>> asyncResultHandler) {
-    return throwable -> {
-      asyncResultHandler.handle(buildFailureResponse(throwable.getMessage()));
-      return null;
-    };
+      .entity(body);
+    return builder.build();
   }
 
 }
