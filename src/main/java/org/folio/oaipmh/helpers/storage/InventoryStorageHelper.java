@@ -7,6 +7,12 @@ import org.folio.oaipmh.Request;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
+/**
+ * To be removed because another mechanism to communicate with inventory is being implemented
+ *
+ * @see org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper
+ */
+@Deprecated
 public class InventoryStorageHelper extends AbstractStorageHelper {
 
   public static final String INSTANCES_URI = "/instance-storage/instances";

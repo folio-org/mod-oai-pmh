@@ -230,24 +230,6 @@ public abstract class AbstractHelper implements VerbHelper {
     return sets;
   }
 
-  // TODO: HttpClientInstance occurrence. Need changes.
-  /**
-   * Creates Okapi client getting Okapi URL from headers. The connection will be closed automatically if idle
-   */
-  protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders) {
-    return getOkapiClient(okapiHeaders, true);
-  }
-
-  // TODO: HttpClientInstance occurrence. Need changes.
-  /**
-   * Creates Okapi client getting Okapi URL from headers.
-   */
-  protected HttpClientInterface getOkapiClient(Map<String, String> okapiHeaders, boolean autoCloseConnections) {
-    String tenantId = TenantTool.tenantId(okapiHeaders);
-    String okapiURL = okapiHeaders.get(OKAPI_URL);
-    return HttpClientFactory.getHttpClient(okapiURL, tenantId, autoCloseConnections);
-  }
-
   /**
    * Creates {@link HeaderType} and populates Identifier, Datestamp and Set
    *
