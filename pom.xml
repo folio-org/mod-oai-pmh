@@ -462,8 +462,8 @@
             <configuration>
               <properties>
                 <property>
-                  <name>log4j.configuration</name>
-                  <value>${project.baseUri}src/main/resources/log4j.properties</value>
+                  <name>log4j2.configuration</name>
+                  <value>${project.baseUri}src/main/resources/log4j2.properties</value>
                 </property>
               </properties>
             </configuration>
