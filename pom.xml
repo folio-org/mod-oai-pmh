@@ -212,11 +212,6 @@
       <version>2.17.0</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.scalikejdbc</groupId>
-      <artifactId>csvquery_2.11</artifactId>
-      <version>1.5.0</version>
-    </dependency>
 
   </dependencies>
 
