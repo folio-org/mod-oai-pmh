@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 
 import javax.ws.rs.core.Response;
@@ -48,35 +49,32 @@ public class ModTenantAPI extends TenantAPI {
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
-    loadConfigData(headers, handlers);
-  }
-
-  private void loadConfigData(Map<String, String> headers, Handler<AsyncResult<Response>> handlers) {
     List<String> configsSet = Arrays.asList("behavior", "general", "technical");
 
-    List<Future> futures = new ArrayList<>();
-
-    configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, headers)));
-    CompositeFuture.all(futures)
-      .onComplete(future -> {
-        String message;
-        if (future.succeeded()) {
-          message = "Configurations has been set up successfully";
-        } else {
-          message = future.cause().getMessage();
-        }
-        handlers.handle(Future.succeededFuture(buildResponse(message)));
-      });
-  }
-
-  private Future processConfigurationByConfigName(String configName, Map<String, String> headers) {
-    Promise promise = Promise.promise();
     String okapiUrl = headers.get(X_OKAPI_URL);
     String tenant = headers.get(X_OKAPI_TENANT);
     String token = headers.get(X_OKAPI_TOKEN);
 
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
 
+    List<Future> futures = new ArrayList<>();
+
+    configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, client)));
+    CompositeFuture.all(futures)
+      .onComplete(future -> {
+        String message;
+        if (future.succeeded()) {
+          message = "Configurations has been set up successfully";
+        } else {
+          message = Optional.ofNullable(future.cause()).map(Throwable::getMessage)
+            .orElse("Error has been occurred while communicating to mod-configuration");
+        }
+        handlers.handle(Future.succeededFuture(buildResponse(message)));
+      });
+  }
+
+  private Future processConfigurationByConfigName(String configName, ConfigurationsClient client) {
+    Promise promise = Promise.promise();
     try {
       logger.info("Getting configurations with configName = {}", configName);
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
