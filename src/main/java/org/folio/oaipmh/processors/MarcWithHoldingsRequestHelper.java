@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -86,7 +87,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     try {
 
       String resumptionToken = request.getResumptionToken();
-
+      final boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
@@ -129,12 +130,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         Future<Map<String, JsonObject>> srsResponse = Future.future();
         if (CollectionUtils.isNotEmpty(batch)) {
-          srsResponse = requestSRSByIdentifiers(srsClient, batch);
+          srsResponse = requestSRSByIdentifiers(srsClient, batch, deletedRecordSupport);
         } else {
           srsResponse.complete();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
-          writeStream, !theLastBatch).onSuccess(promise::complete));
+          writeStream, !theLastBatch, deletedRecordSupport).onSuccess(promise::complete));
         srsResponse.onFailure(t -> handleException(promise, t));
       });
 
@@ -170,11 +171,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Response> buildRecordsResponse(
     Request request, String requestId, List<JsonEvent> batch,
     Map<String, JsonObject> srsResponse, BatchStreamWrapper stream,
-    boolean returnResumptionToken) {
+    boolean returnResumptionToken, boolean deletedRecordSupport) {
 
     Promise<Response> promise = Promise.promise();
     try {
-      List<RecordType> records = buildRecordsList(request, batch, srsResponse);
+      List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
 
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
@@ -205,9 +206,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse) {
+  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse, boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-    final boolean isDeletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+
 
     List<RecordType> records = new ArrayList<>();
 
@@ -225,7 +226,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withHeader(createHeader(inventoryInstance)
           .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
 
-      if (isDeletedRecordsEnabled && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
+      if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
         record.getHeader().setStatus(StatusType.DELETED);
       }
       String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
@@ -325,19 +326,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
-                                                                  List<JsonEvent> batch) {
+                                                                  List<JsonEvent> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.info("Request to SRS: {0}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.postSourceStorageSourceRecords("INSTANCE", true, listOfIds, rh -> rh.bodyHandler(bh -> {
+      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, rh -> rh.bodyHandler(bh -> {
           try {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
               JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("sourceRecords");
+              final JsonArray records = entries.getJsonArray("records");
               records.stream()
+                .filter(Objects::nonNull)
                 .map(r -> (JsonObject) r)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {

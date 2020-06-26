@@ -1,13 +1,9 @@
 package org.folio.oaipmh.helpers.storage;
 
-import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 
-import java.io.UnsupportedEncodingException;
 import java.time.Instant;
-
-import org.folio.oaipmh.Request;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -21,8 +17,6 @@ public interface StorageHelper {
     String repositoryType = System.getProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     if (SOURCE_RECORD_STORAGE.equals(repositoryType)) {
       return new SourceRecordStorageHelper();
-    } else if (INVENTORY_STORAGE.equals(repositoryType)) {
-      return new InventoryStorageHelper();
     } else {
       throw new UnsupportedOperationException(repositoryType + " repository is not supported.");
     }
@@ -76,23 +70,6 @@ public interface StorageHelper {
    * @return {@link Instant} based on updated or created date
    */
   String getRecordSource(JsonObject record);
-
-  /**
-   * Deprecated in favor of using SourceStorageRecordsClient
-   *
-   * Returns base endpoint to get items
-   * @return endpoint
-   * @see org.folio.rest.client.SourceStorageRecordsClient
-   */
-  @Deprecated
-  String buildRecordsEndpoint(Request request, boolean isRecordsPath) throws UnsupportedEncodingException;
-
-  /**
-   * Gets endpoint to search for record metadata by identifier
-   * @param id instance identifier
-   * @return endpoint to get metadata by identifier
-   */
-  String getRecordByIdEndpoint(String id);
 
   /**
    * Returns value that describes whether instance is suppressed from discovery

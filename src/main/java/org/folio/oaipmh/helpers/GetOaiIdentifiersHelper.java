@@ -57,20 +57,20 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
       final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
-      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false);
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true);
 
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-      //source-storage/sourceRecords?query=recordType%3D%3DMARC+and+externalIdsHolder.instanceId%3D%3D6eee8eb9-db1a-46e2-a8ad-780f19974efa&limit=51&offset=0
       srsClient.getSourceStorageSourceRecords(
         null,
         null,
         null,
         "MARC",
-        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        //2. use suppressed from discovery filtering only when deleted record support is enabled
+        deletedRecordsSupport ? null : suppressedRecordsSupport,
         deletedRecordsSupport,
         null,
         updatedAfter,
