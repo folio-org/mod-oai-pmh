@@ -50,7 +50,7 @@ public class OkapiMockServer {
   private static final String PARTITIONABLE_RECORDS_DATE_TIME_STORAGE = "2003-01-01T00:00:00";
   static final String ERROR_UNTIL_DATE = "2010-10-10T10:10:10Z";
   // 1 second should be added to storage until date time
-  private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:10";
+  private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:11";
   static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE = "2001-01-01T01:01:01Z";
   // 1 second should be added to storage until date time
   private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02";
@@ -226,7 +226,7 @@ public class OkapiMockServer {
       } else if (uri.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || uri.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_NO_RECORD_SOURCE));
       } else if (uri.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_2));
+        failureResponse(ctx, 500, "Internal Server Error");
       } else if (uri.contains(THREE_INSTANCES_DATE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
       } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
