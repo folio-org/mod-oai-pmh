@@ -76,11 +76,11 @@ public class ModTenantAPI extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
     Promise<String> promise = Promise.promise();
     try {
-      logger.info(String.format("Getting configurations with configName = %s", configName));
+      logger.info(String.format("Getting configurations with configName = '%s'", configName));
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
           response -> handleModConfigurationGetResponse(response, client, configName, promise));
     } catch (Exception e) {
-      logger.error(String.format("Error while processing config with configName '%s'. %s", configName, e.getMessage()), e);
+      logger.error(String.format("Error while processing config with configName '%s'. '%s'", configName, e.getMessage()), e);
       promise.fail(e.getMessage());
     }
     return promise.future();
@@ -100,7 +100,7 @@ public class ModTenantAPI extends TenantAPI {
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
         logger.info(String.format("Configuration group with configName %s isn't exist. " +
-          "Posting default configs for %s configuration group", MODULE_NAME, configName));
+          "Posting default configs for '%s' configuration group", MODULE_NAME, configName));
         postConfig(client, configName, promise);
       } else {
         logger.info("Configurations has been got successfully, applying configurations to module system properties");
