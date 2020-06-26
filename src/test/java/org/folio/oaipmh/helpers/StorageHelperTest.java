@@ -131,55 +131,6 @@ class StorageHelperTest {
     assertEquals(EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
-  @Test
-  @ExtendWith(VertxExtension.class)
-  void buildItemsEndpointWithSuppressDiscoveryTrue(Vertx vertx, VertxTestContext testContext) {
-    vertx.runOnContext(event ->
-      testContext.verify(() ->  {
-        try {
-          System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
-          System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
-          Map<String, String> okapiHeaders = new HashMap<>();
-          okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
-          String formattedCurrentDate = getFormattedCurrentDate();
-          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build(), false), is
-            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+additionalInfo.suppressDiscovery%3D%3Dfalse"
-              + "+and+metadata.updatedDate%3C" + URLEncoder.encode(formattedCurrentDate,"UTF-8")
-              + "&limit=11&offset=0")));
-          testContext.completeNow();
-        } catch (UnsupportedEncodingException e) {
-          testContext.failNow(e);
-        } finally {
-          System.clearProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-        }
-      })
-    );
-  }
-
-  @Test
-  @ExtendWith(VertxExtension.class)
-  void buildItemsEndpointWithSuppressDiscoveryFalse(Vertx vertx, VertxTestContext testContext) {
-    vertx.runOnContext(event ->
-      testContext.verify(() ->  {
-        try {
-          System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-          System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
-          Map<String, String> okapiHeaders = new HashMap<>();
-          okapiHeaders.put(OKAPI_TENANT, EXIST_CONFIG_TENANT);
-          String formattedCurrentDate = getFormattedCurrentDate();
-          assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).buildRecordsEndpoint(Request.builder().okapiHeaders(okapiHeaders).build(), false), is
-            (equalTo(SOURCE_STORAGE_RESULT_URI + "?query=recordType%3D%3DMARC+and+metadata.updatedDate%3C"
-              + URLEncoder.encode(formattedCurrentDate,"UTF-8") + "&limit=11&offset=0")));
-          testContext.completeNow();
-        } catch (UnsupportedEncodingException e) {
-          testContext.failNow(e);
-        } finally {
-          System.clearProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-        }
-      })
-    );
-  }
 
   @Test
   void getId() {

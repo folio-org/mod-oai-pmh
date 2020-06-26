@@ -76,16 +76,6 @@ public interface StorageHelper {
   String getRecordSource(JsonObject record);
 
   /**
-   * Deprecated in favor of using SourceStorageRecordsClient
-   *
-   * Returns base endpoint to get items
-   * @return endpoint
-   * @see org.folio.rest.client.SourceStorageRecordsClient
-   */
-  @Deprecated
-  String buildRecordsEndpoint(Request request, boolean isRecordsPath) throws UnsupportedEncodingException;
-
-  /**
    * Gets endpoint to search for record metadata by identifier
    * @param id instance identifier
    * @return endpoint to get metadata by identifier
