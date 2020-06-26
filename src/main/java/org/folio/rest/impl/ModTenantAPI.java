@@ -76,7 +76,7 @@ public class ModTenantAPI extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
     Promise<String> promise = Promise.promise();
     try {
-      logger.info("Getting configurations with configName = {}", configName);
+      logger.info(String.format("Getting configurations with configName = %s", configName));
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
           response -> handleModConfigurationGetResponse(response, client, configName, promise));
     } catch (Exception e) {

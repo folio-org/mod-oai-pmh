@@ -21,8 +21,6 @@ public interface StorageHelper {
     String repositoryType = System.getProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     if (SOURCE_RECORD_STORAGE.equals(repositoryType)) {
       return new SourceRecordStorageHelper();
-    } else if (INVENTORY_STORAGE.equals(repositoryType)) {
-      return new InventoryStorageHelper();
     } else {
       throw new UnsupportedOperationException(repositoryType + " repository is not supported.");
     }
