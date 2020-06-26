@@ -59,7 +59,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
         request.getStorageIdentifier(),
         "MARC",
         //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-        !suppressedRecordsSupport ? suppressedRecordsSupport : null,
+        deletedRecordsSupport ? null : suppressedRecordsSupport,
         deletedRecordsSupport,
         null,
         updatedAfter,
