@@ -80,7 +80,7 @@ public class ModTenantAPI extends TenantAPI {
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
           response -> handleModConfigurationGetResponse(response, client, configName, promise));
     } catch (Exception e) {
-      logger.error("Error while processing config with configName '{}'. {}", configName, e.getMessage(), e);
+      logger.error(String.format("Error while processing config with configName '%s'. %s", configName, e.getMessage()), e);
       promise.fail(e.getMessage());
     }
     return promise.future();
@@ -99,7 +99,8 @@ public class ModTenantAPI extends TenantAPI {
       JsonObject jsonConfig = body.toJsonObject();
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {} isn't exist. Posting default configs for {} configuration group", configName, configName);
+        logger.info(String.format("Configuration group with configName %s isn't exist. " +
+          "Posting default configs for %s configuration group", MODULE_NAME, configName));
         postConfig(client, configName, promise);
       } else {
         logger.info("Configurations has been got successfully, applying configurations to module system properties");
@@ -118,8 +119,8 @@ public class ModTenantAPI extends TenantAPI {
     try {
       client.postConfigurationsEntries(null, config, resp -> {
         if (resp.statusCode() != 201) {
-          logger.error("Invalid response from mod-configuration. Cannot post config '{}': {} {}", configName, resp.statusCode(),
-              resp.statusMessage());
+          logger.error(String.format("Invalid response from mod-configuration. Cannot post config '%s'." +
+              " Response message: : %s:%s", configName, resp.statusCode(), resp.statusMessage()));
           promise.fail("Cannot post config. " + resp.statusMessage());
         }
       });
