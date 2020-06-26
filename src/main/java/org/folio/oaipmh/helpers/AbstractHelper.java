@@ -213,7 +213,7 @@ public abstract class AbstractHelper implements VerbHelper {
         if (dateTimeString.matches(DATE_ONLY_PATTERN)){
           date = DateUtils.addDays(date, 1);
         }else{
-          date = DateUtils.addMinutes(date, 1);
+          date = DateUtils.addSeconds(date, 1);
         }
       }
       return date;
