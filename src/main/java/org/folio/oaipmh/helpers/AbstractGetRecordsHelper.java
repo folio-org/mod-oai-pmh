@@ -14,7 +14,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
@@ -22,7 +21,6 @@ import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
