@@ -63,21 +63,6 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   }
 
   @Override
-  protected void addSource(CQLQueryBuilder queryBuilder) {
-    queryBuilder.addStrictCriteria("recordType", "MARC");
-  }
-
-  @Override
-  void addSuppressFromDiscovery(final CQLQueryBuilder queryBuilder) {
-    queryBuilder.addStrictCriteria(ADDITIONAL_INFO + "." + SUPPRESS_DISCOVERY, "false");
-  }
-
-  @Override
-  protected String getIdentifierName() {
-    return EXTERNAL_IDS_HOLDER + "." + INSTANCE_ID;
-  }
-
-  @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
     JsonObject jsonObject = entry.getJsonObject(ADDITIONAL_INFO);
     return jsonObject != null && jsonObject.getBoolean(SUPPRESS_DISCOVERY);

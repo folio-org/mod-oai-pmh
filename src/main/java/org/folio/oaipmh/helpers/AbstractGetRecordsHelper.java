@@ -179,42 +179,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return records;
   }
 
-  /**
-   * Builds {@link MetadataType} if the response from storage service is successful
-   *
-   * @param context        - holds json object that is a source owner which is used for building metadata
-   * @param id             - source owner id
-   * @param request        the request to get metadata prefix
-   * @param sourceResponse the response with {@link JsonObject} which contains record metadata
-   * @return OAI record metadata
-   */
-  private MetadataType buildOaiMetadata(Context context, String id, Request request, org.folio.rest.tools.client.Response sourceResponse) {
-    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
-      logger.error("Record not found. Service responded with error: " + sourceResponse.getError());
-
-      // If no record found (404 status code), we need to skip such record for now (see MODOAIPMH-12)
-      if (sourceResponse.getCode() == 404) {
-        return null;
-      }
-
-      // the rest of the errors we cannot handle
-      throw new IllegalStateException(sourceResponse.getError().toString());
-    }
-
-    RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-    JsonObject sourceOwner = context.get(id);
-    String source = storageHelper.getRecordSource(sourceResponse.getBody());
-    source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, sourceOwner, request);
-    return buildOaiMetadata(request, source);
-  }
-
-  //TODO
-  private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
-    return records.entrySet()
-      .stream()
-      .map(Map.Entry::getValue)
-      .collect(Collectors.toList());
-  }
 
   private void handleException(Promise<Response> future, Throwable e) {
     logger.error(GENERIC_ERROR_MESSAGE, e);
