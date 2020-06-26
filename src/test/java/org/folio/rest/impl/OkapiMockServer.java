@@ -2,7 +2,7 @@ package org.folio.rest.impl;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
+
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -67,13 +67,12 @@ public class OkapiMockServer {
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
-  private static final String INTERNAL_SERVER_ERROR_INSTANCE_ID = "6b4ae089-e1ee-431f-af83-e1133f8e3da0";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instances_0.json";
   private static final String INSTANCES_1 = "/instances_1.json";
   private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instances_1_withNoRecordSource.json";
-  private static final String INSTANCES_2 = "/instances_2_lastWithStorageError500.json";
+
   private static final String INSTANCES_3 = "/instances_3.json";
   private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
   private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
@@ -85,11 +84,9 @@ public class OkapiMockServer {
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
-  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
+
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
   private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
-  private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
-
 
   public static final String ERROR_TENANT = "error";
 
@@ -107,8 +104,7 @@ public class OkapiMockServer {
 
     router.get(SOURCE_STORAGE_RESULT_URI)
           .handler(this::handleRecordStorageResultResponse);
-    router.get(SOURCE_STORAGE_RECORD)
-          .handler(this::handleSourceRecordStorageByIdResponse);
+
     router.get(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleSourceRecordStorageResponse);
 
@@ -155,24 +151,8 @@ public class OkapiMockServer {
     }
   }
 
-  private void handleSourceRecordStorageByIdResponse(RoutingContext ctx) {
-    String recordId = ctx.request().getParam("id");
-      if (recordId.equalsIgnoreCase(INTERNAL_SERVER_ERROR_INSTANCE_ID)) {
-        failureResponse(ctx, 500, "Internal Server Error");
-      } else if (recordId.equalsIgnoreCase(NOT_FOUND_RECORD_INSTANCE_ID)) {
-        failureResponse(ctx, 404, "Record not found");
-      } else {
-        String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", recordId)));
-        if (isNotEmpty(json)) {
-          successResponse(ctx, json);
-        } else {
-          fail("There is no mock response for recordId=" + recordId);
-        }
-      }
-  }
-  //http://localhost:55580/source-storage/source-records?idType=INSTANCE&deleted=false&
   private void handleSourceRecordStorageResponse(RoutingContext ctx){
-    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
+    String json = getJsonObjectFromFile(String.format("/source-storage/records/%s", String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
       final String uri = ctx.request().absoluteURI();
 
