@@ -9,14 +9,12 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -41,7 +39,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -62,8 +59,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
-      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false);
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true);
 
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
@@ -256,41 +253,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return buildOaiMetadata(request, source);
   }
 
-  // TODO: HttpClientInstance occurrence. Need changes.
-  private CompletableFuture<Collection<RecordType>> updateRecordsWithoutMetadata(Context ctx, HttpClientInterface httpClient, Request request, Map<String, RecordType> records) {
-    if (hasRecordsWithoutMetadata(records)) {
-      List<CompletableFuture<Void>> cfs = new ArrayList<>();
-      records.forEach((id, record) -> {
-        if (Objects.isNull(record.getMetadata()) && record.getHeader().getStatus() == null) {
-          cfs.add(getOaiMetadataByRecordId(ctx, httpClient, request, id).thenAccept(record::withMetadata));
-        }
-      });
-      return VertxCompletableFuture.from(ctx, CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0])))
-        // Return only records with metadata populated
-        .thenApply(v -> filterEmptyRecords(records));
-    } else {
-      return CompletableFuture.completedFuture(records.values());
-    }
-  }
-
+  //TODO
   private List<RecordType> filterEmptyRecords(Map<String, RecordType> records) {
     return records.entrySet()
       .stream()
       .map(Map.Entry::getValue)
       .collect(Collectors.toList());
-  }
-
-  /**
-   * In case the storage service could not return instances we have to send 500 back to client.
-   * So the method is intended to validate and throw {@link IllegalStateException} for failure responses
-   *
-   * @param sourceResponse response from the storage
-   */
-  private void requiresSuccessStorageResponse(org.folio.rest.tools.client.Response sourceResponse) {
-    if (!org.folio.rest.tools.client.Response.isSuccess(sourceResponse.getCode())) {
-      logger.error("Source not found. Service responded with error: " + sourceResponse.getError());
-      throw new IllegalStateException(sourceResponse.getError().toString());
-    }
   }
 
   private void handleException(Promise<Response> future, Throwable e) {
