@@ -136,7 +136,9 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import net.jcip.annotations.NotThreadSafe;
 
+@NotThreadSafe
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
@@ -1770,7 +1772,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 1);
+    verifyListResponse(oaipmh, verb, 2);
 
     if (verb.equals(LIST_RECORDS)) {
       assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
@@ -1823,9 +1825,9 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, verb, 3);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListRecords().getRecords().get(2).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
     }
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
