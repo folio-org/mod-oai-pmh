@@ -27,7 +27,7 @@ public class SourceRecordStorageHelper extends AbstractStorageHelper {
   public static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/sourceRecords";
   //TODO REMOVE
   public static final String SOURCE_STORAGE_RECORD_URI = "/source-storage/records/%s";
-  private static final String SOURCE_STORAGE_RECORD_PATH = SOURCE_STORAGE_RECORD_URI.replace("/%s", "");
+
   private static final String INSTANCE_ID = "instanceId";
   private static final String EXTERNAL_IDS_HOLDER = "externalIdsHolder";
   private static final String ADDITIONAL_INFO = "additionalInfo";

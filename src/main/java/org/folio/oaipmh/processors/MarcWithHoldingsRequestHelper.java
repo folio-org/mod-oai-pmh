@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -336,8 +337,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
               JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("sourceRecords");
+              final JsonArray records = entries.getJsonArray("records");
               records.stream()
+                .filter(Objects::nonNull)
                 .map(r -> (JsonObject) r)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {

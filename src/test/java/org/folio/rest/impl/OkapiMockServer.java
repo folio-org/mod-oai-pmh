@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RECORD_URI;
-import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -12,13 +11,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -92,36 +90,6 @@ public class OkapiMockServer {
   private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
   private static final String SOURCE_STORAGE_RECORD = String.format(SOURCE_STORAGE_RECORD_URI, ":id");
 
-  private static final String[] STREAMING_INVENTORY_IDS = {
-    "00f10ab9-d845-4334-92d2-ff55862bf4f9",
-    "04489a01-f3cd-4f9e-9be4-d9c198703f45",
-    "1640f178-f243-4e4a-bf1c-9e1e62b3171d",
-    "1b74ab75-9f41-4837-8662-a1d99118008d",
-    "30fcc8e7-a019-43f4-b642-2edc389f4501",
-    "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc",
-    "549fad9e-7f8e-4d8e-9a71-00d251817866",
-    "54cc0262-76df-4cac-acca-b10e9bc5c79a",
-    "5b1eb450-ff9f-412d-a9e7-887f6eaeb5b4",
-    "5bf370e0-8cca-4d9c-82e4-5170ab2a0a39",
-    "62ca5b43-0f11-40af-a6b4-1a9ee2db33cb",
-    "6506b79b-7702-48b2-9774-a1c538fdd34e",
-    "69640328-788e-43fc-9c3c-af39e243f3b7",
-    "6b4ae089-e1ee-431f-af83-e1133f8e3da0",
-    "6eee8eb9-db1a-46e2-a8ad-780f19974efa",
-    "7ab22f0a-c9cd-449a-9137-c76e5055ca37",
-    "81825729-e824-4d52-9d15-1695e9bf1831",
-    "a317b304-528c-424f-961c-39174933b454",
-    "a89eccf0-57a6-495e-898d-32b9b2210f2f",
-    "bbd4a5e1-c9f3-44b9-bfdf-d184e04f0ba0",
-    "c1d3be12-ecec-4fab-9237-baf728575185",
-    "ce00bca2-9270-4c6b-b096-b83a2e56e8e9",
-    "cf23adf0-61ba-4887-bf82-956c4aae2260",
-    "e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6",
-    "e6bc03c6-c137-4221-b679-a7c5c31f986c",
-    "f31a36de-fcf8-44f9-87ef-a55d06ad21ae",
-    "f7e82a1e-fc06-4b82-bb1d-da326cb378ce"
-  };
-
 
   public static final String ERROR_TENANT = "error";
 
@@ -141,6 +109,11 @@ public class OkapiMockServer {
           .handler(this::handleRecordStorageResultResponse);
     router.get(SOURCE_STORAGE_RECORD)
           .handler(this::handleSourceRecordStorageByIdResponse);
+    router.get(SOURCE_STORAGE_RESULT_URI)
+      .handler(this::handleSourceRecordStorageResponse);
+
+    router.post(SOURCE_STORAGE_RESULT_URI)
+      .handler(this::handleSourceRecordStorageResponse);
 
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
@@ -196,6 +169,28 @@ public class OkapiMockServer {
           fail("There is no mock response for recordId=" + recordId);
         }
       }
+  }
+  //http://localhost:55580/source-storage/source-records?idType=INSTANCE&deleted=false&
+  private void handleSourceRecordStorageResponse(RoutingContext ctx){
+    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
+    if (isNotEmpty(json)) {
+      final String uri = ctx.request().absoluteURI();
+
+      if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+        json = getRecordJsonWithDeletedTrue(json);
+      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
+        json = getRecordJsonWithSuppressedTrue(json);
+      } else if (uri.contains(THREE_INSTANCES_DATE)) {
+        json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
+      } else if (uri.contains(NO_RECORDS_DATE)) {
+        json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
+      } else if (ctx.request().method() == HttpMethod.POST) {
+        json = getJsonObjectFromFile("/source-storage/records/srs_instances.json");
+      }
+      successResponse(ctx, json);
+    } else {
+      fail("There is no mock response");
+    }
   }
 
   public void start(VertxTestContext context) {
