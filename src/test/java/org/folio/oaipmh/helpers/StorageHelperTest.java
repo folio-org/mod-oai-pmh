@@ -45,11 +45,6 @@ class StorageHelperTest {
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/source-records";
   private static final String STORAGE_RECORD_PATH = "/source-storage/records";
 
-  @AfterEach
-  void init() {
-    System.clearProperty(REPOSITORY_STORAGE);
-  }
-
   @Test
   void getInstanceWithException() {
     assertThrows(UnsupportedOperationException.class, () -> getStorageHelper(REPOSITORY_STORAGE));
@@ -57,7 +52,7 @@ class StorageHelperTest {
 
   @Test
   void getItems() {
-    JsonObject entries = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instances_10_totalRecords_10.json");
+    JsonObject entries = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instances_10_totalRecords_10.json");
     JsonArray items = getStorageHelper(SOURCE_RECORD_STORAGE).getItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(10)));
@@ -65,63 +60,63 @@ class StorageHelperTest {
 
   @Test
   void lastModifiedDate() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(notNullValue()));
   }
 
   @Test
   void createdDate() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance_withCreatedDateOnly.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance_withCreatedDateOnly.json");
     assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(notNullValue()));
   }
 
   @Test
   void epochDate() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance_withoutMetadata.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance_withoutMetadata.json");
     assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(Instant.EPOCH));
   }
 
   @Test
   void getItemId() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getRecordId(item), not(isEmptyOrNullString()));
   }
 
   @Test
   void getSuppressedFromDiscovery() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     assertFalse(getStorageHelper(SOURCE_RECORD_STORAGE).getSuppressedFromDiscovery(item));
   }
 
   @Test
   void getRecordSource() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     String recordSource = getStorageHelper(SOURCE_RECORD_STORAGE).getRecordSource(item);
     assertThat(recordSource, is(notNullValue()));
   }
 
   @Test
   void shouldReturnLinkedToRecordInstanceId_whenGetIdentifierAndStorageIsSRS(){
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH+"/instance.json");
     assertEquals(INSTANCE_ID, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
   @Test
   void shouldReturnEmptyString_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNotExternalIdsHolderField(){
-    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE)+"/instance_withoutExternalIdsHolderField.json");
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH+"/instance_withoutExternalIdsHolderField.json");
     assertEquals(EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
 
   @Test
   void getId() {
-    JsonObject item = getJsonObjectFromFile(getDirPathWithPathRecordsInSRS(SOURCE_RECORD_STORAGE) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(STORAGE_RECORD_PATH + "/instance.json");
     assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getId(item), not(isEmptyOrNullString()));
   }
 
   @Test
   void getRecordsItems() {
-    JsonObject entries = getJsonObjectFromFile(getDirPathWithPathRecordsInSRS(SOURCE_RECORD_STORAGE) + "/marc-e567b8e2-a45b-45f1-a85a-6b6312bdf4d8.json");
+    JsonObject entries = getJsonObjectFromFile(STORAGE_RECORD_PATH + "/marc-e567b8e2-a45b-45f1-a85a-6b6312bdf4d8.json");
     JsonArray items = getStorageHelper(SOURCE_RECORD_STORAGE).getRecordsItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(1)));
@@ -130,14 +125,6 @@ class StorageHelperTest {
   private StorageHelper getStorageHelper(String storageType) {
     System.setProperty(REPOSITORY_STORAGE, storageType);
     return StorageHelper.getInstance();
-  }
-
-  private String getDirPath(String storageType) {
-    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RECORD_PATH : "TODO CHANGE";
-  }
-
-  private String getDirPathWithPathRecordsInSRS(String storageType) {
-    return SOURCE_RECORD_STORAGE.equals(storageType) ? STORAGE_RECORD_PATH : "TODO CHANGE";
   }
 
   /**

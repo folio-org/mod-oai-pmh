@@ -173,7 +173,7 @@ class OaiPmhImplTest {
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     resetSystemProperties();
-    setStorageType();
+    System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     String moduleName = PomReader.INSTANCE.getModuleName()
                                           .replaceAll("_", "-");  // RMB normalizes the dash to underscore, fix back
     String moduleVersion = PomReader.INSTANCE.getVersion();
@@ -198,7 +198,7 @@ class OaiPmhImplTest {
   }
 
   protected void setStorageType() {
-    System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
+
   }
 
   protected Logger getLogger() {
