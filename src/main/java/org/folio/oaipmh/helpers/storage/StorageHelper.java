@@ -1,13 +1,9 @@
 package org.folio.oaipmh.helpers.storage;
 
-import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 
-import java.io.UnsupportedEncodingException;
 import java.time.Instant;
-
-import org.folio.oaipmh.Request;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -74,13 +70,6 @@ public interface StorageHelper {
    * @return {@link Instant} based on updated or created date
    */
   String getRecordSource(JsonObject record);
-
-  /**
-   * Gets endpoint to search for record metadata by identifier
-   * @param id instance identifier
-   * @return endpoint to get metadata by identifier
-   */
-  String getRecordByIdEndpoint(String id);
 
   /**
    * Returns value that describes whether instance is suppressed from discovery

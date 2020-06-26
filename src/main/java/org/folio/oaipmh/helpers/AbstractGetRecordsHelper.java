@@ -1,6 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import static me.escoffier.vertx.completablefuture.VertxCompletableFuture.supplyBlockingAsync;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -15,7 +14,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -24,7 +22,6 @@ import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
 import org.openarchives.oai._2.MetadataType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -98,19 +95,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           }
         });
 
-       //region REMOVE IT
-//      httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false)
-//        .thenCompose(response -> buildRecordsResponse(ctx, httpClient, request, response))
-//        .thenAccept(value -> {
-//          httpClient.closeClient();
-//          promise.complete(value);
-//        })
-//        .exceptionally(e -> {
-//          httpClient.closeClient();
-//          handleException(promise, e);
-//          return null;
-//        });
-      //endregion
     } catch (Exception e) {
       handleException(promise, e);
     }
@@ -121,20 +105,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     oaipmh.withErrors(createNoRecordsFoundError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
-
-  // TODO: HttpClientInstance occurrence. Need changes.
-  private CompletableFuture<MetadataType> getOaiMetadataByRecordId(Context ctx, HttpClientInterface httpClient, Request request, String id) {
-    try {
-      String metadataEndpoint = storageHelper.getRecordByIdEndpoint(id);
-      logger.debug("Getting metadata info from {}", metadataEndpoint);
-
-      return httpClient.request(metadataEndpoint, request.getOkapiHeaders(), false)
-        .thenCompose(response -> supplyBlockingAsync(ctx, () -> buildOaiMetadata(ctx, id, request, response)));
-    } catch (Exception e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
 
   private Response buildRecordsResponse(Context ctx, Request request,
                                                            JsonObject instancesResponseBody) {
@@ -166,21 +136,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
       return buildResponse(oaipmh, request);
     }
-    //TODO REMOVE IT
-//    return supplyBlockingAsync(ctx, () -> buildRecords(ctx, request, instances))
-//      .thenCompose(recordsMap -> {
-//        if (recordsMap.isEmpty()) {
-//          return buildNoRecordsFoundOaiResponse(oaipmh, request);
-//        } else {
-//
-//          return updateRecordsWithoutMetadata(ctx, null, request, recordsMap)
-//            .thenApply(records -> {
-//              addRecordsToOaiResponse(oaipmh, records);
-//              addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-//              return buildResponse(oaipmh, request);
-//            });
-//        }
-//      });
   }
 
   /**
