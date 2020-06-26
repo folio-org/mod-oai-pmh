@@ -337,7 +337,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
               JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("records");
+              final JsonArray records = entries.getJsonArray("sourceRecords");
               records.stream()
                 .filter(Objects::nonNull)
                 .map(r -> (JsonObject) r)
