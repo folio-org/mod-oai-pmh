@@ -1,3 +1,7 @@
+### 3.0.3 (Released)
+ 
+ Migrating to SRS v4, bugfixing 
+
 ## 3.0.2 (Released)
 
 Migrating to SRS v4, include log4j2.properties 
