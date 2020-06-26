@@ -1775,9 +1775,12 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, verb, 3);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().stream().filter(e-> StatusType.DELETED.equals(e.getHeader().getStatus())).count(), is(1L));
+      assertThat(oaipmh.getListRecords().getRecords().stream()
+        .filter(e -> StatusType.DELETED
+          .equals(e.getHeader().getStatus())).count(), is(1L));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().stream().filter(e-> StatusType.DELETED.equals(e.getStatus())).count(), is(1L));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().stream()
+        .filter(e -> StatusType.DELETED.equals(e.getStatus())).count(), is(1L));
     }
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
