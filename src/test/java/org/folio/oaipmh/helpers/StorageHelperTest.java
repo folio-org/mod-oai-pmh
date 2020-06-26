@@ -40,7 +40,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.helpers.storage.InventoryStorageHelper.INSTANCES_URI;
 import static org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper.SOURCE_STORAGE_RESULT_URI;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -62,7 +61,7 @@ class StorageHelperTest {
 
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
-  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/records";
+  private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/source-records";
 
   @AfterEach
   void init() {
@@ -111,10 +110,9 @@ class StorageHelperTest {
     assertThat(getStorageHelper(storageType).getRecordId(item), not(isEmptyOrNullString()));
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = { SOURCE_RECORD_STORAGE, INVENTORY_STORAGE })
+  @Test
   void getSuppressedFromDiscovery(String storageType) {
-    JsonObject item = getJsonObjectFromFile(getDirPath(storageType) + "/instance.json");
+    JsonObject item = getJsonObjectFromFile(getDirPath(SOURCE_RECORD_STORAGE) + "/instance.json");
     assertFalse(getStorageHelper(storageType).getSuppressedFromDiscovery(item));
   }
 
@@ -206,7 +204,7 @@ class StorageHelperTest {
 
   @Test
   void getIdentifierIdFromInventtoryStorage() {
-    JsonObject item = getJsonObjectFromFile(getDirPath(INSTANCES_URI)+"/instance.json");
+    JsonObject item = getJsonObjectFromFile(getDirPath("//TODO CHANGE")+"/instance.json");
     assertThat(getStorageHelper(INVENTORY_STORAGE).getIdentifierId(item), not(isEmptyOrNullString()));
   }
 
@@ -217,11 +215,11 @@ class StorageHelperTest {
   }
 
   private String getDirPath(String storageType) {
-    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RESULT_URI : INSTANCES_URI;
+    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RESULT_URI : "TODO CHANGE";
   }
 
   private String getDirPathWithPathRecordsInSRS(String storageType) {
-    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RECORD_PATH : INSTANCES_URI;
+    return SOURCE_RECORD_STORAGE.equals(storageType) ? SOURCE_STORAGE_RECORD_PATH : "TODO CHANGE";
   }
 
   /**
