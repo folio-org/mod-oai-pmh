@@ -141,8 +141,6 @@ public class OkapiMockServer {
           .handler(this::handleRecordStorageResultResponse);
     router.get(SOURCE_STORAGE_RECORD)
           .handler(this::handleSourceRecordStorageByIdResponse);
-    router.get(SOURCE_STORAGE_RECORD_PATH)
-      .handler(this::handleSourceRecordStorageResponse);
 
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
@@ -198,39 +196,6 @@ public class OkapiMockServer {
           fail("There is no mock response for recordId=" + recordId);
         }
       }
-  }
-
-  private void handleSourceRecordStorageResponse(RoutingContext ctx){
-    String json = getJsonObjectFromFile(String.format(SOURCE_STORAGE_RECORD_URI, String.format("marc-%s.json", JSON_FILE_ID)));
-    if (isNotEmpty(json)) {
-      final String uri = ctx.request().absoluteURI();
-      if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
-        json = getRecordJsonWithDeletedTrue(json);
-      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
-        json = getRecordJsonWithSuppressedTrue(json);
-      } else if (uri.contains(THREE_INSTANCES_DATE)) {
-        json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
-      } else if (uri.contains(NO_RECORDS_DATE)) {
-        json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
-      } else if (Arrays.stream(STREAMING_INVENTORY_IDS).parallel().anyMatch(uri::contains)) {
-        json = getJsonObjectFromFile("/source-storage/records/srs_instances.json");
-      }
-      successResponse(ctx, json);
-    } else {
-      fail("There is no mock response");
-    }
-  }
-
-  private void handleSourceStorageSourceRecordsResponse(RoutingContext ctx) {
-    HttpServerRequest request = ctx.request();
-    final String uri = request.absoluteURI();
-    String json = "";
-    if(uri.contains(NON_EXISTING_IDENTIFIER)) {
-      json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0);
-    } else if (uri.contains(EXISTING_IDENTIFIER)) {
-      json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1);
-    }
-    successResponse(ctx, json);
   }
 
   public void start(VertxTestContext context) {
