@@ -1800,7 +1800,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 1);
+    verifyListResponse(oaipmh, verb, 3);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
@@ -1822,7 +1822,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 1);
+    verifyListResponse(oaipmh, verb, 3);
 
     if (verb.equals(LIST_RECORDS)) {
       assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
@@ -1849,7 +1849,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 1);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
