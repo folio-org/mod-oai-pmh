@@ -63,13 +63,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      //source-storage/records?query=recordType%3D%3DMARC+and+metadata.updatedDate%3E%3D3999-01-01T00%3A00%3A00.000Z&limit=51&offset=0
       srsClient.getSourceStorageSourceRecords(
         null,
         null,
         null,
         "MARC",
-        //NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        //2. use suppressed from discovery filtering only when deleted record support is enabled
         deletedRecordsSupport ? null : suppressedRecordsSupport,
         deletedRecordsSupport,
         null,
