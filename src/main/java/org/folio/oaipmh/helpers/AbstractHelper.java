@@ -12,7 +12,6 @@ import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
@@ -52,9 +51,6 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.folio.rest.tools.client.HttpClientFactory;
-import org.folio.rest.tools.client.interfaces.HttpClientInterface;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.MetadataType;
@@ -201,12 +197,26 @@ public abstract class AbstractHelper implements VerbHelper {
     }
   }
 
-  protected Date convertStringToDate(String dateTimeString) {
+  /**
+   * Parse a date from string and compensate one date or one second because in SRS the dates are non-inclusive.
+   * @param dateTimeString - date/time supplied
+   * @param shouldCompensateUntilDate = if the date is used as until parameter
+   * @return date that will be used to query SRS
+   */
+  protected Date convertStringToDate(String dateTimeString, boolean shouldCompensateUntilDate) {
     try {
       if (dateTimeString.isEmpty()) {
         return null;
       }
-      return DateUtils.parseDate(dateTimeString, dateFormats);
+      Date date = DateUtils.parseDate(dateTimeString, dateFormats);
+      if (shouldCompensateUntilDate){
+        if (dateTimeString.matches(DATE_ONLY_PATTERN)){
+          date = DateUtils.addDays(date, 1);
+        }else{
+          date = DateUtils.addSeconds(date, 1);
+        }
+      }
+      return date;
     } catch (DateTimeParseException | ParseException e) {
       logger.error(e);
       return null;

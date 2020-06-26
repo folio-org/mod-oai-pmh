@@ -46,8 +46,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
       final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
         request.getTenant(), request.getOkapiToken());
 
-      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom());
-      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil());
+      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false);
+      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true);
 
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
