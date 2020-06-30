@@ -23,7 +23,7 @@ ListSets | - | - | resumptionToken | 200, 400
 ListMetadataFormats | - | identifier | - | 200, 400, 404
 GetRecord | identifier, metadataPrefix | - | - | 200, 400, 404, 422
 
-The repository supports [oai_dc](https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore) and [marc21](http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm) metadata formats.
+The repository supports [oai_dc](https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore), [marc21](http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm) and `marc21_withholdings`metadata prefixes. The Latest is used to return holding and item information along with MARC records.
 The [OAI Identifier Format](http://www.openarchives.org/OAI/2.0/guidelines-oai-identifier.htm) is used for resource identifiers with the following pattern: `oai:<repositoryBaseUrl>:<tenantId>/<uuid of record>` e.g. ` oai:demo.folio.org:tenant123/fb857902-3ab2-4c34-9772-14ad7acdfe76`.
 
 ## Additional information
@@ -65,14 +65,7 @@ Notes:
 * There is an option, as it says at "Configuration priority resolving" paragraph, if mod-configuration doesn't contain a value for configuration, then default or specified via JVM value will be used further as expected, but in the opposite case such value will be used only during InitAPIs execution and will be overridden further with value from mod-configuration after ModTenantAPI execution. Only configPath and repository.storage configurations are an exception here.
 * The system default values can be overwritten by VM options e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`. 
 * Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader. 
-* There is `repository.storage` system property defining which storage should be used to get records from. This configuration is not tenant specific but system wide therefore cannot be defined in [mod-configuration](https://github.com/folio-org/mod-configuration/) module. There are 2 allowed values:
-
-  | Value | Storage |
-  |  ---  |   ---   |  
-  | `SRS` | [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage) |
-  | `INVENTORY` | [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage) |
-  
-  The default value is `SRS`. To enable usage of the inventory storage, the `-Drepository.storage=INVENTORY` VM option should be specified.
+* For verb `ListRecords` and metadata prefix `marc21_withholdings`, holding and item fields from [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage)  are returned along with the corresponding records from [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage)
 
 ### Issue tracker
 
