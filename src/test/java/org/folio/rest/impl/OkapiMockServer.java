@@ -123,10 +123,8 @@ public class OkapiMockServer {
     String path = "inventory_view/inventory_instances.json";
     Buffer buffer = Buffer.buffer();
     final String startDate = ctx.request().params().get("startDate");
-    if (startDate != null) {
-      if (startDate.equals(INVENTORY_INSTANCE_DATE)) {
-        buffer = vertx.fileSystem().readFileBlocking(path);
-      }
+    if (startDate != null && startDate.contains(INVENTORY_INSTANCE_DATE)) {
+      buffer = vertx.fileSystem().readFileBlocking(path);
     }
     ctx.response().end(buffer);
   }

@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.ISO_DATE_TIME_PATTERN;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
@@ -26,7 +27,9 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FOR
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import java.math.BigInteger;
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -75,10 +78,12 @@ public abstract class AbstractHelper implements VerbHelper {
 
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
+  protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
+
 
   private static final String[] dateFormats = {
     org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),
-    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+    ISO_DATE_TIME_PATTERN
   };
 
   private ResponseHelper responseHelper = ResponseHelper.getInstance();
@@ -205,7 +210,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected Date convertStringToDate(String dateTimeString, boolean shouldCompensateUntilDate) {
     try {
-      if (dateTimeString.isEmpty()) {
+      if (StringUtils.isEmpty(dateTimeString)) {
         return null;
       }
       Date date = DateUtils.parseDate(dateTimeString, dateFormats);
