@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,6 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
@@ -257,14 +257,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private String buildInventoryQuery(Request request) {
     final String inventoryEndpoint = "/oai-pmh-view/instances";
     Map<String, String> paramMap = new HashMap<>();
-    final String from = request.getFrom();
-    if (StringUtils.isNotEmpty(from)) {
-      paramMap.put("startDate", from);
-    }
-    final String until = request.getUntil();
-    if (StringUtils.isNotEmpty(until)) {
-      paramMap.put("endDate", until);
-    }
+    Date date = convertStringToDate(request.getFrom(), false);
+    if (date != null) {
+        paramMap.put("startDate", dateFormat.format(date));
+      }
+    date = convertStringToDate(request.getUntil(), false);
+    if (date != null) {
+        paramMap.put("endDate", dateFormat.format(date));
+      }
     paramMap.put("deletedRecordSupport",
       String.valueOf(
         RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
