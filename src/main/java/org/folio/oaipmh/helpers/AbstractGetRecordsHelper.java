@@ -64,7 +64,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       srsClient.getSourceStorageSourceRecords(
         null,
         null,
-        null,
+        request.getIdentifier() != null ? request.getStorageIdentifier() : null,
         "MARC",
         //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
         //2. use suppressed from discovery filtering only when deleted record support is enabled
