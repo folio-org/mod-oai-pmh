@@ -261,7 +261,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     if (date != null) {
         paramMap.put("startDate", dateFormat.format(date));
       }
-    date = convertStringToDate(request.getUntil(), false);
+    date = convertStringToDate(request.getUntil(), true);
     if (date != null) {
         paramMap.put("endDate", dateFormat.format(date));
       }
