@@ -83,7 +83,7 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
     verifySrsInstanceSuccessfullyUpdated(populatedWithItemsDataSrsInstance);
   }
 
@@ -93,7 +93,7 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
@@ -108,7 +108,7 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
@@ -123,7 +123,7 @@ class RecordMetadataManagerTest {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
     JsonObject fieldContent = electronicAccessField.getJsonObject(ELECTRONIC_ACCESS_FILED);
@@ -139,7 +139,7 @@ class RecordMetadataManagerTest {
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
       String source = storageHelper.getInstanceRecordSource(record);
-      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, record, request);
+      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource);
       testContext.completeNow();
     }));
@@ -151,7 +151,7 @@ class RecordMetadataManagerTest {
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITHOUT_GENERAL_INFO_FIELD_JSON_PATH)));
       String source = storageHelper.getInstanceRecordSource(record);
-      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, record, request);
+      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource);
       testContext.completeNow();
     }));

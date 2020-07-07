@@ -33,7 +33,7 @@ public final class Constants {
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
-  public static final String INVENTORY_STORAGE = "INVENTORY";
+
   public static final String PARSED_RECORD = "parsedRecord";
   public static final String CONTENT = "content";
   public static final String FIELDS = "fields";

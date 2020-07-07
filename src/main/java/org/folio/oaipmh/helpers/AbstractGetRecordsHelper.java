@@ -141,6 +141,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * otherwise empty map is returned
    */
   private Map<String, RecordType> buildRecords(Context context, Request request, JsonArray instances) {
+    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getOkapiHeaders(),
+      REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
     Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
@@ -160,11 +163,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           }
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
-          if (source != null) {
-            source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, instance, request);
-            if (record.getHeader().getStatus() == null) {
-              record.withMetadata(buildOaiMetadata(request, source));
+          if (source != null && record.getHeader().getStatus() == null) {
+            if (suppressedRecordsProcessingEnabled) {
+              source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, instance);
             }
+            record.withMetadata(buildOaiMetadata(request, source));
           } else {
             context.put(recordId, instance);
           }
