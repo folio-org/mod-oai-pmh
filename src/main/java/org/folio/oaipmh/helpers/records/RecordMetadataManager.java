@@ -9,7 +9,6 @@ import static org.folio.oaipmh.Constants.GENERAL_INFO_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SECOND_INDICATOR;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
-import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,8 +23,6 @@ import java.util.function.Predicate;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
-
-import com.google.common.collect.ImmutableMap;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
