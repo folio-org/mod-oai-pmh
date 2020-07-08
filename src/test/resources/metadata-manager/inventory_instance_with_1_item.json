@@ -8,6 +8,7 @@
         "id": "13807cda-b618-4c37-8fe0-df03eed83b4f",
         "volume": "Volume 1_2_1",
         "location": {
+          "name" : "testName",
           "location": {
             "name" : "testName",
             "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
@@ -28,6 +29,7 @@
         "materialType": "book",
         "barcode" : "testBarcode",
         "chronology" : "testChronology",
+        "copyNumber" : "copy number",
         "electronicAccess": [
           {
             "uri": "test.com",

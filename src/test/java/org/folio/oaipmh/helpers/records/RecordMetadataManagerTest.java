@@ -49,7 +49,6 @@ class RecordMetadataManagerTest {
   private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
-  private static final String SRS_INSTANCE_WITHOUT_GENERAL_INFO_FIELD_JSON_PATH = "/metadata-manager/srs_instance_without_999_field.json";
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
@@ -67,15 +66,6 @@ class RecordMetadataManagerTest {
 
   private RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
   private StorageHelper storageHelper = new SourceRecordStorageHelper();
-  private static Request request;
-
-  @BeforeAll
-  static void setUp() {
-    Map<String, String> okapiHeaders = ImmutableMap.of("tenant", "diku");
-    request = Request.builder()
-      .okapiHeaders(okapiHeaders)
-      .build();
-  }
 
   @Test
   void shouldUpdateRecordMetadataWithInventoryItemsDataAndItemsArrayHasOneElement() {
@@ -145,18 +135,6 @@ class RecordMetadataManagerTest {
     }));
   }
 
-  @Test
-  void shouldAppendGeneralInfoFieldWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
-    System.setProperty("repository.suppressedRecordsProcessing", "true");
-    vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITHOUT_GENERAL_INFO_FIELD_JSON_PATH)));
-      String source = storageHelper.getInstanceRecordSource(record);
-      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
-      verifySourceWasUpdatedWithNewSubfield(updatedSource);
-      testContext.completeNow();
-    }));
-  }
-
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
@@ -214,6 +192,7 @@ class RecordMetadataManagerTest {
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "k", "Enumeration 1_2_1"));
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "l", "testChronology"));
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "m", "testBarcode"));
+    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "n", "copy number"));
   }
 
   private JsonArray getContentFieldsArray(JsonObject srsInstance) {
