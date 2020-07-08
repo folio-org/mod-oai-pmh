@@ -206,6 +206,11 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
+    //Map location name, which changed paths in json, to 952$d
+    String subFieldValue = itemData.getJsonObject(LOCATION).getString(NAME);
+    if (isNotEmpty(subFieldValue)) {
+      effectiveLocationSubFields.put("d", subFieldValue);
+    }
     return effectiveLocationSubFields;
   }
 
@@ -307,17 +312,16 @@ public class RecordMetadataManager {
     INSTITUTION_NAME("a", "institutionName"),
     CAMPUS_NAME("b", "campusName"),
     LIBRARY_NAME("c", "libraryName"),
-    LOCATION_NAME("d", "name"), // check default
     CALL_NUMBER("e", "callNumber"),
     CALL_NUMBER_PREFIX("f", "prefix"),
     CALL_NUMBER_SUFFIX("g", "suffix"),
-    //this will work when inventory changes
     CALL_NUMBER_TYPE("h", "typeName"),
     MATERIAL_TYPE("i", "materialType"),
     VOLUME("j", "volume"),
     ENUMERATION("k", "enumeration"),
     CHRONOLOGY("l", "chronology"),
-    BARCODE("m", "barcode");
+    BARCODE("m", "barcode"),
+    COPY_NUMBER("n", "copyNumber");
 
     private String subFieldCode;
     private String jsonPropertyPath;
@@ -328,7 +332,7 @@ public class RecordMetadataManager {
     }
 
     public static List<EffectiveLocationSubFields> getLocationValues() {
-      return Arrays.asList(INSTITUTION_NAME, CAMPUS_NAME, LIBRARY_NAME, LOCATION_NAME);
+      return Arrays.asList(INSTITUTION_NAME, CAMPUS_NAME, LIBRARY_NAME);
     }
 
     public static List<EffectiveLocationSubFields> getCallNumberValues() {
@@ -336,7 +340,7 @@ public class RecordMetadataManager {
     }
 
     public static List<EffectiveLocationSubFields> getSimpleValues() {
-      return Arrays.asList(MATERIAL_TYPE, VOLUME, ENUMERATION, CHRONOLOGY, BARCODE);
+      return Arrays.asList(MATERIAL_TYPE, VOLUME, ENUMERATION, CHRONOLOGY, BARCODE, COPY_NUMBER);
     }
 
     public String getSubFieldCode() {
