@@ -19,21 +19,18 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import com.google.common.collect.ImmutableMap;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -124,13 +121,15 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUpdateGeneralInfoFieldWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
+  void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
     System.setProperty("repository.suppressedRecordsProcessing", "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
       String source = storageHelper.getInstanceRecordSource(record);
       String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
-      verifySourceWasUpdatedWithNewSubfield(updatedSource);
+      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD_TAG_NUMBER);
+      updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
   }
@@ -223,16 +222,16 @@ class RecordMetadataManagerTest {
       .collect(Collectors.toList());
   }
 
-  private void verifySourceWasUpdatedWithNewSubfield(String source) {
+  private void verifySourceWasUpdatedWithNewSubfield(String source, Predicate<JsonObject> predicate, String tagNumber) {
     JsonObject jsonFromSource = new JsonObject(source);
     JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
     JsonObject generalInfoFiled = fields.stream()
       .map(jsonObject -> (JsonObject) jsonObject)
-      .filter(metadataManager.getGeneralInfoFieldPredicate())
+      .filter(predicate)
       .findFirst()
       .get();
 
-    JsonObject fieldContent = generalInfoFiled.getJsonObject(GENERAL_INFO_FIELD_TAG_NUMBER);
+    JsonObject fieldContent = generalInfoFiled.getJsonObject(tagNumber);
     JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
     JsonObject discoverySuppressedSubField = subFields.stream()
       .map(jsonObject -> (JsonObject) jsonObject)

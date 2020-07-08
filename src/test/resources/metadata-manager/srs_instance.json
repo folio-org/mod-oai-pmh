@@ -376,6 +376,23 @@
           }
         },
         {
+          "856": {
+            "subfields": [
+              {
+                "u": "http://resolver.library.cornell.edu/misc/abf5689"
+              },
+              {
+                "y": "journal link"
+              },
+              {
+                "z": "No access to this journal via Vet CabWeb as of 7/29/02"
+              }
+            ],
+            "ind1": "4",
+            "ind2": " "
+          }
+        },
+        {
           "900": {
             "ind1": " ",
             "ind2": " ",

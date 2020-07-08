@@ -253,7 +253,7 @@ public class RecordMetadataManager {
   }
 
   /**
-   * Updates marc electronic access field(tag=856, ind1=ind2='f') with additional subfield which holds data about record discovery
+   * Updates marc electronic access field(tag=856) with additional subfield which holds data about record discovery
    * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite
    * case.
    *
@@ -302,6 +302,10 @@ public class RecordMetadataManager {
 
   public Predicate<JsonObject> getGeneralInfoFieldPredicate() {
     return generalInfoFieldPredicate;
+  }
+
+  public Predicate<JsonObject> getElectronicAccessPredicate() {
+    return electronicAccessPredicate;
   }
 
   private enum EffectiveLocationSubFields {
