@@ -237,6 +237,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (source != null && record.getHeader().getStatus() == null) {
         if (suppressedRecordsProcessing) {
           source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
+          source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
         }
         record.withMetadata(buildOaiMetadata(request, source));
       }

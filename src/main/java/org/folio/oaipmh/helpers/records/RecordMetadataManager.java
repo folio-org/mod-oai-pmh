@@ -52,6 +52,7 @@ public class RecordMetadataManager {
   private StorageHelper storageHelper = StorageHelper.getInstance();
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
+  private final Predicate<JsonObject> electronicAccessPredicate;
   private static RecordMetadataManager instance;
 
   private RecordMetadataManager() {
@@ -66,6 +67,17 @@ public class RecordMetadataManager {
     generalInfoFieldPredicate = jsonObject -> {
       if (jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER)) {
         JsonObject dataFieldContent = jsonObject.getJsonObject(GENERAL_INFO_FIELD_TAG_NUMBER);
+        String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
+        String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
+        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator)
+          && firstIndicator.equals(secondIndicator) && firstIndicator.equals(INDICATOR_VALUE);
+      }
+      return false;
+    };
+
+    electronicAccessPredicate = jsonObject -> {
+      if (jsonObject.containsKey(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)) {
+        JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
         return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator)
@@ -234,13 +246,29 @@ public class RecordMetadataManager {
       JsonObject content = new JsonObject(metadataSource);
       JsonArray fields = content.getJsonArray(FIELDS);
       Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
-      if (generalInfoDataFieldOptional.isPresent()) {
-        updateDataFieldWithDiscoverySuppressedData(generalInfoDataFieldOptional.get(), metadataSourceOwner);
-      } else {
-        appendGeneralInfoDatafieldWithDiscoverySuppressedData(fields, metadataSourceOwner);
-      }
+      generalInfoDataFieldOptional.ifPresent(jsonObject ->
+      updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, GENERAL_INFO_FIELD_TAG_NUMBER));
       return content.encode();
   }
+
+  /**
+   * Updates marc electronic access field(tag=856, ind1=ind2='f') with additional subfield which holds data about record discovery
+   * suppression status. Additional subfield has code = 't' and value = '0' if record is discovery suppressed and '1' at opposite
+   * case.
+   *
+   * @param metadataSource      - record source
+   * @param metadataSourceOwner - record source owner
+   * @return record source
+   */
+  public String updateElectronicAccessFieldWithDiscoverySuppressedData(String metadataSource, JsonObject metadataSourceOwner) {
+    JsonObject content = new JsonObject(metadataSource);
+    JsonArray fields = content.getJsonArray(FIELDS);
+    Optional<JsonObject> electronicAccessField = getElectronicAccessField(fields);
+    electronicAccessField.ifPresent(jsonObject ->
+      updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, ELECTRONIC_ACCESS_FILED_TAG_NUMBER));
+    return content.encode();
+  }
+
 
   private Optional<JsonObject> getGeneralInfoDataField(JsonArray fields) {
     return fields.stream()
@@ -249,9 +277,19 @@ public class RecordMetadataManager {
       .findFirst();
   }
 
+  private Optional<JsonObject> getElectronicAccessField(JsonArray fields) {
+    return fields.stream()
+      .map(obj -> (JsonObject) obj)
+      .filter(electronicAccessPredicate)
+      .findFirst();
+  }
+
   @SuppressWarnings("unchecked")
-  private void updateDataFieldWithDiscoverySuppressedData(JsonObject generalInfoDataField, JsonObject sourceOwner) {
-    JsonObject dataFieldContent = generalInfoDataField.getJsonObject(GENERAL_INFO_FIELD_TAG_NUMBER);
+  private void updateDataFieldWithDiscoverySuppressedData(JsonObject dataField,
+                                                          JsonObject sourceOwner,
+                                                          String tagNumber) {
+
+    JsonObject dataFieldContent = dataField.getJsonObject(tagNumber);
     JsonArray subFields = dataFieldContent.getJsonArray(SUBFIELDS);
     List<Object> subFieldsList = subFields.getList();
 
@@ -259,19 +297,6 @@ public class RecordMetadataManager {
     int subFieldValue = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
     discoverySuppressedSubField.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     subFieldsList.add(discoverySuppressedSubField);
-  }
-
-  @SuppressWarnings("unchecked")
-  private void appendGeneralInfoDatafieldWithDiscoverySuppressedData(JsonArray fields, JsonObject sourceOwner) {
-    List<Object> list = fields.getList();
-    int subFieldValue = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
-    FieldBuilder fieldBuilder = new FieldBuilder();
-    Map<String, Object> generalInfoDataField = fieldBuilder.withFieldTagNumber(GENERAL_INFO_FIELD_TAG_NUMBER)
-      .withFirstIndicator(INDICATOR_VALUE)
-      .withSecondIndicator(INDICATOR_VALUE)
-      .withSubFields(ImmutableMap.of(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE, subFieldValue))
-      .build();
-    list.add(generalInfoDataField);
   }
 
   public Predicate<JsonObject> getGeneralInfoFieldPredicate() {
