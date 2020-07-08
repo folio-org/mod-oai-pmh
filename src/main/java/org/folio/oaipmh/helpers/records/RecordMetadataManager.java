@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 
@@ -41,6 +42,7 @@ public class RecordMetadataManager {
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
 
+  private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
   private static final String ITEMS = "items";
   private static final String ELECTRONIC_ACCESS = "electronicAccess";
   private static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
@@ -69,7 +71,7 @@ public class RecordMetadataManager {
         JsonObject dataFieldContent = jsonObject.getJsonObject(GENERAL_INFO_FIELD_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator)
+        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotBlank(secondIndicator)
           && firstIndicator.equals(secondIndicator) && firstIndicator.equals(INDICATOR_VALUE);
       }
       return false;
@@ -80,7 +82,7 @@ public class RecordMetadataManager {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
+        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotBlank(secondIndicator);
       }
       return false;
     };
@@ -138,9 +140,8 @@ public class RecordMetadataManager {
                                                           boolean suppressedRecordsProcessing) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
-      final Boolean itemSuppressedFromDiscovery = itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD);
-      int subFieldValue = itemSuppressedFromDiscovery == null || !itemSuppressedFromDiscovery ? 0 : 1;
-      effectiveLocationSubFields.put("t", subFieldValue);
+      int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+      effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
     FieldBuilder fieldBuilder = new FieldBuilder();
     Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
@@ -169,9 +170,8 @@ public class RecordMetadataManager {
         FieldBuilder fieldBuilder = new FieldBuilder();
         List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
         if (suppressedRecordsProcessing) {
-          final Boolean itemSuppressedFromDiscovery = itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD);
-          int subFieldValue = itemSuppressedFromDiscovery == null || !itemSuppressedFromDiscovery ? 0 : 1;
-          electronicAccessSubFields.put("t", subFieldValue);
+          int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+          electronicAccessSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
         }
         if (CollectionUtils.isNotEmpty(indicators)) {
           Map<String, Object> electronicAccessField = fieldBuilder
@@ -206,10 +206,10 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
     //Map location name, which changed paths in json, to 952$d
-    String subFieldValue = itemData.getJsonObject(LOCATION).getString(NAME);
-    if (isNotEmpty(subFieldValue)) {
-      effectiveLocationSubFields.put("d", subFieldValue);
-    }
+    Optional.ofNullable(itemData.getJsonObject(LOCATION))
+      .map(jo -> jo.getString(NAME))
+      .filter(StringUtils::isNotBlank)
+      .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
     return effectiveLocationSubFields;
   }
 
