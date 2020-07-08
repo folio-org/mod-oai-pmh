@@ -41,9 +41,6 @@ public final class Constants {
   public static final String FIRST_INDICATOR = "ind1";
   public static final String SECOND_INDICATOR = "ind2";
 
-  public static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
-  public static final String SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE = "t";
-
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";
 

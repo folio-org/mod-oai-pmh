@@ -3,7 +3,6 @@ package org.folio.oaipmh.helpers.records;
 import static java.util.Objects.requireNonNull;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.FIELDS;
-import static org.folio.oaipmh.Constants.GENERAL_INFO_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
 import static org.junit.Assert.assertEquals;
@@ -58,6 +57,7 @@ class RecordMetadataManagerTest {
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_resource.json";
 
   private static final String ELECTRONIC_ACCESS_FILED = "856";
+  private static final String GENERAL_INFO_FIELD = "999";
   private static final String EFFECTIVE_LOCATION_FILED = "952";
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
@@ -129,7 +129,7 @@ class RecordMetadataManagerTest {
       JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
       String source = storageHelper.getInstanceRecordSource(record);
       String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
-      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD_TAG_NUMBER);
+      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD);
       updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();

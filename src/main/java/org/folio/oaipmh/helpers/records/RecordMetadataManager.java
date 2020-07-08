@@ -5,7 +5,6 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.FIELDS;
 import static org.folio.oaipmh.Constants.FIRST_INDICATOR;
-import static org.folio.oaipmh.Constants.GENERAL_INFO_FIELD_TAG_NUMBER;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SECOND_INDICATOR;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
@@ -32,12 +31,16 @@ import io.vertx.core.json.JsonObject;
  */
 public class RecordMetadataManager {
 
-  private static final int FIRST_INDICATOR_INDEX = 0;
-  private static final int SECOND_INDICATOR_INDEX = 1;
+  private static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
   private static final String ELECTRONIC_ACCESS_FILED_TAG_NUMBER = "856";
   private static final String EFFECTIVE_LOCATION_FILED_TAG_NUMBER = "952";
+
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
+
+  private static final int FIRST_INDICATOR_INDEX = 0;
+  private static final int SECOND_INDICATOR_INDEX = 1;
+
   private static final String ITEMS = "items";
   private static final String ELECTRONIC_ACCESS = "electronicAccess";
   private static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
