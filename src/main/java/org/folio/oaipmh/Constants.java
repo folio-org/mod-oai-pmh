@@ -33,16 +33,13 @@ public final class Constants {
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
-  public static final String INVENTORY_STORAGE = "INVENTORY";
+
   public static final String PARSED_RECORD = "parsedRecord";
   public static final String CONTENT = "content";
   public static final String FIELDS = "fields";
   public static final String SUBFIELDS = "subfields";
   public static final String FIRST_INDICATOR = "ind1";
   public static final String SECOND_INDICATOR = "ind2";
-
-  public static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
-  public static final String SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE = "t";
 
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";

@@ -206,9 +206,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse, boolean deletedRecordSupport) {
+  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse,
+                                            boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
+    final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
+      REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     List<RecordType> records = new ArrayList<>();
 
@@ -220,7 +223,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         continue;
       }
       JsonObject updatedSrsInstance = metadataManager
-        .populateMetadataWithItemsData(srsInstance, inventoryInstance);
+        .populateMetadataWithItemsData(srsInstance, inventoryInstance,
+          suppressedRecordsProcessing);
       String identifierPrefix = request.getIdentifierPrefix();
       RecordType record = new RecordType()
         .withHeader(createHeader(inventoryInstance)
@@ -230,9 +234,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         record.getHeader().setStatus(StatusType.DELETED);
       }
       String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
-
       if (source != null && record.getHeader().getStatus() == null) {
-        source = metadataManager.updateMetadataSourceWithDiscoverySuppressedDataIfNecessary(source, updatedSrsInstance, request);
+        if (suppressedRecordsProcessing) {
+          source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
+          source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+        }
         record.withMetadata(buildOaiMetadata(request, source));
       }
 

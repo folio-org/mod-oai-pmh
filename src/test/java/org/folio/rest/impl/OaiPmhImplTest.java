@@ -25,7 +25,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
@@ -223,7 +222,7 @@ class OaiPmhImplTest {
           .anyMatch(subfieldatafieldType -> {
             String value = subfieldatafieldType.getValue();
             return subfieldatafieldType.getCode()
-              .equals(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE) && value.equals("0") || value.equals("1");
+              .equals("t") && value.equals("0") || value.equals("1");
           });
       }
       return false;
@@ -1424,7 +1423,7 @@ class OaiPmhImplTest {
       .findFirst()
       .ifPresent(dataField -> {
         Optional<SubfieldatafieldType> subfieldOptional = dataField.getSubfields().stream()
-          .filter(subfieldatafieldType -> subfieldatafieldType.getCode().equals(SUPPRESS_FROM_DISCOVERY_SUBFIELD_CODE))
+          .filter(subfieldatafieldType -> subfieldatafieldType.getCode().equals("t"))
           .findFirst();
           if(subfieldOptional.isPresent()){
             assertEquals(TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21, subfieldOptional.get().getValue());
