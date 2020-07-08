@@ -46,6 +46,7 @@ class RecordMetadataManagerTest {
   private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
+  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
@@ -76,7 +77,7 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldUpdateRecordMetadataWithTwoEffectiveLocationFields_whenInventoryItemsArrayHasTwoElements() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH)));
 
@@ -91,7 +92,7 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldUpdateRecordMetadataWithTwoElectronicAccessFields_whenInventoryItemHasElectronicAccessArrayWithTwoItems() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
 
@@ -100,7 +101,8 @@ class RecordMetadataManagerTest {
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
 
-    assertEquals(2, electronicAccessFields.size());
+    //2 from inventory, 1 from srs
+    assertEquals(3, electronicAccessFields.size());
     electronicAccessFields.forEach(this::verifyElectronicAccessFieldHasCorrectData);
   }
 
@@ -124,7 +126,7 @@ class RecordMetadataManagerTest {
   void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
     System.setProperty("repository.suppressedRecordsProcessing", "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
       String source = storageHelper.getInstanceRecordSource(record);
       String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD_TAG_NUMBER);

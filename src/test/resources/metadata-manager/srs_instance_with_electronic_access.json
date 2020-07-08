@@ -376,6 +376,26 @@
           }
         },
         {
+          "856": {
+            "subfields": [
+              {
+                "u": "test.com"
+              },
+              {
+                "y": "GS demo Holding 1_2"
+              },
+              {
+                "z": "URL public note"
+              },
+              {
+                "3": "Materials specified"
+              }
+            ],
+            "ind1": "4",
+            "ind2": "0"
+          }
+        },
+        {
           "900": {
             "ind1": " ",
             "ind2": " ",
