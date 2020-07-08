@@ -38,11 +38,11 @@ public class RecordMetadataManager {
 
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
+  private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
 
-  private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
   private static final String ITEMS = "items";
   private static final String ELECTRONIC_ACCESS = "electronicAccess";
   private static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
