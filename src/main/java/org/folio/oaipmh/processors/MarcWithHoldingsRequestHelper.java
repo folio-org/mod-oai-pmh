@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -66,6 +67,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
+  private final Map<String, BatchStreamWrapper> activeStreams = new ConcurrentHashMap<>();
+
   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
    * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
@@ -104,13 +107,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         || request.getNextRecordId() == null) { // the first request from EDS
         writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
       } else {
-        final Object writeStreamObj = vertxContext.get(requestId);
-        if (!(writeStreamObj instanceof BatchStreamWrapper)) { // resumption token doesn't exist in context
+        writeStream = activeStreams.get(requestId);
+        if (writeStream == null) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Resumption token +" + resumptionToken + "+ doesn't exist in context"));
           return promise.future();
         }
-        writeStream = (BatchStreamWrapper) writeStreamObj;
       }
 
       final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
@@ -125,7 +127,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           (writeStream.isStreamEnded()
             && writeStream.getItemsInQueueCount() <= batchSize);
         if (theLastBatch) {
-          vertxContext.remove(requestId);
+          activeStreams.remove(requestId);
         }
 
         Future<Map<String, JsonObject>> srsResponse = Future.future();
@@ -292,7 +294,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
-    vertxContext.put(resumptionToken, writeStream);
+    activeStreams.put(resumptionToken, writeStream);
 
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
     final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient,
@@ -310,7 +312,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     httpClientRequest.exceptionHandler(e -> {
       logger.error(e.getMessage(), e);
-      vertxContext.remove(resumptionToken);
+      activeStreams.remove(resumptionToken);
       handleException(oaiPmhResponsePromise, e);
     });
     httpClientRequest.sendHead();
