@@ -141,6 +141,12 @@
       <artifactId>mod-configuration-client</artifactId>
       <version>${mod-configuration-client.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-liquibase-util</artifactId>
+      <version>1.0.0</version>
+      <type>jar</type>
+    </dependency>
     <!-- Jaxb dependencies -->
     <dependency>
       <groupId>com.migesok</groupId>
