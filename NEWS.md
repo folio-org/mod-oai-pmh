@@ -1,4 +1,10 @@
-### 3.0.3 (Released)
+## 3.0.4 (Released)
+
+* [MODOAIPMH-107](https://issues.folio.org/browse/MODOAIPMH-107) Suppress holdings and items records from discovery
+* [MODOAIPMH-192](https://issues.folio.org/browse/MODOAIPMH-192) Resumption token fails from time to time on big amount of data
+
+
+## 3.0.3 (Released)
  
  Migrating to SRS v4, bugfixing 
 
