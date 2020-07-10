@@ -4,14 +4,14 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
-  <changeSet id="2020-04-27--12-00-create-filtering-conditions-type" author="Illia Daliek">
+  <changeSet id="2020-07-07--16-00-create-filtering-conditions-type" author="Illia Daliek">
     <sql>
-      CREATE TYPE filtering_condition_type AS ENUM (
+      CREATE TYPE ${database.defaultSchemaName}.filtering_condition_type AS ENUM (
       'LOCATION',
       'RESOURCE_TYPE',
       'FORMAT',
       'ILL_POLICY',
-      'MATERIALTYPE'
+      'MATERIAL_TYPE'
       );
     </sql>
   </changeSet>
@@ -21,7 +21,7 @@
       <column name="id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>
       </column>
-      <column name="name" type="filtering_condition_type">
+      <column name="name" type="${database.defaultSchemaName}.filtering_condition_type">
         <constraints nullable="false"/>
       </column>
       <column name="value" type="varchar(255)">

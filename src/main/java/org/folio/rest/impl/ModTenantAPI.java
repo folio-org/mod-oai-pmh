@@ -197,6 +197,7 @@ public class ModTenantAPI extends TenantAPI {
     Promise<String> promise = Promise.promise();
     String tenantId = okapiHeaders.get(OKAPI_TENANT);
     vertx.executeBlocking(blockingFeature -> {
+      logger.info("KEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEK");
       LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
       blockingFeature.complete();
     }, result -> {

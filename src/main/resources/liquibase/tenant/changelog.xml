@@ -3,5 +3,6 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
-  <includeAll path="liquibase/tenant/scripts" relativeToChangelogFile="false"/>
+  <include file="scripts/2020-07-07--16-00-create-set-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2020-07-07--16-00-create-filtering-conditions-table.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
