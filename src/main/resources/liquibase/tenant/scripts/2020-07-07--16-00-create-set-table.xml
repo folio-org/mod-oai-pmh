@@ -16,6 +16,10 @@
       <column name="setSpec" type="varchar(255)">
         <constraints nullable="false"/>
       </column>
+      <column name="created_by_user_id" type="uuid"/>
+      <column name="created_date" type="timestamptz"/>
+      <column name="updated_by_user_id" type="uuid"/>
+      <column name="updated_date" type="timestamptz"/>
     </createTable>
   </changeSet>
 
