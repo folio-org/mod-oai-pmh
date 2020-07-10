@@ -51,18 +51,24 @@ public class ModTenantAPI extends TenantAPI {
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
       final Handler<AsyncResult<Response>> handlers, final Context context) {
-    Future<String> loadConfigurationDataFuture = loadConfigurationData(headers);
-    Future<String> initDatabaseFuture = initDatabase(headers, context.owner());
-    CompositeFuture.all(loadConfigurationDataFuture, initDatabaseFuture)
-      .onComplete(future -> {
-        String message;
-        if (future.succeeded()) {
-          message = loadConfigurationDataFuture.result() + " " + initDatabaseFuture.result();
-        } else {
-          message = getResultErrorMessage(loadConfigurationDataFuture, initDatabaseFuture);
-        }
-        handlers.handle(Future.succeededFuture(buildResponse(message)));
-      });
+    super.postTenant(entity, headers, postTenantAsyncResultHandler -> {
+      if (postTenantAsyncResultHandler.failed()) {
+        handlers.handle(postTenantAsyncResultHandler);
+      } else {
+        Future<String> loadConfigurationDataFuture = loadConfigurationData(headers);
+        Future<String> initDatabaseFuture = initDatabase(headers, context.owner());
+        CompositeFuture.all(loadConfigurationDataFuture, initDatabaseFuture)
+          .onComplete(future -> {
+            String message;
+            if (future.succeeded()) {
+              message = loadConfigurationDataFuture.result() + " " + initDatabaseFuture.result();
+            } else {
+              message = getResultErrorMessage(loadConfigurationDataFuture, initDatabaseFuture);
+            }
+            handlers.handle(Future.succeededFuture(buildResponse(message)));
+          });
+      }
+    }, context);
   }
 
   private Future<String> loadConfigurationData(Map<String, String> headers) {
@@ -211,11 +217,11 @@ public class ModTenantAPI extends TenantAPI {
 
   /**
    * Returns error message of the first failed future. Since both futures required to be succeeded for enabling module for tenant
-   * then if one of them fails then there are no matter that the second future will be succeeded and therefore we don't need to wait until it will be
-   * completed and thus we should respond with message of the first failed future.
+   * then if one of them fails then there are no matter that the second future will be succeeded and therefore we don't need to wait
+   * until it will be completed and thus we should respond with message of the first failed future.
    *
    * @param configDataFuture - future of loading configuration data
-   * @param initDbFuture - future of initializing the module database
+   * @param initDbFuture     - future of initializing the module database
    * @return error message
    */
   private String getResultErrorMessage(Future<String> configDataFuture, Future<String> initDbFuture) {
