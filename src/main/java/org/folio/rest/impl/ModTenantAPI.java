@@ -125,9 +125,8 @@ public class ModTenantAPI extends TenantAPI {
       JsonObject jsonConfig = body.toJsonObject();
       JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info(String.format(
-            "Configuration group with configName %s isn't exist. " + "Posting default configs for '%s' configuration group",
-            MODULE_NAME, configName));
+        logger.info("Configuration group with configName {} isn't exist. " + "Posting default configs for {} configuration group",
+            MODULE_NAME, configName);
         postConfig(client, configName, promise);
       } else {
         logger.info("Configurations has been got successfully, applying configurations to module system properties");
@@ -197,7 +196,6 @@ public class ModTenantAPI extends TenantAPI {
     Promise<String> promise = Promise.promise();
     String tenantId = okapiHeaders.get(OKAPI_TENANT);
     vertx.executeBlocking(blockingFeature -> {
-      logger.info("KEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEK");
       LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
       blockingFeature.complete();
     }, result -> {
