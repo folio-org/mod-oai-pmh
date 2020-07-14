@@ -36,6 +36,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
@@ -148,7 +149,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-                                                              long offset, boolean returnResumptionToken) {
+                                                              long returnedCount, boolean returnResumptionToken) {
+    long offset = returnedCount + request.getOffset();
     if (!returnResumptionToken) {
       return new ResumptionTokenType()
         .withValue("")
@@ -156,7 +158,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           BigInteger.valueOf(offset));
     }
     Map<String, String> extraParams = new HashMap<>();
-    extraParams.put(OFFSET_PARAM, String.valueOf(offset));
+    extraParams.put(OFFSET_PARAM, String.valueOf(returnedCount));
     extraParams.put(NEXT_RECORD_ID_PARAM, id);
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
@@ -171,8 +173,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Response> buildRecordsResponse(
-    Request request, String requestId, List<JsonEvent> batch,
-    Map<String, JsonObject> srsResponse, BatchStreamWrapper stream,
+    Request request, String requestId, List<JsonObject> batch,
+    Map<String, JsonObject> srsResponse, boolean firstBatch,
     boolean returnResumptionToken, boolean deletedRecordSupport) {
 
     Promise<Response> promise = Promise.promise();
@@ -181,19 +183,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-      if (records.isEmpty() && !returnResumptionToken && stream.getReturnedCount() == 0) {
+      if (records.isEmpty() && !returnResumptionToken && (firstBatch && batch.isEmpty())) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));
       }
-
-      stream.addReturnedCount(records.size());
-
       Response response;
       if (oaipmh.getErrors().isEmpty()) {
-        if (stream.getPage() > 1 || returnResumptionToken) {
+        if (!firstBatch || returnResumptionToken) {
           ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-            stream.getReturnedCount(), returnResumptionToken);
+            records.size(), returnResumptionToken);
           oaipmh.getListRecords().withResumptionToken(resumptionToken);
         }
         response = responseHelper.buildSuccessResponse(oaipmh);
@@ -208,7 +207,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private List<RecordType> buildRecordsList(Request request, List<JsonEvent> batch, Map<String, JsonObject> srsResponse,
+  private List<RecordType> buildRecordsList(Request request, List<JsonObject> batch, Map<String, JsonObject> srsResponse,
                                             boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
@@ -217,8 +216,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     List<RecordType> records = new ArrayList<>();
 
-    for (JsonEvent jsonEvent : batch) {
-      final JsonObject inventoryInstance = (JsonObject) jsonEvent.value();
+    for (JsonObject inventoryInstance : batch) {
       final String instanceId = inventoryInstance.getString("instanceid");
       final JsonObject srsInstance = srsResponse.get(instanceId);
       if (srsInstance == null) {
