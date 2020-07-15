@@ -38,3 +38,83 @@
   ],
   "instanceid": "1b74ab75-9f41-4837-8662-a1d99118008d"
 }
+{
+  "items": [
+    {
+      "id": "0aaef1ea-69eb-4f6e-a077-cea159317ce3",
+      "volume": "volume",
+      "location": {
+        "location": {
+          "campusId": "470ff1dd-937a-4195-bf9e-06bcfcd135df",
+          "libraryId": "c2549bb4-19c7-4fcc-8b52-39e612fb7dbe",
+          "campusName": "Online",
+          "libraryName": "Online",
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "institutionName": "Københavns Universitet"
+        }
+      },
+      "callNumber": {},
+      "enumeration": "enum",
+      "materialType": "sound recording",
+      "electronicAccess": [
+        {
+          "uri": "holdinguri",
+          "name": "No information provided",
+          "linkText": "holding link text",
+          "publicNote": "holding public note",
+          "relationshipId": "f50c90c9-bae0-4add-9cd0-db9092dbc9dd",
+          "materialsSpecification": "holding mats"
+        },
+        {
+          "uri": "item uri",
+          "name": "Related resource",
+          "linkText": "item link textr",
+          "publicNote": "item public note",
+          "relationshipId": "5bfe1b7b-f151-4501-8cfa-23b321d5cd1e",
+          "materialsSpecification": "ityem mast"
+        }
+      ]
+    }
+  ],
+  "instanceid": "00f10ab9-d845-4334-92d2-ff55862bf4f9"
+}
+{
+  "items": [
+    {
+      "id": "0aaef1ea-69eb-4f6e-a077-cea159317ce3",
+      "volume": "volume",
+      "location": {
+        "location": {
+          "campusId": "470ff1dd-937a-4195-bf9e-06bcfcd135df",
+          "libraryId": "c2549bb4-19c7-4fcc-8b52-39e612fb7dbe",
+          "campusName": "Online",
+          "libraryName": "Online",
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "institutionName": "Københavns Universitet"
+        }
+      },
+      "callNumber": {},
+      "enumeration": "enum",
+      "materialType": "sound recording",
+      "electronicAccess": [
+        {
+          "uri": "holdinguri",
+          "name": "No information provided",
+          "linkText": "holding link text",
+          "publicNote": "holding public note",
+          "relationshipId": "f50c90c9-bae0-4add-9cd0-db9092dbc9dd",
+          "materialsSpecification": "holding mats"
+        },
+        {
+          "uri": "item uri",
+          "name": "Related resource",
+          "linkText": "item link textr",
+          "publicNote": "item public note",
+          "relationshipId": "5bfe1b7b-f151-4501-8cfa-23b321d5cd1e",
+          "materialsSpecification": "ityem mast"
+        }
+      ]
+    }
+  ],
+  "instanceid": "9ef99938-3246-4f3e-9e2f-9543934141f5"
+}

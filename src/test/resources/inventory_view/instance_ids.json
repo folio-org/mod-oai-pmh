@@ -2,10 +2,16 @@
   "instanceid": "00f10ab9-d845-4334-92d2-ff55862bf4f9",
   "instanceupdateddate": "2020-06-15T11:07:48.563Z",
   "deleted": "false",
-  "suppressdiscovery": ""
+  "suppressdiscovery": "false"
 }
 {
   "instanceid": "1b74ab75-9f41-4837-8662-a1d99118008d",
+  "instanceupdateddate": "2020-06-16T11:36:24.008Z",
+  "deleted": "false",
+  "suppressdiscovery": "false"
+}
+{
+  "instanceid": "9ef99938-3246-4f3e-9e2f-9543934141f5",
   "instanceupdateddate": "2020-06-16T11:36:24.008Z",
   "deleted": "false",
   "suppressdiscovery": "false"
