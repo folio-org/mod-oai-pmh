@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.ws.rs.core.Response;
 
@@ -117,47 +117,104 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void processBatch(Request request, Context context, Promise<Response> promise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
     try {
-      List<JsonObject> instanceIds = getAndLockNextInstanceIds(requestId, context);
-      if (CollectionUtils.isEmpty(instanceIds) && !firstBatch) { // resumption token doesn't exist in context
-        handleException(promise, new IllegalArgumentException(
-          "Specified resumption token doesn't exists"));
-        return;
-      }
 
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      boolean theLastBatch =  instanceIds.size() < batchSize;
-      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-        request.getTenant(), request.getOkapiToken());
+      Promise<List<JsonObject>> instanceIds = getNextInstanceIds(requestId, batchSize, context);
+      instanceIds.future().onComplete(fut -> {
+        List<JsonObject> ids = fut.result();
+        if (CollectionUtils.isEmpty(ids) && !firstBatch) { // resumption token doesn't exist in context
+          handleException(promise, new IllegalArgumentException(
+            "Specified resumption token doesn't exists"));
+          return;
+        }
+
+        boolean theLastBatch = ids.size() < batchSize;
+        final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+          request.getTenant(), request.getOkapiToken());
 
 
-      Future<Map<String, JsonObject>> srsResponse = Future.future();
-      if (CollectionUtils.isNotEmpty(instanceIds)) {
-        srsResponse = requestSRSByIdentifiers(srsClient, instanceIds, deletedRecordSupport);
-      } else {
-        srsResponse.complete();
-      }
-      srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instanceIds, res,
-        firstBatch, !theLastBatch, deletedRecordSupport).onSuccess(result -> {
-        deleteInstanceIds(instanceIds.stream()
-          .map(e->e.getString("id")).collect(Collectors.toList()));
-        promise.complete(result);}));
-      srsResponse.onFailure(t -> handleException(promise, t));
+        Future<Map<String, JsonObject>> srsResponse = Future.future();
+        if (CollectionUtils.isNotEmpty(ids)) {
+          srsResponse = requestSRSByIdentifiers(srsClient, ids, deletedRecordSupport);
+        } else {
+          srsResponse.complete();
+        }
+        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, ids, res,
+          firstBatch, !theLastBatch, deletedRecordSupport).onSuccess(result -> {
+          deleteInstanceIds(ids.stream()
+            .map(e -> e.getString("id"))
+            .collect(toList()), requestId, context)
+            .future().onComplete(e -> promise.complete(result));
+          ;
+        }));
+        srsResponse.onFailure(t -> handleException(promise, t));
+      });
     } catch (Exception e) {
       handleException(promise, e);
     }
   }
 
-  private void deleteInstanceIds(List<String> instanceIds) {
-
+  private Promise<Void> deleteInstanceIds(List<String> instanceIds, String requestId, Context context) {
+    Promise<Void> promise = Promise.promise();
+    PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
+    final String sql = String.format("DELETE FROM INSTANCE_IDS WHERE " +
+      "REQUEST_ID = %s AND INSTANCE_ID IN (%s)", requestId, String.join(", ", instanceIds));
+    postgresClient.startTx(conn -> {
+      try {
+        postgresClient.select(conn, sql, reply -> {
+          if (reply.succeeded()) {
+            promise.complete();
+          } else {
+            promise.fail(reply.cause());
+          }
+        });
+      } catch (Exception e) {
+        handleException(promise, e);
+      }
+    });
+    return promise;
   }
 
-  private List<JsonObject> getAndLockNextInstanceIds(String requestId, Context context) {
-        //TODO: start transaction and SELECT FOR UPDATE
-    PostgresClient instance = PostgresClient.getInstance(context.owner());
-    return null;
+  private Promise<List<JsonObject>> getNextInstanceIds(String requestId, int batchSize, Context context) {
+    Promise<List<JsonObject>> promise = Promise.promise();
+    PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
+    final String sql = String.format("SELECT jsonb FROM INSTANCE_IDS WHERE " +
+      "REQUEST_ID = %s ORDER BY INSTANCE_ID LIMIT %d", requestId, batchSize + 1);
+    postgresClient.startTx(conn -> {
+      try {
+        postgresClient.select(conn, sql, reply -> {
+          if (reply.succeeded()) {
+            promise.complete(StreamSupport
+              .stream(reply.result().spliterator(), false)
+              .map(this::createJsonFromRow).collect(toList()));
+          }
+        });
+      } catch (Exception e) {
+        handleException(promise, e);
+      }
+    });
+    return promise;
+  }
+
+
+  private JsonObject createJsonFromRow(Row row) {
+    JsonObject json = new JsonObject();
+    if (row != null) {
+      for (int i = 0; i < row.size(); i++) {
+        json.put(row.getColumnName(i), convertRowValue(row.getValue(i)));
+      }
+    }
+    return json;
+  }
+
+  private Object convertRowValue(Object value) {
+    if (value == null) {
+      return "";
+    }
+    return value instanceof JsonObject ? value : value.toString();
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
@@ -401,7 +458,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return batch.stream().
       filter(aggregatedInstanceObject -> aggregatedInstanceObject != null)
       .map(instance -> instance.getString("instanceid"))
-      .collect(Collectors.toList());
+      .collect(toList());
   }
 
 
