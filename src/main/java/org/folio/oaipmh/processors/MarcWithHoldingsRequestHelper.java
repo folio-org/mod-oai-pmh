@@ -62,13 +62,14 @@ import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
 
+
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
+
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 100;
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
-
-  private final Map<String, BatchStreamWrapper> activeStreams = new ConcurrentHashMap<>();
 
   /**
    * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
@@ -97,55 +98,66 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return buildResponseWithErrors(request, promise, errors);
       }
 
-      BatchStreamWrapper writeStream;
-      int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getTenant(),
-          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
       String requestId =
         (resumptionToken == null || request.getNextRecordId() == null) ? UUID
           .randomUUID().toString() : request.getNextRecordId();
+      Promise<Void> fetchingIdsPromise;
       if (resumptionToken == null
         || request.getNextRecordId() == null) { // the first request from EDS
-        writeStream = createBatchStream(request, promise, vertxContext, batchSize, requestId);
+        fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
+        fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
       } else {
-        writeStream = activeStreams.get(requestId);
-        if (writeStream == null) { // resumption token doesn't exist in context
-          handleException(promise, new IllegalArgumentException(
-            "Resumption token +" + resumptionToken + "+ doesn't exist in context"));
-          return promise.future();
-        }
+        processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false);
       }
-
-      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-        request.getTenant(), request.getOkapiToken());
-      writeStream.exceptionHandler(e -> {
-        if (e != null) {
-          handleException(promise, e);
-        }
-      });
-      writeStream.handleBatch(batch -> {
-        boolean theLastBatch = batch.size() < batchSize ||
-          (writeStream.isStreamEnded()
-            && writeStream.getItemsInQueueCount() <= batchSize);
-        if (theLastBatch) {
-          activeStreams.remove(requestId);
-        }
-
-        Future<Map<String, JsonObject>> srsResponse = Future.future();
-        if (CollectionUtils.isNotEmpty(batch)) {
-          srsResponse = requestSRSByIdentifiers(srsClient, batch, deletedRecordSupport);
-        } else {
-          srsResponse.complete();
-        }
-        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, batch, res,
-          writeStream, !theLastBatch, deletedRecordSupport).onSuccess(promise::complete));
-        srsResponse.onFailure(t -> handleException(promise, t));
-      });
-
     } catch (Exception e) {
       handleException(promise, e);
     }
     return promise.future();
+  }
+
+  private void processBatch(Request request, Context context, Promise<Response> promise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
+    try {
+      List<JsonObject> instanceIds = getAndLockNextInstanceIds(requestId, context);
+      if (CollectionUtils.isEmpty(instanceIds) && !firstBatch) { // resumption token doesn't exist in context
+        handleException(promise, new IllegalArgumentException(
+          "Specified resumption token doesn't exists"));
+        return;
+      }
+
+      int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+
+      boolean theLastBatch =  instanceIds.size() < batchSize;
+      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+        request.getTenant(), request.getOkapiToken());
+
+
+      Future<Map<String, JsonObject>> srsResponse = Future.future();
+      if (CollectionUtils.isNotEmpty(instanceIds)) {
+        srsResponse = requestSRSByIdentifiers(srsClient, instanceIds, deletedRecordSupport);
+      } else {
+        srsResponse.complete();
+      }
+      srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instanceIds, res,
+        firstBatch, !theLastBatch, deletedRecordSupport).onSuccess(result -> {
+        deleteInstanceIds(instanceIds.stream()
+          .map(e->e.getString("id")).collect(Collectors.toList()));
+        promise.complete(result);}));
+      srsResponse.onFailure(t -> handleException(promise, t));
+    } catch (Exception e) {
+      handleException(promise, e);
+    }
+  }
+
+  private void deleteInstanceIds(List<String> instanceIds) {
+
+  }
+
+  private List<JsonObject> getAndLockNextInstanceIds(String requestId, Context context) {
+        //TODO: start transaction and SELECT FOR UPDATE
+    PostgresClient instance = PostgresClient.getInstance(context.owner());
+    return null;
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
@@ -265,12 +277,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false);
     if (date != null) {
-        paramMap.put("startDate", dateFormat.format(date));
-      }
+      paramMap.put("startDate", dateFormat.format(date));
+    }
     date = convertStringToDate(request.getUntil(), true);
     if (date != null) {
-        paramMap.put("endDate", dateFormat.format(date));
-      }
+      paramMap.put("endDate", dateFormat.format(date));
+    }
     paramMap.put("deletedRecordSupport",
       String.valueOf(
         RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
@@ -286,13 +298,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return String.format("%s%s?%s", request.getOkapiUrl(), inventoryEndpoint, params);
   }
 
-  private BatchStreamWrapper createBatchStream(Request request,
-                                               Promise<Response> oaiPmhResponsePromise,
-                                               Context vertxContext, int batchSize, String resumptionToken) {
+  private Promise<Void> createBatchStream(Request request,
+                                          Promise<Response> oaiPmhResponsePromise,
+                                          Context vertxContext, String requestId) {
+    Promise<Void> completePromise = Promise.promise();
     final Vertx vertx = vertxContext.owner();
 
-    BatchStreamWrapper writeStream = new BatchStreamWrapper(vertx, batchSize);
-    activeStreams.put(resumptionToken, writeStream);
+    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
 
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
     final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient,
@@ -301,20 +313,40 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.handler(resp -> {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
-      jp.pipeTo(writeStream);
+      jp.pipeTo(databaseWriteStream);
       jp.endHandler(e -> {
-        writeStream.end();
+        databaseWriteStream.end();
         inventoryHttpClient.close();
       });
     });
 
     httpClientRequest.exceptionHandler(e -> {
       logger.error(e.getMessage(), e);
-      activeStreams.remove(resumptionToken);
       handleException(oaiPmhResponsePromise, e);
     });
-    httpClientRequest.sendHead();
-    return writeStream;
+
+    databaseWriteStream.exceptionHandler(e -> {
+      if (e != null) {
+        handleException(oaiPmhResponsePromise, e);
+      }
+    });
+
+    databaseWriteStream.handleBatch(batch -> {
+
+      saveInstancesIds(batch, requestId);
+
+      boolean theLastBatch = batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
+        (databaseWriteStream.isStreamEnded()
+          && databaseWriteStream.getItemsInQueueCount() <= DATABASE_FETCHING_CHUNK_SIZE); //TODO: think about the last condition in terms of new approach
+      if (theLastBatch) {
+        completePromise.complete();
+      }
+    });
+    return completePromise;
+  }
+
+  private void saveInstancesIds(List<JsonEvent> batch, String requestId) {
+
   }
 
   private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, Request request) {
@@ -332,7 +364,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
-                                                                  List<JsonEvent> batch, boolean deletedRecordSupport) {
+                                                                  List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.info("Request to SRS: {0}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
@@ -364,11 +396,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private List<String> extractListOfIdsForSRSRequest(List<JsonEvent> batch) {
+  private List<String> extractListOfIdsForSRSRequest(List<JsonObject> batch) {
 
-    return batch.stream().map(JsonEvent::value).
-      filter(aggregatedInstanceObject -> aggregatedInstanceObject instanceof JsonObject)
-      .map(aggregatedInstanceObject -> (JsonObject) aggregatedInstanceObject)
+    return batch.stream().
+      filter(aggregatedInstanceObject -> aggregatedInstanceObject != null)
       .map(instance -> instance.getString("instanceid"))
       .collect(Collectors.toList());
   }
