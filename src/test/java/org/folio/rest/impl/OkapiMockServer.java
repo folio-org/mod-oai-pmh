@@ -124,7 +124,7 @@ public class OkapiMockServer {
   }
 
   private void handleStreamingInventoryInstanceIdsResponse(RoutingContext ctx) {
-    String path = "inventory_view/inventory_instances.json";
+    String path = "inventory_view/instance_ids.json";
     Buffer buffer = Buffer.buffer();
     final String startDate = ctx.request().params().get("startDate");
     if (startDate != null && startDate.contains(INVENTORY_INSTANCE_DATE)) {

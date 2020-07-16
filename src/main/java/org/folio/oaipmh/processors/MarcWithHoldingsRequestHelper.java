@@ -224,7 +224,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Promise<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
-    Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getString("instanceId"), Function.identity()));
+    Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getJsonObject("json").getString("instanceid"), Function.identity()));
     Promise<List<JsonObject>> completePromise = Promise.promise();
     HttpClient httpClient = context.owner().createHttpClient();
 
@@ -245,7 +245,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
     });
 
-    return Promise.promise();
+    return completePromise;
   }
 
 
