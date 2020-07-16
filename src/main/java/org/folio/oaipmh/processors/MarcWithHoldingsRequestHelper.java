@@ -214,6 +214,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Promise<List<JsonObject>> enrichInstances(List<JsonObject> result) {
+
+/*    Promise<Void> completePromise = Promise.promise();
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(request, oaiPmhResponsePromise, vertxContext);
+
+    databaseWriteStream.handleBatch(batch -> {
+
+    });*/
+
     // List<String> instanceIds = result.stream().map(e -> e.getString("instanceId")).collect(toList());
     return Promise.promise();
   }
@@ -378,12 +386,29 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                                           Promise<Response> oaiPmhResponsePromise,
                                           Context vertxContext, String requestId) {
     Promise<Void> completePromise = Promise.promise();
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(request, oaiPmhResponsePromise, vertxContext);
+
+    databaseWriteStream.handleBatch(batch -> {
+
+      saveInstancesIds(batch, requestId, vertxContext);
+
+      boolean theLastBatch = batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
+        (databaseWriteStream.isStreamEnded()
+          && databaseWriteStream.getItemsInQueueCount() <= DATABASE_FETCHING_CHUNK_SIZE); //TODO: think about the last condition in terms of new approach
+      if (theLastBatch) {
+        completePromise.complete();
+      }
+    });
+    return completePromise;
+  }
+
+  private BatchStreamWrapper getBatchHttpStream(Request request, Promise<Response> oaiPmhResponsePromise, Context vertxContext) {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
 
     final HttpClient inventoryHttpClient = vertx.createHttpClient();
-    final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient,
+    final HttpClientRequest httpClientRequest = createInventoryClientRequest(inventoryHttpClient, buildInventoryQuery(request),
       request);
 
     httpClientRequest.handler(resp -> {
@@ -406,19 +431,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         handleException(oaiPmhResponsePromise, e);
       }
     });
-
-    databaseWriteStream.handleBatch(batch -> {
-
-      saveInstancesIds(batch, requestId, vertxContext);
-
-      boolean theLastBatch = batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
-        (databaseWriteStream.isStreamEnded()
-          && databaseWriteStream.getItemsInQueueCount() <= DATABASE_FETCHING_CHUNK_SIZE); //TODO: think about the last condition in terms of new approach
-      if (theLastBatch) {
-        completePromise.complete();
-      }
-    });
-    return completePromise;
+    return databaseWriteStream;
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String requestId, Context vertxContext) {
@@ -435,7 +448,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       String sql = "INSERT INTO " + "" /*//TODO: this.schemaName*/ + "." + INSTANCES_TABLE_NAME + " (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
 
-      PgConnection connection = null; //TODO: ((SQLConnection) e.result()).conn;
+      PgConnection connection = e.result(); //TODO: ((SQLConnection) e.result()).conn;
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
         if (queryRes.failed()) {
           promise.fail(queryRes.cause());
@@ -447,9 +460,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, Request request) {
-    String inventoryQuery = buildInventoryQuery(request);
-
+  private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, String inventoryQuery, Request request) {
     logger.info("Sending request to {0}", inventoryQuery);
     final HttpClientRequest httpClientRequest = httpClient
       .getAbs(inventoryQuery);
