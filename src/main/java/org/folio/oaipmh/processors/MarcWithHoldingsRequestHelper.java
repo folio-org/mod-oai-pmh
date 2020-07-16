@@ -1,16 +1,5 @@
 package org.folio.oaipmh.processors;
 
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -61,6 +50,21 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
+import io.vertx.pgclient.PgConnection;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.Tuple;
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -122,29 +126,29 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      Promise<List<JsonObject>> instanceIds = getNextInstanceIds(requestId, batchSize, context);
-      instanceIds.future().onComplete(fut -> {
-        List<JsonObject> ids = fut.result();
-        if (CollectionUtils.isEmpty(ids) && !firstBatch) { // resumption token doesn't exist in context
+      getNextInstances(requestId, batchSize, context).future().onComplete(fut -> {
+        List<JsonObject> instances = fut.result();
+        if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
           return;
         }
 
-        boolean theLastBatch = ids.size() < batchSize;
+        String nextInstanceId = instances.size() < batchSize ? null : instances.get(batchSize).getString("instanceId");
+        List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
 
 
         Future<Map<String, JsonObject>> srsResponse = Future.future();
-        if (CollectionUtils.isNotEmpty(ids)) {
-          srsResponse = requestSRSByIdentifiers(srsClient, ids, deletedRecordSupport);
+        if (CollectionUtils.isNotEmpty(instances)) {
+          srsResponse = requestSRSByIdentifiers(srsClient, instancesWithoutLast, deletedRecordSupport);
         } else {
           srsResponse.complete();
         }
-        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, ids, res,
-          firstBatch, !theLastBatch, deletedRecordSupport).onSuccess(result -> {
-          deleteInstanceIds(ids.stream()
+        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
+          firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
+          deleteInstanceIds(instancesWithoutLast.stream()
             .map(e -> e.getString("id"))
             .collect(toList()), requestId, context)
             .future().onComplete(e -> promise.complete(result));
@@ -178,7 +182,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private Promise<List<JsonObject>> getNextInstanceIds(String requestId, int batchSize, Context context) {
+  private Promise<List<JsonObject>> getNextInstances(String requestId, int batchSize, Context context) {
     Promise<List<JsonObject>> promise = Promise.promise();
     PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
     final String sql = String.format("SELECT jsonb FROM INSTANCE_IDS WHERE " +
@@ -187,9 +191,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       try {
         postgresClient.select(conn, sql, reply -> {
           if (reply.succeeded()) {
-            promise.complete(StreamSupport
+            enrichInstances(StreamSupport
               .stream(reply.result().spliterator(), false)
-              .map(this::createJsonFromRow).collect(toList()));
+              .map(this::createJsonFromRow).collect(toList()))
+              .future().onComplete(e -> promise.complete(e.result()));
+            ;
           }
         });
       } catch (Exception e) {
@@ -197,6 +203,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
     });
     return promise;
+  }
+
+  private Promise<List<JsonObject>> enrichInstances(List<JsonObject> result) {
+    // List<String> instanceIds = result.stream().map(e -> e.getString("instanceId")).collect(toList());
+    return Promise.promise();
   }
 
 
@@ -217,10 +228,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return value instanceof JsonObject ? value : value.toString();
   }
 
-  private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id,
-                                                              long returnedCount, boolean returnResumptionToken) {
+  private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id, long returnedCount, String nextInstanceId) {
     long offset = returnedCount + request.getOffset();
-    if (!returnResumptionToken) {
+    if (nextInstanceId == null) {
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(
@@ -228,7 +238,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     Map<String, String> extraParams = new HashMap<>();
     extraParams.put(OFFSET_PARAM, String.valueOf(returnedCount));
-    extraParams.put(NEXT_RECORD_ID_PARAM, id);
+    extraParams.put(REQUEST_ID_PARAM, id);
+    extraParams.put(NEXT_RECORD_ID_PARAM, nextInstanceId);
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
     }
@@ -244,7 +255,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Response> buildRecordsResponse(
     Request request, String requestId, List<JsonObject> batch,
     Map<String, JsonObject> srsResponse, boolean firstBatch,
-    boolean returnResumptionToken, boolean deletedRecordSupport) {
+    String nextInstanceId, boolean deletedRecordSupport) {
 
     Promise<Response> promise = Promise.promise();
     try {
@@ -252,16 +263,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-      if (records.isEmpty() && !returnResumptionToken && (firstBatch && batch.isEmpty())) {
+      if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));
       }
       Response response;
       if (oaipmh.getErrors().isEmpty()) {
-        if (!firstBatch || returnResumptionToken) {
+        if (!firstBatch || nextInstanceId != null) {
           ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId,
-            records.size(), returnResumptionToken);
+            records.size(), nextInstanceId);
           oaipmh.getListRecords().withResumptionToken(resumptionToken);
         }
         response = responseHelper.buildSuccessResponse(oaipmh);
@@ -390,7 +401,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.handleBatch(batch -> {
 
-      saveInstancesIds(batch, requestId);
+      saveInstancesIds(batch, requestId, vertxContext);
 
       boolean theLastBatch = batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
         (databaseWriteStream.isStreamEnded()
@@ -402,8 +413,30 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completePromise;
   }
 
-  private void saveInstancesIds(List<JsonEvent> batch, String requestId) {
+  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String requestId, Context vertxContext) {
+    Promise<Void> promise = Promise.promise();
+    PostgresClient instance = PostgresClient.getInstance(vertxContext.owner());
+    instance.getConnection(e -> {
+      List<Tuple> batch = new ArrayList<>();
+      List<JsonObject> entities = instances.stream().map(JsonEvent::objectValue).collect(toList());
 
+      for (JsonObject jsonObject : entities) {
+        String id = jsonObject.getString("instanceId");
+        batch.add(Tuple.of(id, requestId, jsonObject));
+      }
+
+      String sql = "INSERT INTO " + "" /*//TODO: this.schemaName*/ + ".INSTANCES (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
+
+      PgConnection connection = null; //TODO: ((SQLConnection) e.result()).conn;
+      connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
+        if (queryRes.failed()) {
+          promise.fail(queryRes.cause());
+        } else {
+          promise.complete();
+        }
+      });
+    });
+    return promise;
   }
 
   private HttpClientRequest createInventoryClientRequest(HttpClient httpClient, Request request) {
