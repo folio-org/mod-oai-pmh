@@ -390,7 +390,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.handleBatch(batch -> {
 
-      saveInstancesIds(batch, requestId, vertxContext);
+      saveInstancesIds(batch, request, requestId, vertxContext);
 
       boolean theLastBatch = batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
         (databaseWriteStream.isStreamEnded()
@@ -434,7 +434,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return databaseWriteStream;
   }
 
-  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String requestId, Context vertxContext) {
+  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, Context vertxContext) {
     Promise<Void> promise = Promise.promise();
     PostgresClient instance = PostgresClient.getInstance(vertxContext.owner());
     instance.getConnection(e -> {
@@ -445,8 +445,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         String id = jsonObject.getString("instanceId");
         batch.add(Tuple.of(id, requestId, jsonObject));
       }
-
-      String sql = "INSERT INTO " + "" /*//TODO: this.schemaName*/ + "." + INSTANCES_TABLE_NAME + " (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
+      String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
+      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
 
       PgConnection connection = e.result(); //TODO: ((SQLConnection) e.result()).conn;
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
