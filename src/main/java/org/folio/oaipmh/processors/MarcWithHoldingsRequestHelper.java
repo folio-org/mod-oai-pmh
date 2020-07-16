@@ -144,7 +144,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.fail(fut.cause());
           return;
         }
-        List<JsonObject> instances = fut.result();
+        List<JsonObject> instances = fut.result().stream().map(e->e.getJsonObject("json")).collect(toList());
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
