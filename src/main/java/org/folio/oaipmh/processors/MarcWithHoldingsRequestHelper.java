@@ -71,6 +71,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final int DATABASE_FETCHING_CHUNK_SIZE = 100;
 
+  private static final String INSTANCES_TABLE_NAME = "INSTANCES";
+
+  private static final String INSTANCE_ID_COLUMN_NAME = "INSTANCE_ID";
+
+  private static final String REQUEST_ID_COLUMN_NAME = "REQUEST_ID";
+
+
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
@@ -85,6 +92,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     .optionalStart().appendOffset("+HH:MM", "Z").optionalEnd()
     .optionalStart().appendOffset("+HHmm", "Z").optionalEnd()
     .toFormatter();
+
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
@@ -164,11 +172,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Promise<Void> deleteInstanceIds(List<String> instanceIds, String requestId, Context context) {
     Promise<Void> promise = Promise.promise();
     PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
-    final String sql = String.format("DELETE FROM INSTANCE_IDS WHERE " +
-      "REQUEST_ID = %s AND INSTANCE_ID IN (%s)", requestId, String.join(", ", instanceIds));
+    final String sql = String.format("DELETE FROM " + INSTANCES_TABLE_NAME + " WHERE " +
+      REQUEST_ID_COLUMN_NAME + " = %s AND " + INSTANCE_ID_COLUMN_NAME + " IN (%s)", requestId, String.join(", ", instanceIds));
     postgresClient.startTx(conn -> {
       try {
-        postgresClient.select(conn, sql, reply -> {
+        postgresClient.execute(conn, sql, reply -> {
           if (reply.succeeded()) {
             promise.complete();
           } else {
@@ -185,8 +193,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Promise<List<JsonObject>> getNextInstances(String requestId, int batchSize, Context context) {
     Promise<List<JsonObject>> promise = Promise.promise();
     PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
-    final String sql = String.format("SELECT jsonb FROM INSTANCE_IDS WHERE " +
-      "REQUEST_ID = %s ORDER BY INSTANCE_ID LIMIT %d", requestId, batchSize + 1);
+    final String sql = String.format("SELECT jsonb FROM " + INSTANCES_TABLE_NAME + " WHERE " +
+      REQUEST_ID_COLUMN_NAME + " = %s ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
     postgresClient.startTx(conn -> {
       try {
         postgresClient.select(conn, sql, reply -> {
@@ -425,7 +433,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         batch.add(Tuple.of(id, requestId, jsonObject));
       }
 
-      String sql = "INSERT INTO " + "" /*//TODO: this.schemaName*/ + ".INSTANCES (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
+      String sql = "INSERT INTO " + "" /*//TODO: this.schemaName*/ + "." + INSTANCES_TABLE_NAME + " (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
 
       PgConnection connection = null; //TODO: ((SQLConnection) e.result()).conn;
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
