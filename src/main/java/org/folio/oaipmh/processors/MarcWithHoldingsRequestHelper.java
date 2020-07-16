@@ -494,7 +494,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
     final HttpClientRequest httpClientRequest = httpClient
-      .postAbs(String.format("%s%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT));
+      .postAbs(String.format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
 
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
