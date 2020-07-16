@@ -203,7 +203,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     PostgresClient postgresClient = PostgresClient.getInstance(context.owner(), request.getTenant());
     final String sql = String.format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
-      REQUEST_ID_COLUMN_NAME + " = \"%s\" ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
+      REQUEST_ID_COLUMN_NAME + " = '%s' ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
     postgresClient.startTx(conn -> {
       try {
         postgresClient.select(conn, sql, reply -> {
@@ -474,13 +474,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       List<JsonObject> entities = instances.stream().map(JsonEvent::objectValue).collect(toList());
 
       for (JsonObject jsonObject : entities) {
-        String id = jsonObject.getString("instanceId");
-        batch.add(Tuple.of(id, requestId, jsonObject));
+        String id = jsonObject.getString("instanceid");
+        batch.add(Tuple.of(UUID.fromString(id), requestId, jsonObject));
       }
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instace_id, request_id, jsonb) VALUES ($1, $2, $3) RETURNING id ";
+      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
-      PgConnection connection = e.result(); //TODO: ((SQLConnection) e.result()).conn;
+      PgConnection connection = e.result();
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
         if (queryRes.failed()) {
           promise.fail(queryRes.cause());
