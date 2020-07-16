@@ -165,7 +165,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
-          deleteInstanceIds(instancesWithoutLast.stream()
+          deleteInstanceIds(request, instancesWithoutLast.stream()
             .map(e -> e.getString("id"))
             .collect(toList()), requestId, context)
             .future().onComplete(e -> promise.complete(result));
@@ -178,9 +178,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<Void> deleteInstanceIds(List<String> instanceIds, String requestId, Context context) {
+  private Promise<Void> deleteInstanceIds(Request request, List<String> instanceIds, String requestId, Context context) {
     Promise<Void> promise = Promise.promise();
-    PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
+    PostgresClient postgresClient = PostgresClient.getInstance(context.owner(), request.getTenant());
     final String sql = String.format("DELETE FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = %s AND " + INSTANCE_ID_COLUMN_NAME + " IN (%s)", requestId, String.join(", ", instanceIds));
     postgresClient.startTx(conn -> {
@@ -201,8 +201,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Promise<List<JsonObject>> getNextInstances(Request request, String requestId, int batchSize, Context context) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    PostgresClient postgresClient = PostgresClient.getInstance(context.owner());
-    final String sql = String.format("SELECT jsonb FROM " + INSTANCES_TABLE_NAME + " WHERE " +
+    PostgresClient postgresClient = PostgresClient.getInstance(context.owner(), request.getTenant());
+    final String sql = String.format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = \"%s\" ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
     postgresClient.startTx(conn -> {
       try {
@@ -468,7 +468,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, Context vertxContext) {
     Promise<Void> promise = Promise.promise();
-    PostgresClient instance = PostgresClient.getInstance(vertxContext.owner());
+    PostgresClient instance = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
     instance.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
       List<JsonObject> entities = instances.stream().map(JsonEvent::objectValue).collect(toList());

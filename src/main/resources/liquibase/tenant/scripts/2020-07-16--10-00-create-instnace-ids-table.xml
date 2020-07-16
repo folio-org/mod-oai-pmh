@@ -12,7 +12,7 @@
       <column name="request_id" type="varchar(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="instance" type="json">
+      <column name="json" type="json">
         <constraints nullable="false"/>
       </column>
     </createTable>
