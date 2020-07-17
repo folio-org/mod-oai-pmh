@@ -107,6 +107,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return INSTANCE;
   }
 
+  /**
+   * Handle MarcWithHoldings request
+   */
   @Override
   public Future<Response> handle(Request request, Context vertxContext) {
     Promise<Response> promise = Promise.promise();
