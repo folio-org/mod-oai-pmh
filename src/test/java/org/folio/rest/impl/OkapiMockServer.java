@@ -115,7 +115,7 @@ public class OkapiMockServer {
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
 
-    router.get(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
+    router.post(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
       .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
     //need to set a proper value to this constant cause i don't now what the second view endpoint is
     router.get(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)

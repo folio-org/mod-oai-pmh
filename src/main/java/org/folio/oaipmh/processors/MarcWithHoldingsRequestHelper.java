@@ -144,7 +144,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.fail(fut.cause());
           return;
         }
-        List<JsonObject> instances = fut.result().stream().map(e->e.getJsonObject("json")).collect(toList());
+        List<JsonObject> instances = fut.result().stream().map(e -> e.getJsonObject("json")).collect(toList());
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
@@ -233,15 +233,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     enrichInventoryClientRequest.end(Json.encode(instances.keySet().toArray(new String[0])));
 
     databaseWriteStream.handleBatch(batch -> {
+      try {
+        for (JsonEvent jsonEvent : batch) {
+          String instanceId = jsonEvent.objectValue().getString("instanceid");
+          instances.get(instanceId).put("itemsandholdingsfields",
+            jsonEvent.objectValue().getString("itemsandholdingsfields"));
+        }
 
-      for (JsonEvent jsonEvent : batch) {
-        String instanceId = jsonEvent.objectValue().getString("instanceId");
-        instances.get(instanceId).put("itemsandholdingsfields",
-          jsonEvent.objectValue().getString("itemsandholdingsfields"));
-      }
-
-      if (isTheLastBatch(databaseWriteStream, batch)) {
-        completePromise.complete(new ArrayList<>(instances.values()));
+        if (isTheLastBatch(databaseWriteStream, batch)) {
+          completePromise.complete(new ArrayList<>(instances.values()));
+        }
+      } catch (Exception e) {
+        completePromise.fail(e);
       }
     });
 
