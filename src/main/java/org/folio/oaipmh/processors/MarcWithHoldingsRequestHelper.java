@@ -61,6 +61,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -161,6 +162,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (!instances.isEmpty() && instances.get(0).getString(INSTANCE_ID_FIELD_NAME).equals(request.getNextRecordId())) {
           handleException(promise, new IllegalArgumentException(
             "Stale resumption token"));
+          return;
+        }
+
+        if (CollectionUtils.isEmpty(instances)) {
+          buildRecordsResponse(request, requestId, instances, new HashMap<>(),
+          firstBatch, null, deletedRecordSupport).onSuccess(e -> postgresClient.closeClient(o -> promise.complete(e)));
           return;
         }
 
