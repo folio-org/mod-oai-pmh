@@ -110,9 +110,9 @@
     <restassured.version>4.2.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
     <srs.version>4.0.1</srs.version>
+    <jooq.version>3.13.2</jooq.version>
     <vertx-jooq.version>5.1.1</vertx-jooq.version>
     <postgres.version>42.2.12</postgres.version>
-    <jooq.version>3.13.2</jooq.version>
   </properties>
 
   <dependencies>
@@ -132,6 +132,11 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>domain-models-runtime</artifactId>
+      <version>${raml-module-builder.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>domain-models-api-interfaces</artifactId>
       <version>${raml-module-builder.version}</version>
     </dependency>
     <dependency>
@@ -218,6 +223,12 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-unit</artifactId>
       <version>${vertx.version}</version>
       <scope>test</scope>
     </dependency>
