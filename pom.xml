@@ -110,6 +110,9 @@
     <restassured.version>4.2.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
     <srs.version>4.0.1</srs.version>
+    <vertx-jooq.version>5.1.1</vertx-jooq.version>
+    <postgres.version>42.2.12</postgres.version>
+    <jooq.version>3.13.2</jooq.version>
   </properties>
 
   <dependencies>
@@ -135,6 +138,12 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-di-support</artifactId>
       <version>1.0.0</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>data-import-utils</artifactId>
+      <version>1.5.0</version>
       <type>jar</type>
     </dependency>
     <dependency>
@@ -181,6 +190,16 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${apache-commons-lang3.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jooq</groupId>
+      <artifactId>jooq</artifactId>
+      <version>${jooq.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.jklingsporn</groupId>
+      <artifactId>vertx-jooq-classic-reactive</artifactId>
+      <version>${vertx-jooq.version}</version>
     </dependency>
 
     <!-- logging see http://www.slf4j.org/legacy.html -->
@@ -592,6 +611,127 @@
             <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
           </systemPropertyVariables>
           <useSystemClassLoader>false</useSystemClassLoader>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.gitlab.janecekpetr</groupId>
+        <artifactId>embedded-postgresql-maven-plugin</artifactId>
+        <version>0.1.0</version>
+        <configuration>
+          <pgServerPort>15432</pgServerPort>
+          <dbName>postgres</dbName>
+          <userName>postgres</userName>
+          <password>postgres</password>
+        </configuration>
+        <executions>
+          <execution>
+            <id>start-pgsql</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>stop-pgsql</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.liquibase</groupId>
+        <artifactId>liquibase-maven-plugin</artifactId>
+        <version>3.9.0</version>
+        <configuration>
+          <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml</changeLogFile>
+          <driver>org.postgresql.Driver</driver>
+          <url>jdbc:postgresql://localhost:15432/postgres</url>
+          <username>postgres</username>
+          <password>postgres</password>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgres.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>create-schema</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>update</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jooq</groupId>
+        <artifactId>jooq-codegen-maven</artifactId>
+        <version>${jooq.version}</version>
+        <executions>
+          <execution>
+            <id>jooq-generate</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgres.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.github.jklingsporn</groupId>
+            <artifactId>vertx-jooq-generate</artifactId>
+            <version>${vertx-jooq.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+            <version>3.3.9</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <jdbc>
+            <driver>org.postgresql.Driver</driver>
+            <url>jdbc:postgresql://localhost:15432/postgres</url>
+            <user>postgres</user>
+            <password>postgres</password>
+          </jdbc>
+          <generator>
+            <name>io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator</name>
+            <database>
+              <name>org.jooq.meta.postgres.PostgresDatabase</name>
+              <includes>.*</includes>
+              <excludes>
+                databasechangelog|databasechangeloglock
+              </excludes>
+              <inputSchema>public</inputSchema>
+              <outputSchemaToDefault>true</outputSchemaToDefault>
+              <unsignedTypes>false</unsignedTypes>
+              <forcedTypes />
+            </database>
+            <generate>
+              <daos>true</daos>
+              <fluentSetters>true</fluentSetters>
+            </generate>
+            <target>
+              <packageName>org.folio.rest.jooq</packageName>
+            </target>
+            <strategy>
+              <name>io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy</name>
+            </strategy>
+          </generator>
         </configuration>
       </plugin>
     </plugins>

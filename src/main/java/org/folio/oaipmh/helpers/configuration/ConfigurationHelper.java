@@ -31,6 +31,8 @@ public class ConfigurationHelper {
 
   private static ConfigurationHelper instance;
 
+  public ConfigurationHelper(){}
+
   public static ConfigurationHelper getInstance() {
     if(Objects.nonNull(instance)){
       return instance;

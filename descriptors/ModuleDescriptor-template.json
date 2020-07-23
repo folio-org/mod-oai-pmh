@@ -19,6 +19,26 @@
             "configuration.entries.collection.get",
             "inventory-storage.oai-pmh-view.instances.collection.get"
           ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": []
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": []
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": []
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/oai-pmh/set",
+          "permissionsRequired": []
         }
       ]
     },

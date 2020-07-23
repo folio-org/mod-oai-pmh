@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Filtering condition DTO Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "filteringConditions" : {
+      "description": "list of sets",
+      "type": "array",
+      "id": "setList",
+      "items": {
+        "type": "object",
+        "ref": "set.json"
+      }
+    }
+  }
+}

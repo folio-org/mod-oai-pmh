@@ -5,7 +5,4 @@
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
   <include file="scripts/2020-07-07--16-00-create-set-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-07-07--16-00-create-filtering-conditions-table.xml" relativeToChangelogFile="true"/>
-  <include file="scripts/2020-07-16--10-00-create-instnace-ids-table.xml" relativeToChangelogFile="true"/>
-  <include file="scripts/2020-07-27--19-17-fix_primary_key.xml" relativeToChangelogFile="true"/>
-  <include file="scripts/2020-07-20--9-00-import-sample-data.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
