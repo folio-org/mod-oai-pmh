@@ -46,7 +46,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -297,7 +296,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    Boolean instanceSuppressDiscovery = instance.getBoolean("suppressDiscovery");
+    Boolean instanceSuppressDiscovery = instance.getBoolean("suppressdiscovery");
     if (instanceSuppressDiscovery != null && instanceSuppressDiscovery)
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
