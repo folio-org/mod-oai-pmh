@@ -132,6 +132,12 @@
       <version>${raml-module-builder.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-di-support</artifactId>
+      <version>1.0.0</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
       <groupId>me.escoffier.vertx</groupId>
       <artifactId>vertx-completable-future</artifactId>
       <version>${vertx-completable-future.version}</version>
@@ -579,7 +585,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>-Xmx1024m -XX:MaxPermSize=256m</argLine>
+          <argLine>@{argLine} -Xmx1024m -XX:MaxPermSize=256m</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
