@@ -579,7 +579,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>-Xmx1024m -XX:MaxPermSize=256m</argLine>
+          <argLine>@{argLine} -Xmx1024m -XX:MaxPermSize=256m</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>

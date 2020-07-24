@@ -86,7 +86,8 @@ public class OkapiMockServer {
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
-  private static final String STREAMING_INVENTORY_ENDPOINT = "/oai-pmh-view/instances";
+  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/oai-pmh-view/enrichedInstances";
+  private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
 
   public static final String ERROR_TENANT = "error";
 
@@ -114,18 +115,27 @@ public class OkapiMockServer {
     router.get(CONFIGURATIONS_ENTRIES)
           .handler(this::handleConfigurationModuleResponse);
 
-    router.get(STREAMING_INVENTORY_ENDPOINT)
-      .handler(this::handleStreamingInventoryResponse);
+    router.post(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
+      .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
+    //need to set a proper value to this constant cause i don't now what the second view endpoint is
+    router.get(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)
+      .handler(this::handleStreamingInventoryInstanceIdsResponse);
     return router;
   }
 
-  private void handleStreamingInventoryResponse(RoutingContext ctx) {
-    String path = "inventory_view/inventory_instances.json";
+  private void handleStreamingInventoryInstanceIdsResponse(RoutingContext ctx) {
+    String path = "inventory_view/instance_ids.json";
     Buffer buffer = Buffer.buffer();
     final String startDate = ctx.request().params().get("startDate");
     if (startDate != null && startDate.contains(INVENTORY_INSTANCE_DATE)) {
       buffer = vertx.fileSystem().readFileBlocking(path);
     }
+    ctx.response().end(buffer);
+  }
+
+  private void handleStreamingInventoryItemsAndHoldingsResponse(RoutingContext ctx) {
+    String path = "inventory_view/enriched_instances.json";
+    Buffer buffer = vertx.fileSystem().readFileBlocking(path);
     ctx.response().end(buffer);
   }
 

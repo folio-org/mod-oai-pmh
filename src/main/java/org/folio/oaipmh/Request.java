@@ -9,6 +9,7 @@ import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -48,6 +49,9 @@ public class Request {
   private int totalRecords;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
+
+   /** The id of the request. */
+  private String requestId;
 
   /**
    * Builder used to build the request.
@@ -184,6 +188,10 @@ public class Request {
     return nextRecordId;
   }
 
+  public String getRequestId() {
+    return requestId;
+  }
+
   public String getTenant() {
     return tenant;
   }
@@ -233,6 +241,7 @@ public class Request {
       final String value = params.get(TOTAL_RECORDS_PARAM);
       this.totalRecords = value == null ? 0 : Integer.parseInt(value);
       this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
+      this.requestId = params.get(REQUEST_ID_PARAM);
     } catch (Exception e) {
       return false;
     }
