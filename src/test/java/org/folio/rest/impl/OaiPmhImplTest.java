@@ -68,6 +68,8 @@ import static org.openarchives.oai._2.VerbType.UNKNOWN;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -87,12 +89,15 @@ import javax.xml.bind.JAXBElement;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.liquibase.LiquibaseUtil;
+import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.BeforeClass;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -170,7 +175,7 @@ class OaiPmhImplTest {
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
   @BeforeAll
-  void setUpOnce(Vertx vertx, VertxTestContext testContext) {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws SQLException {
     resetSystemProperties();
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     String moduleName = PomReader.INSTANCE.getModuleName()
@@ -194,11 +199,14 @@ class OaiPmhImplTest {
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
     setupPredicates();
+
+    try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
+      connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
+    }
+
+    LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
   }
 
-  protected void setStorageType() {
-
-  }
 
   protected Logger getLogger() {
     return logger;
