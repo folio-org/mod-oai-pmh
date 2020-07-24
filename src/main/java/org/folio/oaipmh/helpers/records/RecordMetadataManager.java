@@ -45,17 +45,19 @@ public class RecordMetadataManager {
 
   private static final String ITEMS = "items";
   private static final String ELECTRONIC_ACCESS = "electronicAccess";
-  private static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
+
   private static final String LOCATION = "location";
   private static final String CALL_NUMBER = "callNumber";
   private static final String NAME = "name";
-  private static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressDiscovery";
 
   private StorageHelper storageHelper = StorageHelper.getInstance();
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
   private final Predicate<JsonObject> electronicAccessPredicate;
   private static RecordMetadataManager instance;
+
+  public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
+  public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressDiscovery";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();

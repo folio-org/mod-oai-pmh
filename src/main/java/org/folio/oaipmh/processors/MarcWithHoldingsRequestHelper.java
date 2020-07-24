@@ -84,6 +84,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceid";
 
+  private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
+
+  private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
+
+  private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
+
+  private static final String START_DATE_PARAM_NAME = "startDate";
+
+  private static final String END_DATE_PARAM_NAME = "endDate";
+
   private static final String INVENTORY_INSTANCES_ENDPOINT = "/oai-pmh-view/enrichedInstances";
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
@@ -262,8 +272,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
     JsonObject entries = new JsonObject();
-    entries.put("instanceIds", new JsonArray(new ArrayList<>(instances.keySet())));
-    entries.put("skipSuppressedFromDiscoveryRecords", isSkipSuppressed(request));
+    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
+    entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
     enrichInventoryClientRequest.end(entries.encode());
 
     databaseWriteStream.handleBatch(batch -> {
@@ -271,12 +281,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         for (JsonEvent jsonEvent : batch) {
           JsonObject value = jsonEvent.objectValue();
           String instanceId = value.getString(INSTANCE_ID_FIELD_NAME);
-          Object itemsandholdingsfields = value.getValue("itemsandholdingsfields");
+          Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
           if (itemsandholdingsfields instanceof JsonObject) {
             JsonObject instance = instances.get(instanceId);
             if (instance != null) {
               enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
-              instance.put("itemsandholdingsfields",
+              instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
                 itemsandholdingsfields);
             } else { // it can be the case only for testing
               logger.info(String.format("Instance with instanceId %s wasn't in the request", instanceId));
@@ -296,12 +306,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    Boolean instanceSuppressDiscovery = instance.getBoolean("suppressdiscovery");
-    if (instanceSuppressDiscovery != null && instanceSuppressDiscovery)
+    if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
-          itemJson.put("suppressDiscovery", true);
+          itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, true);
         }
       }
   }
@@ -427,8 +436,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   @Override
   protected HeaderType createHeader(JsonObject instance) {
-    String instanceUpdatedDate = instance.getString("instanceupdateddate");
-    Instant datetime = formatter.parse(instanceUpdatedDate, Instant::from)
+    String updatedDate = instance.getString("updatedDate");
+    Instant datetime = formatter.parse(updatedDate, Instant::from)
       .truncatedTo(ChronoUnit.SECONDS);
 
     return new HeaderType()
@@ -440,16 +449,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false);
     if (date != null) {
-      paramMap.put("startDate", dateFormat.format(date));
+      paramMap.put(START_DATE_PARAM_NAME, dateFormat.format(date));
     }
     date = convertStringToDate(request.getUntil(), true);
     if (date != null) {
-      paramMap.put("endDate", dateFormat.format(date));
+      paramMap.put(END_DATE_PARAM_NAME, dateFormat.format(date));
     }
-    paramMap.put("deletedRecordSupport",
+    paramMap.put(DELETED_RECORD_SUPPORT_PARAM_NAME,
       String.valueOf(
         RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
-    paramMap.put("skipSuppressedFromDiscoveryRecords",
+    paramMap.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS,
       String.valueOf(
         isSkipSuppressed(request)));
 
@@ -580,7 +589,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               records.stream()
                 .filter(Objects::nonNull)
                 .map(r -> (JsonObject) r)
-                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
+                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString(INSTANCE_ID_FIELD_NAME), jo));
             } else {
               logger.debug("Can't process response from SRS: {0}", bh.toString());
             }
