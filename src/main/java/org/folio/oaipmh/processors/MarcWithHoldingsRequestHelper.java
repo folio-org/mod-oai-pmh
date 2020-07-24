@@ -85,7 +85,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceid";
 
-  private static final String INVENTORY_INSTANCES_ENDPOINT = "/oai-pmh-view/instances";
+  private static final String INVENTORY_INSTANCES_ENDPOINT = "/oai-pmh-view/enrichedInstances";
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
 
@@ -262,7 +262,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
-    enrichInventoryClientRequest.end(Json.encode(instances.keySet().toArray(new String[0])));
+    JsonObject entries = new JsonObject();
+    entries.put("instanceIds", new JsonArray(new ArrayList<>(instances.keySet())));
+    entries.put("skipSuppressedFromDiscoveryRecords", isSkipSuppressed(request));
+    enrichInventoryClientRequest.end(entries.encode());
 
     databaseWriteStream.handleBatch(batch -> {
       try {
@@ -449,7 +452,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
     paramMap.put("skipSuppressedFromDiscoveryRecords",
       String.valueOf(
-        !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING)));
+        isSkipSuppressed(request)));
 
     final String params = paramMap.entrySet().stream()
       .map(e -> e.getKey() + "=" + e.getValue())
@@ -467,6 +470,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
 
     return httpClientRequest;
+  }
+
+  private boolean isSkipSuppressed(Request request) {
+    return !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
   private Promise<Void> createBatchStream(Request request,
