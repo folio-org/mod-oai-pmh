@@ -176,7 +176,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         if (CollectionUtils.isEmpty(instances)) {
           buildRecordsResponse(request, requestId, instances, new HashMap<>(),
-          firstBatch, null, deletedRecordSupport).onSuccess(e -> postgresClient.closeClient(o -> promise.complete(e)));
+          firstBatch, null, deletedRecordSupport)
+            .onSuccess(e -> postgresClient.closeClient(o -> promise.complete(e)))
+            .onFailure(e -> handleException(promise, e));
           return;
         }
 
@@ -198,7 +200,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList()), requestId, postgresClient)
             .future().onComplete(e -> postgresClient.closeClient(o -> promise.complete(result)));
-        }));
+        }).onFailure(e -> handleException(promise, e)));
         srsResponse.onFailure(t -> handleException(promise, t));
       });
     } catch (Exception e) {
@@ -306,7 +308,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
+    if (Boolean.parseBoolean(instance.getString("suppressfromdiscovery")))
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
@@ -436,8 +438,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   @Override
   protected HeaderType createHeader(JsonObject instance) {
-    String updatedDate = instance.getString("updatedDate");
-    Instant datetime = formatter.parse(updatedDate, Instant::from)
+    String updateddate = instance.getString("updateddate");
+    Instant datetime = formatter.parse(updateddate, Instant::from)
       .truncatedTo(ChronoUnit.SECONDS);
 
     return new HeaderType()
@@ -589,7 +591,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               records.stream()
                 .filter(Objects::nonNull)
                 .map(r -> (JsonObject) r)
-                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString(INSTANCE_ID_FIELD_NAME), jo));
+                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
               logger.debug("Can't process response from SRS: {0}", bh.toString());
             }
