@@ -6,24 +6,24 @@ import org.folio.rest.client.TenantClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.VertxTestContext;
 
 public class AbstractServiceTest {
 
-  static final String TENANT_ID = "diku";
+  static final String TEST_TENANT_ID = "test_diku";
   static PostgresClientFactory postgresClientFactory;
   static Vertx vertx;
 
-  @BeforeClass
-  public static void setUpClass(TestContext context) throws Exception {
-    Async async = context.async();
+  @BeforeAll
+  public static void setUpClass(VertxTestContext context) throws Exception {
     vertx = Vertx.vertx();
 
     PostgresClient.setIsEmbedded(true);
@@ -34,13 +34,13 @@ public class AbstractServiceTest {
 
     int port = NetworkUtils.nextFreePort();
     String okapiUrl = "http://localhost:" + port;
-    TenantClient tenantClient = new TenantClient(okapiUrl, "diku", "dummy-token");
+    TenantClient tenantClient = new TenantClient(okapiUrl, TEST_TENANT_ID, "dummy-token");
     DeploymentOptions restVerticleDeploymentOptions = new DeploymentOptions()
       .setConfig(new JsonObject().put("http.port", port));
     vertx.deployVerticle(RestVerticle.class.getName(), restVerticleDeploymentOptions, deployResponse -> {
       try {
-        tenantClient.postTenant(new TenantAttributes().withModuleTo("3.2.0"), postTenantResponse -> {
-          async.complete();
+        tenantClient.postTenant(new TenantAttributes().withModuleTo("3.1.0"), postTenantResponse -> {
+          context.completeNow();
         });
       } catch (Exception e) {
         e.printStackTrace();
@@ -48,13 +48,12 @@ public class AbstractServiceTest {
     });
   }
 
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
+  @AfterAll
+  public static void tearDownClass(VertxTestContext context) {
     PostgresClientFactory.closeAll();
-    vertx.close(context.asyncAssertSuccess(res -> {
+    vertx.close(context.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
-      async.complete();
+      context.completeNow();
     }));
   }
 }

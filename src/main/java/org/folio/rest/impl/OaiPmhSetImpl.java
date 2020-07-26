@@ -42,8 +42,6 @@ public class OaiPmhSetImpl implements OaiPmhSet {
     vertxContext.runOnContext(v -> {
       try {
         setService.getSetById(id, getTenantId(okapiHeaders))
-          .map(optionalSet -> optionalSet
-            .orElseThrow(() -> new NotFoundException(String.format(NOT_FOUND_MESSAGE, Set.class.getSimpleName(), id))))
           .map(GetOaiPmhSetByIdResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
@@ -59,7 +57,7 @@ public class OaiPmhSetImpl implements OaiPmhSet {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        setService.updateSetById(id, entity, getTenantId(okapiHeaders))
+        setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(updated -> PutOaiPmhSetByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
@@ -75,10 +73,15 @@ public class OaiPmhSetImpl implements OaiPmhSet {
       Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        setService.saveSet(entity, getTenantId(okapiHeaders))
+        setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(PostOaiPmhSetResponse::respond201WithApplicationJson)
           .map(Response.class::cast)
-          .otherwise(ExceptionHelper::mapExceptionToResponse)
+          .otherwise(throwable -> {
+            if(throwable instanceof IllegalArgumentException) {
+              return PostOaiPmhSetResponse.respond400WithTextPlain(throwable.getMessage());
+            }
+            return ExceptionHelper.mapExceptionToResponse(throwable);
+          })
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
@@ -92,9 +95,7 @@ public class OaiPmhSetImpl implements OaiPmhSet {
     vertxContext.runOnContext(v -> {
       try {
         setService.deleteSetById(id, getTenantId(okapiHeaders))
-          .map(deleted -> deleted ? DeleteOaiPmhSetByIdResponse.respond204()
-              : DeleteOaiPmhSetByIdResponse
-                .respond404WithTextPlain(String.format(NOT_FOUND_MESSAGE, Set.class.getSimpleName(), id)))
+          .map(DeleteOaiPmhSetByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -106,6 +107,10 @@ public class OaiPmhSetImpl implements OaiPmhSet {
 
   private String getTenantId(Map<String, String> okapiHeaders) {
     return TenantTool.tenantId(okapiHeaders);
+  }
+
+  private String getUserId(Map<String, String> okapiHeaders) {
+    return okapiHeaders.get("x-okapi-user-id");
   }
 
 }

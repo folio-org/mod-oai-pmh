@@ -40,6 +40,11 @@ resourceTypes:
         body:
           application/json:
             type: set
+      400:
+        description: "Returns a newly created set item, with server-controlled fields like 'id' populated"
+        body:
+          text/plain:
+            example: "Set item with specified id already exists"
   /{id}:
     displayName: Set
     description: Get, Delete or Update a specific set item

@@ -26,18 +26,18 @@ public class SetServiceImpl implements SetService {
   }
 
   @Override
-  public Future<Optional<Set>> getSetById(String id, String tenantId) {
+  public Future<Set> getSetById(String id, String tenantId) {
     return setDao.getSetById(id, tenantId);
   }
 
   @Override
-  public Future<Set> updateSetById(String id, Set entry, String tenantId) {
-    return setDao.updateSetById(id, entry, tenantId);
+  public Future<Set> updateSetById(String id, Set entry, String tenantId, String userId) {
+    return setDao.updateSetById(id, entry, tenantId, userId);
   }
 
   @Override
-  public Future<Set> saveSet(Set entry, String tenantId) {
-    return setDao.saveSet(entry, tenantId);
+  public Future<Set> saveSet(Set entry, String tenantId, String userId) {
+    return setDao.saveSet(entry, tenantId, userId);
   }
 
   @Override

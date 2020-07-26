@@ -128,7 +128,6 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- org.folio:domain-models-api-interfaces dependency goes with org.folio:domain-models-runtime -->
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>domain-models-runtime</artifactId>
@@ -254,6 +253,12 @@
       <version>2.17.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
@@ -301,6 +306,7 @@
             <configuration>
               <sources>
                 <source>${project.build.directory}/generated-sources/raml-jaxrs</source>
+                <source>${project.build.directory}/generated-sources/jooq</source>
               </sources>
             </configuration>
           </execution>
@@ -615,7 +621,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>@{argLine} -Xmx1024m -XX:MaxPermSize=256m</argLine>
+          <argLine>@{argLine} -Xmx1024m</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
