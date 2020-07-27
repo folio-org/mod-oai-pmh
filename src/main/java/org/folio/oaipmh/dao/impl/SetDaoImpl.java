@@ -20,7 +20,6 @@ import org.folio.rest.jaxrs.model.Set;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.records.SetRecord;
 import org.jooq.Condition;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
