@@ -112,7 +112,7 @@ class OaiPmhSetImplTest {
           SpringContextUtil.init(vertx, context, ApplicationConfig.class);
           SpringContextUtil.autowireDependencies(this, context);
           try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-            connection.prepareStatement("create schema postgres_mod_oai_pmh").execute();
+            connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
           } catch (Exception ex) {
             testContext.failNow(ex);
           }
