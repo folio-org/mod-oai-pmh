@@ -5,7 +5,6 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET;
 
-import java.sql.Date;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Objects;
@@ -177,7 +176,7 @@ public class SetDaoImpl implements SetDao {
       .next())) : Optional.empty();
   }
 
-  private static Set rowToSet(Row row) {
+  private Set rowToSet(Row row) {
     org.folio.rest.jooq.tables.pojos.Set pojo = RowMappers.getSetMapper()
       .apply(row);
     Set set = new Set();
