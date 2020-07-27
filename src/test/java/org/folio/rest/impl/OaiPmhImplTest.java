@@ -95,9 +95,11 @@ import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -175,7 +177,7 @@ class OaiPmhImplTest {
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
   @BeforeAll
-  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws SQLException {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
     resetSystemProperties();
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     String moduleName = PomReader.INSTANCE.getModuleName()
@@ -199,12 +201,20 @@ class OaiPmhImplTest {
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
     setupPredicates();
+    
+    PostgresClient client = PostgresClient.getInstance(vertx);
+    client.startEmbeddedPostgres();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
       connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
     }
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
+  }
+
+  @AfterAll
+  void cleanUpAfterAll() {
+    PostgresClient.stopEmbeddedPostgres();
   }
 
 
