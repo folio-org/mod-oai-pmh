@@ -95,9 +95,11 @@ import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -205,6 +207,11 @@ class OaiPmhImplTest {
     }
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
+  }
+  
+  @AfterAll
+  void cleanUpAfterAll() {
+    PostgresClient.stopEmbeddedPostgres();
   }
 
 
