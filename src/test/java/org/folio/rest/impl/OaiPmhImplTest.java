@@ -177,7 +177,7 @@ class OaiPmhImplTest {
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
   @BeforeAll
-  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws SQLException {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
     resetSystemProperties();
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     String moduleName = PomReader.INSTANCE.getModuleName()
@@ -201,6 +201,9 @@ class OaiPmhImplTest {
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
     setupPredicates();
+    
+    PostgresClient client = PostgresClient.getInstance(vertx);
+    client.startEmbeddedPostgres();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
       connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
@@ -208,7 +211,7 @@ class OaiPmhImplTest {
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
   }
-  
+
   @AfterAll
   void cleanUpAfterAll() {
     PostgresClient.stopEmbeddedPostgres();
