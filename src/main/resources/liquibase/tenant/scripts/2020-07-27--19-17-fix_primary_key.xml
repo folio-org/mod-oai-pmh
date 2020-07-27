@@ -1,0 +1,12 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+  <changeSet id="2020-07-27--19-17-fix_primary_key" author="Dmytro Popov">
+    <dropPrimaryKey constraintName="instances_pkey" tableName="instances"
+                    schemaName="${database.defaultSchemaName}"/>
+  </changeSet>
+
+</databaseChangeLog>
