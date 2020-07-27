@@ -1,13 +1,12 @@
 package org.folio.rest.impl;
 
 import static java.util.Objects.nonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.util.UUID;
 
 import org.folio.config.ApplicationConfig;
+import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
@@ -18,7 +17,6 @@ import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
-import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
@@ -47,16 +44,7 @@ import io.vertx.junit5.VertxTestContext;
 class OaiPmhSetImplTest {
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
 
-  private static final String ID = "id";
-  private static final String NAME = "name";
-  private static final String DESCRIPTION = "description";
-  private static final String SETSPEC = "setSpec";
-  private static final String CREATED_BY_USER_ID = "createdByUserId";
-  private static final String CREATED_DATE = "createdDate";
-  private static final String UPDATED_BY_USER_ID = "updatedByUserId";
-  private static final String UPDATED_DATE = "updatedDate";
-
-  private static final String TEST_TENANT_ID = "test_tenant";
+  private static final String TEST_TENANT_ID = "test";
   private static final String TEST_USER_ID = UUID.randomUUID()
     .toString();
 
@@ -105,7 +93,6 @@ class OaiPmhSetImplTest {
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
     PostgresClient.setIsEmbedded(true);
-//    PostgresClient.setEmbeddedPort(NetworkUtils.nextFreePort());
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
@@ -126,6 +113,8 @@ class OaiPmhSetImplTest {
       } catch (Exception e) {
         testContext.failNow(e);
       }
+      LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
+      testContext.completeNow();
     });
   }
 
