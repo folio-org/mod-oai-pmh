@@ -1,0 +1,7 @@
+{
+  "host" : "localhost",
+  "port" : 7777,
+  "database" : "postgres",
+  "username" : "postgres_mod_oai_pmh",
+  "password" : "postgres"
+}
