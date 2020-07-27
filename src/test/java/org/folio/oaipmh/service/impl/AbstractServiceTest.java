@@ -16,7 +16,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.junit5.VertxTestContext;
 
-public class AbstractServiceTest {
+public abstract class AbstractServiceTest {
 
   static final String TEST_TENANT_ID = "test_diku";
   static PostgresClientFactory postgresClientFactory;

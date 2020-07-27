@@ -1,5 +1,6 @@
 package org.folio.oaipmh.dao.impl;
 
+import static java.util.Date.from;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET;
@@ -121,17 +122,12 @@ public class SetDaoImpl implements SetDao {
   }
 
   private void prepareSetMetadata(Set entry, String userId, InsertType insertType) {
-    switch (insertType) {
-      case UPDATE: {
-        entry.setUpdatedDate(java.util.Date.from(Instant.now()));
-        entry.setUpdatedByUserId(userId);
-        break;
-      }
-      case INSERT: {
-        entry.setCreatedDate(java.util.Date.from(Instant.now()));
-        entry.setCreatedByUserId(userId);
-        break;
-      }
+    if (insertType.equals(InsertType.UPDATE)) {
+      entry.setUpdatedDate(from(Instant.now()));
+      entry.setUpdatedByUserId(userId);
+    } else {
+      entry.setCreatedDate(from(Instant.now()));
+      entry.setCreatedByUserId(userId);
     }
   }
 
@@ -149,16 +145,20 @@ public class SetDaoImpl implements SetDao {
     if (isNotEmpty(set.getSetSpec())) {
       dbRecord.setSetspec(set.getSetSpec());
     }
-    if(Objects.nonNull(set.getCreatedDate())) {
-      dbRecord.setCreatedDate(set.getCreatedDate().toInstant().atOffset(ZoneOffset.UTC));
+    if (Objects.nonNull(set.getCreatedDate())) {
+      dbRecord.setCreatedDate(set.getCreatedDate()
+        .toInstant()
+        .atOffset(ZoneOffset.UTC));
     }
-    if(isNotEmpty(set.getCreatedByUserId())) {
+    if (isNotEmpty(set.getCreatedByUserId())) {
       dbRecord.setCreatedByUserId(UUID.fromString(set.getCreatedByUserId()));
     }
-    if(Objects.nonNull(set.getUpdatedDate())) {
-      dbRecord.setUpdatedDate(set.getUpdatedDate().toInstant().atOffset(ZoneOffset.UTC));
+    if (Objects.nonNull(set.getUpdatedDate())) {
+      dbRecord.setUpdatedDate(set.getUpdatedDate()
+        .toInstant()
+        .atOffset(ZoneOffset.UTC));
     }
-    if(isNotEmpty(set.getUpdatedByUserId())) {
+    if (isNotEmpty(set.getUpdatedByUserId())) {
       dbRecord.setUpdatedByUserId(UUID.fromString(set.getUpdatedByUserId()));
     }
     return dbRecord;
@@ -199,7 +199,7 @@ public class SetDaoImpl implements SetDao {
         .toString());
     }
     if (nonNull(pojo.getCreatedDate())) {
-      set.withCreatedDate(Date.from(pojo.getCreatedDate()
+      set.withCreatedDate(from(pojo.getCreatedDate()
         .toInstant()));
     }
     if (nonNull(pojo.getUpdatedByUserId())) {
@@ -207,7 +207,7 @@ public class SetDaoImpl implements SetDao {
         .toString());
     }
     if (nonNull(pojo.getUpdatedDate())) {
-      set.withUpdatedDate(Date.from(pojo.getUpdatedDate()
+      set.withUpdatedDate(from(pojo.getUpdatedDate()
         .toInstant()));
     }
     return set;
