@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static java.util.Objects.nonNull;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.sql.Connection;
@@ -46,7 +47,6 @@ import io.vertx.junit5.VertxTestContext;
 class OaiPmhSetImplTest {
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
 
-  private static final String TEST_TENANT_ID = "postgres";
   private static final String TEST_USER_ID = UUID.randomUUID()
     .toString();
 
@@ -70,7 +70,7 @@ class OaiPmhSetImplTest {
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private final Header tenantHeader = new Header("X-Okapi-Tenant", TEST_TENANT_ID);
+  private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + okapiPort);
   private final Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
 
@@ -99,7 +99,7 @@ class OaiPmhSetImplTest {
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
-    TenantClient tenantClient = new TenantClient(okapiUrl, TEST_TENANT_ID, "dummy-token");
+    TenantClient tenantClient = new TenantClient(okapiUrl, OAI_TEST_TENANT, "dummy-token");
 
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
@@ -111,12 +111,12 @@ class OaiPmhSetImplTest {
           Context context = vertx.getOrCreateContext();
           SpringContextUtil.init(vertx, context, ApplicationConfig.class);
           SpringContextUtil.autowireDependencies(this, context);
-          try (Connection connection = SingleConnectionProvider.getConnection(vertx, TEST_TENANT_ID)) {
+          try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
             connection.prepareStatement("create schema postgres_mod_oai_pmh").execute();
           } catch (Exception ex) {
             testContext.failNow(ex);
           }
-          LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
+          LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
           testContext.completeNow();
         });
       } catch (Exception e) {
@@ -127,7 +127,7 @@ class OaiPmhSetImplTest {
 
   @BeforeEach
   private void initTestData(VertxTestContext testContext) {
-    setDao.saveSet(INITIAL_TEST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+    setDao.saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());
@@ -139,7 +139,7 @@ class OaiPmhSetImplTest {
 
   @AfterEach
   private void cleanTestData(VertxTestContext testContext) {
-    setDao.deleteSetById(EXISTENT_SET_ID, TEST_TENANT_ID)
+    setDao.deleteSetById(EXISTENT_SET_ID, OAI_TEST_TENANT)
       .onComplete(result -> testContext.completeNow());
   }
 
