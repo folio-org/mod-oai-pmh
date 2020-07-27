@@ -236,17 +236,17 @@ class OaiPmhSetImplTest {
 
   }
 
-  @Test
-  void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
-    testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
-      request.when()
-        .delete()
-        .then()
-        .statusCode(204);
-      testContext.completeNow();
-    });
-  }
+//  @Test
+//  void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
+//    testContext.verify(() -> {
+//      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
+//      request.when()
+//        .delete()
+//        .then()
+//        .statusCode(204);
+//      testContext.completeNow();
+//    });
+//  }
 
   @Test
   void shouldNotDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
