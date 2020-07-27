@@ -87,7 +87,11 @@
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
       "subPermissions": [
-        "oai-pmh.records.collection.get"
+        "oai-pmh.records.collection.get",
+        "oai-pmh.set.item.get",
+        "oai-pmh.set.item.post",
+        "oai-pmh.set.item.put",
+        "oai-pmh.set.item.delete"
       ]
     },
     {
