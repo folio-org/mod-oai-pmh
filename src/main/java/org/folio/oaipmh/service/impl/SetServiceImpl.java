@@ -1,11 +1,8 @@
 package org.folio.oaipmh.service.impl;
 
-import java.util.Optional;
-
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.Set;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;

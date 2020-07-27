@@ -1,7 +1,5 @@
 package org.folio.oaipmh.dao;
 
-import java.util.Optional;
-
 import org.folio.rest.jaxrs.model.Set;
 
 import io.vertx.core.Future;

@@ -34,6 +34,9 @@ public class SetDaoImpl implements SetDao {
 
   private static final Logger logger = LoggerFactory.getLogger(SetDaoImpl.class);
 
+  private static final String ALREADY_EXISTS_ERROR_MSG = "Set with id '%s' already exists";
+  private static final String NOT_FOUND_ERROR_MSG = "Set with id '%s' was not found";
+
   private final PostgresClientFactory postgresClientFactory;
 
   public SetDaoImpl(final PostgresClientFactory postgresClientFactory) {
@@ -54,7 +57,7 @@ public class SetDaoImpl implements SetDao {
           if (optionalSet.isPresent()) {
             return optionalSet.get();
           }
-          throw new NotFoundException(String.format("Set with id '%s' was not found", id));
+          throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id));
         });
     });
   }
@@ -73,7 +76,7 @@ public class SetDaoImpl implements SetDao {
         if (optionalSet.isPresent()) {
           return optionalSet.get();
         }
-        throw new NotFoundException(String.format("Set with id '%s' was not found", entry.getId()));
+        throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, entry.getId()));
       }));
   }
 
@@ -84,7 +87,7 @@ public class SetDaoImpl implements SetDao {
         .where(SET.ID.eq(UUID.fromString(entry.getId()))))
         .compose(res -> {
           if (res == 1) {
-            throw new IllegalArgumentException(String.format("Set with id '%s' already exists", entry.getId()));
+            throw new IllegalArgumentException(String.format(ALREADY_EXISTS_ERROR_MSG, entry.getId()));
           }
           return saveSetItem(entry, tenantId, userId);
         }));
@@ -113,7 +116,7 @@ public class SetDaoImpl implements SetDao {
         if (res == 1) {
           return true;
         }
-        throw new NotFoundException(String.format("Set with id '%s' was not found", id));
+        throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id));
       }));
   }
 

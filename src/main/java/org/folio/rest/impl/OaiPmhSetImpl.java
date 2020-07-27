@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import java.util.Map;
 
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
 
 import org.folio.dataimport.util.ExceptionHelper;
@@ -24,8 +23,6 @@ import io.vertx.core.logging.LoggerFactory;
 public class OaiPmhSetImpl implements OaiPmhSet {
 
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
-
-  private static final String NOT_FOUND_MESSAGE = "%s with id '%s' was not found";
 
   @Autowired
   private SetService setService;

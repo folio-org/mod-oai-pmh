@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import java.util.UUID;
 
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
@@ -54,10 +53,6 @@ class OaiPmhSetImplTest {
   private static final String SET_PATH = "/oai-pmh/set";
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
-
-  private static final String EXPECTED_NOT_FOUND_MSG = String.format("Set with id '%s' was not found", NONEXISTENT_SET_ID);
-  private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = String.format("Set with id '%s' already exists",
-      EXISTENT_SET_ID);
 
   private static final Set INITIAL_TEST_SET_ENTRY = new Set().withId(EXISTENT_SET_ID)
     .withName("test name")
