@@ -2,6 +2,7 @@ package org.folio.oaipmh.service.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import javax.ws.rs.NotFoundException;
@@ -68,10 +69,7 @@ class SetServiceImplTest extends AbstractServiceTest {
           testContext.failNow(result.cause());
         }
         Set set = result.result();
-        assertEquals(EXISTENT_SET_ID, set.getId());
-        assertEquals(INITIAL_TEST_SET_ENTRY.getName(), set.getName());
-        assertEquals(INITIAL_TEST_SET_ENTRY.getDescription(), set.getDescription());
-        assertEquals(INITIAL_TEST_SET_ENTRY.getSetSpec(), set.getSetSpec());
+        verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
         assertEquals(TEST_USER_ID, set.getCreatedByUserId());
         assertNotNull(set.getCreatedDate());
         testContext.completeNow();
@@ -96,13 +94,9 @@ class SetServiceImplTest extends AbstractServiceTest {
           testContext.failNow(result.cause());
         }
         Set updatedSet = result.result();
-        assertEquals(EXISTENT_SET_ID, updatedSet.getId());
-        assertEquals(UPDATE_SET_ENTRY.getName(), updatedSet.getName());
-        assertEquals(UPDATE_SET_ENTRY.getDescription(), updatedSet.getDescription());
-        assertEquals(UPDATE_SET_ENTRY.getSetSpec(), updatedSet.getSetSpec());
+        verifyMainSetData(UPDATE_SET_ENTRY, updatedSet, true);
         assertEquals(TEST_USER_ID, updatedSet.getUpdatedByUserId());
         assertEquals(TEST_USER_ID, updatedSet.getCreatedByUserId());
-        assertEquals(EXISTENT_SET_ID, updatedSet.getId());
         assertNotNull(updatedSet.getCreatedDate());
         assertNotNull(updatedSet.getUpdatedDate());
         testContext.completeNow();
@@ -127,10 +121,7 @@ class SetServiceImplTest extends AbstractServiceTest {
           testContext.failNow(result.cause());
         }
         Set savedSet = result.result();
-        assertNotNull(savedSet.getId());
-        assertEquals(POST_SET_ENTRY.getName(), savedSet.getName());
-        assertEquals(POST_SET_ENTRY.getDescription(), savedSet.getDescription());
-        assertEquals(POST_SET_ENTRY.getSetSpec(), savedSet.getSetSpec());
+        verifyMainSetData(POST_SET_ENTRY, savedSet, false);
         assertEquals(TEST_USER_ID, savedSet.getCreatedByUserId());
         assertNotNull(savedSet.getCreatedDate());
         testContext.completeNow();
@@ -139,14 +130,16 @@ class SetServiceImplTest extends AbstractServiceTest {
 
   @Test
   void shouldNotSaveAndThrowException_whenSaveSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
-    POST_SET_ENTRY.setId(EXISTENT_SET_ID);
-    setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
-      .onComplete(testContext.failing(throwable -> {
-        assertTrue(throwable instanceof IllegalArgumentException);
-        assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
-        POST_SET_ENTRY.setId(null);
-        testContext.completeNow();
-      }));
+    testContext.verify(() -> {
+      POST_SET_ENTRY.setId(EXISTENT_SET_ID);
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+        .onComplete(testContext.failing(throwable -> {
+          assertTrue(throwable instanceof IllegalArgumentException);
+          assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
+          POST_SET_ENTRY.setId(null);
+          testContext.completeNow();
+        }));
+    });
   }
 
   @Test
@@ -179,6 +172,17 @@ class SetServiceImplTest extends AbstractServiceTest {
         }
         testContext.completeNow();
       });
+  }
+
+  private void verifyMainSetData(Set setWithExpectedData, Set setToVerify, boolean checkIdEquals) {
+    assertEquals(setWithExpectedData.getName(), setToVerify.getName());
+    assertEquals(setWithExpectedData.getDescription(), setToVerify.getDescription());
+    assertEquals(setWithExpectedData.getSetSpec(), setToVerify.getSetSpec());
+    if(checkIdEquals) {
+      assertEquals(EXISTENT_SET_ID, setToVerify.getId());
+    } else {
+      assertNotNull(setToVerify.getId());
+    }
   }
 
 }

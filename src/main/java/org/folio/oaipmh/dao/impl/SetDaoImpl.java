@@ -6,7 +6,7 @@ import static org.folio.rest.jooq.Tables.SET;
 
 import java.sql.Date;
 import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -101,7 +101,6 @@ public class SetDaoImpl implements SetDao {
       .set(toDatabaseSetRecord(entry))
       .onConflict(SET.ID)
       .doNothing()
-      // later in validation ticket .onConflict(setSpec fild must be unqiue)
       .returning())
       .map(raw -> entry));
   }
@@ -148,13 +147,13 @@ public class SetDaoImpl implements SetDao {
       dbRecord.setSetspec(set.getSetSpec());
     }
     if(Objects.nonNull(set.getCreatedDate())) {
-      dbRecord.setCreatedDate(OffsetDateTime.from(set.getCreatedDate().toInstant()));
+      dbRecord.setCreatedDate(set.getCreatedDate().toInstant().atOffset(ZoneOffset.UTC));
     }
     if(isNotEmpty(set.getCreatedByUserId())) {
       dbRecord.setCreatedByUserId(UUID.fromString(set.getCreatedByUserId()));
     }
     if(Objects.nonNull(set.getUpdatedDate())) {
-      dbRecord.setUpdatedDate(OffsetDateTime.from(set.getUpdatedDate().toInstant()));
+      dbRecord.setUpdatedDate(set.getUpdatedDate().toInstant().atOffset(ZoneOffset.UTC));
     }
     if(isNotEmpty(set.getUpdatedByUserId())) {
       dbRecord.setUpdatedByUserId(UUID.fromString(set.getUpdatedByUserId()));
