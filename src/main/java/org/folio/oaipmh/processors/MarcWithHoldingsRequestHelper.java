@@ -59,6 +59,7 @@ import io.vertx.sqlclient.Tuple;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
@@ -471,7 +472,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String inventoryQuery = String.format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
 
-    logger.info("Sending request to {0}", inventoryQuery);
+    logger.info("Sending request to :" + inventoryQuery);
     final HttpClientRequest httpClientRequest = httpClient
       .getAbs(inventoryQuery);
 
@@ -571,6 +572,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+    httpClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
     return httpClientRequest;
   }
