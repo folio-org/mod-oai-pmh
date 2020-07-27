@@ -3,4 +3,8 @@
   "name" : "example set",
   "description" : "example description",
   "setSpec" : "EXAMPLE:SET:SPEC"
+  "createdDate" : "2020-07-27T11:19:58.293+0000",
+  "createdByUserId" : "ba332b37-1e74-4e95-b61f-a220401ef0bb"
+  "updatedDate" : "2020-08-02T12:23:57.298+0000",
+  "updatedByUserId" : "ba332b37-1e74-4e95-b61f-a220401ef0bb"
 }
