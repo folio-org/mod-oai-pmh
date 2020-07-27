@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Filtering condition DTO Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "UUID",
+      "$ref": "../common/uuid.json"
+    },
+    "name": {
+      "description": "Filtering condition name",
+      "type": "string"
+    },
+    "value": {
+      "description": "Filtering condition value",
+      "type": "string"
+    },
+    "setSpec": {
+      "description": "Set of spec",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "value",
+    "setSpec"
+  ]
+}

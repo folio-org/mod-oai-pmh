@@ -19,6 +19,26 @@
             "configuration.entries.collection.get",
             "inventory-storage.oai-pmh-view.instances.collection.get"
           ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": ["oai-pmh.set.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": ["oai-pmh.set.item.put"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/oai-pmh/set",
+          "permissionsRequired": ["oai-pmh.set.item.post"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/oai-pmh/set/{id}",
+          "permissionsRequired": ["oai-pmh.set.item.delete"]
         }
       ]
     },
@@ -67,7 +87,42 @@
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
       "subPermissions": [
-        "oai-pmh.records.collection.get"
+        "oai-pmh.records.collection.get",
+        "oai-pmh.set.item.get",
+        "oai-pmh.set.item.post",
+        "oai-pmh.set.item.put",
+        "oai-pmh.set.item.delete"
+      ]
+    },
+    {
+      "permissionName": "oai-pmh.set.item.get",
+      "displayName": "OAI-PMH Set - get item",
+      "description": "Manage oai-pmh set items"
+    },
+    {
+      "permissionName": "oai-pmh.set.item.post",
+      "displayName": "OAI-PMH Set - post item",
+      "description": "Manage oai-pmh set items"
+    },
+    {
+      "permissionName": "oai-pmh.set.item.put",
+      "displayName": "OAI-PMH Set - put item",
+      "description": "Manage oai-pmh set items"
+    },
+    {
+      "permissionName": "oai-pmh.set.item.delete",
+      "displayName": "OAI-PMH Set - delete item",
+      "description": "Manage oai-pmh set items"
+    },
+    {
+      "permissionName": "oai-pmh.set.all",
+      "displayName": "OAI-PMH Set - all permissions",
+      "description": "Entire set of permissions for managing oai-pmh set items",
+      "subPermissions": [
+        "oai-pmh.set.item.get",
+        "oai-pmh.set.item.post",
+        "oai-pmh.set.item.put",
+        "oai-pmh.set.item.delete"
       ]
     }
   ],
