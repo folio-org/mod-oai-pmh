@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -23,13 +24,12 @@ import io.vertx.core.logging.LoggerFactory;
  * Is used for reading json configuration files from resources and mapping them to {@link JsonObject} instances.
  * As well allows to parse configuration keys/values from json entry to Map.
  */
+@Component
 public class ConfigurationHelper {
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurationHelper.class);
 
   private static ConfigurationHelper instance;
-
-  private ConfigurationHelper(){}
 
   public static ConfigurationHelper getInstance() {
     if(Objects.nonNull(instance)){

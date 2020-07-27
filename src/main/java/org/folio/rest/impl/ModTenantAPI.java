@@ -23,6 +23,8 @@ import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -46,7 +48,12 @@ public class ModTenantAPI extends TenantAPI {
   private static final String QUERY = "module==OAIPMH and configName==%s";
   private static final String MODULE_NAME = "OAIPMH";
   private static final int CONFIG_JSON_BODY = 0;
-  private ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
+
+  private ConfigurationHelper configurationHelper;
+
+  public ModTenantAPI() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
@@ -235,6 +242,11 @@ public class ModTenantAPI extends TenantAPI {
       .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
       .entity(body);
     return builder.build();
+  }
+
+  @Autowired
+  public void setConfigurationHelper(ConfigurationHelper configurationHelper) {
+    this.configurationHelper = configurationHelper;
   }
 
 }
