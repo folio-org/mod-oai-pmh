@@ -164,7 +164,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         List<JsonObject> instances = fut.result();
 
-        logger.debug(String.format("Inventory response for %s: %s", requestId, instances
+        logger.info(String.format("Inventory response for %s: %s", requestId, instances
         .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
 
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
@@ -620,7 +620,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .map(r -> (JsonObject) r)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
-              logger.debug("Can't process response from SRS: {0}", bh.toString());
+              logger.info("Can't process response from SRS: {0}", bh.toString());
             }
             promise.complete(result);
           } catch (Exception e) {
