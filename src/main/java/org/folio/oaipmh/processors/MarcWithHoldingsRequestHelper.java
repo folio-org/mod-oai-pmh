@@ -61,7 +61,6 @@ import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -162,7 +161,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.fail(fut.cause());
           return;
         }
+
         List<JsonObject> instances = fut.result();
+
+        logger.debug(String.format("Inventory response for %s: %s", requestId, instances
+        .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
+
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
@@ -407,6 +411,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     List<RecordType> records = new ArrayList<>();
 
+
+    logger.info(String.format("buildRecordsList batch %s: ", batch
+      .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
+
+    logger.info(String.format("buildRecordsList srsResponse %s: ", srsResponse.values()
+      .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
+
     for (JsonObject inventoryInstance : batch) {
       final String instanceId = inventoryInstance.getString(INSTANCE_ID_FIELD_NAME);
       final JsonObject srsInstance = srsResponse.get(instanceId);
@@ -437,6 +448,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         records.add(record);
       }
     }
+
+     logger.info(String.format("buildRecordsList records %s: ", records
+      .stream().map(Object::toString).collect(Collectors.joining("\n"))));
+
     return records;
   }
 
