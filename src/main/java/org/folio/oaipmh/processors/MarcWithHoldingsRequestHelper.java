@@ -277,7 +277,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-    enrichInventoryClientRequest.end(entries.encode());
+    String entities = entries.encode();
+    enrichInventoryClientRequest.end(entities);
+
+    logger.info("Sending enrich request with :" + entities);
 
     databaseWriteStream.handleBatch(batch -> {
       try {
@@ -497,6 +500,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.sendHead();
     databaseWriteStream.handleBatch(batch -> {
 
+      logger.info(String.format("Inventory response for %s: %s", requestId, batch
+        .stream().map(Object::toString).collect(Collectors.joining("\n"))));
+
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
 
       if (isTheLastBatch(databaseWriteStream, batch)) {
@@ -551,10 +557,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         batch.add(Tuple.of(UUID.fromString(id), requestId, jsonObject));
       }
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
+      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
+        + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
       PgConnection connection = e.result();
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
+          logger.info(String.format("Insert result for %s: %s", requestId,
+            StreamSupport.stream(queryRes.result().spliterator(), false)
+        .map(Tuple::deepToString).collect(Collectors.joining("\n"))));
         if (queryRes.failed()) {
           promise.fail(queryRes.cause());
         } else {
@@ -580,7 +590,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.info("Request to SRS: {0}", listOfIds);
+    logger.info("Request to SRS for ids: " + String.join(",", listOfIds));
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
