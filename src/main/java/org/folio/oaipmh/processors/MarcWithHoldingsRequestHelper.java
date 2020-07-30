@@ -575,11 +575,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
         + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
+      logger.info(String.format("Inserting instances for %s: %s", requestId,
+        batch.stream().map(Tuple::deepToString).collect(Collectors.joining(", "))));
+
       PgConnection connection = e.result();
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
-          logger.info(String.format("Insert result for %s: %s", requestId,
-            StreamSupport.stream(queryRes.result().spliterator(), false)
-        .map(Tuple::deepToString).collect(Collectors.joining("\n"))));
         if (queryRes.failed()) {
           promise.fail(queryRes.cause());
         } else {
