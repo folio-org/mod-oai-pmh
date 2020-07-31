@@ -4,23 +4,38 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.ws.rs.NotFoundException;
 
+import org.folio.liquibase.LiquibaseUtil;
+import org.folio.liquibase.SingleConnectionProvider;
+import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.Set;
+import org.folio.rest.jaxrs.model.SetCollection;
+import org.folio.rest.persist.PostgresClient;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
-class SetServiceImplTest extends AbstractServiceTest {
+class SetServiceImplTest {
 
+  private static final String TEST_TENANT_ID = "oaiTest";
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
   private static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
@@ -42,8 +57,37 @@ class SetServiceImplTest extends AbstractServiceTest {
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
+  private static PostgresClientFactory postgresClientFactory;
+  private static Vertx vertx;
+
   private SetDao setDao;
   private SetService setService;
+
+  @BeforeAll
+  static void setUpClass(VertxTestContext testContext) throws Exception {
+    vertx = Vertx.vertx();
+    postgresClientFactory = new PostgresClientFactory(vertx);
+    PostgresClient.getInstance(vertx)
+      .startEmbeddedPostgres();
+
+    try (Connection connection = SingleConnectionProvider.getConnection(vertx, TEST_TENANT_ID)) {
+      connection.prepareStatement("create schema oaitest_mod_oai_pmh")
+        .execute();
+    } catch (Exception ex) {
+      testContext.failNow(ex);
+    }
+    LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
+    dropSampleData(testContext);
+  }
+
+  @AfterAll
+  static void tearDownClass(VertxTestContext context) {
+    PostgresClientFactory.closeAll();
+    vertx.close(context.succeeding(res -> {
+      PostgresClient.stopEmbeddedPostgres();
+      context.completeNow();
+    }));
+  }
 
   @BeforeEach
   void setUp(VertxTestContext testContext) {
@@ -86,6 +130,20 @@ class SetServiceImplTest extends AbstractServiceTest {
   }
 
   @Test
+  void shouldReturnSetItemList(VertxTestContext testContext) {
+    setService.getSetList(0, 100, TEST_TENANT_ID)
+      .onComplete(testContext.succeeding(setItemCollection -> {
+        assertEquals(1, setItemCollection.getSets()
+          .size());
+        Set set = setItemCollection.getSets()
+          .iterator()
+          .next();
+        verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
+        testContext.completeNow();
+      }));
+  }
+
+  @Test
   void shouldUpdateAndReturnSetItem_whenUpdateSetByIdAndSuchSetItemWithIdExists(VertxTestContext testContext) {
     setService.updateSetById(EXISTENT_SET_ID, UPDATE_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
       .onComplete(result -> {
@@ -123,23 +181,29 @@ class SetServiceImplTest extends AbstractServiceTest {
         verifyMainSetData(POST_SET_ENTRY, savedSet, false);
         assertEquals(TEST_USER_ID, savedSet.getCreatedByUserId());
         assertNotNull(savedSet.getCreatedDate());
-        testContext.completeNow();
+        setDao.deleteSetById(savedSet.getId(), TEST_TENANT_ID)
+          .onComplete(res -> {
+            if (res.failed()) {
+              testContext.failNow(res.cause());
+            }
+            testContext.completeNow();
+          });
       });
   }
 
-//  @Test
-//  void shouldNotSaveAndThrowException_whenSaveSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
-//    testContext.verify(() -> {
-//      POST_SET_ENTRY.setId(EXISTENT_SET_ID);
-//      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
-//        .onComplete(testContext.failing(throwable -> {
-//          assertTrue(throwable instanceof IllegalArgumentException);
-//          assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
-//          POST_SET_ENTRY.setId(null);
-//        }));
-//      testContext.completeNow();
-//    });
-//  }
+  @Test
+  void shouldNotSaveAndThrowException_whenSaveSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      POST_SET_ENTRY.setId(EXISTENT_SET_ID);
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+        .onComplete(testContext.failing(throwable -> {
+          assertTrue(throwable instanceof IllegalArgumentException);
+          assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
+          POST_SET_ENTRY.setId(null);
+          testContext.completeNow();
+        }));
+    });
+  }
 
   @Test
   void shouldReturnTrue_whenDeleteSetByIdAndSuchItemWithIdExists(VertxTestContext testContext) {
@@ -163,6 +227,20 @@ class SetServiceImplTest extends AbstractServiceTest {
       }));
   }
 
+  private static void dropSampleData(VertxTestContext testContext) {
+    SetDao setDao = new SetDaoImpl(postgresClientFactory);
+    setDao.getSetList(0, 100, TEST_TENANT_ID)
+      .onComplete(result -> {
+        SetCollection setItemCollection = result.result();
+        List<Future> futures = new ArrayList<>();
+        setItemCollection.getSets()
+          .forEach(setItem -> futures.add(setDao.deleteSetById(setItem.getId(), TEST_TENANT_ID)));
+        CompositeFuture.all(futures)
+          .onSuccess(compositeFuture -> testContext.completeNow())
+          .onFailure(testContext::failNow);
+      });
+  }
+
   private void loadTestData(VertxTestContext testContext) {
     setDao.saveSet(INITIAL_TEST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
       .onComplete(result -> {
@@ -177,7 +255,7 @@ class SetServiceImplTest extends AbstractServiceTest {
     assertEquals(setWithExpectedData.getName(), setToVerify.getName());
     assertEquals(setWithExpectedData.getDescription(), setToVerify.getDescription());
     assertEquals(setWithExpectedData.getSetSpec(), setToVerify.getSetSpec());
-    if(checkIdEquals) {
+    if (checkIdEquals) {
       assertEquals(EXISTENT_SET_ID, setToVerify.getId());
     } else {
       assertNotNull(setToVerify.getId());

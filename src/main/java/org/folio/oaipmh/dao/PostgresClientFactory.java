@@ -36,7 +36,7 @@ public class PostgresClientFactory {
 
   private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
 
-  private static final int POOL_SIZE = 5;
+  private static final int POOL_SIZE = 20;
 
   private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
 
@@ -44,9 +44,7 @@ public class PostgresClientFactory {
 
   @Autowired
   public PostgresClientFactory(Vertx vertx) {
-    LOG.debug("PostgresClientFactory constructor start");
     this.vertx = vertx;
-    LOG.debug("PostgresClientFactory constructor finish");
   }
 
   @PreDestroy

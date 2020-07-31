@@ -7,9 +7,11 @@ import static org.folio.rest.jooq.Tables.SET;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
@@ -17,12 +19,14 @@ import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.jaxrs.model.Set;
+import org.folio.rest.jaxrs.model.SetCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.records.SetRecord;
 import org.jooq.Condition;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -40,9 +44,7 @@ public class SetDaoImpl implements SetDao {
   private final PostgresClientFactory postgresClientFactory;
 
   public SetDaoImpl(final PostgresClientFactory postgresClientFactory) {
-    logger.info("SetDaoImpl constructor start");
     this.postgresClientFactory = postgresClientFactory;
-    logger.info("SetDaoImpl constructor finish, postgresClientFactory - {}", this.postgresClientFactory);
   }
 
   @Override
@@ -120,14 +122,28 @@ public class SetDaoImpl implements SetDao {
       }));
   }
 
+  @Override
+  public Future<SetCollection> getSetList(int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET)
+      .offset(offset)
+      .limit(limit))
+      .map(this::queryResultToSetCollection));
+  }
+
+  private SetCollection queryResultToSetCollection(QueryResult queryResult) {
+    List<Set> list = queryResult.stream()
+      .map(row -> rowToSet(row.unwrap()))
+      .collect(Collectors.toList());
+    return new SetCollection().withSets(list);
+  }
+
   private void prepareSetMetadata(Set entry, String userId, InsertType insertType) {
-    if (insertType.equals(InsertType.UPDATE)) {
-      entry.setUpdatedDate(from(Instant.now()));
-      entry.setUpdatedByUserId(userId);
-    } else {
+    if (insertType.equals(InsertType.INSERT)) {
       entry.setCreatedDate(from(Instant.now()));
       entry.setCreatedByUserId(userId);
     }
+    entry.setUpdatedDate(from(Instant.now()));
+    entry.setUpdatedByUserId(userId);
   }
 
   private SetRecord toDatabaseSetRecord(Set set) {
@@ -138,7 +154,7 @@ public class SetDaoImpl implements SetDao {
     if (isNotEmpty(set.getName())) {
       dbRecord.setName(set.getName());
     }
-    if (isNotEmpty(set.getDescription())) {
+    if (Objects.nonNull(set.getDescription())) {
       dbRecord.setDescription(set.getDescription());
     }
     if (isNotEmpty(set.getSetSpec())) {

@@ -28,9 +28,7 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   private SetService setService;
 
   public OaiPmhSetImpl() {
-    logger.info("OaiPmhSetImpl constructor start");
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
-    logger.info("OaiPmhSetImpl constructor finish");
   }
 
   @Override
@@ -93,6 +91,22 @@ public class OaiPmhSetImpl implements OaiPmhSets {
       try {
         setService.deleteSetById(id, getTenantId(okapiHeaders))
           .map(DeleteOaiPmhSetsByIdResponse.respond204())
+          .map(Response.class::cast)
+          .otherwise(ExceptionHelper::mapExceptionToResponse)
+          .onComplete(asyncResultHandler);
+      } catch (Exception e) {
+        asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+      }
+    });
+  }
+
+  @Override
+  public void getOaiPmhSets(int offset, int limit, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    vertxContext.runOnContext(v -> {
+      try {
+        setService.getSetList(offset, limit, getTenantId(okapiHeaders))
+          .map(GetOaiPmhSetsResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);

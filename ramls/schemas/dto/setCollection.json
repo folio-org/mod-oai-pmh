@@ -4,13 +4,13 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "filteringConditions" : {
+    "sets" : {
       "description": "list of sets",
       "type": "array",
       "id": "setList",
       "items": {
         "type": "object",
-        "ref": "set.json"
+        "$ref": "set.json"
       }
     }
   }
