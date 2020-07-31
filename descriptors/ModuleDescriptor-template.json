@@ -20,6 +20,9 @@
             "inventory-storage.oai-pmh-view.instances.collection.get",
             "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
             "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
+            "inventory-storage.oai-pmh-view.instances.collection.get",
+            "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
+            "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
           ]
         },
         {
@@ -56,7 +59,10 @@
             "inventory-storage.ill-policies.collection.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.instance-types.collection.get",
-            "inventory-storage.instance-formats.collection.get"
+            "inventory-storage.instance-formats.collection.get",
+            "inventory-storage.oai-pmh-view.instances.collection.get",
+            "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
+            "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
           ]
         }
       ]
