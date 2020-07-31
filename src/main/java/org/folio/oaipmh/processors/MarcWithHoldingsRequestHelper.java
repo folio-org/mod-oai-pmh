@@ -61,6 +61,7 @@ import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -161,12 +162,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.fail(fut.cause());
           return;
         }
-
         List<JsonObject> instances = fut.result();
-
-        logger.info(String.format("Inventory response for %s: %s", requestId, instances
-        .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
-
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
@@ -281,10 +277,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-    String entities = entries.encode();
-    enrichInventoryClientRequest.end(entities);
-
-    logger.info("Sending enrich request with :" + entities);
+    enrichInventoryClientRequest.end(entries.encode());
 
     databaseWriteStream.handleBatch(batch -> {
       try {
@@ -411,13 +404,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     List<RecordType> records = new ArrayList<>();
 
-
-    logger.info(String.format("buildRecordsList batch %s: ", batch
-      .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
-
-    logger.info(String.format("buildRecordsList srsResponse %s: ", srsResponse.values()
-      .stream().map(JsonObject::encodePrettily).collect(Collectors.joining("\n"))));
-
     for (JsonObject inventoryInstance : batch) {
       final String instanceId = inventoryInstance.getString(INSTANCE_ID_FIELD_NAME);
       final JsonObject srsInstance = srsResponse.get(instanceId);
@@ -448,10 +434,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         records.add(record);
       }
     }
-
-     logger.info(String.format("buildRecordsList records %s: ", records
-      .stream().map(Object::toString).collect(Collectors.joining("\n"))));
-
     return records;
   }
 
@@ -515,9 +497,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.sendHead();
     databaseWriteStream.handleBatch(batch -> {
 
-      logger.info(String.format("Inventory response for %s: %s", requestId, batch
-        .stream().map(Object::toString).collect(Collectors.joining("\n"))));
-
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
 
       if (isTheLastBatch(databaseWriteStream, batch)) {
@@ -572,11 +551,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         batch.add(Tuple.of(UUID.fromString(id), requestId, jsonObject));
       }
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
-      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
-        + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
-
-      logger.info(String.format("Inserting instances for %s: %s", requestId,
-        batch.stream().map(Tuple::deepToString).collect(Collectors.joining(", "))));
+      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
       PgConnection connection = e.result();
       connection.preparedQuery(sql).executeBatch(batch, (queryRes) -> {
@@ -605,7 +580,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.info("Request to SRS for ids: " + String.join(",", listOfIds));
+    logger.info("Request to SRS: {0}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
@@ -620,7 +595,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .map(r -> (JsonObject) r)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
-              logger.info("Can't process response from SRS: {0}", bh.toString());
+              logger.debug("Can't process response from SRS: {0}", bh.toString());
             }
             promise.complete(result);
           } catch (Exception e) {
