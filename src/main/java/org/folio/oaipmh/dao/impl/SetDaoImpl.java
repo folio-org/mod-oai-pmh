@@ -16,13 +16,15 @@ import javax.ws.rs.NotFoundException;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
-import org.folio.rest.jaxrs.model.Set;
+import org.folio.rest.jaxrs.model.SetItem;
+import org.folio.rest.jaxrs.model.SetItemCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.records.SetRecord;
 import org.jooq.Condition;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -46,7 +48,7 @@ public class SetDaoImpl implements SetDao {
   }
 
   @Override
-  public Future<Set> getSetById(String id, String tenantId) {
+  public Future<SetItem> getSetById(String id, String tenantId) {
     return getQueryExecutor(tenantId).transaction(txQE -> {
       Condition condition = SET.ID.eq(UUID.fromString(id));
       return txQE.findOneRow(dslContext -> dslContext.selectFrom(SET)
@@ -63,7 +65,7 @@ public class SetDaoImpl implements SetDao {
   }
 
   @Override
-  public Future<Set> updateSetById(String id, Set entry, String tenantId, String userId) {
+  public Future<SetItem> updateSetById(String id, SetItem entry, String tenantId, String userId) {
     entry.setId(id);
     prepareSetMetadata(entry, userId, InsertType.UPDATE);
     SetRecord dbRecord = toDatabaseSetRecord(entry);
@@ -81,7 +83,7 @@ public class SetDaoImpl implements SetDao {
   }
 
   @Override
-  public Future<Set> saveSet(Set entry, String tenantId, String userId) {
+  public Future<SetItem> saveSet(SetItem entry, String tenantId, String userId) {
     if (StringUtils.isNotEmpty(entry.getId())) {
       return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> dslContext.selectFrom(SET)
         .where(SET.ID.eq(UUID.fromString(entry.getId()))))
@@ -98,7 +100,7 @@ public class SetDaoImpl implements SetDao {
     }
   }
 
-  private Future<Set> saveSetItem(Set entry, String tenantId, String userId) {
+  private Future<SetItem> saveSetItem(SetItem entry, String tenantId, String userId) {
     prepareSetMetadata(entry, userId, InsertType.INSERT);
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.insertInto(SET)
       .set(toDatabaseSetRecord(entry))
@@ -120,7 +122,20 @@ public class SetDaoImpl implements SetDao {
       }));
   }
 
-  private void prepareSetMetadata(Set entry, String userId, InsertType insertType) {
+  @Override
+  public Future<SetItemCollection> getSetList(int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET)
+      .offset(offset)
+      .limit(limit))
+      .map(this::queryResultToSetCollection));
+  }
+
+  private SetItemCollection queryResultToSetCollection(QueryResult queryResult) {
+    SetItemCollection setCollection = new SetItemCollection();
+    return setCollection;
+  }
+
+  private void prepareSetMetadata(SetItem entry, String userId, InsertType insertType) {
     if (insertType.equals(InsertType.UPDATE)) {
       entry.setUpdatedDate(from(Instant.now()));
       entry.setUpdatedByUserId(userId);
@@ -130,7 +145,7 @@ public class SetDaoImpl implements SetDao {
     }
   }
 
-  private SetRecord toDatabaseSetRecord(Set set) {
+  private SetRecord toDatabaseSetRecord(SetItem set) {
     SetRecord dbRecord = new SetRecord();
     if (isNotEmpty(set.getId())) {
       dbRecord.setId(UUID.fromString(set.getId()));
@@ -167,19 +182,19 @@ public class SetDaoImpl implements SetDao {
     return postgresClientFactory.getQueryExecutor(tenantId);
   }
 
-  private Optional<Set> toOptionalSet(Row row) {
+  private Optional<SetItem> toOptionalSet(Row row) {
     return nonNull(row) ? Optional.of(rowToSet(row)) : Optional.empty();
   }
 
-  private Optional<Set> toOptionalSet(RowSet<Row> rows) {
+  private Optional<SetItem> toOptionalSet(RowSet<Row> rows) {
     return rows.rowCount() == 1 ? Optional.of(rowToSet(rows.iterator()
       .next())) : Optional.empty();
   }
 
-  private Set rowToSet(Row row) {
+  private SetItem rowToSet(Row row) {
     org.folio.rest.jooq.tables.pojos.Set pojo = RowMappers.getSetMapper()
       .apply(row);
-    Set set = new Set();
+    SetItem set = new SetItem();
     if (nonNull(pojo.getId())) {
       set.withId(pojo.getId()
         .toString());

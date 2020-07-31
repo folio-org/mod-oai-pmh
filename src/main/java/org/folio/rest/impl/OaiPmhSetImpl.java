@@ -6,8 +6,8 @@ import javax.ws.rs.core.Response;
 
 import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.SetService;
-import org.folio.rest.jaxrs.model.Set;
-import org.folio.rest.jaxrs.resource.OaiPmhSet;
+import org.folio.rest.jaxrs.model.SetItem;
+import org.folio.rest.jaxrs.resource.OaiPmhSets;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class OaiPmhSetImpl implements OaiPmhSet {
+public class OaiPmhSetImpl implements OaiPmhSets {
 
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
 
@@ -34,12 +34,12 @@ public class OaiPmhSetImpl implements OaiPmhSet {
   }
 
   @Override
-  public void getOaiPmhSetById(String id, String lang, Map<String, String> okapiHeaders,
+  public void getOaiPmhSetsById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.getSetById(id, getTenantId(okapiHeaders))
-          .map(GetOaiPmhSetByIdResponse::respond200WithApplicationJson)
+          .map(GetOaiPmhSetsByIdResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -50,12 +50,12 @@ public class OaiPmhSetImpl implements OaiPmhSet {
   }
 
   @Override
-  public void putOaiPmhSetById(String id, String lang, Set entity, Map<String, String> okapiHeaders,
+  public void putOaiPmhSetsById(String id, String lang, SetItem entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
-          .map(updated -> PutOaiPmhSetByIdResponse.respond204())
+          .map(updated -> PutOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -66,16 +66,16 @@ public class OaiPmhSetImpl implements OaiPmhSet {
   }
 
   @Override
-  public void postOaiPmhSet(Set entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+  public void postOaiPmhSets(String lang, SetItem entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
-          .map(PostOaiPmhSetResponse::respond201WithApplicationJson)
+          .map(PostOaiPmhSetsResponse.respond201WithApplicationJson(entity, PostOaiPmhSetsResponse.headersFor201()))
           .map(Response.class::cast)
           .otherwise(throwable -> {
             if(throwable instanceof IllegalArgumentException) {
-              return PostOaiPmhSetResponse.respond400WithTextPlain(throwable.getMessage());
+              return PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
             }
             return ExceptionHelper.mapExceptionToResponse(throwable);
           })
@@ -87,12 +87,12 @@ public class OaiPmhSetImpl implements OaiPmhSet {
   }
 
   @Override
-  public void deleteOaiPmhSetById(String id, String lang, Map<String, String> okapiHeaders,
+  public void deleteOaiPmhSetsById(String id, String lang, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.deleteSetById(id, getTenantId(okapiHeaders))
-          .map(DeleteOaiPmhSetByIdResponse.respond204())
+          .map(DeleteOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -100,6 +100,11 @@ public class OaiPmhSetImpl implements OaiPmhSet {
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
+  }
+
+  @Override
+  public void getOaiPmhSets(int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
   }
 
   private String getTenantId(Map<String, String> okapiHeaders) {
