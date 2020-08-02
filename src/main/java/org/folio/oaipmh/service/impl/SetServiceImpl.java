@@ -3,6 +3,7 @@ package org.folio.oaipmh.service.impl;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.SetItem;
+import org.folio.rest.jaxrs.model.SetItemCollection;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
@@ -42,4 +43,8 @@ public class SetServiceImpl implements SetService {
     return setDao.deleteSetById(id, tenantId);
   }
 
+  @Override
+  public Future<SetItemCollection> getSetList(int offset, int limit, String tenantId) {
+    return setDao.getSetList(offset, limit, tenantId);
+  }
 }

@@ -7,9 +7,11 @@ import static org.folio.rest.jooq.Tables.SET;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
@@ -131,8 +133,10 @@ public class SetDaoImpl implements SetDao {
   }
 
   private SetItemCollection queryResultToSetCollection(QueryResult queryResult) {
-    SetItemCollection setCollection = new SetItemCollection();
-    return setCollection;
+    List<SetItem> list = queryResult.stream()
+      .map(row -> rowToSet(row.unwrap()))
+      .collect(Collectors.toList());
+    return new SetItemCollection().withSetItems(list);
   }
 
   private void prepareSetMetadata(SetItem entry, String userId, InsertType insertType) {

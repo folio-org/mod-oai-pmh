@@ -22,23 +22,28 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/oai-pmh/set/{id}",
+          "pathPattern": "/oai-pmh/sets/{id}",
           "permissionsRequired": ["oai-pmh.set.item.get"]
         },
         {
           "methods": ["PUT"],
-          "pathPattern": "/oai-pmh/set/{id}",
+          "pathPattern": "/oai-pmh/sets/{id}",
           "permissionsRequired": ["oai-pmh.set.item.put"]
         },
         {
           "methods": ["POST"],
-          "pathPattern": "/oai-pmh/set",
+          "pathPattern": "/oai-pmh/sets",
           "permissionsRequired": ["oai-pmh.set.item.post"]
         },
         {
           "methods": ["DELETE"],
-          "pathPattern": "/oai-pmh/set/{id}",
+          "pathPattern": "/oai-pmh/sets/{id}",
           "permissionsRequired": ["oai-pmh.set.item.delete"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/sets",
+          "permissionsRequired": ["oai-pmh.set.item.collection.get"]
         }
       ]
     },
@@ -91,7 +96,8 @@
         "oai-pmh.set.item.get",
         "oai-pmh.set.item.post",
         "oai-pmh.set.item.put",
-        "oai-pmh.set.item.delete"
+        "oai-pmh.set.item.delete",
+        "oai-pmh.set.item.collection.get"
       ]
     },
     {
@@ -122,7 +128,8 @@
         "oai-pmh.set.item.get",
         "oai-pmh.set.item.post",
         "oai-pmh.set.item.put",
-        "oai-pmh.set.item.delete"
+        "oai-pmh.set.item.delete",
+        "oai-pmh.set.item.collection.get"
       ]
     }
   ],

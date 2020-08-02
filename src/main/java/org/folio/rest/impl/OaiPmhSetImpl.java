@@ -66,15 +66,15 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   }
 
   @Override
-  public void postOaiPmhSets(String lang, SetItem entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+  public void postOaiPmhSets(String lang, SetItem entity, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(PostOaiPmhSetsResponse.respond201WithApplicationJson(entity, PostOaiPmhSetsResponse.headersFor201()))
           .map(Response.class::cast)
           .otherwise(throwable -> {
-            if(throwable instanceof IllegalArgumentException) {
+            if (throwable instanceof IllegalArgumentException) {
               return PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
             }
             return ExceptionHelper.mapExceptionToResponse(throwable);
@@ -103,8 +103,19 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   }
 
   @Override
-  public void getOaiPmhSets(int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-
+  public void getOaiPmhSets(int offset, int limit, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    vertxContext.runOnContext(v -> {
+      try {
+        setService.getSetList(offset, limit, getTenantId(okapiHeaders))
+          .map(GetOaiPmhSetsResponse::respond200WithApplicationJson)
+          .map(Response.class::cast)
+          .otherwise(ExceptionHelper::mapExceptionToResponse)
+          .onComplete(asyncResultHandler);
+      } catch (Exception e) {
+        asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+      }
+    });
   }
 
   private String getTenantId(Map<String, String> okapiHeaders) {
