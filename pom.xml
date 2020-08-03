@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.0.4</version>
+  <version>3.1.0-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -18,7 +18,7 @@
     <url>https://github.com/folio-org/mod-oai-pmh.git</url>
     <connection>scm:git:git://github.com/folio-org/mod-oai-pmh.git</connection>
     <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git</developerConnection>
-    <tag>v3.0.4</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
@@ -152,6 +152,12 @@
       <artifactId>folio-liquibase-util</artifactId>
       <version>1.0.0</version>
       <type>jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- Jaxb dependencies -->
     <dependency>
@@ -585,7 +591,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>@{argLine} -Xmx1024m -XX:MaxPermSize=256m</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>

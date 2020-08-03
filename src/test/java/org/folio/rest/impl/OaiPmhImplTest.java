@@ -201,7 +201,7 @@ class OaiPmhImplTest {
     setupPredicates();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-      connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
+      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh").execute();
     }
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
@@ -1913,16 +1913,6 @@ class OaiPmhImplTest {
     assertThat(actualResumptionToken, is(nullValue()));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
-  @Test
-  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
-    RequestSpecification requestWithResumptionToken = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(RESUMPTION_TOKEN_PARAM, "abc");
-
-    final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
-    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
 
   @Test
