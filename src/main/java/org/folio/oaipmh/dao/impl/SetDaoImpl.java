@@ -140,13 +140,12 @@ public class SetDaoImpl implements SetDao {
   }
 
   private void prepareSetMetadata(SetItem entry, String userId, InsertType insertType) {
-    if (insertType.equals(InsertType.UPDATE)) {
-      entry.setUpdatedDate(from(Instant.now()));
-      entry.setUpdatedByUserId(userId);
-    } else {
+    if (insertType.equals(InsertType.INSERT)) {
       entry.setCreatedDate(from(Instant.now()));
       entry.setCreatedByUserId(userId);
     }
+    entry.setUpdatedDate(from(Instant.now()));
+    entry.setUpdatedByUserId(userId);
   }
 
   private SetRecord toDatabaseSetRecord(SetItem set) {
