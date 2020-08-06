@@ -201,12 +201,12 @@ class OaiPmhImplTest {
       new OkapiMockServer(vertx, mockPort).start(testContext);
     }));
     setupPredicates();
-    
+
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-      connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
+      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh").execute();
     }
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
