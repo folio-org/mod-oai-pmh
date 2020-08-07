@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.0.4</version>
+  <version>3.1.0</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -18,7 +18,7 @@
     <url>https://github.com/folio-org/mod-oai-pmh.git</url>
     <connection>scm:git:git://github.com/folio-org/mod-oai-pmh.git</connection>
     <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git</developerConnection>
-    <tag>v3.0.4</tag>
+    <tag>v3.1.0</tag>
   </scm>
 
   <issueManagement>
@@ -97,7 +97,7 @@
     <sonar.coverage.exclusions>**/ModTenantAPI.java</sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.4</aspectj.version>
-    <raml-module-builder.version>30.0.0</raml-module-builder.version>
+    <raml-module-builder.version>30.2.4</raml-module-builder.version>
     <vertx.version>3.9.0</vertx.version>
     <vertx-completable-future.version>0.1.2</vertx-completable-future.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
@@ -132,6 +132,12 @@
       <version>${raml-module-builder.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-di-support</artifactId>
+      <version>1.0.0</version>
+      <type>jar</type>
+    </dependency>
+    <dependency>
       <groupId>me.escoffier.vertx</groupId>
       <artifactId>vertx-completable-future</artifactId>
       <version>${vertx-completable-future.version}</version>
@@ -140,6 +146,18 @@
       <groupId>org.folio</groupId>
       <artifactId>mod-configuration-client</artifactId>
       <version>${mod-configuration-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-liquibase-util</artifactId>
+      <version>1.0.0</version>
+      <type>jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- Jaxb dependencies -->
     <dependency>
@@ -573,7 +591,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>-Xmx1024m -XX:MaxPermSize=256m</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>

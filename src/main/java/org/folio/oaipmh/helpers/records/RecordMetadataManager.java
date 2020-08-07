@@ -45,17 +45,19 @@ public class RecordMetadataManager {
 
   private static final String ITEMS = "items";
   private static final String ELECTRONIC_ACCESS = "electronicAccess";
-  private static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
+
   private static final String LOCATION = "location";
   private static final String CALL_NUMBER = "callNumber";
   private static final String NAME = "name";
-  private static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressDiscovery";
 
   private StorageHelper storageHelper = StorageHelper.getInstance();
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
   private final Predicate<JsonObject> electronicAccessPredicate;
   private static RecordMetadataManager instance;
+
+  public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
+  public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressDiscovery";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
@@ -108,12 +110,13 @@ public class RecordMetadataManager {
                                                   boolean suppressedRecordsProcessing) {
     JsonObject itemsAndHoldings;
     JsonArray items = null;
-    try {
-      itemsAndHoldings = inventoryInstance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS);
-      items = itemsAndHoldings.getJsonArray(ITEMS);
-    } catch (ClassCastException e) {
-      //this means that inventory instance has no items and holdings
+    Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
+    if (!(value instanceof JsonObject)) {
+      return srsInstance;
     }
+    itemsAndHoldings = (JsonObject) value;
+    items = itemsAndHoldings.getJsonArray(ITEMS);
+
     if (Objects.nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
       JsonObject content = parsedRecord.getJsonObject(CONTENT);
@@ -131,8 +134,8 @@ public class RecordMetadataManager {
    * Constructs field with subfields which is build from item location data. Constructed field has tag number = 952 and both
    * indicators has 'f' value.
    *
-   * @param itemData         - json of single item
-   * @param marcRecordFields - fields list to be updated with new one
+   * @param itemData                    - json of single item
+   * @param marcRecordFields            - fields list to be updated with new one
    * @param suppressedRecordsProcessing - include suppressed flag in 952 field?
    */
   private void updateFieldsWithItemEffectiveLocationField(JsonObject itemData,
@@ -156,8 +159,8 @@ public class RecordMetadataManager {
    * Constructs field with subfields which is build from item electronic access data. Constructed field has tag number = 856 and
    * both indicators depends on 'name' field of electronic access json (see {@link RecordMetadataManager#resolveIndicatorsValue}).
    *
-   * @param itemData         - json of single item which contains array of electronic accesses
-   * @param marcRecordFields - fields list to be updated with new one
+   * @param itemData                    - json of single item which contains array of electronic accesses
+   * @param marcRecordFields            - fields list to be updated with new one
    * @param suppressedRecordsProcessing - include suppressed flag in 856 field?
    */
   private void updateFieldsWithItemElectronicAccessField(JsonObject itemData,
@@ -247,12 +250,12 @@ public class RecordMetadataManager {
    * @return record source
    */
   public String updateMetadataSourceWithDiscoverySuppressedData(String metadataSource, JsonObject metadataSourceOwner) {
-      JsonObject content = new JsonObject(metadataSource);
-      JsonArray fields = content.getJsonArray(FIELDS);
-      Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
-      generalInfoDataFieldOptional.ifPresent(jsonObject ->
+    JsonObject content = new JsonObject(metadataSource);
+    JsonArray fields = content.getJsonArray(FIELDS);
+    Optional<JsonObject> generalInfoDataFieldOptional = getGeneralInfoDataField(fields);
+    generalInfoDataFieldOptional.ifPresent(jsonObject ->
       updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, GENERAL_INFO_FIELD_TAG_NUMBER));
-      return content.encode();
+    return content.encode();
   }
 
   /**

@@ -1,3 +1,11 @@
+## 3.1.0 (Released)
+
+This release includes support for multiple instances of mod-oai-pmh deployed
+* [MODOAIPMH-191](https://issues.folio.org/browse/MODOAIPMH-191) Connect the database to mod-oai-pmh
+* [MODOAIPMH-202](https://issues.folio.org/browse/MODOAIPMH-202) Modify data retrieval from OAI-PMH view
+* [MODOAIPMH-203](https://issues.folio.org/browse/MODOAIPMH-203) Enable Spring DI for mod-oai-pmh
+* [MODOAIPMH-213](https://issues.folio.org/browse/MODOAIPMH-213) Maven build test phase fails 
+* 
 ## 3.0.4 (Released)
 
 * [MODOAIPMH-107](https://issues.folio.org/browse/MODOAIPMH-107) Suppress holdings and items records from discovery

@@ -69,15 +69,13 @@ public class OaiPmhImpl implements Oai {
 
   private VerbValidator validator = new VerbValidator();
 
-  public static void init(Handler<AsyncResult<Boolean>> resultHandler) {
+  public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
     HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
     HELPERS.put(LIST_RECORDS, new GetOaiRecordsHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     HELPERS.put(GET_RECORD, new GetOaiRecordHelper());
-
-    resultHandler.handle(succeededFuture(true));
   }
 
   @Override
