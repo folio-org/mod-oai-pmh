@@ -2,9 +2,11 @@ package org.folio.rest.impl;
 
 import static java.util.Objects.nonNull;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.UUID;
 
 import org.folio.config.ApplicationConfig;
@@ -13,9 +15,7 @@ import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.client.TenantClient;
 import org.folio.rest.jaxrs.model.FolioSet;
-import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -50,80 +50,70 @@ class OaiPmhSetImplTest {
   private static final String TEST_USER_ID = UUID.randomUUID()
     .toString();
 
-  private static final Vertx vertx = Vertx.vertx();
   private static final int okapiPort = NetworkUtils.nextFreePort();
+  private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final String SET_PATH = "/oai-pmh/sets";
+  private static final String FILTERING_CONDITIONS_PATH = "/oai-pmh/filtering-conditions";
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 
-  private static final FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
+  private FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
     .withName("test name")
     .withDescription("test description")
     .withSetSpec("test setSpec");
 
-  private static final FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
+  private FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("update name")
+  private FolioSet POST_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
-  private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + okapiPort);
-  private final Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
+  private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
+  private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
+  private Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
 
   private SetDao setDao;
-  private PostgresClientFactory postgresClientFactory;
-
-  @Autowired
-  public void setPostgresClientFactory(PostgresClientFactory postgresClientFactory) {
-    this.postgresClientFactory = postgresClientFactory;
-  }
 
   @BeforeAll
-  void setUpOnce(VertxTestContext testContext) throws Exception {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
     String moduleName = PomReader.INSTANCE.getModuleName()
       .replaceAll("_", "-");
     String moduleVersion = PomReader.INSTANCE.getVersion();
     String moduleId = moduleName + "-" + moduleVersion;
     logger.info("Test setup starting for " + moduleId);
 
-    String okapiUrl = "http://localhost:" + okapiPort;
-
-    RestAssured.baseURI = okapiUrl;
+    RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
-    TenantClient tenantClient = new TenantClient(okapiUrl, OAI_TEST_TENANT, "dummy-token");
-
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, res -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
       try {
-        tenantClient.postTenant(new TenantAttributes().withModuleTo("1.0"), res2 -> {
-          Context context = vertx.getOrCreateContext();
-          SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-          SpringContextUtil.autowireDependencies(this, context);
-          try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
+        Context context = vertx.getOrCreateContext();
+        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+        SpringContextUtil.autowireDependencies(this, context);
+        try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
             connection.prepareStatement("create schema oaitest_mod_oai_pmh")
               .execute();
-          } catch (Exception ex) {
-            testContext.failNow(ex);
-          }
-          LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
-          testContext.completeNow();
-        });
+        } catch (Exception ex) {
+          testContext.failNow(ex);
+        }
+        LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
+        new OkapiMockServer(vertx, mockPort).start(testContext);
+        testContext.completeNow();
       } catch (Exception e) {
         testContext.failNow(e);
       }
-    });
+    }));
   }
 
   @BeforeEach
@@ -145,7 +135,7 @@ class OaiPmhSetImplTest {
   }
 
   @AfterAll
-  void afterAll(VertxTestContext testContext) {
+  void afterAll(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
@@ -156,7 +146,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldReturnSetItem_whenGetSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null);
       request.when()
         .get()
         .then()
@@ -169,7 +159,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldNotReturnSetItem_whenGetSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(NONEXISTENT_SET_ID), null);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), null);
       request.when()
         .get()
         .then()
@@ -182,7 +172,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
       request.when()
         .put()
         .then()
@@ -194,7 +184,8 @@ class OaiPmhSetImplTest {
   @Test
   void shouldNotUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(NONEXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+        .body(UPDATE_SET_ENTRY);
       request.when()
         .put()
         .then()
@@ -248,7 +239,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldNotDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(NONEXISTENT_SET_ID), null);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), null);
       request.when()
         .delete()
         .then()
@@ -271,6 +262,20 @@ class OaiPmhSetImplTest {
     });
   }
 
+  @Test
+  void shouldReturnFilteringConditions(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestSpecification request = createBaseRequest(FILTERING_CONDITIONS_PATH, null);
+      request.when()
+        .get()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .body("setsFilteringConditions.size()", is(5));
+      testContext.completeNow();
+    });
+  }
+
   private RequestSpecification createBaseRequest(String path, ContentType contentType) {
     RequestSpecification requestSpecification = RestAssured.given()
       .header(okapiUrlHeader)
@@ -283,7 +288,7 @@ class OaiPmhSetImplTest {
     return requestSpecification;
   }
 
-  private String getPathWithId(String id) {
+  private String getSetPathWithId(String id) {
     return SET_PATH + "/" + id;
   }
 

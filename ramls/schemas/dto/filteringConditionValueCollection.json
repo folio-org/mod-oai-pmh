@@ -4,13 +4,13 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "filteringConditions" : {
-      "description": "list of filtering conditions",
+    "setsFilteringConditions" : {
+      "description": "list of filtering condition values",
       "type": "array",
-      "id": "filteringConditionList",
+      "id": "filteringConditionValues",
       "items": {
         "type": "object",
-        "$ref": "filteringCondition.json"
+        "$ref": "filteringConditionValue.json"
       }
     }
   }

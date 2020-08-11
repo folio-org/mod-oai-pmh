@@ -1,0 +1,15 @@
+{
+  "instanceTypes": [
+    {
+      "id": "a2c91e87-6bab-44d6-8adb-1fd02481fc4f",
+      "name": "other",
+      "code": "xxx",
+      "source": "rdacontent",
+      "metadata": {
+        "createdDate": "2020-08-12T01:27:36.445+0000",
+        "updatedDate": "2020-08-12T01:27:36.445+0000"
+      }
+    }
+  ],
+  "totalRecords": 1
+}
