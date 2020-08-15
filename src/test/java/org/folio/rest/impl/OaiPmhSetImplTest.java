@@ -53,7 +53,7 @@ class OaiPmhSetImplTest {
   private static final Vertx vertx = Vertx.vertx();
   private static final int okapiPort = NetworkUtils.nextFreePort();
 
-  private static final String SET_PATH = "/oai-pmh/set";
+  private static final String SET_PATH = "/oai-pmh/sets";
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 

@@ -24,23 +24,23 @@
         },
         {
           "methods": ["GET"],
-          "pathPattern": "/oai-pmh/set/{id}",
-          "permissionsRequired": ["oai-pmh.set.item.get"]
+          "pathPattern": "/oai-pmh/sets/{id}",
+          "permissionsRequired": ["oai-pmh.sets.item.get"]
         },
         {
           "methods": ["PUT"],
-          "pathPattern": "/oai-pmh/set/{id}",
-          "permissionsRequired": ["oai-pmh.set.item.put"]
+          "pathPattern": "/oai-pmh/sets/{id}",
+          "permissionsRequired": ["oai-pmh.sets.item.put"]
         },
         {
           "methods": ["POST"],
-          "pathPattern": "/oai-pmh/set",
-          "permissionsRequired": ["oai-pmh.set.item.post"]
+          "pathPattern": "/oai-pmh/sets",
+          "permissionsRequired": ["oai-pmh.sets.item.post"]
         },
         {
           "methods": ["DELETE"],
-          "pathPattern": "/oai-pmh/set/{id}",
-          "permissionsRequired": ["oai-pmh.set.item.delete"]
+          "pathPattern": "/oai-pmh/sets/{id}",
+          "permissionsRequired": ["oai-pmh.sets.item.delete"]
         }
       ]
     },
@@ -94,41 +94,41 @@
       "description": "Entire set of permissions needed to use OAI-PMH",
       "subPermissions": [
         "oai-pmh.records.collection.get",
-        "oai-pmh.set.item.get",
-        "oai-pmh.set.item.post",
-        "oai-pmh.set.item.put",
-        "oai-pmh.set.item.delete"
+        "oai-pmh.sets.item.get",
+        "oai-pmh.sets.item.post",
+        "oai-pmh.sets.item.put",
+        "oai-pmh.sets.item.delete"
       ]
     },
     {
-      "permissionName": "oai-pmh.set.item.get",
+      "permissionName": "oai-pmh.sets.item.get",
       "displayName": "OAI-PMH Set - get item",
       "description": "Manage oai-pmh set items"
     },
     {
-      "permissionName": "oai-pmh.set.item.post",
+      "permissionName": "oai-pmh.sets.item.post",
       "displayName": "OAI-PMH Set - post item",
       "description": "Manage oai-pmh set items"
     },
     {
-      "permissionName": "oai-pmh.set.item.put",
+      "permissionName": "oai-pmh.sets.item.put",
       "displayName": "OAI-PMH Set - put item",
       "description": "Manage oai-pmh set items"
     },
     {
-      "permissionName": "oai-pmh.set.item.delete",
+      "permissionName": "oai-pmh.sets.item.delete",
       "displayName": "OAI-PMH Set - delete item",
       "description": "Manage oai-pmh set items"
     },
     {
-      "permissionName": "oai-pmh.set.all",
+      "permissionName": "oai-pmh.sets.all",
       "displayName": "OAI-PMH Set - all permissions",
       "description": "Entire set of permissions for managing oai-pmh set items",
       "subPermissions": [
-        "oai-pmh.set.item.get",
-        "oai-pmh.set.item.post",
-        "oai-pmh.set.item.put",
-        "oai-pmh.set.item.delete"
+        "oai-pmh.sets.item.get",
+        "oai-pmh.sets.item.post",
+        "oai-pmh.sets.item.put",
+        "oai-pmh.sets.item.delete"
       ]
     }
   ],
