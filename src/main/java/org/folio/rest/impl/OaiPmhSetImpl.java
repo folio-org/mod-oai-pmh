@@ -64,12 +64,12 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   }
 
   @Override
-  public void postOaiPmhSets(Set entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+  public void postOaiPmhSets(String lang, Set entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
-          .map(PostOaiPmhSetsResponse::respond201WithApplicationJson)
+          .map(set -> PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
           .map(Response.class::cast)
           .otherwise(throwable -> {
             if(throwable instanceof IllegalArgumentException) {
