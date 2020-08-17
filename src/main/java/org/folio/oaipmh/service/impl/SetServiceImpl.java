@@ -7,13 +7,9 @@ import org.folio.rest.jaxrs.model.SetCollection;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 @Service
 public class SetServiceImpl implements SetService {
-
-  private static final Logger logger = LoggerFactory.getLogger(SetServiceImpl.class);
 
   private final SetDao setDao;
 

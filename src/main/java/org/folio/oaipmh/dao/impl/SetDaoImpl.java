@@ -28,15 +28,11 @@ import org.springframework.stereotype.Repository;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
 @Repository
 public class SetDaoImpl implements SetDao {
-
-  private static final Logger logger = LoggerFactory.getLogger(SetDaoImpl.class);
 
   private static final String ALREADY_EXISTS_ERROR_MSG = "Set with id '%s' already exists";
   private static final String NOT_FOUND_ERROR_MSG = "Set with id '%s' was not found";
