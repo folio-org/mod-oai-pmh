@@ -120,8 +120,7 @@ public class OaiPmhSetImpl implements OaiPmhSets {
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error("Error occurred while getting list of sets with offset: '{}' and limit: '{}'. Message: {}. Exception: {}",
-            offset, limit, e.getMessage(), e);
+        logger.error("Error occurred while getting list of sets with offset: '{}' and limit: '{}'. Message: {}. Exception: {}", offset, limit, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
