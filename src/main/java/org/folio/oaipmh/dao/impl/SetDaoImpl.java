@@ -144,14 +144,12 @@ public class SetDaoImpl implements SetDao {
 
   private SetRecord toDatabaseSetRecord(Set set) {
     SetRecord dbRecord = new SetRecord();
+    dbRecord.setDescription(set.getDescription());
     if (isNotEmpty(set.getId())) {
       dbRecord.setId(UUID.fromString(set.getId()));
     }
     if (isNotEmpty(set.getName())) {
       dbRecord.setName(set.getName());
-    }
-    if (Objects.nonNull(set.getDescription())) {
-      dbRecord.setDescription(set.getDescription());
     }
     if (isNotEmpty(set.getSetSpec())) {
       dbRecord.setSetspec(set.getSetSpec());
