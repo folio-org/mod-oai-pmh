@@ -102,7 +102,7 @@ public class OaiPmhSetImpl implements OaiPmhSets {
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error("Error occurred while posting set with id: '{}'. Message: {}. Exception: {}", id, e.getMessage(), e);
+        logger.error("Error occurred while deleting set with id: '{}'. Message: {}. Exception: {}", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
