@@ -26,7 +26,6 @@ import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
-import org.folio.rest.jaxrs.model.Set;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.springframework.stereotype.Service;
 

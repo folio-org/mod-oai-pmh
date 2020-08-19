@@ -7,7 +7,8 @@ import javax.ws.rs.core.Response;
 import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.FolioSet;
-import org.folio.rest.jaxrs.resource.OaiPmh;
+import org.folio.rest.jaxrs.resource.OaiPmhFilteringConditions;
+import org.folio.rest.jaxrs.resource.OaiPmhSets;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-public class OaiPmhSetImpl implements OaiPmh {
+public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
 
@@ -38,7 +39,7 @@ public class OaiPmhSetImpl implements OaiPmh {
       try {
         logger.info("Get set by id with id: '{}'", id);
         setService.getSetById(id, getTenantId(okapiHeaders))
-          .map(OaiPmh.GetOaiPmhSetsByIdResponse::respond200WithApplicationJson)
+          .map(OaiPmhSets.GetOaiPmhSetsByIdResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -56,7 +57,7 @@ public class OaiPmhSetImpl implements OaiPmh {
       try {
         logger.info("Put set by id with id: '{}' and body: {}", id, entity);
         setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
-          .map(updated -> OaiPmh.PutOaiPmhSetsByIdResponse.respond204())
+          .map(updated -> OaiPmhSets.PutOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
@@ -74,11 +75,11 @@ public class OaiPmhSetImpl implements OaiPmh {
       try {
         logger.info("Post set with body: {}", entity);
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
-          .map(set -> OaiPmh.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
+          .map(set -> OaiPmhSets.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
           .map(Response.class::cast)
           .otherwise(throwable -> {
             if (throwable instanceof IllegalArgumentException) {
-              return OaiPmh.PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
+              return OaiPmhSets.PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
             }
             return ExceptionHelper.mapExceptionToResponse(throwable);
           })
@@ -97,11 +98,12 @@ public class OaiPmhSetImpl implements OaiPmh {
       try {
         logger.info("Delete set by id with id: '{}'", id);
         setService.deleteSetById(id, getTenantId(okapiHeaders))
-          .map(OaiPmh.DeleteOaiPmhSetsByIdResponse.respond204())
+          .map(OaiPmhSets.DeleteOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
+        logger.error("Error occurred while deleting set with id: '{}'. Message: {}. Exception: {}", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -131,12 +133,11 @@ public class OaiPmhSetImpl implements OaiPmh {
     vertxContext.runOnContext(v -> {
       try {
         setService.getFilteringConditions(okapiHeaders)
-          .map(OaiPmh.GetOaiPmhFilteringConditionsResponse::respond200WithApplicationJson)
+          .map(OaiPmhFilteringConditions.GetOaiPmhFilteringConditionsResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error("Error occurred while deleting set with id: '{}'. Message: {}. Exception: {}", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });

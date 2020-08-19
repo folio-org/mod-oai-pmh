@@ -11,13 +11,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.ws.rs.NotFoundException;
 
@@ -30,8 +27,6 @@ import org.folio.oaipmh.service.SetService;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
-import org.folio.rest.persist.PostgresClient;
-import org.junit.jupiter.api.AfterAll;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -42,12 +37,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -91,7 +85,7 @@ class SetServiceImplTest {
       .startEmbeddedPostgres();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, TEST_TENANT_ID)) {
-      connection.prepareStatement("create schema oaitest_mod_oai_pmh")
+      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
         .execute();
     } catch (Exception ex) {
       testContext.failNow(ex);
@@ -104,15 +98,6 @@ class SetServiceImplTest {
 
   @AfterAll
   static void tearDownClass(Vertx vertx, VertxTestContext context) {
-    PostgresClientFactory.closeAll();
-    vertx.close(context.succeeding(res -> {
-      PostgresClient.stopEmbeddedPostgres();
-      context.completeNow();
-    }));
-  }
-
-  @AfterAll
-  static void tearDownClass(VertxTestContext context) {
     PostgresClientFactory.closeAll();
     vertx.close(context.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
@@ -218,26 +203,6 @@ class SetServiceImplTest {
               testContext.failNow(res.cause());
             }
             testContext.completeNow();
-          });
-      });
-  }
-
-  @Test
-  void shouldNotSaveAndThrowException_whenSaveSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
-    testContext.verify(() -> {
-      POST_SET_ENTRY.setId(EXISTENT_SET_ID);
-      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
-        .onComplete(testContext.failing(throwable -> {
-          assertTrue(throwable instanceof IllegalArgumentException);
-          assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
-          POST_SET_ENTRY.setId(null);
-        setDao.deleteSetById(savedSet.getId(), TEST_TENANT_ID)
-          .onComplete(res -> {
-            if (res.failed()) {
-              testContext.failNow(res.cause());
-            }
-            testContext.completeNow();
-        }));
           });
       });
   }

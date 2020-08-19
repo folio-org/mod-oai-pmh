@@ -6,7 +6,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.util.UUID;
 
 import org.folio.config.ApplicationConfig;
@@ -184,8 +183,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldNotUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
-        .body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
       request.when()
         .put()
         .then()
@@ -227,7 +225,7 @@ class OaiPmhSetImplTest {
   @Test
   void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null);
       request.when()
         .delete()
         .then()
