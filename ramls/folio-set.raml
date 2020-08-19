@@ -1,0 +1,51 @@
+#%RAML 1.0
+title: OAI-PMH API
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v3
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Set API
+    content: API for managing sets and filtering conditions that is used as part of metadata harvesting protocol implementation
+
+types:
+  folioSet: !include schemas/dto/folioSet.json
+  folioSetCollection: !include schemas/dto/folioSetCollection.json
+  filteringCondition: !include schemas/dto/filteringCondition.json
+  filteringConditionCollection: !include schemas/dto/filteringConditionCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+  language: !include raml-util/traits/language.raml
+  pageable: !include raml-util/traits/pageable.raml
+
+resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
+
+/oai-pmh/sets:
+  displayName: Sets
+  description: CRUD API for managing set items
+  type:
+    collection:
+      schemaCollection: folioSetCollection
+      schemaItem: folioSet
+      exampleCollection: !include examples/folioSetCollection.sample
+      exampleItem: !include examples/folioSet.sample
+  post:
+    is: [validate]
+  get:
+    is: [
+      pageable,
+      validate
+    ]
+  /{id}:
+    displayName: Set
+    description: Get, Delete or Update a specific set item
+    type:
+      collection-item:
+        schema: folioSet
+        exampleItem: !include examples/folioSet.sample
+    put:
+     is: [validate]

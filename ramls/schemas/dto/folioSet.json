@@ -3,6 +3,7 @@
   "description": "Set DTO Schema",
   "type": "object",
   "additionalProperties": false,
+  "javaType" : "org.folio.rest.jaxrs.model.FolioSet",
   "properties": {
     "id": {
       "description": "UUID",

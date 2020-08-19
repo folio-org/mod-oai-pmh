@@ -14,7 +14,7 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.client.TenantClient;
-import org.folio.rest.jaxrs.model.Set;
+import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
@@ -57,16 +57,16 @@ class OaiPmhSetImplTest {
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 
-  private static final Set INITIAL_TEST_SET_ENTRY = new Set().withId(EXISTENT_SET_ID)
+  private static final FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
     .withName("test name")
     .withDescription("test description")
     .withSetSpec("test setSpec");
 
-  private static final Set UPDATE_SET_ENTRY = new Set().withName("update name")
+  private static final FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private static final Set POST_SET_ENTRY = new Set().withName("update name")
+  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
@@ -112,7 +112,8 @@ class OaiPmhSetImplTest {
           SpringContextUtil.init(vertx, context, ApplicationConfig.class);
           SpringContextUtil.autowireDependencies(this, context);
           try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-            connection.prepareStatement("create schema oaitest_mod_oai_pmh").execute();
+            connection.prepareStatement("create schema oaitest_mod_oai_pmh")
+              .execute();
           } catch (Exception ex) {
             testContext.failNow(ex);
           }
@@ -232,17 +233,17 @@ class OaiPmhSetImplTest {
 
   }
 
-//  @Test
-//  void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
-//    testContext.verify(() -> {
-//      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
-//      request.when()
-//        .delete()
-//        .then()
-//        .statusCode(204);
-//      testContext.completeNow();
-//    });
-//  }
+  @Test
+  void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestSpecification request = createBaseRequest(getPathWithId(EXISTENT_SET_ID), null);
+      request.when()
+        .delete()
+        .then()
+        .statusCode(204);
+      testContext.completeNow();
+    });
+  }
 
   @Test
   void shouldNotDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
@@ -253,6 +254,19 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(404)
         .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnSetItemList(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestSpecification request = createBaseRequest(SET_PATH, null);
+      request.when()
+        .get()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON);
       testContext.completeNow();
     });
   }

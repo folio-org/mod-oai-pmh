@@ -41,6 +41,11 @@
           "methods": ["DELETE"],
           "pathPattern": "/oai-pmh/sets/{id}",
           "permissionsRequired": ["oai-pmh.sets.item.delete"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/sets",
+          "permissionsRequired": ["oai-pmh.sets.item.collection.get"]
         }
       ]
     },
@@ -97,7 +102,8 @@
         "oai-pmh.sets.item.get",
         "oai-pmh.sets.item.post",
         "oai-pmh.sets.item.put",
-        "oai-pmh.sets.item.delete"
+        "oai-pmh.sets.item.delete",
+        "oai-pmh.sets.item.collection.get"
       ]
     },
     {
@@ -128,7 +134,8 @@
         "oai-pmh.sets.item.get",
         "oai-pmh.sets.item.post",
         "oai-pmh.sets.item.put",
-        "oai-pmh.sets.item.delete"
+        "oai-pmh.sets.item.delete",
+        "oai-pmh.sets.item.collection.get"
       ]
     }
   ],

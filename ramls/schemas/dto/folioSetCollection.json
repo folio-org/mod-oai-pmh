@@ -4,13 +4,14 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "filteringConditions" : {
-      "description": "list of sets",
+    "sets" : {
+      "description": "list of folio sets",
       "type": "array",
-      "id": "setList",
+      "id": "folioSetList",
       "items": {
+        "javaType" : "org.folio.rest.jaxrs.model.FolioSet",
         "type": "object",
-        "ref": "set.json"
+        "$ref": "folioSet.json"
       }
     }
   }
