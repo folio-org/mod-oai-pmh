@@ -9,8 +9,8 @@ documentation:
     content: API for managing sets and filtering conditions that is used as part of metadata harvesting protocol implementation
 
 types:
-  set: !include schemas/dto/set.json
-  setCollection: !include schemas/dto/setCollection.json
+  folioSet: !include schemas/dto/folioSet.json
+  folioSetCollection: !include schemas/dto/folioSetCollection.json
   filteringCondition: !include schemas/dto/filteringCondition.json
   filteringConditionCollection: !include schemas/dto/filteringConditionCollection.json
   errors: !include raml-util/schemas/errors.schema
@@ -29,10 +29,10 @@ resourceTypes:
   description: CRUD API for managing set items
   type:
     collection:
-      schemaCollection: setCollection
-      schemaItem: set
-      exampleCollection: !include examples/setCollection.sample
-      exampleItem: !include examples/set.sample
+      schemaCollection: folioSetCollection
+      schemaItem: folioSet
+      exampleCollection: !include examples/folioSetCollection.sample
+      exampleItem: !include examples/folioSet.sample
   post:
     is: [validate]
   get:
@@ -45,7 +45,7 @@ resourceTypes:
     description: Get, Delete or Update a specific set item
     type:
       collection-item:
-        schema: set
-        exampleItem: !include examples/set.sample
+        schema: folioSet
+        exampleItem: !include examples/folioSet.sample
     put:
      is: [validate]

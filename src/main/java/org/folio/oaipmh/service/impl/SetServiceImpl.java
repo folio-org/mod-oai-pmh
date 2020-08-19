@@ -2,8 +2,8 @@ package org.folio.oaipmh.service.impl;
 
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
-import org.folio.rest.jaxrs.model.Set;
-import org.folio.rest.jaxrs.model.SetCollection;
+import org.folio.rest.jaxrs.model.FolioSet;
+import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
@@ -18,17 +18,17 @@ public class SetServiceImpl implements SetService {
   }
 
   @Override
-  public Future<Set> getSetById(String id, String tenantId) {
+  public Future<FolioSet> getSetById(String id, String tenantId) {
     return setDao.getSetById(id, tenantId);
   }
 
   @Override
-  public Future<Set> updateSetById(String id, Set entry, String tenantId, String userId) {
+  public Future<FolioSet> updateSetById(String id, FolioSet entry, String tenantId, String userId) {
     return setDao.updateSetById(id, entry, tenantId, userId);
   }
 
   @Override
-  public Future<Set> saveSet(Set entry, String tenantId, String userId) {
+  public Future<FolioSet> saveSet(FolioSet entry, String tenantId, String userId) {
     return setDao.saveSet(entry, tenantId, userId);
   }
 
@@ -38,7 +38,7 @@ public class SetServiceImpl implements SetService {
   }
 
   @Override
-  public Future<SetCollection> getSetList(int offset, int limit, String tenantId) {
+  public Future<FolioSetCollection> getSetList(int offset, int limit, String tenantId) {
     return setDao.getSetList(offset, limit, tenantId);
   }
 }

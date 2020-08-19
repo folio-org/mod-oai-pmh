@@ -6,7 +6,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.SetService;
-import org.folio.rest.jaxrs.model.Set;
+import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.resource.OaiPmhSets;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
@@ -50,7 +50,7 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   }
 
   @Override
-  public void putOaiPmhSetsById(String id, String lang, Set entity, Map<String, String> okapiHeaders,
+  public void putOaiPmhSetsById(String id, String lang, FolioSet entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
@@ -68,7 +68,7 @@ public class OaiPmhSetImpl implements OaiPmhSets {
   }
 
   @Override
-  public void postOaiPmhSets(String lang, Set entity, Map<String, String> okapiHeaders,
+  public void postOaiPmhSets(String lang, FolioSet entity, Map<String, String> okapiHeaders,
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {

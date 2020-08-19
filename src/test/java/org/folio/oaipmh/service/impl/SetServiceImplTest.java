@@ -16,8 +16,8 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
 import org.folio.oaipmh.service.SetService;
-import org.folio.rest.jaxrs.model.Set;
-import org.folio.rest.jaxrs.model.SetCollection;
+import org.folio.rest.jaxrs.model.FolioSet;
+import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.persist.PostgresClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -44,16 +44,16 @@ class SetServiceImplTest {
   private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = String.format("Set with id '%s' already exists",
       EXISTENT_SET_ID);
 
-  private static final Set INITIAL_TEST_SET_ENTRY = new Set().withId(EXISTENT_SET_ID)
+  private static final FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
     .withName("test name")
     .withDescription("test description")
     .withSetSpec("test setSpec");
 
-  private static final Set UPDATE_SET_ENTRY = new Set().withName("update name")
+  private static final FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private static final Set POST_SET_ENTRY = new Set().withName("update name")
+  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("update name")
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
@@ -111,7 +111,7 @@ class SetServiceImplTest {
         if (result.failed()) {
           testContext.failNow(result.cause());
         }
-        Set set = result.result();
+        FolioSet set = result.result();
         verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
         assertEquals(TEST_USER_ID, set.getCreatedByUserId());
         assertNotNull(set.getCreatedDate());
@@ -135,7 +135,7 @@ class SetServiceImplTest {
       .onComplete(testContext.succeeding(setItemCollection -> {
         assertEquals(1, setItemCollection.getSets()
           .size());
-        Set set = setItemCollection.getSets()
+        FolioSet set = setItemCollection.getSets()
           .iterator()
           .next();
         verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
@@ -150,7 +150,7 @@ class SetServiceImplTest {
         if (result.failed()) {
           testContext.failNow(result.cause());
         }
-        Set updatedSet = result.result();
+        FolioSet updatedSet = result.result();
         verifyMainSetData(UPDATE_SET_ENTRY, updatedSet, true);
         assertEquals(TEST_USER_ID, updatedSet.getUpdatedByUserId());
         assertEquals(TEST_USER_ID, updatedSet.getCreatedByUserId());
@@ -177,7 +177,7 @@ class SetServiceImplTest {
         if (result.failed()) {
           testContext.failNow(result.cause());
         }
-        Set savedSet = result.result();
+        FolioSet savedSet = result.result();
         verifyMainSetData(POST_SET_ENTRY, savedSet, false);
         assertEquals(TEST_USER_ID, savedSet.getCreatedByUserId());
         assertNotNull(savedSet.getCreatedDate());
@@ -231,7 +231,7 @@ class SetServiceImplTest {
     SetDao setDao = new SetDaoImpl(postgresClientFactory);
     setDao.getSetList(0, 100, TEST_TENANT_ID)
       .onComplete(result -> {
-        SetCollection setItemCollection = result.result();
+        FolioSetCollection setItemCollection = result.result();
         List<Future> futures = new ArrayList<>();
         setItemCollection.getSets()
           .forEach(setItem -> futures.add(setDao.deleteSetById(setItem.getId(), TEST_TENANT_ID)));
@@ -251,7 +251,7 @@ class SetServiceImplTest {
       });
   }
 
-  private void verifyMainSetData(Set setWithExpectedData, Set setToVerify, boolean checkIdEquals) {
+  private void verifyMainSetData(FolioSet setWithExpectedData, FolioSet setToVerify, boolean checkIdEquals) {
     assertEquals(setWithExpectedData.getName(), setToVerify.getName());
     assertEquals(setWithExpectedData.getDescription(), setToVerify.getDescription());
     assertEquals(setWithExpectedData.getSetSpec(), setToVerify.getSetSpec());
