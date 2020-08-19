@@ -345,7 +345,7 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   private JsonObject getLastInstance(JsonArray instances) {
-    return (JsonObject) instances.remove(instances.size() - 1);
+    return instances.getJsonObject(instances.size() - 1);
   }
 
   /**
