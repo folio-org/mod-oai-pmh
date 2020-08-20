@@ -1,0 +1,47 @@
+#%RAML 1.0
+title: OAI-PMH API
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v3
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Set API
+    content: API for retirieving filtering condition values
+
+types:
+  filteringCondition: !include schemas/dto/filteringCondition.json
+  filteringConditionCollection: !include schemas/dto/filteringConditionCollection.json
+  filteringConditionValueCollection: !include schemas/dto/filteringConditionValueCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+  language: !include raml-util/traits/language.raml
+  pageable: !include raml-util/traits/pageable.raml
+
+resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
+
+/oai-pmh/filtering-conditions:
+  displayName: Filtering conditions
+  description: "Retrieve values for next filtering condition types: location, illpolicy, material-type, resource-type, instance-formats."
+  get:
+   responses:
+     200:
+       body:
+         application/json:
+           type: filteringConditionValueCollection
+           example:
+             strict: false
+             value: !include examples/filtering_condition_value_collection.sample
+     401:
+       description: "Not authorized to perform requested action"
+       body:
+         text/plain:
+           example: "Unable to get filtering condition values. Unauthorized"
+     500:
+       description: "Internal server error, e.g. due to misconfiguration"
+       body:
+         text/plain:
+           example: "Internal server error, contact administrator"

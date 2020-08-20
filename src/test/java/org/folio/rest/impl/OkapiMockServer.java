@@ -1,8 +1,13 @@
 package org.folio.rest.impl;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.LOCATION_URI;
+import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 
+import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -12,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -91,6 +97,12 @@ public class OkapiMockServer {
 
   public static final String ERROR_TENANT = "error";
 
+  private static final String LOCATION_JSON_PATH = "/filtering-conditions/locations.json";
+  private static final String ILL_POLICIES_JSON_PATH = "/filtering-conditions/illPolicies.json";
+  private static final String MATERIAL_TYPES_JSON_PATH = "/filtering-conditions/materialTypes.json";
+  private static final String INSTANCE_TYPES_JSON_PATH = "/filtering-conditions/instanceTypes.json";
+  private static final String INSTANCE_FORMATS_JSON_PATH = "/filtering-conditions/instanceFormats.json";
+
   private final int port;
   private final Vertx vertx;
 
@@ -102,6 +114,17 @@ public class OkapiMockServer {
   private Router defineRoutes() {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
+
+    router.get(ILL_POLICIES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(INSTANCE_FORMATS_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(RESOURCE_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(LOCATION_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(MATERIAL_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
 
     router.get(SOURCE_STORAGE_RESULT_URI)
           .handler(this::handleRecordStorageResultResponse);
@@ -228,6 +251,24 @@ public class OkapiMockServer {
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private void handleInventoryStorageFilteringConditionsResponse(RoutingContext ctx) {
+    String uri = ctx.request().absoluteURI();
+    if(uri.contains(ILL_POLICIES_URI)) {
+      successResponse(ctx, getJsonObjectFromFile(ILL_POLICIES_JSON_PATH));
+    } else if(uri.contains(INSTANCE_FORMATS_URI)) {
+      successResponse(ctx, getJsonObjectFromFile(INSTANCE_FORMATS_JSON_PATH));
+    } else if(uri.contains(RESOURCE_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFile(INSTANCE_TYPES_JSON_PATH));
+    } else if(uri.contains(LOCATION_URI)) {
+      successResponse(ctx, getJsonObjectFromFile(LOCATION_JSON_PATH));
+    } else if(uri.contains(MATERIAL_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFile(MATERIAL_TYPES_JSON_PATH));
+    } else {
+      failureResponse(ctx, 400, "there is no mocked handler for request uri '{" + uri + "}'");
+    }
+
   }
 
   private void successResponse(RoutingContext ctx, String body) {

@@ -46,6 +46,18 @@
           "methods": ["GET"],
           "pathPattern": "/oai-pmh/sets",
           "permissionsRequired": ["oai-pmh.sets.item.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/filtering-conditions",
+          "permissionsRequired": ["oai-pmh.filtering-conditions.get"],
+          "modulePermissions": [
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.ill-policies.collection.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.instance-types.collection.get",
+            "inventory-storage.instance-formats.collection.get"
+          ]
         }
       ]
     },
@@ -103,7 +115,8 @@
         "oai-pmh.sets.item.post",
         "oai-pmh.sets.item.put",
         "oai-pmh.sets.item.delete",
-        "oai-pmh.sets.item.collection.get"
+        "oai-pmh.sets.item.collection.get",
+        "oai-pmh.filtering-conditions.get"
       ]
     },
     {
@@ -127,7 +140,12 @@
       "description": "Manage oai-pmh set items"
     },
     {
-      "permissionName": "oai-pmh.sets.all",
+      "permissionName": "oai-pmh.filtering-conditions.get",
+      "displayName": "OAI-PMH Filtering condition - get items",
+      "description": "Retrieves filtering condition values"
+    },
+    {
+      "permissionName": "oai-pmh.set.all",
       "displayName": "OAI-PMH Set - all permissions",
       "description": "Entire set of permissions for managing oai-pmh set items",
       "subPermissions": [
@@ -135,7 +153,8 @@
         "oai-pmh.sets.item.post",
         "oai-pmh.sets.item.put",
         "oai-pmh.sets.item.delete",
-        "oai-pmh.sets.item.collection.get"
+        "oai-pmh.sets.item.collection.get",
+        "oai-pmh.filtering-conditions.get"
       ]
     }
   ],

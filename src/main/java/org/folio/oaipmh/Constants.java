@@ -8,6 +8,7 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
+
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -71,4 +72,16 @@ public final class Constants {
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
+
+  public static final String LOCATION_URI = "/locations";
+  public static final String ILL_POLICIES_URI = "/ill-policies";
+  public static final String MATERIAL_TYPES_URI = "/material-types";
+  public static final String RESOURCE_TYPES_URI = "/instance-types";
+  public static final String INSTANCE_FORMATS_URI = "/instance-formats";
+
+  public static final String LOCATION = "location";
+  public static final String ILL_POLICIES = "illPolicy";
+  public static final String MATERIAL_TYPES = "materialType";
+  public static final String INSTANCE_TYPES = "resourceType";
+  public static final String INSTANCE_FORMATS = "format";
 }

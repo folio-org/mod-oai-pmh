@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Filtering condition DTO Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "description": "Filtering condition name",
+      "type": "string"
+    },
+    "values": {
+      "description": "Filtering condition value",
+      "type": "array"
+    }
+  }
+}
