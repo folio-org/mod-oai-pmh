@@ -23,6 +23,11 @@
     },
     "filteringConditions" : {
       "description": "list of filtering conditions",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$ref": "filteringCondition.json"
+      },
       "ref": "filteringConditionCollection.json"
     },
     "createdDate": {
