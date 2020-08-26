@@ -4,13 +4,17 @@ import static java.util.Date.from;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET_LB;
+import static org.jooq.impl.DSL.field;
+import static org.jooq.impl.DSL.name;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Filter;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
@@ -18,16 +22,22 @@ import javax.ws.rs.NotFoundException;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
+import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.records.SetLbRecord;
 import org.jooq.Condition;
+import org.jooq.Field;
+import org.jooq.JSON;
+import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
@@ -81,8 +91,9 @@ public class SetDaoImpl implements SetDao {
   @Override
   public Future<FolioSet> saveSet(FolioSet entry, String tenantId, String userId) {
     if (StringUtils.isNotEmpty(entry.getId())) {
-      return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> dslContext.selectFrom(SET_LB)
-        .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
+      return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+        .execute(dslContext -> dslContext.selectFrom(SET_LB)
+          .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
         .compose(res -> {
           if (res == 1) {
             throw new IllegalArgumentException(String.format(ALREADY_EXISTS_ERROR_MSG, entry.getId()));
@@ -98,11 +109,21 @@ public class SetDaoImpl implements SetDao {
 
   private Future<FolioSet> saveSetItem(FolioSet entry, String tenantId, String userId) {
     prepareSetMetadata(entry, userId, InsertType.INSERT);
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.insertInto(SET_LB)
-      .set(toDatabaseSetRecord(entry))
-      .onConflict(SET_LB.ID)
-      .doNothing()
-      .returning())
+    Field<UUID> idField = field(name("id"), UUID.class);
+    Field<String> nameField = field(name("name"), String.class);
+    Field<String> descriptionField = field(name("description"), String.class);
+    Field<String> setSpecField = field(name("set_spec"), String.class);
+    Field<String> fkField = field(name("filtering_conditions"), String.class);
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext -> dslContext.insertInto(SET_LB)
+        .set(idField, UUID.fromString(entry.getId()))
+        .set(nameField, entry.getName())
+        .set(descriptionField, entry.getDescription())
+        .set(setSpecField, entry.getSetSpec())
+        .set(fkField, fkListToJsonString(entry.getFilteringConditions()))
+        .onConflict(SET_LB.ID)
+        .doNothing()
+        .returning())
       .map(raw -> entry));
   }
 
@@ -147,6 +168,7 @@ public class SetDaoImpl implements SetDao {
   private SetLbRecord toDatabaseSetRecord(FolioSet set) {
     SetLbRecord dbRecord = new SetLbRecord();
     dbRecord.setDescription(set.getDescription());
+    dbRecord.setFilteringConditions(fkListToJsonb(set.getFilteringConditions()));
     if (isNotEmpty(set.getId())) {
       dbRecord.setId(UUID.fromString(set.getId()));
     }
@@ -205,6 +227,9 @@ public class SetDaoImpl implements SetDao {
     if (nonNull(pojo.getSetSpec())) {
       set.withSetSpec(pojo.getSetSpec());
     }
+    if (nonNull(pojo.getFilteringConditions())) {
+      set.setFilteringConditions(jsonbToFKList(pojo.getFilteringConditions()));
+    }
     if (nonNull(pojo.getCreatedByUserId())) {
       set.withCreatedByUserId(pojo.getCreatedByUserId()
         .toString());
@@ -226,6 +251,44 @@ public class SetDaoImpl implements SetDao {
 
   private enum InsertType {
     INSERT, UPDATE
+  }
+
+  private JSON fkListToJsonb(List<FilteringCondition> filteringConditions) {
+    JsonArray array = new JsonArray();
+    filteringConditions.stream()
+      .map(this::fkToJsonObject)
+      .forEach(array::add);
+    return JSON.valueOf(array.toString());
+  }
+
+  private String fkListToJsonString(List<FilteringCondition> list) {
+    JsonArray array = new JsonArray();
+    list.stream()
+      .map(this::fkToJsonObject)
+      .forEach(array::add);
+    return array.toString();
+  }
+
+  private JsonObject fkToJsonObject(FilteringCondition filteringCondition) {
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("name", filteringCondition.getName());
+    jsonObject.put("value", filteringCondition.getValue());
+    jsonObject.put("setSpec", filteringCondition.getSetSpec());
+    return jsonObject;
+  }
+
+  private List<FilteringCondition> jsonbToFKList(JSON jsonb) {
+    JsonArray array = new JsonArray(jsonb.data());
+    List<FilteringCondition> list = array.stream()
+      .map(this::jsonEntryToFilteringCondition)
+      .collect(Collectors.toList());
+    return list;
+  }
+
+  private FilteringCondition jsonEntryToFilteringCondition(Object object) {
+    return new FilteringCondition().withName("mock")
+      .withSetSpec("mock")
+      .withValue("mock");
   }
 
 }
