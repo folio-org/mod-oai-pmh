@@ -2,6 +2,8 @@ package org.folio.rest.impl;
 
 import static java.util.Objects.nonNull;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
@@ -255,7 +257,8 @@ class OaiPmhSetImplTest {
         .get()
         .then()
         .statusCode(200)
-        .contentType(ContentType.JSON);
+        .contentType(ContentType.JSON)
+        .body("$", hasKey("totalRecords"));
       testContext.completeNow();
     });
   }

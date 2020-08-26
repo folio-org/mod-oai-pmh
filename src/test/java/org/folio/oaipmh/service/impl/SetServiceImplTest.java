@@ -1,5 +1,6 @@
 package org.folio.oaipmh.service.impl;
 
+import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.ILL_POLICIES;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
 import static org.folio.oaipmh.Constants.INSTANCE_TYPES;
@@ -149,8 +150,8 @@ class SetServiceImplTest {
   void shouldReturnSetItemList(VertxTestContext testContext) {
     setService.getSetList(0, 100, TEST_TENANT_ID)
       .onComplete(testContext.succeeding(setItemCollection -> {
-        assertEquals(1, setItemCollection.getSets()
-          .size());
+        assertTrue(nonNull(setItemCollection.getSets()));
+        assertEquals(1, setItemCollection.getTotalRecords().intValue());
         FolioSet set = setItemCollection.getSets()
           .iterator()
           .next();

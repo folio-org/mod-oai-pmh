@@ -13,6 +13,14 @@
         "type": "object",
         "$ref": "folioSet.json"
       }
+    },
+    "totalRecords": {
+      "type": "integer",
+      "description": "Total number of records"
     }
-  }
+  },
+  "required": [
+    "precedingSucceedingTitles",
+    "totalRecords"
+  ]
 }
