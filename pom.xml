@@ -1,15 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
   <version>3.2.0-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
-  <description>Business logic to support the Open Archives Initiative Protocol
-    for Metadata Harvesting
-  </description>
+  <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
   <url>https://github.com/folio-org/mod-oai-pmh</url>
   <inceptionYear>2018</inceptionYear>
 
@@ -21,8 +17,7 @@
   <scm>
     <url>https://github.com/folio-org/mod-oai-pmh.git</url>
     <connection>scm:git:git://github.com/folio-org/mod-oai-pmh.git</connection>
-    <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git
-    </developerConnection>
+    <developerConnection>scm:git:git@github.com:folio-org/mod-oai-pmh.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
@@ -117,8 +112,7 @@
     <srs.version>4.0.1</srs.version>
     <jooq.version>3.13.2</jooq.version>
     <vertx-jooq.generator.version>5.1.1</vertx-jooq.generator.version>
-    <vertx-jooq.classic-reactive.version>5.2.0
-    </vertx-jooq.classic-reactive.version>
+    <vertx-jooq.classic-reactive.version>5.2.0</vertx-jooq.classic-reactive.version>
     <postgres.version>42.2.12</postgres.version>
   </properties>
 
@@ -312,11 +306,8 @@
             <phase>initialize</phase>
             <configuration>
               <sources>
-                <source>
-                  ${project.build.directory}/generated-sources/raml-jaxrs
-                </source>
-                <source>${project.build.directory}/generated-sources/jooq
-                </source>
+                <source>${project.build.directory}/generated-sources/raml-jaxrs</source>
+                <source>${project.build.directory}/generated-sources/jooq</source>
               </sources>
             </configuration>
           </execution>
@@ -380,8 +371,7 @@
             <include>**/impl/*.java</include>
             <include>**/*.aj</include>
           </includes>
-          <aspectDirectory>src/main/java/org/folio/rest/annotations
-          </aspectDirectory>
+          <aspectDirectory>src/main/java/org/folio/rest/annotations</aspectDirectory>
           <XaddSerialVersionUID>true</XaddSerialVersionUID>
           <showWeaveInfo>true</showWeaveInfo>
           <aspectLibraries>
@@ -423,8 +413,7 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${project.build.directory}/classes/apidocs/raml
-              </outputDirectory>
+              <outputDirectory>${project.build.directory}/classes/apidocs/raml</outputDirectory>
               <resources>
                 <resource>
                   <directory>${ramlfiles_path}</directory>
@@ -467,16 +456,11 @@
             <phase>prepare-package</phase>
             <configuration>
               <target if="http.port">
-                <replace
-                  token="baseUri: https://github.com/folio-org/mod-oai-pmh"
-                  value="baseUri: http://localhost:${http.port}"
-                  dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh" value="baseUri: http://localhost:${http.port}" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
-                <replace token="protocols: [ HTTP, HTTPS ]"
-                         value="protocols: [ HTTP ]"
-                         dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
               </target>
             </configuration>
@@ -501,20 +485,12 @@
             <configuration>
               <fileSets>
                 <fileSet>
-                  <sourceFile>
-                    ${project.build.directory}/ModuleDescriptor-template.json
-                  </sourceFile>
-                  <destinationFile>
-                    ${project.build.directory}/ModuleDescriptor.json
-                  </destinationFile>
+                  <sourceFile>${project.build.directory}/ModuleDescriptor-template.json</sourceFile>
+                  <destinationFile>${project.build.directory}/ModuleDescriptor.json</destinationFile>
                 </fileSet>
                 <fileSet>
-                  <sourceFile>
-                    ${project.build.directory}/DeploymentDescriptor-template.json
-                  </sourceFile>
-                  <destinationFile>
-                    ${project.build.directory}/DeploymentDescriptor.json
-                  </destinationFile>
+                  <sourceFile>${project.build.directory}/DeploymentDescriptor-template.json</sourceFile>
+                  <destinationFile>${project.build.directory}/DeploymentDescriptor.json</destinationFile>
                 </fileSet>
               </fileSets>
             </configuration>
@@ -536,9 +512,7 @@
               <properties>
                 <property>
                   <name>log4j2.configuration</name>
-                  <value>
-                    ${project.baseUri}src/main/resources/log4j2.properties
-                  </value>
+                  <value>${project.baseUri}src/main/resources/log4j2.properties</value>
                 </property>
               </properties>
             </configuration>
@@ -558,18 +532,15 @@
             </goals>
             <configuration>
               <transformers>
-                <transformer
-                  implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>org.folio.rest.RestLauncher</Main-Class>
                     <Main-Verticle>org.folio.rest.RestVerticle</Main-Verticle>
                   </manifestEntries>
                 </transformer>
               </transformers>
-              <artifactSet/>
-              <outputFile>
-                ${project.build.directory}/${project.artifactId}-fat.jar
-              </outputFile>
+              <artifactSet />
+              <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
             </configuration>
           </execution>
         </executions>
@@ -651,14 +622,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <forkedProcessExitTimeoutInSeconds>300
-          </forkedProcessExitTimeoutInSeconds>
+          <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
-            <jaxb.marshaller.enableValidation>true
-            </jaxb.marshaller.enableValidation>
-            <vertx.logger-delegate-factory-class-name>
-              io.vertx.core.logging.Log4j2LogDelegateFactory
-            </vertx.logger-delegate-factory-class-name>
+            <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
+            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
           </systemPropertyVariables>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
@@ -697,8 +664,7 @@
         <artifactId>liquibase-maven-plugin</artifactId>
         <version>3.9.0</version>
         <configuration>
-          <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml
-          </changeLogFile>
+          <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml</changeLogFile>
           <driver>org.postgresql.Driver</driver>
           <url>jdbc:postgresql://localhost:15432/postgres</url>
           <username>postgres</username>
@@ -760,9 +726,7 @@
             <password>postgres</password>
           </jdbc>
           <generator>
-            <name>
-              io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator
-            </name>
+            <name>io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator</name>
             <database>
               <name>org.jooq.meta.postgres.PostgresDatabase</name>
               <includes>.*</includes>
@@ -771,22 +735,8 @@
               </excludes>
               <inputSchema>public</inputSchema>
               <outputSchemaToDefault>true</outputSchemaToDefault>
-<!--              <unsignedTypes>false</unsignedTypes>-->
-<!--              <customTypes>-->
-<!--                  <customType>-->
-<!--                    <name>org.folio.oaipmh.dao.jooq.binders.VertxJsonArrayBinder</name>-->
-<!--                    <type>io.vertx.core.json.JsonObject</type>-->
-<!--                    <binding>org.folio.oaipmh.dao.jooq.binders.VertxJsonArrayBinder</binding>-->
-<!--                </customType>-->
-<!--              </customTypes>-->
-              <forcedTypes>
-<!--                <forcedType>-->
-<!--                  <userType>io.vertx.core.json.JsonArray</userType>-->
-<!--                  <binding>io.github.jklingsporn.vertx.jooq.shared.postgres.JSONToJsonArrayBinding</binding>-->
-<!--                  <expression>.*filtering_conditions.*</expression>-->
-<!--                  <types>json</types>-->
-<!--                </forcedType>-->
-              </forcedTypes>
+              <unsignedTypes>false</unsignedTypes>
+              <forcedTypes />
             </database>
             <generate>
               <daos>true</daos>
@@ -796,9 +746,7 @@
               <packageName>org.folio.rest.jooq</packageName>
             </target>
             <strategy>
-              <name>
-                io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy
-              </name>
+              <name>io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy</name>
             </strategy>
           </generator>
         </configuration>
