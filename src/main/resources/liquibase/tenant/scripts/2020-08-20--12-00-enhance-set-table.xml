@@ -16,7 +16,7 @@
     <addColumn schemaName="${database.defaultSchemaName}"
                tableName="set">
       <column name="filtering_conditions"
-              type="json"/>
+              type="text"/>
     </addColumn>
   </changeSet>
 

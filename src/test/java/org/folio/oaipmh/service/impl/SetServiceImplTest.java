@@ -9,7 +9,6 @@ import static org.folio.oaipmh.Constants.LOCATION;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
@@ -23,6 +22,7 @@ import javax.ws.rs.NotFoundException;
 
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
+import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
@@ -51,12 +51,7 @@ import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgException;
 
 @ExtendWith(VertxExtension.class)
-class SetServiceImplTest {
-
-  private static final String TEST_TENANT_ID = "oaiTest";
-  private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
-  private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
-  private static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
+class SetServiceImplTest extends AbstractSetTest {
 
   private static final String EXPECTED_NOT_FOUND_MSG = format("Set with id '%s' was not found", NONEXISTENT_SET_ID);
   private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = format("Set with id '%s' already exists",
@@ -64,19 +59,6 @@ class SetServiceImplTest {
   private static final String DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
   private static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
   private static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
-
-  private static final FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
-    .withName("test name")
-    .withDescription("test description")
-    .withSetSpec("test setSpec");
-
-  private static final FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
-    .withDescription("update description")
-    .withSetSpec("update SetSpec");
-
-  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("post name")
-    .withDescription("post description")
-    .withSetSpec("post SetSpec");
 
   private static final int mockPort = NetworkUtils.nextFreePort();
 
@@ -92,7 +74,7 @@ class SetServiceImplTest {
       .startEmbeddedPostgres();
 
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, TEST_TENANT_ID)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
+      connection.prepareStatement("create schema oaitest_mod_oai_pmh")
         .execute();
     } catch (Exception ex) {
       testContext.failNow(ex);
@@ -104,11 +86,11 @@ class SetServiceImplTest {
   }
 
   @AfterAll
-  static void tearDownClass(Vertx vertx, VertxTestContext context) {
+  static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    vertx.close(context.succeeding(res -> {
+    vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
-      context.completeNow();
+      testContext.completeNow();
     }));
   }
 
@@ -145,8 +127,7 @@ class SetServiceImplTest {
         }
         FolioSet set = result.result();
         verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
-        assertEquals(TEST_USER_ID, set.getCreatedByUserId());
-        assertNotNull(set.getCreatedDate());
+        verifyMetadata(set);
         testContext.completeNow();
       });
   }
@@ -171,6 +152,7 @@ class SetServiceImplTest {
           .iterator()
           .next();
         verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
+        verifyMetadata(set);
         testContext.completeNow();
       }));
   }
@@ -184,10 +166,7 @@ class SetServiceImplTest {
         }
         FolioSet updatedSet = result.result();
         verifyMainSetData(UPDATE_SET_ENTRY, updatedSet, true);
-        assertEquals(TEST_USER_ID, updatedSet.getUpdatedByUserId());
-        assertEquals(TEST_USER_ID, updatedSet.getCreatedByUserId());
-        assertNotNull(updatedSet.getCreatedDate());
-        assertNotNull(updatedSet.getUpdatedDate());
+        verifyMetadata(updatedSet);
         testContext.completeNow();
       });
   }
@@ -211,8 +190,7 @@ class SetServiceImplTest {
         }
         FolioSet savedSet = result.result();
         verifyMainSetData(POST_SET_ENTRY, savedSet, false);
-        assertEquals(TEST_USER_ID, savedSet.getCreatedByUserId());
-        assertNotNull(savedSet.getCreatedDate());
+        verifyMetadata(savedSet);
         testContext.completeNow();
       });
   }
@@ -322,19 +300,10 @@ class SetServiceImplTest {
       });
   }
 
-  private void verifyMainSetData(FolioSet setWithExpectedData, FolioSet setToVerify, boolean checkIdEquals) {
-    assertEquals(setWithExpectedData.getName(), setToVerify.getName());
-    assertEquals(setWithExpectedData.getDescription(), setToVerify.getDescription());
-    assertEquals(setWithExpectedData.getSetSpec(), setToVerify.getSetSpec());
-    if (checkIdEquals) {
-      assertEquals(EXISTENT_SET_ID, setToVerify.getId());
-    } else {
-      assertNotNull(setToVerify.getId());
-    }
-  }
-
   private void verifyContainsItem(String item, Collection<SetsFilteringCondition> verifiedCollection) {
-    boolean res = verifiedCollection.stream().anyMatch(colItem -> colItem.getName().equals(item));
+    boolean res = verifiedCollection.stream()
+      .anyMatch(colItem -> colItem.getName()
+        .equals(item));
     assertTrue(res);
   }
 

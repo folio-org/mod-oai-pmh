@@ -780,12 +780,12 @@
 <!--                </customType>-->
 <!--              </customTypes>-->
               <forcedTypes>
-                <forcedType>
-                  <userType>io.vertx.core.json.JsonArray</userType>
-                  <binding>io.github.jklingsporn.vertx.jooq.shared.postgres.JSONToJsonArrayBinding</binding>
-                  <expression>.*filtering_conditions.*</expression>
-                  <types>json</types>
-                </forcedType>
+<!--                <forcedType>-->
+<!--                  <userType>io.vertx.core.json.JsonArray</userType>-->
+<!--                  <binding>io.github.jklingsporn.vertx.jooq.shared.postgres.JSONToJsonArrayBinding</binding>-->
+<!--                  <expression>.*filtering_conditions.*</expression>-->
+<!--                  <types>json</types>-->
+<!--                </forcedType>-->
               </forcedTypes>
             </database>
             <generate>
