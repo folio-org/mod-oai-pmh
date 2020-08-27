@@ -68,8 +68,8 @@ public abstract class AbstractSetTest {
   }
 
   protected void verifyMetadata(FolioSet folioSet) {
-    assertEquals(folioSet.getCreatedByUserId(), TEST_USER_ID);
-    assertEquals(folioSet.getUpdatedByUserId(), TEST_USER_ID);
+    assertEquals(TEST_USER_ID, folioSet.getCreatedByUserId());
+    assertEquals(TEST_USER_ID, folioSet.getUpdatedByUserId());
     assertNotNull(folioSet.getCreatedDate());
     assertNotNull(folioSet.getUpdatedDate());
   }
