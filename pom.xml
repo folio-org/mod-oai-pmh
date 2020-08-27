@@ -771,20 +771,20 @@
               </excludes>
               <inputSchema>public</inputSchema>
               <outputSchemaToDefault>true</outputSchemaToDefault>
-              <unsignedTypes>false</unsignedTypes>
+<!--              <unsignedTypes>false</unsignedTypes>-->
 <!--              <customTypes>-->
 <!--                  <customType>-->
-<!--                    <name>org.folio.oaipmh.dao.jooq.binders.VertxJsonObjectBinder</name>-->
+<!--                    <name>org.folio.oaipmh.dao.jooq.binders.VertxJsonArrayBinder</name>-->
 <!--                    <type>io.vertx.core.json.JsonObject</type>-->
-<!--                    <binding>org.folio.oaipmh.dao.jooq.binders.VertxJsonObjectBinder</binding>-->
+<!--                    <binding>org.folio.oaipmh.dao.jooq.binders.VertxJsonArrayBinder</binding>-->
 <!--                </customType>-->
 <!--              </customTypes>-->
               <forcedTypes>
                 <forcedType>
-                  <userType>io.vertx.core.json.JsonObject</userType>
-                  <binding>org.folio.oaipmh.dao.jooq.binders.VertxJsonObjectBinder</binding>
-                  <expression>filtering_conditions | .*json.*</expression>
-                  <types>.*</types>
+                  <userType>io.vertx.core.json.JsonArray</userType>
+                  <binding>io.github.jklingsporn.vertx.jooq.shared.postgres.JSONToJsonArrayBinding</binding>
+                  <expression>.*filtering_conditions.*</expression>
+                  <types>json</types>
                 </forcedType>
               </forcedTypes>
             </database>
