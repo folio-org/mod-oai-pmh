@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
+import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
-import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +35,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @Service
