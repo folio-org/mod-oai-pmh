@@ -4,6 +4,7 @@ import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.ILL_POLICIES;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
 import static org.folio.oaipmh.Constants.INSTANCE_TYPES;
 import static org.folio.oaipmh.Constants.LOCATION;
@@ -20,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -35,6 +35,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 @Service
@@ -98,12 +99,9 @@ public class SetServiceImpl implements SetService {
           List<SetsFilteringCondition> values = new ArrayList<>();
           values.add(jsonObjectToSetsFilteringCondition(locationFuture.result(), LOCATION_JSON_FIELD_PATH, LOCATION));
           values.add(jsonObjectToSetsFilteringCondition(illPoliciesFuture.result(), ILL_POLICIES_JSON_FIELD_PATH, ILL_POLICIES));
-          values
-            .add(jsonObjectToSetsFilteringCondition(materialTypesFuture.result(), MATERIAL_TYPES_JSON_FIELD_PATH, MATERIAL_TYPES));
-          values
-            .add(jsonObjectToSetsFilteringCondition(resourceTypeFuture.result(), INSTANCE_TYPES_JSON_FIELD_PATH, INSTANCE_TYPES));
-          values.add(jsonObjectToSetsFilteringCondition(instanceFormatsFuture.result(), INSTANCE_FORMATS_JSON_FIELD_PATH,
-              Constants.INSTANCE_FORMATS));
+          values.add(jsonObjectToSetsFilteringCondition(materialTypesFuture.result(), MATERIAL_TYPES_JSON_FIELD_PATH, MATERIAL_TYPES));
+          values.add(jsonObjectToSetsFilteringCondition(resourceTypeFuture.result(), INSTANCE_TYPES_JSON_FIELD_PATH, INSTANCE_TYPES));
+          values.add(jsonObjectToSetsFilteringCondition(instanceFormatsFuture.result(), INSTANCE_FORMATS_JSON_FIELD_PATH, INSTANCE_FORMATS));
 
           FilteringConditionValueCollection filteringConditionValueCollection = new FilteringConditionValueCollection()
             .withSetsFilteringConditions(values);
@@ -113,9 +111,9 @@ public class SetServiceImpl implements SetService {
     return promise.future();
   }
 
-  private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient,
-      Map<String, String> okapiHeaders) {
+  private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient, Map<String, String> okapiHeaders) {
     Promise<JsonObject> promise = Promise.promise();
+    requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
 
     String okapiUrl = okapiHeaders.get(OKAPI_URL);
     String tenant = okapiHeaders.get(OKAPI_TENANT);
