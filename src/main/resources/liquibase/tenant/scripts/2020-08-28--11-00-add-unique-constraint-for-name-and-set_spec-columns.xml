@@ -1,0 +1,18 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet  id="2020-08-28--11-00-add-unique-constraint-to-set.set_spec-column " author="Illia Daliek">
+    <addUniqueConstraint  columnNames="setSpec"
+                          constraintName="set_spec_unique_constraint"
+                          schemaName="${database.defaultSchemaName}"
+                          tableName="set"/>
+    <addUniqueConstraint  columnNames="name"
+                          constraintName="name_unique_constraint"
+                          schemaName="${database.defaultSchemaName}"
+                          tableName="set"/>
+  </changeSet>
+
+</databaseChangeLog>
