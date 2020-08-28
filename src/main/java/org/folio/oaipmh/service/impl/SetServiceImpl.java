@@ -98,9 +98,12 @@ public class SetServiceImpl implements SetService {
           List<SetsFilteringCondition> values = new ArrayList<>();
           values.add(jsonObjectToSetsFilteringCondition(locationFuture.result(), LOCATION_JSON_FIELD_PATH, LOCATION));
           values.add(jsonObjectToSetsFilteringCondition(illPoliciesFuture.result(), ILL_POLICIES_JSON_FIELD_PATH, ILL_POLICIES));
-          values.add(jsonObjectToSetsFilteringCondition(materialTypesFuture.result(), MATERIAL_TYPES_JSON_FIELD_PATH, MATERIAL_TYPES));
-          values.add(jsonObjectToSetsFilteringCondition(resourceTypeFuture.result(), INSTANCE_TYPES_JSON_FIELD_PATH, INSTANCE_TYPES));
-          values.add(jsonObjectToSetsFilteringCondition(instanceFormatsFuture.result(), INSTANCE_FORMATS_JSON_FIELD_PATH, INSTANCE_FORMATS));
+          values
+            .add(jsonObjectToSetsFilteringCondition(materialTypesFuture.result(), MATERIAL_TYPES_JSON_FIELD_PATH, MATERIAL_TYPES));
+          values
+            .add(jsonObjectToSetsFilteringCondition(resourceTypeFuture.result(), INSTANCE_TYPES_JSON_FIELD_PATH, INSTANCE_TYPES));
+          values.add(jsonObjectToSetsFilteringCondition(instanceFormatsFuture.result(), INSTANCE_FORMATS_JSON_FIELD_PATH,
+              INSTANCE_FORMATS));
 
           FilteringConditionValueCollection filteringConditionValueCollection = new FilteringConditionValueCollection()
             .withSetsFilteringConditions(values);
@@ -110,7 +113,8 @@ public class SetServiceImpl implements SetService {
     return promise.future();
   }
 
-  private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient, Map<String, String> okapiHeaders) {
+  private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient,
+      Map<String, String> okapiHeaders) {
     Promise<JsonObject> promise = Promise.promise();
     requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
 
