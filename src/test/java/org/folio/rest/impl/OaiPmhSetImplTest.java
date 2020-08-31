@@ -254,6 +254,9 @@ class OaiPmhSetImplTest {
         .statusCode(201)
         .contentType(ContentType.JSON);
 
+      String oldValue = POST_SET_ENTRY.getName();
+      POST_SET_ENTRY.setName("unique value for name");
+
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
         .post()
@@ -261,6 +264,7 @@ class OaiPmhSetImplTest {
         .statusCode(422)
         .contentType(ContentType.JSON)
         .body("errors[0].message", equalTo(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT)));
+      POST_SET_ENTRY.setName(oldValue);
       testContext.completeNow();
     });
   }
