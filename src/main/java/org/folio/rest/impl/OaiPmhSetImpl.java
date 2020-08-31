@@ -162,7 +162,8 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     if(isEmpty(folioSet.getName())) {
       String message = format(ERROR_MSG_TEMPLATE, "name");
       errorsList.add(createError("name", "null", message));
-    } if (isEmpty(folioSet.getSetSpec())) {
+    }
+    if (isEmpty(folioSet.getSetSpec())) {
       String message = format(ERROR_MSG_TEMPLATE, "setSpec");
       errorsList.add(createError("setSpec", "null", message));
     }
