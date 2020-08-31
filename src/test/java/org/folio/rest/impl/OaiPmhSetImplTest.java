@@ -5,6 +5,7 @@ import static java.util.Objects.nonNull;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
@@ -64,6 +65,8 @@ class OaiPmhSetImplTest {
   private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 
+  private static final String NULL_VALUE_ERROR_MSG_TEMPLATE = "null value in column \"%s\" violates not-null constraint";
+
   private static final String DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
   private static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
   private static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
@@ -112,8 +115,8 @@ class OaiPmhSetImplTest {
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
         try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-            connection.prepareStatement("create schema oaitest_mod_oai_pmh")
-              .execute();
+          connection.prepareStatement("create schema oaitest_mod_oai_pmh")
+            .execute();
         } catch (Exception ex) {
           testContext.failNow(ex);
         }
@@ -205,12 +208,71 @@ class OaiPmhSetImplTest {
   @Test
   void shouldNotUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+        .body(UPDATE_SET_ENTRY);
       request.when()
         .put()
         .then()
         .statusCode(404)
         .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptyName(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
+        .withName("")
+        .withDescription("description")
+        .withSetSpec("setSpec");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+        .body(folioSetWithEmptyName);
+      request.when()
+        .put()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptySetSpec(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
+        .withName("name")
+        .withDescription("description")
+        .withSetSpec("");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+        .body(folioSetWithEmptyName);
+      request.when()
+        .put()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptyNameAndSetSpec(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
+        .withName("")
+        .withDescription("description")
+        .withSetSpec("");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+        .body(folioSetWithEmptyName);
+      request.when()
+        .put()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
+        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -239,6 +301,67 @@ class OaiPmhSetImplTest {
         .statusCode(400)
         .contentType(ContentType.TEXT);
       POST_SET_ENTRY.setId(null);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotSaveSetItem_whenSaveSetWithEmptyName(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
+        .toString())
+        .withName("")
+        .withDescription("description")
+        .withSetSpec("setSpec");
+
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      request.when()
+        .post()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotSaveSetItem_whenSaveSetWithEmptyNameAndEmptySetSpec(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
+        .toString())
+        .withName("")
+        .withDescription("description")
+        .withSetSpec("");
+
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      request.when()
+        .post()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
+        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldNotSaveSetItem_whenSaveSetWithEmptySetSpec(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
+        .toString())
+        .withName("name")
+        .withDescription("description")
+        .withSetSpec("");
+
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      request.when()
+        .post()
+        .then()
+        .statusCode(422)
+        .contentType(ContentType.JSON)
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
