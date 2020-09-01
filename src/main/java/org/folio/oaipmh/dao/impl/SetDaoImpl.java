@@ -105,12 +105,8 @@ public class SetDaoImpl implements SetDao {
 
   private Future<FolioSet> saveSetItem(FolioSet entry, String tenantId, String userId) {
     prepareSetMetadata(entry, userId, InsertType.INSERT);
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
-      .executeAny(dslContext -> dslContext.insertInto(SET_LB)
-        .set(toDatabaseSetRecord(entry))
-        .onConflict(SET_LB.ID)
-        .doNothing()
-        .returning())
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.insertInto(SET_LB)
+      .set(toDatabaseSetRecord(entry)))
       .map(raw -> entry));
   }
 
