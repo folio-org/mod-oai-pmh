@@ -20,9 +20,6 @@
             "inventory-storage.oai-pmh-view.instances.collection.get",
             "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
             "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
-            "inventory-storage.oai-pmh-view.instances.collection.get",
-            "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
-            "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
           ]
         },
         {
@@ -59,10 +56,7 @@
             "inventory-storage.ill-policies.collection.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.instance-types.collection.get",
-            "inventory-storage.instance-formats.collection.get",
-            "inventory-storage.oai-pmh-view.instances.collection.get",
-            "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
-            "inventory-storage.oai-pmh-view.enrichedinstances.collection.post"
+            "inventory-storage.instance-formats.collection.get"
           ]
         }
       ]
@@ -174,8 +168,45 @@
       }
     },
     "env": [
-      { "name": "JAVA_OPTIONS",
+      {
+        "name": "JAVA_OPTIONS",
         "value": "-XX:MaxRAMPercentage=66.0"
+      },
+      {
+        "name": "DB_HOST",
+        "value": "postgres"
+      },
+      {
+        "name": "DB_PORT",
+        "value": "5432"
+      },
+      {
+        "name": "DB_USERNAME",
+        "value": "folio_admin"
+      },
+      {
+        "name": "DB_PASSWORD",
+        "value": "folio_admin"
+      },
+      {
+        "name": "DB_DATABASE",
+        "value": "okapi_modules"
+      },
+      {
+        "name": "DB_QUERYTIMEOUT",
+        "value": "60000"
+      },
+      {
+        "name": "DB_CHARSET",
+        "value": "UTF-8"
+      },
+      {
+        "name": "DB_MAXPOOLSIZE",
+        "value": "5"
+      },
+      {
+        "name": "test.mode",
+        "value": "true"
       }
     ]
   }

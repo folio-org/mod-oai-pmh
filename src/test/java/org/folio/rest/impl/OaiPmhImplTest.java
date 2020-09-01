@@ -1924,6 +1924,16 @@ class OaiPmhImplTest {
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
+  @Test
+  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
+    RequestSpecification requestWithResumptionToken = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(RESUMPTION_TOKEN_PARAM, "abc");
+
+    final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
+  }
 
   @Test
   void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
