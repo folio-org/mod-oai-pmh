@@ -4,6 +4,7 @@ import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.ILL_POLICIES;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
 import static org.folio.oaipmh.Constants.INSTANCE_TYPES;
 import static org.folio.oaipmh.Constants.LOCATION;
@@ -20,12 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
+import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
-import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.springframework.stereotype.Service;
 
@@ -103,7 +103,7 @@ public class SetServiceImpl implements SetService {
           values
             .add(jsonObjectToSetsFilteringCondition(resourceTypeFuture.result(), INSTANCE_TYPES_JSON_FIELD_PATH, INSTANCE_TYPES));
           values.add(jsonObjectToSetsFilteringCondition(instanceFormatsFuture.result(), INSTANCE_FORMATS_JSON_FIELD_PATH,
-              Constants.INSTANCE_FORMATS));
+              INSTANCE_FORMATS));
 
           FilteringConditionValueCollection filteringConditionValueCollection = new FilteringConditionValueCollection()
             .withSetsFilteringConditions(values);
@@ -116,6 +116,7 @@ public class SetServiceImpl implements SetService {
   private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient,
       Map<String, String> okapiHeaders) {
     Promise<JsonObject> promise = Promise.promise();
+    requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
 
     String okapiUrl = okapiHeaders.get(OKAPI_URL);
     String tenant = okapiHeaders.get(OKAPI_TENANT);
