@@ -131,7 +131,8 @@ public class SetDaoImpl implements SetDao {
     List<FolioSet> list = queryResult.stream()
       .map(row -> rowToSet(row.unwrap()))
       .collect(Collectors.toList());
-    return new FolioSetCollection().withSets(list);
+    return new FolioSetCollection().withSets(list)
+      .withTotalRecords(list.size());
   }
 
   private void prepareSetMetadata(FolioSet entry, String userId, InsertType insertType) {
