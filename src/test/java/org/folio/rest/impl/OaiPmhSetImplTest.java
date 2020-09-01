@@ -5,7 +5,6 @@ import static java.util.Objects.nonNull;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 

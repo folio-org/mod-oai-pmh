@@ -1,7 +1,7 @@
 package org.folio.oaipmh.service.impl;
 
-import static java.util.Objects.nonNull;
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.ILL_POLICIES;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
 import static org.folio.oaipmh.Constants.INSTANCE_TYPES;
