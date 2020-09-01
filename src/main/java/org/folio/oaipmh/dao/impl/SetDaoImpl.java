@@ -34,7 +34,6 @@ import io.vertx.sqlclient.RowSet;
 @Repository
 public class SetDaoImpl implements SetDao {
 
-
   private static final String ALREADY_EXISTS_ERROR_MSG = "Set with id '%s' already exists";
   private static final String NOT_FOUND_ERROR_MSG = "Set with id '%s' was not found";
 

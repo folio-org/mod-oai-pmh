@@ -1,24 +1,44 @@
 {
-  "filteringConditions" : [
+  "filteringConditions": [
     {
-      "name" : "location",
-      "values" : ["location 1", "location 2", "location 3"]
+      "name": "location",
+      "values": [
+        "location 1",
+        "location 2",
+        "location 3"
+      ]
     },
     {
-      "name" : "resourceType",
-      "values" : ["resourceType 1", "resourceType 2", "resourceType 3"]
+      "name": "resourceType",
+      "values": [
+        "resourceType 1",
+        "resourceType 2",
+        "resourceType 3"
+      ]
     },
     {
-      "name" : "format",
-      "values" : ["format 1", "format 2", "format 3"]
+      "name": "format",
+      "values": [
+        "format 1",
+        "format 2",
+        "format 3"
+      ]
     },
     {
-      "name" : "illPolicy",
-      "values" : ["illPolicy 1", "illPolicy 2", "illPolicy 3"]
+      "name": "illPolicy",
+      "values": [
+        "illPolicy 1",
+        "illPolicy 2",
+        "illPolicy 3"
+      ]
     },
     {
-      "name" : "materialType",
-      "values" : ["materialType 1", "materialType 2", "materialType 3"]
-    },
+      "name": "materialType",
+      "values": [
+        "materialType 1",
+        "materialType 2",
+        "materialType 3"
+      ]
+    }
   ]
 }

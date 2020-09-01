@@ -8,4 +8,6 @@
   <include file="scripts/2020-07-16--10-00-create-instnace-ids-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-07-27--19-17-fix_primary_key.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-07-20--9-00-import-sample-data.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2020-08-28--11-00-add-unique-constraint-for-name-and-set_spec-columns.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
+

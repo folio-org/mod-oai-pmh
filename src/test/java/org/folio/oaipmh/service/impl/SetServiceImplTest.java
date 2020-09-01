@@ -1,5 +1,6 @@
 package org.folio.oaipmh.service.impl;
 
+import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.ILL_POLICIES;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.ws.rs.NotFoundException;
 
@@ -46,6 +48,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.pgclient.PgException;
 
 @ExtendWith(VertxExtension.class)
 class SetServiceImplTest {
@@ -55,9 +58,12 @@ class SetServiceImplTest {
   private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
   private static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 
-  private static final String EXPECTED_NOT_FOUND_MSG = String.format("Set with id '%s' was not found", NONEXISTENT_SET_ID);
-  private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = String.format("Set with id '%s' already exists",
+  private static final String EXPECTED_NOT_FOUND_MSG = format("Set with id '%s' was not found", NONEXISTENT_SET_ID);
+  private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = format("Set with id '%s' already exists",
       EXISTENT_SET_ID);
+  private static final String DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
+  private static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
+  private static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
 
   private static final FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
     .withName("test name")
@@ -68,9 +74,9 @@ class SetServiceImplTest {
     .withDescription("update description")
     .withSetSpec("update SetSpec");
 
-  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("update name")
-    .withDescription("update description")
-    .withSetSpec("update SetSpec");
+  private static final FolioSet POST_SET_ENTRY = new FolioSet().withName("post name")
+    .withDescription("post description")
+    .withSetSpec("post SetSpec");
 
   private static final int mockPort = NetworkUtils.nextFreePort();
 
@@ -115,10 +121,19 @@ class SetServiceImplTest {
 
   @AfterEach
   void cleanUp(VertxTestContext testContext) {
-    setDao.deleteSetById(EXISTENT_SET_ID, TEST_TENANT_ID)
-      .onComplete(result -> {
-        testContext.completeNow();
+    setDao.getSetList(0, 100, TEST_TENANT_ID).onSuccess(folioSetCollection -> {
+      List<Future> list = new ArrayList<>();
+      folioSetCollection.getSets().forEach(set -> {
+        list.add(setDao.deleteSetById(set.getId(), TEST_TENANT_ID));
       });
+      CompositeFuture.all(list).onComplete(result -> {
+        if(result.failed()) {
+          testContext.failNow(result.cause());
+        } else {
+          testContext.completeNow();
+        }
+      });
+    });
   }
 
   @Test
@@ -198,13 +213,7 @@ class SetServiceImplTest {
         verifyMainSetData(POST_SET_ENTRY, savedSet, false);
         assertEquals(TEST_USER_ID, savedSet.getCreatedByUserId());
         assertNotNull(savedSet.getCreatedDate());
-        setDao.deleteSetById(savedSet.getId(), TEST_TENANT_ID)
-          .onComplete(res -> {
-            if (res.failed()) {
-              testContext.failNow(res.cause());
-            }
-            testContext.completeNow();
-          });
+        testContext.completeNow();
       });
   }
 
@@ -219,6 +228,38 @@ class SetServiceImplTest {
           POST_SET_ENTRY.setId(null);
           testContext.completeNow();
         }));
+    });
+  }
+
+  @Test
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
+        FolioSet setWithExistedSetSpecValue = result.result();
+        setWithExistedSetSpecValue.setId(UUID.randomUUID().toString());
+        setWithExistedSetSpecValue.setName("unique name");
+        setService.saveSet(setWithExistedSetSpecValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
+          assertTrue(throwable instanceof PgException);
+          assertEquals(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
+          testContext.completeNow();
+        });
+      });
+    });
+  }
+
+  @Test
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
+        FolioSet setWithExistedNameValue = result.result();
+        setWithExistedNameValue.setId(UUID.randomUUID().toString());
+        setWithExistedNameValue.setSetSpec("unique setSpec");
+        setService.saveSet(setWithExistedNameValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
+          assertTrue(throwable instanceof PgException);
+          assertEquals(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
+          testContext.completeNow();
+        });
+      });
     });
   }
 
