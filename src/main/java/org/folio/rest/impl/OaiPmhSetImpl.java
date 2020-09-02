@@ -182,7 +182,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       .add(p);
     error.setMessage(message);
     error.setCode(String.valueOf(error_type.ordinal()));
-    error.setType(error_type.toString().toLowerCase());
+    error.setType(error_type.toString());
     return error;
   }
 
@@ -234,6 +234,11 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       public String toString() {
         return "notUnique";
       }
+    };
+
+    @Override
+    public String toString() {
+      return name().toLowerCase();
     }
   }
 
