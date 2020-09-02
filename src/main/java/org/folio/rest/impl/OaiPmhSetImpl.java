@@ -5,6 +5,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.capitalize;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,8 +40,6 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
 
-  private static final String ERROR_MSG_TEMPLATE = "null value in column \"%s\" violates not-null constraint";
-
   @Autowired
   private SetService setService;
 
@@ -72,7 +71,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Put set by id with id: '{}' and body: {}", id, entity);
-//        validateFolioSet(entity, asyncResultHandler);
+        validateFolioSet(entity, asyncResultHandler);
         setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(updated -> OaiPmhSets.PutOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
@@ -91,7 +90,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Post set with body: {}", entity);
-//        validateFolioSet(entity, asyncResultHandler);
+        validateFolioSet(entity, asyncResultHandler);
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(set -> OaiPmhSets.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
           .map(Response.class::cast)
@@ -160,12 +159,12 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   private void validateFolioSet(FolioSet folioSet, Handler<AsyncResult<Response>> asyncResultHandler) {
     List<Error> errorsList = new ArrayList<>();
     if (isEmpty(folioSet.getName())) {
-      String message = format(ERROR_MSG_TEMPLATE, "name");
-      errorsList.add(createError("name", "null", message));
+      String message = format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name");
+      errorsList.add(createError("name", folioSet.getName(), message, ERROR_TYPE.EMPTY));
     }
     if (isEmpty(folioSet.getSetSpec())) {
-      String message = format(ERROR_MSG_TEMPLATE, "setSpec");
-      errorsList.add(createError("setSpec", "null", message));
+      String message = format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec");
+      errorsList.add(createError("set_spec", folioSet.getSetSpec(), message, ERROR_TYPE.EMPTY));
     }
     if (isNotEmpty(errorsList)) {
       Errors errors = new Errors();
@@ -174,7 +173,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     }
   }
 
-  private Error createError(String field, String value, String message) {
+  private Error createError(String field, String value, String message, ERROR_TYPE error_type) {
     Error error = new Error();
     Parameter p = new Parameter();
     p.setKey(field);
@@ -182,62 +181,43 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     error.getParameters()
       .add(p);
     error.setMessage(message);
-    error.setCode("-1");
-    error.setType("1");
+    error.setCode(String.valueOf(error_type.ordinal()));
+    error.setType(error_type.toString().toLowerCase());
     return error;
   }
 
   private Response handleException(Throwable throwable) {
+    Response response = null;
     if (throwable instanceof IllegalArgumentException) {
-      return OaiPmhSets.PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
-    }
-    else if (throwable instanceof PgException) {
+      response = OaiPmhSets.PostOaiPmhSetsResponse.respond400WithTextPlain(throwable.getMessage());
+    } else if (throwable instanceof PgException) {
       Map<Character, String> pgErrorsMap = PgExceptionUtil.getBadRequestFields(throwable);
       int errorCode = Integer.parseInt(pgErrorsMap.get('C'));
-      if(errorCode == 23502) {
-          String fieldName = getFieldName(pgErrorsMap, errorCode);
-          String fieldValue = getFieldValue(pgErrorsMap, errorCode);
-          String errorMessage = format("Field '%s' cannot be %s",fieldName, fieldValue);
-          Error error = createError(fieldName, fieldValue, errorMessage);
-          Errors errors = new Errors().withErrors(Collections.singletonList(error));
-          return PostOaiPmhSetsResponse.respond422WithApplicationJson(errors);
-        } else if(errorCode == 23505) {
-          String fieldName = getFieldName(pgErrorsMap, errorCode);
-          String fieldValue = getFieldValue(pgErrorsMap, errorCode);
-          String errorMessage = format("Field '%s' cannot have duplicated values. Value '%s' is already taken. Please, pass another value", fieldName, fieldValue);
-          Error error = createError(fieldName, fieldValue, errorMessage);
-          Errors errors = new Errors().withErrors(Collections.singletonList(error));
-          return PostOaiPmhSetsResponse.respond422WithApplicationJson(errors);
-        } else {
-          return PostOaiPmhSetsResponse.respond500WithTextPlain(pgErrorsMap.get('M'));
-        }
-      } else {
-      return ExceptionHelper.mapExceptionToResponse(throwable);
+      if (errorCode == 23505) {
+        String fieldName = getFieldName(pgErrorsMap);
+        String fieldValue = getFieldValue(pgErrorsMap);
+        String errorMessage = format(
+            "Field '%s' cannot have duplicated values. Value '%s' is already taken. Please, pass another value", fieldName,
+            fieldValue);
+        Error error = createError(fieldName, fieldValue, errorMessage, ERROR_TYPE.UNIQUE);
+        Errors errors = new Errors().withErrors(Collections.singletonList(error));
+        response = PostOaiPmhSetsResponse.respond422WithApplicationJson(errors);
+      }
+    } else {
+      response = ExceptionHelper.mapExceptionToResponse(throwable);
     }
+    return response;
   }
 
-  private String getFieldName(Map<Character, String> pgErrorsMap, int errorCode) {
-    if (errorCode == 23502) {
-      String error = pgErrorsMap.get('M');
-      return error.split("\"")[1];
-    }
-    if (errorCode == 23505) {
-      String error = pgErrorsMap.get('D');
-      return error.split("\\)")[0].split("\\(")[1];
-    }
-    return EMPTY;
+  private String getFieldName(Map<Character, String> pgErrorsMap) {
+    String error = pgErrorsMap.get('D');
+    return error.split("\\)")[0].split("\\(")[1];
   }
 
-  private String getFieldValue(Map<Character, String> pgErrorsMap, int errorCode) {
-    if (errorCode == 23502) {
-      return "empty";
-    }
-    if (errorCode == 23505) {
-      String error = pgErrorsMap.get('D');
-      String value = error.split("=")[1].split("\\)")[0];
-      return value.substring(1);
-    }
-    return EMPTY;
+  private String getFieldValue(Map<Character, String> pgErrorsMap) {
+    String error = pgErrorsMap.get('D');
+    String value = error.split("=")[1].split("\\)")[0];
+    return value.substring(1);
   }
 
   private String getTenantId(Map<String, String> okapiHeaders) {
@@ -246,6 +226,10 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private String getUserId(Map<String, String> okapiHeaders) {
     return okapiHeaders.get("x-okapi-user-id");
+  }
+
+  private enum ERROR_TYPE {
+    EMPTY, UNIQUE
   }
 
 }

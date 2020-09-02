@@ -1,0 +1,14 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet  id="2020-09-02--17-00-drop-sample-data" author="Illia Daliek">
+    <sql>
+      DELETE FROM ${database.defaultSchemaName}.set_lb
+      WHERE id IN ('800a6081-9699-404f-bc59-2d7ec49ea6bd','73abf4b2-b117-4e1a-a526-9d1f80a28680')
+    </sql>
+  </changeSet>
+
+</databaseChangeLog>
