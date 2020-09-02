@@ -163,8 +163,8 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       errorsList.add(createError("name", folioSet.getName(), message, ERROR_TYPE.EMPTY));
     }
     if (isEmpty(folioSet.getSetSpec())) {
-      String message = format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec");
-      errorsList.add(createError("set_spec", folioSet.getSetSpec(), message, ERROR_TYPE.EMPTY));
+      String message = format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec");
+      errorsList.add(createError("setSpec", folioSet.getSetSpec(), message, ERROR_TYPE.EMPTY));
     }
     if (isNotEmpty(errorsList)) {
       Errors errors = new Errors();
