@@ -199,7 +199,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
         String errorMessage = format(
             "Field '%s' cannot have duplicated values. Value '%s' is already taken. Please, pass another value", fieldName,
             fieldValue);
-        Error error = createError(fieldName, fieldValue, errorMessage, ERROR_TYPE.UNIQUE);
+        Error error = createError(fieldName, fieldValue, errorMessage, ERROR_TYPE.NOT_UNIQUE);
         Errors errors = new Errors().withErrors(Collections.singletonList(error));
         response = PostOaiPmhSetsResponse.respond422WithApplicationJson(errors);
       }
@@ -229,7 +229,12 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   private enum ERROR_TYPE {
-    EMPTY, UNIQUE
+    EMPTY, NOT_UNIQUE {
+      @Override
+      public String toString() {
+        return "notUnique";
+      }
+    }
   }
 
 }
