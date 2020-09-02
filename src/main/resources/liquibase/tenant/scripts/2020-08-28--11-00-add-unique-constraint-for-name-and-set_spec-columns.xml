@@ -4,15 +4,15 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 
-  <changeSet  id="2020-08-28--11-00-add-unique-constraint-to-set.set_spec-column " author="Illia Daliek">
-    <addUniqueConstraint  columnNames="setSpec"
+  <changeSet  id="2020-08-28--11-00-add-unique-constraint-to-set_spec-and-name-columns" author="Illia Daliek">
+    <addUniqueConstraint  columnNames="set_spec"
                           constraintName="set_spec_unique_constraint"
                           schemaName="${database.defaultSchemaName}"
-                          tableName="set"/>
+                          tableName="set_lb"/>
     <addUniqueConstraint  columnNames="name"
                           constraintName="name_unique_constraint"
                           schemaName="${database.defaultSchemaName}"
-                          tableName="set"/>
+                          tableName="set_lb"/>
   </changeSet>
 
 </databaseChangeLog>

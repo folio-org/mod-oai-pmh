@@ -1,0 +1,30 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet id="2020-08-20-add-filtering-conditions-column-into-set-table" author="Illia Daliek">
+    <addColumn schemaName="${database.defaultSchemaName}"
+               tableName="set">
+      <column name="filtering_conditions"
+              type="jsonb"/>
+    </addColumn>
+  </changeSet>
+
+  <changeSet id="2020-08-20-rename-'setSpec'-column-to-'set_spec'" author="Illia Daliek">
+    <renameColumn columnDataType="varchar(255)"
+                  newColumnName="set_spec"
+                  oldColumnName="setSpec"
+                  remarks="rename column due it incorrect naming approach"
+                  schemaName="${database.defaultSchemaName}"
+                  tableName="set"/>
+  </changeSet>
+
+  <changeSet id="2020-08-20-rename-'set'-table-to-'set_lb'" author="Illia Daliek">
+    <renameTable newTableName="set_lb"
+                 oldTableName="set"
+                 schemaName="${database.defaultSchemaName}"/>
+  </changeSet>
+
+</databaseChangeLog>
