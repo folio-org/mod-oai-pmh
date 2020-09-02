@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.capitalize;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 
@@ -173,7 +171,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     }
   }
 
-  private Error createError(String field, String value, String message, ERROR_TYPE error_type) {
+  private Error createError(String field, String value, String message, ERROR_TYPE errorType) {
     Error error = new Error();
     Parameter p = new Parameter();
     p.setKey(field);
@@ -181,8 +179,8 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     error.getParameters()
       .add(p);
     error.setMessage(message);
-    error.setCode(String.valueOf(error_type.ordinal()));
-    error.setType(error_type.toString());
+    error.setCode(String.valueOf(errorType.ordinal()));
+    error.setType(errorType.toString());
     return error;
   }
 

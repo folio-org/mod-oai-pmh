@@ -251,7 +251,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -271,7 +271,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .statusCode(422)
         .contentType(ContentType.JSON)
         .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec")));
+        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -345,7 +345,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .statusCode(422)
         .contentType(ContentType.JSON)
         .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec")));
+        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -365,7 +365,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -389,7 +389,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "set_spec", POST_SET_ENTRY.getSetSpec())));
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec", POST_SET_ENTRY.getSetSpec())));
       POST_SET_ENTRY.setName(oldValue);
       testContext.completeNow();
     });
