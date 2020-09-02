@@ -10,15 +10,15 @@
       "$ref": "../common/uuid.json"
     },
     "name": {
-      "description": "Corresponding snapshot id, which is the same as jobExecutionId",
+      "description": "set name",
       "type": "string"
     },
     "description": {
-      "description": "Represents relations with another matched records, necessary for saving the history of applying changes for inventory/holding/etc records",
+      "description": "set description",
       "type": "string"
     },
     "setSpec": {
-      "description": "Generation from the last record with the same matchedId incremented by 1. Starts from 0.",
+      "description": "set 'set spec' value based on included filtering-conditions",
       "type": "string"
     },
     "filteringConditions" : {
@@ -31,21 +31,21 @@
       "ref": "filteringConditionCollection.json"
     },
     "createdDate": {
-      "description": "Date and time when the record was created",
+      "description": "Date and time when the set was created",
       "type": "string",
       "format": "date-time"
     },
     "createdByUserId": {
-      "description": "ID of the user who created the record",
+      "description": "ID of the user who set the record",
       "$ref": "../common/uuid.json"
     },
     "updatedDate": {
-      "description": "Date and time when the record was last updated",
+      "description": "Date and time when the set was last updated",
       "type": "string",
       "format": "date-time"
     },
     "updatedByUserId": {
-      "description": "ID of the user who last updated the record",
+      "description": "ID of the user who last updated the set",
       "$ref": "../common/uuid.json"
     }
   },
