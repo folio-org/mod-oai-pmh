@@ -4,10 +4,6 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "id": {
-      "description": "UUID",
-      "$ref": "../common/uuid.json"
-    },
     "name": {
       "description": "Filtering condition name",
       "type": "string"

@@ -18,6 +18,7 @@ import javax.ws.rs.NotFoundException;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
+import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
@@ -28,6 +29,8 @@ import org.springframework.stereotype.Repository;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
@@ -81,8 +84,9 @@ public class SetDaoImpl implements SetDao {
   @Override
   public Future<FolioSet> saveSet(FolioSet entry, String tenantId, String userId) {
     if (StringUtils.isNotEmpty(entry.getId())) {
-      return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> dslContext.selectFrom(SET_LB)
-        .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
+      return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+        .execute(dslContext -> dslContext.selectFrom(SET_LB)
+          .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
         .compose(res -> {
           if (res == 1) {
             throw new IllegalArgumentException(String.format(ALREADY_EXISTS_ERROR_MSG, entry.getId()));
@@ -99,10 +103,7 @@ public class SetDaoImpl implements SetDao {
   private Future<FolioSet> saveSetItem(FolioSet entry, String tenantId, String userId) {
     prepareSetMetadata(entry, userId, InsertType.INSERT);
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.insertInto(SET_LB)
-      .set(toDatabaseSetRecord(entry))
-      .onConflict(SET_LB.ID)
-      .doNothing()
-      .returning())
+      .set(toDatabaseSetRecord(entry)))
       .map(raw -> entry));
   }
 
@@ -153,8 +154,14 @@ public class SetDaoImpl implements SetDao {
     if (isNotEmpty(set.getName())) {
       dbRecord.setName(set.getName());
     }
+    if(nonNull(set.getDescription())) {
+      dbRecord.setDescription(set.getDescription());
+    }
     if (isNotEmpty(set.getSetSpec())) {
       dbRecord.setSetSpec(set.getSetSpec());
+    }
+    if(nonNull(set.getFilteringConditions())) {
+      dbRecord.setFilteringConditions(fkListToJsonString(set.getFilteringConditions()));
     }
     if (Objects.nonNull(set.getCreatedDate())) {
       dbRecord.setCreatedDate(set.getCreatedDate()
@@ -205,6 +212,9 @@ public class SetDaoImpl implements SetDao {
     if (nonNull(pojo.getSetSpec())) {
       set.withSetSpec(pojo.getSetSpec());
     }
+    if (nonNull(pojo.getFilteringConditions())) {
+      set.setFilteringConditions(jsonStringToFKList(pojo.getFilteringConditions()));
+    }
     if (nonNull(pojo.getCreatedByUserId())) {
       set.withCreatedByUserId(pojo.getCreatedByUserId()
         .toString());
@@ -228,4 +238,32 @@ public class SetDaoImpl implements SetDao {
     INSERT, UPDATE
   }
 
+  private String fkListToJsonString(List<FilteringCondition> filteringConditions) {
+    JsonArray jsonArray = new JsonArray();
+    filteringConditions.stream()
+      .map(this::fkToJsonObject)
+      .forEach(jsonArray::add);
+    return jsonArray.toString();
+  }
+
+  private JsonObject fkToJsonObject(FilteringCondition filteringCondition) {
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.put("name", filteringCondition.getName());
+    jsonObject.put("value", filteringCondition.getValue());
+    jsonObject.put("setSpec", filteringCondition.getSetSpec());
+    return jsonObject;
+  }
+
+  private List<FilteringCondition> jsonStringToFKList(String json) {
+    return new JsonArray(json).stream()
+      .map(JsonObject.class::cast)
+      .map(this::jsonObjectToFilteringCondition)
+      .collect(Collectors.toList());
+  }
+
+  private FilteringCondition jsonObjectToFilteringCondition(JsonObject jsonObject) {
+    return new FilteringCondition().withName(jsonObject.getString("name"))
+      .withValue(jsonObject.getString("value"))
+      .withSetSpec(jsonObject.getString("setSpec"));
+  }
 }

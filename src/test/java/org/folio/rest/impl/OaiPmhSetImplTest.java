@@ -2,6 +2,7 @@ package org.folio.rest.impl;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
+import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
@@ -9,16 +10,23 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
+import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
@@ -50,38 +58,14 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
-class OaiPmhSetImplTest {
+class OaiPmhSetImplTest extends AbstractSetTest {
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
-
-  private static final String TEST_USER_ID = UUID.randomUUID()
-    .toString();
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final String SET_PATH = "/oai-pmh/sets";
   private static final String FILTERING_CONDITIONS_PATH = "/oai-pmh/filtering-conditions";
-  private static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
-  private static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
-
-  private static final String NULL_VALUE_ERROR_MSG_TEMPLATE = "null value in column \"%s\" violates not-null constraint";
-
-  private static final String DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
-  private static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
-  private static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
-
-  private FolioSet INITIAL_TEST_SET_ENTRY = new FolioSet().withId(EXISTENT_SET_ID)
-    .withName("test name")
-    .withDescription("test description")
-    .withSetSpec("test setSpec");
-
-  private FolioSet UPDATE_SET_ENTRY = new FolioSet().withName("update name")
-    .withDescription("update description")
-    .withSetSpec("update SetSpec");
-
-  private FolioSet POST_SET_ENTRY = new FolioSet().withName("post name")
-    .withDescription("post description")
-    .withSetSpec("post SetSpec");
 
   private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
@@ -170,11 +154,16 @@ class OaiPmhSetImplTest {
   void shouldReturnSetItem_whenGetSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null);
-      request.when()
+      String json = request.when()
         .get()
         .then()
         .statusCode(200)
-        .contentType(ContentType.JSON);
+        .contentType(ContentType.JSON)
+        .extract()
+        .asString();
+      FolioSet set = jsonStringToFolioSet(json);
+      verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
+      verifyMetadata(set);
       testContext.completeNow();
     });
   }
@@ -200,6 +189,17 @@ class OaiPmhSetImplTest {
         .put()
         .then()
         .statusCode(204);
+
+      String json = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null).when()
+        .get()
+        .then()
+        .statusCode(200)
+        .contentType(ContentType.JSON)
+        .extract()
+        .asString();
+      FolioSet updatedSet = jsonStringToFolioSet(json);
+      verifyMainSetData(UPDATE_SET_ENTRY, updatedSet, true);
+      verifyMetadata(updatedSet);
       testContext.completeNow();
     });
   }
@@ -232,10 +232,10 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
       testContext.completeNow();
     });
-  }
+}
 
   @Test
   void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptySetSpec(VertxTestContext testContext) {
@@ -251,7 +251,7 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -263,15 +263,15 @@ class OaiPmhSetImplTest {
         .withName("")
         .withDescription("description")
         .withSetSpec("");
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), ContentType.JSON)
         .body(folioSetWithEmptyName);
       request.when()
         .put()
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
+        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -280,11 +280,16 @@ class OaiPmhSetImplTest {
   void shouldSaveSetItem_whenPostSet(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
-      request.when()
+      String json = request.when()
         .post()
         .then()
         .statusCode(201)
-        .contentType(ContentType.JSON);
+        .contentType(ContentType.JSON)
+        .extract()
+        .asString();
+      FolioSet savedSet = jsonStringToFolioSet(json);
+      verifyMainSetData(POST_SET_ENTRY, savedSet, false);
+      verifyMetadata(savedSet);
       testContext.completeNow();
     });
   }
@@ -319,7 +324,7 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
       testContext.completeNow();
     });
   }
@@ -339,8 +344,8 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
+        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -360,7 +365,7 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
       testContext.completeNow();
     });
   }
@@ -384,7 +389,7 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT)));
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec", POST_SET_ENTRY.getSetSpec())));
       POST_SET_ENTRY.setName(oldValue);
       testContext.completeNow();
     });
@@ -409,7 +414,7 @@ class OaiPmhSetImplTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, NAME_UNIQUE_CONSTRAINT)));
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "name", POST_SET_ENTRY.getName())));
       POST_SET_ENTRY.setSetSpec(oldValue);
       testContext.completeNow();
     });
@@ -478,6 +483,38 @@ class OaiPmhSetImplTest {
       requestSpecification.contentType(contentType);
     }
     return requestSpecification;
+  }
+
+  private FolioSet jsonStringToFolioSet(String json) {
+    JsonObject jsonObject = new JsonObject(json);
+    List<FilteringCondition> fkList = jsonObject.getJsonArray("filteringConditions")
+      .stream()
+      .map(JsonObject.class::cast)
+      .map(this::jsonObjectToFilteringCondition)
+      .collect(Collectors.toList());
+    return new FolioSet().withId(jsonObject.getString("id"))
+      .withName(jsonObject.getString("name"))
+      .withDescription(jsonObject.getString("description"))
+      .withSetSpec(jsonObject.getString("setSpec"))
+      .withFilteringConditions(fkList)
+      .withCreatedByUserId(jsonObject.getString("createdByUserId"))
+      .withCreatedDate(getDate(jsonObject, "createdDate"))
+      .withUpdatedByUserId(jsonObject.getString("updatedByUserId"))
+      .withUpdatedDate(getDate(jsonObject, "updatedDate"));
+  }
+
+  private FilteringCondition jsonObjectToFilteringCondition(JsonObject jsonObject) {
+    return new FilteringCondition().withName(jsonObject.getString("name"))
+      .withValue(jsonObject.getString("value"))
+      .withSetSpec(jsonObject.getString("setSpec"));
+  }
+
+  private Date getDate(JsonObject jsonObject, String field) {
+    String strDate = jsonObject.getValue(field)
+      .toString()
+      .split("\\.")[0];
+    LocalDateTime localDateTime = LocalDateTime.parse(strDate, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
   }
 
   private String getSetPathWithId(String id) {

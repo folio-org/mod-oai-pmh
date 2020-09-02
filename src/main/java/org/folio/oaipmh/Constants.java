@@ -73,6 +73,8 @@ public final class Constants {
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
 
+  public static final String SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be empty or null";
+
   public static final String LOCATION_URI = "/locations";
   public static final String ILL_POLICIES_URI = "/ill-policies";
   public static final String MATERIAL_TYPES_URI = "/material-types";

@@ -10,5 +10,6 @@
   <include file="scripts/2020-07-20--9-00-import-sample-data.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-08-20--12-00-enhance-set-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-08-28--11-00-add-unique-constraint-for-name-and-set_spec-columns.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2020-09-02--17-00-drop-sample-data.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
 

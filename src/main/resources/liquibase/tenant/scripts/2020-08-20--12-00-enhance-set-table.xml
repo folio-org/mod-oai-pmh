@@ -4,15 +4,24 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
 
-  <changeSet id="2020-08-20-add-filtering-conditions-column-into-set-table" author="Illia Daliek">
+  <changeSet id="2020-08-20-drop-filtering-conditions-column"
+             author="Illia Daliek">
+    <dropTable cascadeConstraints="true"
+               schemaName="${database.defaultSchemaName}"
+               tableName="filtering_condition"/>
+  </changeSet>
+
+  <changeSet id="2020-08-20-add-filtering-conditions-column-into-set-table"
+             author="Illia Daliek">
     <addColumn schemaName="${database.defaultSchemaName}"
                tableName="set">
       <column name="filtering_conditions"
-              type="jsonb"/>
+              type="text"/>
     </addColumn>
   </changeSet>
 
-  <changeSet id="2020-08-20-rename-'setSpec'-column-to-'set_spec'" author="Illia Daliek">
+  <changeSet id="2020-08-20-rename-'setSpec'-column-to-'set_spec'"
+             author="Illia Daliek">
     <renameColumn columnDataType="varchar(255)"
                   newColumnName="set_spec"
                   oldColumnName="setSpec"
@@ -21,7 +30,8 @@
                   tableName="set"/>
   </changeSet>
 
-  <changeSet id="2020-08-20-rename-'set'-table-to-'set_lb'" author="Illia Daliek">
+  <changeSet id="2020-08-20-rename-'set'-table-to-'set_lb'"
+             author="Illia Daliek">
     <renameTable newTableName="set_lb"
                  oldTableName="set"
                  schemaName="${database.defaultSchemaName}"/>
