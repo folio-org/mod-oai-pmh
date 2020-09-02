@@ -121,6 +121,7 @@ public class SetDaoImpl implements SetDao {
   @Override
   public Future<FolioSetCollection> getSetList(int offset, int limit, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
+      .orderBy(SET_LB.UPDATED_DATE.desc())
       .offset(offset)
       .limit(limit))
       .map(this::queryResultToSetCollection));
