@@ -2,11 +2,8 @@ package org.folio.oaipmh.dao.impl;
 
 import static java.util.Date.from;
 import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET_LB;
-import static org.jooq.impl.DSL.field;
-import static org.jooq.impl.DSL.name;
 
 import java.time.Instant;
 import java.time.ZoneOffset;

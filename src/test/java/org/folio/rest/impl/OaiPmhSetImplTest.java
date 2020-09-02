@@ -67,6 +67,8 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   private static final String SET_PATH = "/oai-pmh/sets";
   private static final String FILTERING_CONDITIONS_PATH = "/oai-pmh/filtering-conditions";
 
+  private static final String NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be %s";
+
   private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
@@ -232,10 +234,10 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name", "empty")));
       testContext.completeNow();
     });
-  }
+}
 
   @Test
   void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptySetSpec(VertxTestContext testContext) {
@@ -251,7 +253,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec", "empty")));
       testContext.completeNow();
     });
   }
@@ -263,15 +265,15 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .withName("")
         .withDescription("description")
         .withSetSpec("");
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), ContentType.JSON)
         .body(folioSetWithEmptyName);
       request.when()
         .put()
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name", "empty")))
+        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "set_spec", "empty")));
       testContext.completeNow();
     });
   }
@@ -324,7 +326,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name", "empty")));
       testContext.completeNow();
     });
   }
@@ -344,8 +346,8 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "name", "empty")))
+        .body("errors[1].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec", "empty")));
       testContext.completeNow();
     });
   }
@@ -365,7 +367,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+        .body("errors[0].message", equalTo(format(NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec", "empty")));
       testContext.completeNow();
     });
   }
@@ -389,7 +391,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT)));
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_ERROR_MSG, "set_spec", POST_SET_ENTRY.getSetSpec())));
       POST_SET_ENTRY.setName(oldValue);
       testContext.completeNow();
     });
@@ -414,7 +416,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, NAME_UNIQUE_CONSTRAINT)));
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_ERROR_MSG, "name", POST_SET_ENTRY.getName())));
       POST_SET_ENTRY.setSetSpec(oldValue);
       testContext.completeNow();
     });

@@ -56,9 +56,6 @@ class SetServiceImplTest extends AbstractSetTest {
   private static final String EXPECTED_NOT_FOUND_MSG = format("Set with id '%s' was not found", NONEXISTENT_SET_ID);
   private static final String EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG = format("Set with id '%s' already exists",
       EXISTENT_SET_ID);
-  private static final String DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
-  private static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
-  private static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
 
   private static final int mockPort = NetworkUtils.nextFreePort();
 
@@ -218,7 +215,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedSetSpecValue.setName("unique name");
         setService.saveSet(setWithExistedSetSpecValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
+          assertEquals(format(DUPLICATED_VALUE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
         });
       });
@@ -234,7 +231,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedNameValue.setSetSpec("unique setSpec");
         setService.saveSet(setWithExistedNameValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATE_KEY_VALUE_VIOLATES_UNIQUE_CONSTRAINT_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
+          assertEquals(format(DUPLICATED_VALUE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
         });
       });
