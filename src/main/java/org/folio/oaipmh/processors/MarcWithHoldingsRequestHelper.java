@@ -60,6 +60,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -495,7 +496,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                                           Promise<Response> oaiPmhResponsePromise,
                                           Context vertxContext, String requestId, PostgresClient postgresClient) {
     Promise<Void> completePromise = Promise.promise();
-    HttpClient httpClient = vertxContext.owner().createHttpClient();
+    final HttpClientOptions options = new HttpClientOptions();
+    options.setKeepAliveTimeout(REQUEST_TIMEOUT);
+    options.setConnectTimeout(REQUEST_TIMEOUT);
+    options.setIdleTimeout(REQUEST_TIMEOUT);
+    HttpClient httpClient = vertxContext.owner().createHttpClient(options);
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
