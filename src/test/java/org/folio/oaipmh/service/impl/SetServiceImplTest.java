@@ -94,7 +94,6 @@ class SetServiceImplTest extends AbstractSetTest {
   void setUp(VertxTestContext testContext) {
     setDao = new SetDaoImpl(postgresClientFactory);
     setService = new SetServiceImpl(setDao);
-//    testContext.completeNow();
     loadTestData(testContext);
   }
 
