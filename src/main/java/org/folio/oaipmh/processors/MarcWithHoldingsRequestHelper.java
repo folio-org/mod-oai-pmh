@@ -99,6 +99,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
 
+  private static final int REQUEST_TIMEOUT = 604800000;
+
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
@@ -479,6 +481,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+
+    httpClientRequest.setTimeout(REQUEST_TIMEOUT);
 
     return httpClientRequest;
   }
