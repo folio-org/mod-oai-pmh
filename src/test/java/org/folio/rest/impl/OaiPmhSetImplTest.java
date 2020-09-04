@@ -371,7 +371,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue(VertxTestContext testContext) {
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
@@ -380,8 +380,10 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .statusCode(201)
         .contentType(ContentType.JSON);
 
-      String oldValue = POST_SET_ENTRY.getName();
+      String oldNameValue = POST_SET_ENTRY.getName();
+      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
       POST_SET_ENTRY.setName("unique value for name");
+      POST_SET_ENTRY.setSetSpec(oldSetSpecValue.toUpperCase());
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
@@ -389,14 +391,15 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec", POST_SET_ENTRY.getSetSpec())));
-      POST_SET_ENTRY.setName(oldValue);
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec", POST_SET_ENTRY.getSetSpec().toLowerCase())));
+      POST_SET_ENTRY.setName(oldNameValue);
+      POST_SET_ENTRY.setSetSpec(oldSetSpecValue);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue(VertxTestContext testContext) {
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
@@ -405,7 +408,9 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .statusCode(201)
         .contentType(ContentType.JSON);
 
-      String oldValue = POST_SET_ENTRY.getSetSpec();
+      String oldNameValue = POST_SET_ENTRY.getName();
+      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
+      POST_SET_ENTRY.setName(oldNameValue.toUpperCase());
       POST_SET_ENTRY.setSetSpec("unique value for setSpec");
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
@@ -414,8 +419,9 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         .then()
         .statusCode(422)
         .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "name", POST_SET_ENTRY.getName())));
-      POST_SET_ENTRY.setSetSpec(oldValue);
+        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "name", POST_SET_ENTRY.getName().toLowerCase())));
+      POST_SET_ENTRY.setName(oldNameValue);
+      POST_SET_ENTRY.setSetSpec(oldSetSpecValue);
       testContext.completeNow();
     });
   }

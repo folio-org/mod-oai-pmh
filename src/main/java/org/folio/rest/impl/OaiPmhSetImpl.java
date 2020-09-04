@@ -209,7 +209,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private String getFieldName(Map<Character, String> pgErrorsMap) {
     String error = pgErrorsMap.get('D');
-    String val = (error.split("\\)")[0].split("\\(")[1]);
+    String val = error.split("\\(")[2].replace("::text))=", "");
     if (val.contains("set_spec")) {
       return val.replace("_spec", "Spec");
     }

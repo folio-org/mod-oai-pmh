@@ -121,19 +121,21 @@ public class SetDaoImpl implements SetDao {
 
   @Override
   public Future<FolioSetCollection> getSetList(int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
-      .orderBy(SET_LB.UPDATED_DATE.desc())
-      .offset(offset)
-      .limit(limit))
-      .map(this::queryResultToSetCollection));
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SET_LB))).compose(recordsCount ->
+        getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
+        .orderBy(SET_LB.UPDATED_DATE.desc())
+        .offset(offset)
+        .limit(limit))
+        .map(collection -> queryResultToSetCollection(collection, recordsCount.get(0, int.class))))
+    );
   }
 
-  private FolioSetCollection queryResultToSetCollection(QueryResult queryResult) {
+  private FolioSetCollection queryResultToSetCollection(QueryResult queryResult, int totalRecordsCount) {
     List<FolioSet> list = queryResult.stream()
       .map(row -> rowToSet(row.unwrap()))
       .collect(Collectors.toList());
     return new FolioSetCollection().withSets(list)
-      .withTotalRecords(list.size());
+      .withTotalRecords(totalRecordsCount);
   }
 
   private void prepareSetMetadata(FolioSet entry, String userId, InsertType insertType) {
