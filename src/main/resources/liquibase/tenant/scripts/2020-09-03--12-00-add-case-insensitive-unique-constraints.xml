@@ -1,0 +1,29 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet  id="2020-08-28--12-30-drop-liquibase-unique-constraint-from-both-set_spec-and-name-columns" author="Illia Daliek">
+    <dropUniqueConstraint tableName="set_lb"
+                          schemaName="${database.defaultSchemaName}"
+                          constraintName="set_spec_unique_constraint"
+                          uniqueColumns="set_spec"/>
+    <dropUniqueConstraint tableName="set_lb"
+                          schemaName="${database.defaultSchemaName}"
+                          constraintName="name_unique_constraint"
+                          uniqueColumns="name"/>
+  </changeSet>
+
+  <changeSet  id="2020-08-28--11-00-add-case-insensitive-unique-constraint-to-both-set_spec-and-name-columns" author="Illia Daliek">
+    <sql>
+      CREATE UNIQUE INDEX set_spec_unique_constraint
+      ON ${database.defaultSchemaName}.set_lb (lower(set_spec));
+    </sql>
+    <sql>
+      CREATE UNIQUE INDEX name_unique_constraint
+      ON ${database.defaultSchemaName}.set_lb (lower(name));
+    </sql>
+  </changeSet>
+
+</databaseChangeLog>

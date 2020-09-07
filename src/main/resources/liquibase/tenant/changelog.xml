@@ -1,7 +1,7 @@
 <databaseChangeLog
-  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
   <include file="scripts/2020-07-07--16-00-create-set-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-07-07--16-00-create-filtering-conditions-table.xml" relativeToChangelogFile="true"/>
@@ -11,5 +11,5 @@
   <include file="scripts/2020-08-20--12-00-enhance-set-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-08-28--11-00-add-unique-constraint-for-name-and-set_spec-columns.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-09-02--17-00-drop-sample-data.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2020-09-03--12-00-add-case-insensitive-unique-constraints.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
-

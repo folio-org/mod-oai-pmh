@@ -206,12 +206,13 @@ class SetServiceImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue(VertxTestContext testContext) {
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
       setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
         FolioSet setWithExistedSetSpecValue = result.result();
         setWithExistedSetSpecValue.setId(UUID.randomUUID().toString());
         setWithExistedSetSpecValue.setName("unique name");
+        setWithExistedSetSpecValue.setSetSpec(setWithExistedSetSpecValue.getSetSpec().toUpperCase());
         setService.saveSet(setWithExistedSetSpecValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
           assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
@@ -222,12 +223,13 @@ class SetServiceImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue(VertxTestContext testContext) {
+  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
       setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
         FolioSet setWithExistedNameValue = result.result();
         setWithExistedNameValue.setId(UUID.randomUUID().toString());
         setWithExistedNameValue.setSetSpec("unique setSpec");
+        setWithExistedNameValue.setName(setWithExistedNameValue.getName().toUpperCase());
         setService.saveSet(setWithExistedNameValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
           assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
