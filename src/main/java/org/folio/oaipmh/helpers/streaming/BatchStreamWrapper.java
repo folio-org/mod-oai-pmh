@@ -64,7 +64,6 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           page.increment();
           batchReadyHandler.handle(batch);
-          batchReadyHandler = null;
           dataList.subList(0, batch.size()).clear();
           p.complete();
         }
