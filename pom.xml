@@ -89,8 +89,8 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
 
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sonar.exclusions>**/ModTenantAPI.java</sonar.exclusions>
     <sonar.exclusions>**/PropertyNameMapper.java</sonar.exclusions>
@@ -107,7 +107,7 @@
     <marc4j.version>2.8.3</marc4j.version>
     <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
     <log4j-slf4j.version>2.13.0</log4j-slf4j.version>
-    <restassured.version>4.2.0</restassured.version>
+    <restassured.version>4.3.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
     <srs.version>4.0.1</srs.version>
     <jooq.version>3.13.2</jooq.version>
@@ -274,9 +274,13 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
+        <version>3.8.1</version>
         <configuration>
           <compilerArgument>-Xlint:unchecked</compilerArgument>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <release>11</release>
         </configuration>
         <executions>
           <execution>
@@ -360,13 +364,27 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
+        <!--
+          Until version 1.11.1 is released into Maven Central by org.codehaus.mojo use the snapshot build instead:
+          https://github.com/mojohaus/aspectj-maven-plugin/issues/24#issuecomment-419077658
+          So that, this dependency group can be used alternatively:
+
+          <groupId>com.github.m50d</groupId>
+              instead of
+          <groupId>org.codehaus.mojo</groupId>
+        -->
+        <groupId>com.github.m50d</groupId>
+        <!-- groupId>org.codehaus.mojo</groupId -->
         <artifactId>aspectj-maven-plugin</artifactId>
-        <version>1.11</version>
+        <!-- version>1.11</version -->
+        <version>1.11.1</version>
         <configuration>
           <verbose>true</verbose>
           <showWeaveInfo>false</showWeaveInfo>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
           <complianceLevel>${maven.compiler.target}</complianceLevel>
+          <encoding>${project.build.sourceEncoding}</encoding>
           <includes>
             <include>**/impl/*.java</include>
             <include>**/*.aj</include>
@@ -620,7 +638,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.2</version>
+        <version>3.0.0-M5</version>
         <configuration>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
