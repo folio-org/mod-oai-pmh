@@ -76,7 +76,7 @@ import io.vertx.sqlclient.Tuple;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 100;
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 50;
 
   private static final String INSTANCES_TABLE_NAME = "INSTANCES";
 
@@ -186,7 +186,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         if (CollectionUtils.isEmpty(instances)) {
           buildRecordsResponse(request, requestId, instances, new HashMap<>(),
-          firstBatch, null, deletedRecordSupport)
+            firstBatch, null, deletedRecordSupport)
             .onSuccess(e -> postgresClient.closeClient(o -> promise.complete(e)))
             .onFailure(e -> handleException(promise, e));
           return;
@@ -247,28 +247,28 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     logger.info("selecting instances");
 
     postgresClient.startTx(conn -> {
-            if(conn.failed()) {
-              logger.error("Cannot get connection for saving ids: " + conn.cause().getMessage(), conn.cause());
+      if (conn.failed()) {
+        logger.error("Cannot get connection for saving ids: " + conn.cause().getMessage(), conn.cause());
+      } else {
+        try {
+          postgresClient.select(conn, sql, reply -> {
+            if (reply.succeeded()) {
+              logger.info("Instances select result: " + reply.result());
+              List<JsonObject> list = StreamSupport
+                .stream(reply.result().spliterator(), false)
+                .map(this::createJsonFromRow).map(e -> e.getJsonObject("json")).collect(toList());
+              enrichInstances(list, request, context)
+                .future().onComplete(e ->
+                endTransaction(postgresClient, conn).future().onComplete(o -> promise.complete(e.result())));
             } else {
-              try {
-                postgresClient.select(conn, sql, reply -> {
-                  if (reply.succeeded()) {
-                    logger.info("Instances select result: " + reply.result());
-                    List<JsonObject> list = StreamSupport
-                      .stream(reply.result().spliterator(), false)
-                      .map(this::createJsonFromRow).map(e -> e.getJsonObject("json")).collect(toList());
-                    enrichInstances(list, request, context)
-                      .future().onComplete(e ->
-                      endTransaction(postgresClient, conn).future().onComplete(o -> promise.complete(e.result())));
-                  } else {
-                    logger.error("Selecting instances failed: " + reply.cause());
-                    endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, reply.cause()));
-                  }
-                });
-              } catch (Exception e) {
-                endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, e));
-              }
+              logger.error("Selecting instances failed: " + reply.cause());
+              endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, reply.cause()));
             }
+          });
+        } catch (Exception e) {
+          endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, e));
+        }
+      }
     });
     return promise;
   }
@@ -314,7 +314,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
         }
 
-        if (isTheLastBatch(databaseWriteStream, batch)) {
+        if (databaseWriteStream.isTheLastBatch()) {
           completePromise.complete(new ArrayList<>(instances.values()));
         }
       } catch (Exception e) {
@@ -526,21 +526,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     databaseWriteStream.handleBatch(batch -> {
 
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
+      logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded()
+        + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount());
 
-      if (isTheLastBatch(databaseWriteStream, batch)) {
-        savePromise.future().onComplete(e -> completePromise.complete());
+      if (databaseWriteStream.isTheLastBatch()) {
+        savePromise.future().toCompletionStage().thenRun(completePromise::complete);
       }
     });
+
     return completePromise;
   }
 
-  private boolean isTheLastBatch(BatchStreamWrapper databaseWriteStream, List<JsonEvent> batch) {
-    return batch.size() < DATABASE_FETCHING_CHUNK_SIZE ||
-      (databaseWriteStream.isStreamEnded()
-        && databaseWriteStream.getItemsInQueueCount() <= DATABASE_FETCHING_CHUNK_SIZE);
-  }
-
-  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> exceptionPromise, HttpClientRequest inventoryQuery, Context vertxContext) {
+  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
@@ -557,12 +554,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     inventoryQuery.exceptionHandler(e -> {
       logger.error(e.getMessage(), e);
-      handleException(exceptionPromise, e);
+      handleException(promise, e);
     });
 
     databaseWriteStream.exceptionHandler(e -> {
       if (e != null) {
-        handleException(exceptionPromise, e);
+        handleException(promise, e);
       }
     });
     return databaseWriteStream;
@@ -591,9 +588,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             logger.error("Save instance Ids failed: " + e.cause().getMessage(), e.cause());
             promise.fail(queryRes.cause());
           } else {
-            logger.error("Save instance complete: " + e.result());
+            logger.info("Save instance complete");
             promise.complete();
           }
+          connection.close();
         });
       }
     });
