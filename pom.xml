@@ -96,8 +96,8 @@
     <sonar.exclusions>**/PropertyNameMapper.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/ModTenantAPI.java</sonar.coverage.exclusions>
     <!-- Plugin versions -->
-    <aspectj.version>1.9.5</aspectj.version>
-    <raml-module-builder.version>31.0.2</raml-module-builder.version>
+    <aspectj.version>1.9.6</aspectj.version>
+    <raml-module-builder.version>31.1.0-SNAPSHOT</raml-module-builder.version>
     <vertx.version>3.9.0</vertx.version>
     <vertx-completable-future.version>0.1.2</vertx-completable-future.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
@@ -277,8 +277,6 @@
         <version>3.8.1</version>
         <configuration>
           <compilerArgument>-Xlint:unchecked</compilerArgument>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
           <encoding>${project.build.sourceEncoding}</encoding>
           <release>11</release>
         </configuration>
@@ -373,11 +371,9 @@
               instead of
           <groupId>org.codehaus.mojo</groupId>
         -->
-        <groupId>com.github.m50d</groupId>
-        <!-- groupId>org.codehaus.mojo</groupId -->
+        <groupId>com.nickwongdev</groupId>
         <artifactId>aspectj-maven-plugin</artifactId>
-        <!-- version>1.11</version -->
-        <version>1.11.1</version>
+        <version>1.12.6</version>
         <configuration>
           <verbose>true</verbose>
           <showWeaveInfo>false</showWeaveInfo>
