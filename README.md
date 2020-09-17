@@ -72,6 +72,11 @@ Notes:
 See project [MODOAIPMH](https://issues.folio.org/browse/MODOAIPMH)
 at the [FOLIO issue tracker](https://dev.folio.org/guidelines/issue-tracker).
 
+### Configuration needed to fix timeouts for marc21_witholdings
+
+* Okapi-ngnix timeout for the corresponding location should be increased to 1 hour.
+* DB_HOST and other DB_ env vars should be set
+
 ### Other documentation
 
 Other [modules](https://dev.folio.org/source-code/#server-side) are described,
