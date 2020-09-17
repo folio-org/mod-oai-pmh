@@ -1,3 +1,10 @@
+## 3.1.1 (Released)
+
+This release includes fixing timeouts for marc21_withholdings.
+
+* [MODOAIPMH-226](https://issues.folio.org/browse/MODOAIPMH-226) ListRecords with metdataPrefix=marc21_withholdings timeouts on BugFest
+
+
 ## 3.1.0 (Released)
 
 This release includes support for multiple instances of mod-oai-pmh deployed
