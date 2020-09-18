@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.FIELDS;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -18,10 +19,12 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
@@ -49,6 +52,8 @@ class RecordMetadataManagerTest {
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
+  private static final String INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM = "/metadata-manager/inventory_instance_with_not_suppressed_from_discovery_item.json";
+  private static final String INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM = "/metadata-manager/inventory_instance_with_suppressed_from_discovery_item.json";
 
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY = "/metadata-manager/electronic_access-empty.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED = "/metadata-manager/electronic_access-no_display_constant_generated.json";
@@ -71,7 +76,8 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
     verifySrsInstanceSuccessfullyUpdated(populatedWithItemsDataSrsInstance);
   }
 
@@ -81,7 +87,8 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
@@ -96,12 +103,13 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
 
-    //2 from inventory, 1 from srs
+    // 2 from inventory, 1 from srs
     assertEquals(3, electronicAccessFields.size());
     electronicAccessFields.forEach(this::verifyElectronicAccessFieldHasCorrectData);
   }
@@ -112,7 +120,8 @@ class RecordMetadataManagerTest {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
     JsonObject fieldContent = electronicAccessField.getJsonObject(ELECTRONIC_ACCESS_FILED);
@@ -124,7 +133,7 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
-    System.setProperty("repository.suppressedRecordsProcessing", "true");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
       String source = storageHelper.getInstanceRecordSource(record);
@@ -134,6 +143,37 @@ class RecordMetadataManagerTest {
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
+  }
+
+  @Test
+  void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemNotSuppressedFromDiscovery() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    int value = getSuppressedFromDiscoveryValue(effectiveLocationFields);
+    assertEquals(0, value);
+  }
+
+  @Test
+  void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemSuppressedFromDiscovery() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    int value = getSuppressedFromDiscoveryValue(effectiveLocationFields);
+    assertEquals(1, value);
   }
 
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
@@ -242,6 +282,23 @@ class RecordMetadataManagerTest {
       .get();
     int subFieldValue = discoverySuppressedSubField.getInteger("t");
     assertEquals(0, subFieldValue);
+  }
+
+  private int getSuppressedFromDiscoveryValue(List<JsonObject> effectiveLocationFields) {
+    Optional<JsonObject> optionalSuppressFromDiscoverySubfield = effectiveLocationFields.iterator()
+      .next()
+      .getJsonObject("952")
+      .getJsonArray("subfields")
+      .stream()
+      .map(JsonObject.class::cast)
+      .filter(jsonObject -> jsonObject.containsKey("t"))
+      .findFirst();
+    if (optionalSuppressFromDiscoverySubfield.isPresent()) {
+      JsonObject suppressFromDiscoverySubfield = optionalSuppressFromDiscoverySubfield.get();
+      return suppressFromDiscoverySubfield.getInteger("t");
+    } else {
+      return -1;
+    }
   }
 
   /**

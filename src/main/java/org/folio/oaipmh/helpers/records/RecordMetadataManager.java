@@ -57,7 +57,7 @@ public class RecordMetadataManager {
   private static RecordMetadataManager instance;
 
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
-  public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressDiscovery";
+  public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
