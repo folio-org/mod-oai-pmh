@@ -1,0 +1,34 @@
+{
+  "instanceid": "2f7f23be-81a6-4227-85ba-7c1c81272ee1",
+  "updateddate": "2020-06-01T10:56:10.118Z",
+  "deleted": "false",
+  "itemsandholdingsfields": {
+    "items": [
+      {
+        "id": "13807cda-b618-4c37-8fe0-df03eed83b4f",
+        "volume": "Volume 1_2_1",
+        "callNumber": {
+          "prefix": "prefix",
+          "suffix": "suffix",
+          "typeName": "512173a7-bd09-490e-b773-17d83f2b63fe",
+          "callNumber": "Call number 1_2_1"
+        },
+        "enumeration": "Enumeration 1_2_1",
+        "materialType": "book",
+        "barcode" : "testBarcode",
+        "chronology" : "testChronology",
+        "copyNumber" : "copy number",
+        "electronicAccess": [
+          {
+            "uri": "test.com",
+            "name": "Resource",
+            "linkText": "GS demo Holding 1_2",
+            "publicNote": "URL public note",
+            "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+            "materialsSpecification": "Materials specified"
+          }
+        ]
+      }
+    ]
+  }
+}
