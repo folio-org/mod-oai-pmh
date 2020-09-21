@@ -575,6 +575,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         String id = jsonObject.getString(INSTANCE_ID_FIELD_NAME);
         batch.add(Tuple.of(UUID.fromString(id), requestId, jsonObject));
       }
+
       String tenantId = TenantTool.tenantId(request.getOkapiHeaders());
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
