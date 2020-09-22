@@ -7,6 +7,7 @@ import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -49,6 +50,8 @@ class RecordMetadataManagerTest {
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
+  private static final String INVENTORY_INSTANCE_WHIT_ITEM_WITHOUT_LOCATION = "/metadata-manager/inventory_instance_whit_item_without_location.json";
+  private static final String INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER = "/metadata-manager/inventory_instance_with_item_without_call_number.json";
 
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY = "/metadata-manager/electronic_access-empty.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED = "/metadata-manager/electronic_access-no_display_constant_generated.json";
@@ -71,7 +74,8 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
     verifySrsInstanceSuccessfullyUpdated(populatedWithItemsDataSrsInstance);
   }
 
@@ -81,13 +85,14 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
 
     assertEquals(2, effectiveLocationFields.size());
-    effectiveLocationFields.forEach(this::verifyEffectiveLocationFieldHasCorrectData);
+    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, true, true));
   }
 
   @Test
@@ -96,12 +101,13 @@ class RecordMetadataManagerTest {
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
 
-    //2 from inventory, 1 from srs
+    // 2 from inventory, 1 from srs
     assertEquals(3, electronicAccessFields.size());
     electronicAccessFields.forEach(this::verifyElectronicAccessFieldHasCorrectData);
   }
@@ -112,7 +118,8 @@ class RecordMetadataManagerTest {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
     JsonObject fieldContent = electronicAccessField.getJsonObject(ELECTRONIC_ACCESS_FILED);
@@ -136,6 +143,36 @@ class RecordMetadataManagerTest {
     }));
   }
 
+  @Test
+  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutLocationsSubfieldGroup_whenInstanceHasItemWithoutLocationData() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WHIT_ITEM_WITHOUT_LOCATION)));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, false, true));
+  }
+
+  @Test
+  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutCallNumberSubfieldGroup_whenInstanceHasItemWithoutCallNumber() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER)));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, true, false));
+  }
+
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
@@ -150,7 +187,7 @@ class RecordMetadataManagerTest {
     JsonArray fields = getContentFieldsArray(srsInstance);
     JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
     JsonObject effectiveLocationField = getFieldFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
-    verifyEffectiveLocationFieldHasCorrectData(effectiveLocationField);
+    verifyEffectiveLocationFieldHasCorrectData(effectiveLocationField, true, true);
     verifyElectronicAccessFieldHasCorrectData(electronicAccessField);
   }
 
@@ -171,23 +208,37 @@ class RecordMetadataManagerTest {
   }
 
   @SuppressWarnings("unchecked")
-  private void verifyEffectiveLocationFieldHasCorrectData(JsonObject field) {
+  private void verifyEffectiveLocationFieldHasCorrectData(JsonObject field, boolean locationGroupMustBePresented,
+      boolean callNumberGroupMustBePresented) {
     Map<String, Object> fieldMap = field.getMap();
     Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
     String firstIndicator = (String) fieldContentMap.get("ind1");
     String secondIndicator = (String) fieldContentMap.get("ind2");
     assertEquals("f", firstIndicator);
     assertEquals("f", secondIndicator);
-
     List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "a", "Københavns Universitet"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "b", "City Campus"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "c", "Datalogisk Institut"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "d", "testName"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "e", "Call number 1_2_1"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "f", "prefix"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "g", "suffix"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe"));
+    if (locationGroupMustBePresented) {
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "a", "Københavns Universitet"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "b", "City Campus"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "c", "Datalogisk Institut"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "d", "testName"));
+    } else {
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "a", "Københavns Universitet"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "b", "City Campus"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "c", "Datalogisk Institut"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "d", "testName"));
+    }
+    if (callNumberGroupMustBePresented) {
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "e", "Call number 1_2_1"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "f", "prefix"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "g", "suffix"));
+      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe"));
+    } else {
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "e", "Call number 1_2_1"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "f", "prefix"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "g", "suffix"));
+      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe"));
+    }
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "i", "book"));
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "j", "Volume 1_2_1"));
     assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "k", "Enumeration 1_2_1"));
