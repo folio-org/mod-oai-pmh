@@ -202,8 +202,10 @@ public class RecordMetadataManager {
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
-    JsonObject locationGroup = itemData.getJsonObject(LOCATION)
-      .getJsonObject(LOCATION);
+    JsonObject locationGroup = null;
+    if(Objects.nonNull(itemData.getJsonObject(LOCATION))) {
+      locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
+    }
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
@@ -218,13 +220,15 @@ public class RecordMetadataManager {
 
   private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject itemData,
                                 List<EffectiveLocationSubFields> subFieldGroupProperties) {
-    subFieldGroupProperties.forEach(pair -> {
-      String subFieldCode = pair.getSubFieldCode();
-      String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
-      if (isNotEmpty(subFieldValue)) {
-        effectiveLocationSubFields.put(subFieldCode, subFieldValue);
-      }
-    });
+    if(Objects.nonNull(itemData)) {
+      subFieldGroupProperties.forEach(pair -> {
+        String subFieldCode = pair.getSubFieldCode();
+        String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
+        if (isNotEmpty(subFieldValue)) {
+          effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+        }
+      });
+    }
   }
 
   private Map<String, Object> constructElectronicAccessSubFieldsMap(JsonObject itemData) {
