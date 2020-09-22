@@ -70,7 +70,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           }
           invokeDrainHandler();
         }
-      };
+      }
   }
 
   private synchronized void invokeDrainHandler() {
