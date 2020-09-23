@@ -1,9 +1,16 @@
+## 3.1.2 (Released)
+
+This release includes fixing the NullPointerException on ListRecords with metdataPrefix=marc21_withholdings, fixing the incorrect displaying of item's "discovery suppressed" status into oai-pmh response and fixing the resumption token work.
+
+* [MODOAIPMH-216](https://issues.folio.org/browse/MODOAIPMH-216) Incorrect number of records returned by listrecords with resumption token for marc21 and marc21_withholdings
+* [MODOAIPMH-219](https://issues.folio.org/browse/MODOAIPMH-219) Item's suppress from discovery flag value isn't correct for "transfer" behavior
+* [MODOAIPMH-231](https://issues.folio.org/browse/MODOAIPMH-231) NPE on ListRecords with metdataPrefix=marc21_withholdings
+
 ## 3.1.1 (Released)
 
 This release includes fixing timeouts for marc21_withholdings.
 
 * [MODOAIPMH-226](https://issues.folio.org/browse/MODOAIPMH-226) ListRecords with metdataPrefix=marc21_withholdings timeouts on BugFest
-
 
 ## 3.1.0 (Released)
 
