@@ -322,9 +322,9 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request)) {
-        nextRecordId = storageHelper.getId(getLastInstance(instances));
+        nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
       } else {
-        nextRecordId = storageHelper.getRecordId(getLastInstance(instances));
+        nextRecordId = storageHelper.getRecordId(getAndRemoveLastInstance(instances));
       }
       extraParams.put(NEXT_RECORD_ID_PARAM, nextRecordId);
       if (request.getUntil() == null) {
@@ -344,8 +344,8 @@ public abstract class AbstractHelper implements VerbHelper {
     return null;
   }
 
-  private JsonObject getLastInstance(JsonArray instances) {
-    return instances.getJsonObject(instances.size() - 1);
+  private JsonObject getAndRemoveLastInstance(JsonArray instances) {
+    return (JsonObject) instances.remove(instances.size() - 1);
   }
 
   /**
