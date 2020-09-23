@@ -75,7 +75,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         updatedBefore,
         null,
         request.getOffset(),
-        batchSize,
+        batchSize + 1,
         response -> {
           try {
             if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
