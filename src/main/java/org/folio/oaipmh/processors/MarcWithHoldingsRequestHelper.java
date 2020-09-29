@@ -166,12 +166,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           promise.fail(fut.cause());
           return;
         }
-
-
         List<JsonObject> instances = fut.result();
-
         logger.info("Processing instances: " + instances.size());
-
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
           handleException(promise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
@@ -243,9 +239,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final String sql = String.format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = '%s' ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
-
     logger.info("selecting instances");
-
     postgresClient.startTx(conn -> {
       if (conn.failed()) {
         logger.error("Cannot get connection for saving ids: " + conn.cause().getMessage(), conn.cause());
@@ -384,13 +378,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     Promise<Response> promise = Promise.promise();
     try {
-
       logger.info("Build records response: " + batch.size());
-
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
 
       logger.info("Build records response: " + records.size());
-
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
