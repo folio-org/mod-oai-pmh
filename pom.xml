@@ -95,6 +95,7 @@
     <sonar.exclusions>**/ModTenantAPI.java</sonar.exclusions>
     <sonar.exclusions>**/PropertyNameMapper.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/ModTenantAPI.java</sonar.coverage.exclusions>
+    <sonar.coverage.exclusions>**/BatchStreamWrapper.java</sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
     <raml-module-builder.version>31.1.0</raml-module-builder.version>
