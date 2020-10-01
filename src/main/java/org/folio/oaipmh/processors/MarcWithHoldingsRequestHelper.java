@@ -202,7 +202,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
-          deleteInstanceIds(request, instancesWithoutLast.stream()
+          deleteInstanceIds(instancesWithoutLast.stream()
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList()), requestId, postgresClient)
             .future().onComplete(e -> postgresClient.closeClient(o -> promise.complete(result)));
@@ -214,7 +214,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<Void> deleteInstanceIds(Request request, List<String> instanceIds, String requestId, PostgresClient postgresClient) {
+  private Promise<Void> deleteInstanceIds(List<String> instanceIds, String requestId, PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     String instanceIdsStr = instanceIds.stream().map(e -> "'" + e + "'").collect(Collectors.joining(", "));
     final String sql = String.format("DELETE FROM " + INSTANCES_TABLE_NAME + " WHERE " +
@@ -239,15 +239,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final String sql = String.format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = '%s' ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
-    logger.info("selecting instances");
+    logger.info("selecting instances"); // $COVERAGE-IGNORE$
     postgresClient.startTx(conn -> {
       if (conn.failed()) {
-        logger.error("Cannot get connection for saving ids: " + conn.cause().getMessage(), conn.cause());
+        logger.error("Cannot get connection for saving ids: " + conn.cause().getMessage(), conn.cause()); // $COVERAGE-IGNORE$
       } else {
         try {
           postgresClient.select(conn, sql, reply -> {
             if (reply.succeeded()) {
-              logger.info("Instances select result: " + reply.result());
+              logger.info("Instances select result: " + reply.result()); // $COVERAGE-IGNORE$
               List<JsonObject> list = StreamSupport
                 .stream(reply.result().spliterator(), false)
                 .map(this::createJsonFromRow).map(e -> e.getJsonObject("json")).collect(toList());
@@ -255,7 +255,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .future().onComplete(e ->
                 endTransaction(postgresClient, conn).future().onComplete(o -> promise.complete(e.result())));
             } else {
-              logger.error("Selecting instances failed: " + reply.cause());
+              logger.error("Selecting instances failed: " + reply.cause()); // $COVERAGE-IGNORE$
               endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, reply.cause()));
             }
           });
@@ -378,10 +378,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     Promise<Response> promise = Promise.promise();
     try {
-      logger.info("Build records response: " + batch.size());
+      logger.info("Build records response: " + batch.size()); // $COVERAGE-IGNORE$
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
 
-      logger.info("Build records response: " + records.size());
+      logger.info("Build records response: " + records.size()); // $COVERAGE-IGNORE$
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
@@ -517,8 +517,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     databaseWriteStream.handleBatch(batch -> {
 
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
-      logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded()
-        + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount());
+      logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded() // $COVERAGE-IGNORE$
+        + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount()); // $COVERAGE-IGNORE$
 
       if (databaseWriteStream.isTheLastBatch()) {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);
@@ -571,16 +571,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + "." + INSTANCES_TABLE_NAME + " (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
       if (e.failed()) {
-        logger.error("Cannot get connection for saving ids: " + e.cause().getMessage(), e.cause());
+        logger.error("Cannot get connection for saving ids: " + e.cause().getMessage(), e.cause()); // $COVERAGE-IGNORE$
         promise.fail(e.cause());
       } else {
         PgConnection connection = e.result();
         connection.preparedQuery(sql).executeBatch(batch, queryRes -> {
           if (queryRes.failed()) {
-            logger.error("Save instance Ids failed: " + e.cause().getMessage(), e.cause());
+            logger.error("Save instance Ids failed: " + e.cause().getMessage(), e.cause()); // $COVERAGE-IGNORE$
             promise.fail(queryRes.cause());
           } else {
-            logger.info("Save instance complete");
+            logger.info("Save instance complete"); // $COVERAGE-IGNORE$
             promise.complete();
           }
           connection.close();
