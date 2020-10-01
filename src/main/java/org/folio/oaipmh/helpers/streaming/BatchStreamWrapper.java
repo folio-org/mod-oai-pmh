@@ -48,7 +48,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public synchronized WriteStream<JsonEvent> write(JsonEvent data,
-    Handler<AsyncResult<Void>> handler) {
+                                                   Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
     if (dataList.size() >= batchSize) {
       runBatchHandler();
@@ -57,19 +57,20 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   private void runBatchHandler() {
-    vertx.executeBlocking(p -> {
+
       synchronized (BatchStreamWrapper.this) {
         if (batchReadyHandler != null) {
           int size = Math.min(dataList.size(), batchSize);
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           page.increment();
-          batchReadyHandler.handle(batch);
-          batchReadyHandler = null;
           dataList.subList(0, batch.size()).clear();
-          p.complete();
+          batchReadyHandler.handle(batch);
+          if (isTheLastBatch()) {
+            batchReadyHandler = null;
+          }
+          invokeDrainHandler();
         }
       }
-    }, e -> invokeDrainHandler());
   }
 
   private synchronized void invokeDrainHandler() {
@@ -78,10 +79,14 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     }
   }
 
+  public boolean isTheLastBatch() {
+    return (isStreamEnded() && dataList.isEmpty());
+  }
+
   @Override
   public synchronized void end() {
-    runBatchHandler();
     streamEnded = true;
+    runBatchHandler();
   }
 
   @Override
@@ -132,7 +137,4 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return page.longValue();
   }
 
-  public void addReturnedCount(int addition) {
-    returnedCount.add(addition);
-  }
 }

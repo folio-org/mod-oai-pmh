@@ -69,7 +69,6 @@ import static org.openarchives.oai._2.VerbType.UNKNOWN;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -98,7 +97,6 @@ import org.folio.rest.RestVerticle;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -167,6 +165,9 @@ class OaiPmhImplTest {
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_DC = "discovery not suppressed";
+
+  private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
+  private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
@@ -1924,6 +1925,29 @@ class OaiPmhImplTest {
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
+
+  @Test
+  void shouldRespondWithBadArgument_whenGetOaiRecordsMarc21WithHoldingsWithInvalidDateRange() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVALID_FROM_PARAM)
+      .param(UNTIL_PARAM, INVALID_UNTIL_PARAM)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 400, 1);
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(MetadataPrefix.MARC21WITHHOLDINGS.getName()));
+
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertThat(error.getCode(), equalTo(BAD_ARGUMENT));
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
   @Test
   void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
     RequestSpecification requestWithResumptionToken = createBaseRequest()
@@ -1934,6 +1958,7 @@ class OaiPmhImplTest {
     final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
+
 
   @Test
   void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
