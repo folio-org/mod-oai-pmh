@@ -31,7 +31,7 @@ public class VerbValidator {
   /**
    * Validates request parameters except 'from' and 'until' against particular verb.
    *
-   * @param object - anme of verb against witch parameters are validated
+   * @param object - name of verb against witch parameters are validated
    * @param requestParams - map with request parameters
    * @return list of errors.
    */
