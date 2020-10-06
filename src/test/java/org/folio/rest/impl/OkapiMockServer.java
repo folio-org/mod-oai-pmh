@@ -93,7 +93,7 @@ public class OkapiMockServer {
 
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
   private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/oai-pmh-view/enrichedInstances";
-  private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
+  private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   public static final String ERROR_TENANT = "error";
 
