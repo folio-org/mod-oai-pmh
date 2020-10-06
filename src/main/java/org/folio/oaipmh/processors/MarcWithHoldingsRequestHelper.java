@@ -97,7 +97,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INVENTORY_INSTANCES_ENDPOINT = "/oai-pmh-view/enrichedInstances";
 
-  private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
+  private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
