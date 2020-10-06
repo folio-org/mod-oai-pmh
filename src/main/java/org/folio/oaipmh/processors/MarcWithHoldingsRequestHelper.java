@@ -84,7 +84,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String REQUEST_ID_COLUMN_NAME = "REQUEST_ID";
 
-  private static final String INSTANCE_ID_FIELD_NAME = "instanceid";
+  private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
   private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
 
@@ -98,7 +98,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INVENTORY_INSTANCES_ENDPOINT = "/oai-pmh-view/enrichedInstances";
 
-  private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/oai-pmh-view/updatedInstanceIds";
+  private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   private static final int REQUEST_TIMEOUT = 604800000;
 
@@ -320,7 +320,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString("suppressfromdiscovery")))
+    if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
@@ -452,8 +452,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   @Override
   protected HeaderType createHeader(JsonObject instance) {
-    String updateddate = instance.getString("updateddate");
-    Instant datetime = formatter.parse(updateddate, Instant::from)
+    String updatedDate = instance.getString("updatedDate");
+    Instant datetime = formatter.parse(updatedDate, Instant::from)
       .truncatedTo(ChronoUnit.SECONDS);
 
     return new HeaderType()
