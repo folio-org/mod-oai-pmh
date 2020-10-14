@@ -1,3 +1,15 @@
+## 3.2.0 (Released)
+* [MODOAIPMH-200](https://issues.folio.org/browse/MODOAIPMH-200) Implement the endpoint for getting list of sets
+* [MODOAIPMH-201](https://issues.folio.org/browse/MODOAIPMH-201) Enrich sets endpoints with filtering conditions entites
+* [MODOAIPMH-206](https://issues.folio.org/browse/MODOAIPMH-206) POST /oai-pmh/set returns 500 when empty string is passed
+* [MODOAIPMH-210](https://issues.folio.org/browse/MODOAIPMH-210) Implement endpoint for getting values of all required filtering condition types.
+* [MODOAIPMH-218](https://issues.folio.org/browse/MODOAIPMH-218) Rename sets endpoints
+* [MODOAIPMH-220](https://issues.folio.org/browse/MODOAIPMH-220) Perform uniqueness validation for sets endpoints
+* [MODOAIPMH-223](https://issues.folio.org/browse/MODOAIPMH-223) "totalRecords" isn't shown in response to GET oai-pmh/sets? request
+* [MODOAIPMH-227](https://issues.folio.org/browse/MODOAIPMH-227) Set table constraints don't work properly
+* [MODOAIPMH-229](https://issues.folio.org/browse/MODOAIPMH-229) Increase postrgres pool connection size and timeout for module
+* [MODOAIPMH-238](https://issues.folio.org/browse/MODOAIPMH-238) MODOAIPMH (mod-oai-pmh) release
+
 ## 3.0.4 (Released)
 
 * [MODOAIPMH-107](https://issues.folio.org/browse/MODOAIPMH-107) Suppress holdings and items records from discovery
