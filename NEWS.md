@@ -1,3 +1,9 @@
+## 3.2.1 (Released)
+
+This is the bugfix release
+
+* [MODOAIPMH-245](https://issues.folio.org/browse/MODOAIPMH-245) Edge module doesn't return the data, even if mod-oai-pmh does
+
 ## 3.2.0 (Released)
 * [MODOAIPMH-200](https://issues.folio.org/browse/MODOAIPMH-200) Implement the endpoint for getting list of sets
 * [MODOAIPMH-201](https://issues.folio.org/browse/MODOAIPMH-201) Enrich sets endpoints with filtering conditions entites
