@@ -1,3 +1,15 @@
+## 3.1.3 (Released)
+
+Fixes transaction bugs.
+
+* [MODOAIPMH-248](https://issues.folio.org/browse/MODOAIPMH-248) Upgrade RMB to 30.2.9:
+  * [RMB-740](https://issues.folio.org/browse/RMB-740) Use FOLIO fork of vertx-sql-client and vertx-pg-client with
+    the following two patches
+  * [RMB-739](https://issues.folio.org/browse/RMB-739) Make RMB's DB\_CONNECTIONRELEASEDELAY work again, defaults to 60 seconds
+  * [FOLIO-2840](https://issues.folio.org/browse/FOLIO-2840) Fix duplicate names causing 'prepared statement "XYZ" already exists'
+  * [RMB-738](https://issues.folio.org/browse/RMB-738) Upgrade to Vert.x 3.9.4, most notable fix: RowStream fetch
+    can close prematurely the stream https://github.com/eclipse-vertx/vertx-sql-client/issues/778
+
 ## 3.1.2 (Released)
 
 This release includes fixing the NullPointerException on ListRecords with metdataPrefix=marc21_withholdings, fixing the incorrect displaying of item's "discovery suppressed" status into oai-pmh response and fixing the resumption token work.
