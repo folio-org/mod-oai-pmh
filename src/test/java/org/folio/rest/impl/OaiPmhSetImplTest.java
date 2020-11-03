@@ -142,12 +142,8 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @AfterAll
-  void afterAll(Vertx vertx, VertxTestContext testContext) {
+  void afterAll() {
     PostgresClientFactory.closeAll();
-    vertx.close(testContext.succeeding(res -> {
-      PostgresClient.stopEmbeddedPostgres();
-      testContext.completeNow();
-    }));
   }
 
   @Test
