@@ -1,3 +1,9 @@
+## 3.2.3 (Released)
+
+This release includes updating RMB version up to 31.1.5 which fixing issues with database interaction.
+
+* [MODOAIPMH-256](https://issues.folio.org/browse/MODOAIPMH-256) Update RMB version up to 31.1.5
+
 ## 3.2.2 (Released)
 
 This release brings updates of both RMB version up to 31.1.3 and vert.x version up to 3.9.4
