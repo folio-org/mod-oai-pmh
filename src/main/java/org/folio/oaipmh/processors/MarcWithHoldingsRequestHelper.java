@@ -526,7 +526,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.handleBatch(batch -> {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
-      logger.info("Batch saving progress: " + databaseWriteStream.getReturnedCount() + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded() );
+      final Long returnedCount = databaseWriteStream.getReturnedCount();
+
+      if (returnedCount % 1000 == 0) {
+        logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+      }
 
       databaseWriteStream.addReturnedItemsCount(batch.size());
 
