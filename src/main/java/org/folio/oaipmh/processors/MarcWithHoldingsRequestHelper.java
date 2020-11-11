@@ -1,25 +1,11 @@
 package org.folio.oaipmh.processors;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -51,6 +37,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
+import org.springframework.util.ReflectionUtils;
 
 import com.google.common.collect.Maps;
 
@@ -72,6 +59,21 @@ import io.vertx.core.parsetools.impl.JsonParserImpl;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
+import io.vertx.sqlclient.impl.Connection;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -514,8 +516,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
-    databaseWriteStream.handleBatch(batch -> {
 
+    ArrayDeque<Promise<Connection>> queue = (ArrayDeque<Promise<Connection>>)
+      getValueFrom(getValueFrom(getValueFrom(postgresClient, "client"), "pool"),
+        "waiters");
+    databaseWriteStream.setCapacityChecker(()-> queue.size() > 20);
+
+    databaseWriteStream.handleBatch(batch -> {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
       logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded()
         + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount());
@@ -523,9 +530,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (databaseWriteStream.isTheLastBatch()) {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);
       }
+      databaseWriteStream.invokeDrainHandler();
     });
 
     return completePromise;
+  }
+
+  private Object getValueFrom(Object obj, String fieldName) {
+    return ReflectionUtils.getField(ReflectionUtils.findField(obj.getClass(), fieldName), obj);
   }
 
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {

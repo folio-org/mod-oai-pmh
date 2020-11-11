@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -28,6 +29,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   private final LongAdder returnedCount = new LongAdder();
   private final LongAdder page = new LongAdder();
+
+  private Supplier<Boolean> capacityChecker;
 
 
   public BatchStreamWrapper(Vertx vertx, int batchSize) {
@@ -73,8 +76,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
       }
   }
 
-  private synchronized void invokeDrainHandler() {
-    if (drainHandler != null) {
+  public synchronized void invokeDrainHandler() {
+    if (drainHandler != null && !writeQueueFull()) {
       drainHandler.handle(null);
     }
   }
@@ -103,7 +106,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public boolean writeQueueFull() {
-    return dataList.size() > batchSize * 2;
+    return capacityChecker.get() || dataList.size() > batchSize * 2;
   }
 
   @Override
@@ -119,6 +122,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
       runBatchHandler();
     }
     return this;
+  }
+
+  public void setCapacityChecker(Supplier<Boolean> supplier) {
+    capacityChecker = supplier;
   }
 
   public boolean isStreamEnded() {
