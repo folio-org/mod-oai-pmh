@@ -1,5 +1,6 @@
 package org.folio.oaipmh.processors;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -537,7 +538,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Object getValueFrom(Object obj, String fieldName) {
-    return ReflectionUtils.getField(ReflectionUtils.findField(obj.getClass(), fieldName), obj);
+    Field field = ReflectionUtils.findField(obj.getClass(), fieldName);
+    ReflectionUtils.makeAccessible(field);
+    return ReflectionUtils.getField(field, obj);
   }
 
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
