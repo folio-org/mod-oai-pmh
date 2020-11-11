@@ -77,7 +77,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         updatedBefore,
         null,
         request.getOffset(),
-        batchSize+1,
+        batchSize + 1,
         response -> response.bodyHandler(bh -> {
           try {
             final OAIPMH oaipmh = buildListIdentifiers(request, bh.toJsonObject());
