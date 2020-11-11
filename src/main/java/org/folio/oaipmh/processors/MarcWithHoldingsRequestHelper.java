@@ -521,12 +521,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ArrayDeque<Promise<Connection>> queue = (ArrayDeque<Promise<Connection>>)
       getValueFrom(getValueFrom(getValueFrom(postgresClient, "client"), "pool"),
         "waiters");
+
     databaseWriteStream.setCapacityChecker(()-> queue.size() > 20);
 
     databaseWriteStream.handleBatch(batch -> {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
-      logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded()
-        + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount());
+      logger.info("Batch saving progress: " + databaseWriteStream.getReturnedCount() + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded() );
+
+      databaseWriteStream.addReturnedItemsCount(batch.size());
 
       if (databaseWriteStream.isTheLastBatch()) {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);

@@ -140,6 +140,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return returnedCount.longValue();
   }
 
+  public void addReturnedItemsCount(long count) {
+    returnedCount.add(count);
+  }
+
   public Long getPage() {
     return page.longValue();
   }
