@@ -106,7 +106,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public boolean writeQueueFull() {
-    return capacityChecker.get() || dataList.size() > batchSize * 2;
+    return dataList.size() > batchSize * 2 || capacityChecker.get();
   }
 
   @Override
