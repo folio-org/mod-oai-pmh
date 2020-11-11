@@ -552,9 +552,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Object getValueFrom(Object obj, String fieldName) {
-    Field field = ReflectionUtils.findField(obj.getClass(), fieldName);
-    ReflectionUtils.makeAccessible(field);
-    return ReflectionUtils.getField(field, obj);
+    if(Objects.nonNull(obj)) {
+      Field field = ReflectionUtils.findField(obj.getClass(), fieldName);
+      ReflectionUtils.makeAccessible(field);
+      return ReflectionUtils.getField(field, obj);
+    } else {
+      logger.error("Cannot get the pool size. Object is null.");
+      throw new IllegalArgumentException("Cannot get the pool size. Object is null.");
+    }
   }
 
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
