@@ -529,9 +529,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
 
-    ArrayDeque<Promise<Connection>> queue = (ArrayDeque<Promise<Connection>>)
-      getValueFrom(getValueFrom(getValueFrom(postgresClient, "client"), "pool"),
-        "waiters");
+    ArrayDeque<Promise<Connection>> queue;
+    try {
+      queue =  (ArrayDeque<Promise<Connection>>)
+        getValueFrom(getValueFrom(getValueFrom(postgresClient, "client"), "pool"),
+          "waiters");
+    } catch (NullPointerException ex){
+      logger.error("Cannot get the pool size. Object is null.");
+      throw new IllegalArgumentException("Cannot get the pool size. Object is null.");
+    }
 
     databaseWriteStream.setCapacityChecker(()-> queue.size() > 20);
 
@@ -553,14 +559,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Object getValueFrom(Object obj, String fieldName) {
-    try{
-      Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
-      ReflectionUtils.makeAccessible(field);
-      return ReflectionUtils.getField(field, obj);
-    } catch (NullPointerException ex){
-      logger.error("Cannot get the pool size. Object is null.");
-      throw new IllegalArgumentException("Cannot get the pool size. Object is null.");
-    }
+    Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
+    ReflectionUtils.makeAccessible(field);
+    return ReflectionUtils.getField(field, obj);
   }
 
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
