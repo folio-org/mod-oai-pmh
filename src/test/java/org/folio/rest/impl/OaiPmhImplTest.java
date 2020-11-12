@@ -28,9 +28,15 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
+import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
+import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSATNCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
-import static org.folio.rest.impl.OkapiMockServer.INVENTORY_INSTANCE_DATE;
+import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
@@ -165,6 +171,8 @@ class OaiPmhImplTest {
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_DC = "discovery not suppressed";
+
+  private static final String EXPECTED_ERROR_MESSAGE = "Got error response from %s";
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
@@ -478,13 +486,13 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
-  void getOaiListVerbResumptionFlowStarted(VerbType verb) {
+  @MethodSource("metadataPrefixAndVerbProvider")
+  void getOaiListVerbResumptionFlowStarted(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
-      .param(METADATA_PREFIX_PARAM, "oai_dc")
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(SET_PARAM, "all");
 
 
@@ -504,7 +512,7 @@ class OaiPmhImplTest {
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
     assertThat(params, is(hasSize(7)));
 
-    assertThat(getParamValue(params, METADATA_PREFIX_PARAM), is(equalTo("oai_dc")));
+    assertThat(getParamValue(params, METADATA_PREFIX_PARAM), is(equalTo(metadataPrefix.getName())));
     assertThat(getParamValue(params, FROM_PARAM), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
     assertThat(getParamValue(params, UNTIL_PARAM), is((notNullValue())));
     assertThat(getParamValue(params, SET_PARAM), is(equalTo("all")));
@@ -887,7 +895,7 @@ class OaiPmhImplTest {
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithNoRecordsFoundFromStorage(VerbType verb) {
     String metadataPrefix = MetadataPrefix.DC.getName();
-    String from = OkapiMockServer.NO_RECORDS_DATE;
+    String from = NO_RECORDS_DATE;
     String set = "all";
 
     RequestSpecification request = createBaseRequest()
@@ -1286,17 +1294,6 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getRequest().getVerb(), equalTo(verb));
   }
 
-  private OAIPMH verify200WithXml(RequestSpecification request, VerbType verb) {
-    String response = verifyWithCodeWithXml(request, 200);
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
-
-    verifyBaseResponse(oaipmh, verb);
-
-    return oaipmh;
-  }
-
   private String verifyWithCodeWithXml(RequestSpecification request, int code) {
     ValidatableResponse response = request
       .when()
@@ -1309,6 +1306,17 @@ class OaiPmhImplTest {
       .extract()
         .body()
           .asString();
+  }
+
+  private OAIPMH verify200WithXml(RequestSpecification request, VerbType verb) {
+    String response = verifyWithCodeWithXml(request, 200);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh, verb);
+
+    return oaipmh;
   }
 
   private void verify500WithErrorMessage(RequestSpecification request) {
@@ -1763,7 +1771,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, OkapiMockServer.NO_RECORDS_DATE)
+      .param(FROM_PARAM, NO_RECORDS_DATE)
       .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 404, 1);
@@ -1898,7 +1906,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, OkapiMockServer.NO_RECORDS_DATE)
+      .param(FROM_PARAM, EMPTY_INSATNCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -1914,11 +1922,12 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVENTORY_INSTANCE_DATE)
+      .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
+//      .param()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+    verifyListResponse(oaipmh, LIST_RECORDS, 27);
 
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
@@ -1949,6 +1958,72 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryStorage() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_INVENTORY_STORAGE_ERROR_RESPONSE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    String body = request.when()
+      .get()
+      .then()
+      .statusCode(500)
+      .extract()
+      .asString();
+    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
+    assertTrue(body.contains(expectedMessage));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_SRS_ERROR_RESPONSE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    String body = request.when()
+      .get()
+      .then()
+      .statusCode(500)
+      .extract()
+      .asString();
+    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
+    assertTrue(body.contains(expectedMessage));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    String body = request.when()
+      .get()
+      .then()
+      .statusCode(500)
+      .extract()
+      .asString();
+    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
+    assertTrue(body.contains(expectedMessage));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
   void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
     RequestSpecification requestWithResumptionToken = createBaseRequest()
       .with()
@@ -1959,45 +2034,42 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
   }
 
-
-  @Test
-  void getOaiRecordsMarc21WithHoldingsAndCheckResumptionToken() {
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = {"LIST_RECORDS"})
+  void verifyResumptionTokenFlow_whenVerbListRecordsAndMetadataPrefixMarc21WithHoldings(VerbType verb) {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "7");
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");
 
     List<HeaderType> totalRecords = new ArrayList<>();
-
     RequestSpecification request = createBaseRequest()
       .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVENTORY_INSTANCE_DATE)
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, DATE_INVENTORY_10_INSTANCE_IDS)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
-    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 4);
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-
     List<HeaderType> records = oaipmh.getListRecords().getRecords().stream()
       .map(RecordType::getHeader)
       .collect(Collectors.toList());
     totalRecords.addAll(records);
 
-    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 3);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 4);
 
-    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
-
-    resumptionToken = makeRequestsAndVerifyCount(totalRecords, resumptionToken, 1);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
 
     assertThat(resumptionToken.getValue(), is(isEmptyString()));
 
-    assertThat(totalRecords.size(), is(9));
+    assertThat(totalRecords.size(), is(10));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
-  private ResumptionTokenType makeRequestsAndVerifyCount(List<HeaderType> totalRecords,
-                                                         ResumptionTokenType resumptionToken, int desiredCount) {
+  private ResumptionTokenType makeResumptionTokenRequestsAndVerifyCount(List<HeaderType> totalRecords,
+                                                                        ResumptionTokenType resumptionToken, int desiredCount) {
     RequestSpecification request;
     OAIPMH oaipmh;
     List<HeaderType> records;

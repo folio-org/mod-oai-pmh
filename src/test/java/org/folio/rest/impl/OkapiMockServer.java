@@ -1,12 +1,12 @@
 package org.folio.rest.impl;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
 import static org.folio.oaipmh.Constants.LOCATION_URI;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -16,13 +16,17 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -66,13 +70,20 @@ public class OkapiMockServer {
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
-  static final String INVENTORY_INSTANCE_DATE = "2020-01-01";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
   private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00";
+  static final String INVENTORY_27_INSTANCES_IDS_DATE = "2020-01-01";
+  static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
+  static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
+  static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
+  static final String EMPTY_INSATNCES_IDS_DATE = "1444-01-01";
+  static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
+  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
+  private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instances_0.json";
@@ -103,12 +114,33 @@ public class OkapiMockServer {
   private static final String INSTANCE_TYPES_JSON_PATH = "/filtering-conditions/instanceTypes.json";
   private static final String INSTANCE_FORMATS_JSON_PATH = "/filtering-conditions/instanceFormats.json";
 
+  private static final String INVENTORY_VIEW_PATH = "inventory_view/";
+  private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
+  private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
+  private static final String SRS_RECORD_TEMPLATE_JSON = "/srs_record_template.json";
+  private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
+  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
+  private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
+  private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
+  private static final String ENRICHED_INSTANCES_JSON = "enriched_instances.json";
+  private static final String INSTANCE_IDS = "instanceIds";
+
   private final int port;
   private final Vertx vertx;
 
   public OkapiMockServer(Vertx vertx, int port) {
     this.port = port;
     this.vertx = vertx;
+  }
+
+  public void start(VertxTestContext context) {
+    HttpServer server = vertx.createHttpServer();
+
+    server.requestHandler(defineRoutes())
+      .listen(port, context.succeeding(result -> {
+        logger.info("The server has started");
+        context.completeNow();
+      }));
   }
 
   private Router defineRoutes() {
@@ -127,62 +159,78 @@ public class OkapiMockServer {
       .handler(this::handleInventoryStorageFilteringConditionsResponse);
 
     router.get(SOURCE_STORAGE_RESULT_URI)
-          .handler(this::handleRecordStorageResultResponse);
+      .handler(this::handleRecordStorageResultGetResponse);
+
+    router.post(SOURCE_STORAGE_RESULT_URI)
+      .handler(this::handleRecordStorageResultPostResponse);
 
     router.get(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleSourceRecordStorageResponse);
 
-    router.post(SOURCE_STORAGE_RESULT_URI)
-      .handler(this::handleSourceRecordStorageResponse);
-
     router.get(CONFIGURATIONS_ENTRIES)
-          .handler(this::handleConfigurationModuleResponse);
+      .handler(this::handleConfigurationModuleResponse);
 
     router.post(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
       .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
-    //need to set a proper value to this constant cause i don't now what the second view endpoint is
+    // need to set a proper value to this constant cause i don't now what the second view endpoint is
     router.get(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)
       .handler(this::handleStreamingInventoryInstanceIdsResponse);
     return router;
   }
 
   private void handleStreamingInventoryInstanceIdsResponse(RoutingContext ctx) {
-    String path = "inventory_view/instance_ids.json";
-    Buffer buffer = Buffer.buffer();
-    final String startDate = ctx.request().params().get("startDate");
-    if (startDate != null && startDate.contains(INVENTORY_INSTANCE_DATE)) {
-      buffer = vertx.fileSystem().readFileBlocking(path);
+    String uri = ctx.request()
+      .absoluteURI();
+    if (Objects.nonNull(uri)) {
+      if (uri.contains(DATE_INVENTORY_STORAGE_ERROR_RESPONSE)) {
+        failureResponse(ctx);
+      } else if(uri.contains(DATE_INVENTORY_10_INSTANCE_IDS)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
+      } else if(uri.contains(INVENTORY_27_INSTANCES_IDS_DATE)) {
+        inventoryViewSuccessResponse(ctx, ALL_INSTANCES_IDS_JSON);
+      } else if(uri.contains(DATE_SRS_ERROR_RESPONSE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON);
+      } else if(uri.contains(EMPTY_INSATNCES_IDS_DATE)) {
+        inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
+      } else if(uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
+        inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
+      } else {
+        fail("There is no mock response");
+      }
     }
-    ctx.response().end(buffer);
   }
 
   private void handleStreamingInventoryItemsAndHoldingsResponse(RoutingContext ctx) {
-    String path = "inventory_view/enriched_instances.json";
-    Buffer buffer = vertx.fileSystem().readFileBlocking(path);
-    ctx.response().end(buffer);
-  }
-
-  private void handleConfigurationModuleResponse(RoutingContext ctx) {
-    switch (ctx.request().getHeader(OKAPI_TENANT)) {
-      case EXIST_CONFIG_TENANT:
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
-        break;
-      case EXIST_CONFIG_TENANT_2:
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
-        break;
-      case OAI_TEST_TENANT:
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
-        break;
-      case ERROR_TENANT:
-        failureResponse(ctx, 500, "Internal Server Error");
-        break;
-      default:
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
-        break;
+    JsonArray instanceIds = ctx.getBody().toJsonObject().getJsonArray(INSTANCE_IDS);
+    if(instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
+      failureResponse(ctx);
+    } else {
+      inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCES_JSON);
     }
   }
 
-  private void handleSourceRecordStorageResponse(RoutingContext ctx){
+  private void handleConfigurationModuleResponse(RoutingContext ctx) {
+    switch (ctx.request()
+      .getHeader(OKAPI_TENANT)) {
+    case EXIST_CONFIG_TENANT:
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
+      break;
+    case EXIST_CONFIG_TENANT_2:
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      break;
+    case OAI_TEST_TENANT:
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      break;
+    case ERROR_TENANT:
+      failureResponse(ctx, 500, "Internal Server Error");
+      break;
+    default:
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
+      break;
+    }
+  }
+
+  private void handleSourceRecordStorageResponse(RoutingContext ctx) {
     String json = getJsonObjectFromFile(String.format("/source-storage/records/%s", String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
       final String uri = ctx.request().absoluteURI();
@@ -204,19 +252,20 @@ public class OkapiMockServer {
     }
   }
 
-  public void start(VertxTestContext context) {
-    HttpServer server = vertx.createHttpServer();
-
-    server.requestHandler(defineRoutes()).listen(port, context.succeeding(result -> {
-      logger.info("The server has started");
-      context.completeNow();
-    }));
+  private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
+    JsonArray instanceIds = ctx.getBody().toJsonArray();
+    if(instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
+      failureResponse(ctx);
+    } else {
+      String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
+      successResponse(ctx, mockSrsResponse);
+    }
   }
 
-  private void handleRecordStorageResultResponse(RoutingContext ctx) {
-    String uri = ctx.request().absoluteURI();
-    if (uri != null)
-    {
+  private void handleRecordStorageResultGetResponse(RoutingContext ctx) {
+    String uri = ctx.request()
+      .absoluteURI();
+    if (uri != null) {
       if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
@@ -247,23 +296,25 @@ public class OkapiMockServer {
       } else {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
-      logger.info("Mock returns http status code: " + ctx.response().getStatusCode());
+      logger.info("Mock returns http status code: " + ctx.response()
+        .getStatusCode());
     } else {
       throw new UnsupportedOperationException();
     }
   }
 
   private void handleInventoryStorageFilteringConditionsResponse(RoutingContext ctx) {
-    String uri = ctx.request().absoluteURI();
-    if(uri.contains(ILL_POLICIES_URI)) {
+    String uri = ctx.request()
+      .absoluteURI();
+    if (uri.contains(ILL_POLICIES_URI)) {
       successResponse(ctx, getJsonObjectFromFile(ILL_POLICIES_JSON_PATH));
-    } else if(uri.contains(INSTANCE_FORMATS_URI)) {
+    } else if (uri.contains(INSTANCE_FORMATS_URI)) {
       successResponse(ctx, getJsonObjectFromFile(INSTANCE_FORMATS_JSON_PATH));
-    } else if(uri.contains(RESOURCE_TYPES_URI)) {
+    } else if (uri.contains(RESOURCE_TYPES_URI)) {
       successResponse(ctx, getJsonObjectFromFile(INSTANCE_TYPES_JSON_PATH));
-    } else if(uri.contains(LOCATION_URI)) {
+    } else if (uri.contains(LOCATION_URI)) {
       successResponse(ctx, getJsonObjectFromFile(LOCATION_JSON_PATH));
-    } else if(uri.contains(MATERIAL_TYPES_URI)) {
+    } else if (uri.contains(MATERIAL_TYPES_URI)) {
       successResponse(ctx, getJsonObjectFromFile(MATERIAL_TYPES_JSON_PATH));
     } else {
       failureResponse(ctx, 400, "there is no mocked handler for request uri '{" + uri + "}'");
@@ -273,20 +324,34 @@ public class OkapiMockServer {
 
   private void successResponse(RoutingContext ctx, String body) {
     ctx.response()
-       .setStatusCode(200)
-       .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
-       .end(body);
+      .setStatusCode(200)
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+      .end(body);
+  }
+
+  private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
+    String path = INVENTORY_VIEW_PATH + jsonFileName;
+    Buffer buffer = vertx.fileSystem().readFileBlocking(path);
+    routingContext.response().setStatusCode(200).end(buffer);
+  }
+
+  private void failureResponse(RoutingContext ctx) {
+    ctx.response().setStatusCode(403)
+      .setStatusMessage("Forbidden")
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
+      .end();
   }
 
   private void failureResponse(RoutingContext ctx, int code, String body) {
     ctx.response()
-       .setStatusCode(code)
-       .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
-       .end(body);
+      .setStatusCode(code)
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
+      .end(body);
   }
 
   /**
    * Creates {@link JsonObject} from the json file
+   *
    * @param path path to json file to read
    * @return json as string from the json file
    */
@@ -308,7 +373,7 @@ public class OkapiMockServer {
   }
 
   private String getJsonWithRecordMarkAsDeleted(String json) {
-    return json.replace("00778nam a2200217 c 4500","00778dam a2200217 c 4500");
+    return json.replace("00778nam a2200217 c 4500", "00778dam a2200217 c 4500");
   }
 
   private String getRecordJsonWithDeletedTrue(String json) {
@@ -318,4 +383,24 @@ public class OkapiMockServer {
   private String getRecordJsonWithSuppressedTrue(String json) {
     return json.replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
   }
+
+  private String generateSrsPostResponseForInstanceIds(JsonArray instanceIds) {
+    String srsRecordTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_TEMPLATE_JSON));
+    String srsRecordsResponseTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
+    List<String> srsRecords = new ArrayList<>();
+    instanceIds.stream()
+      .map(Object::toString)
+      .forEach(id ->
+        srsRecords.add(transformTemplateToRecord(requireNonNull(srsRecordTemplate), id))
+      );
+    String allRecords = String.join(",", srsRecords);
+    return srsRecordsResponseTemplate.replace("replace_with_records", allRecords)
+      .replace("replace_total_count", String.valueOf(srsRecords.size()));
+  }
+
+  private String transformTemplateToRecord(String recordTemplate, String instanceId) {
+    return recordTemplate.replace("replace_record_UUID", UUID.randomUUID().toString())
+      .replace("instanceId_replace", instanceId);
+  }
+
 }

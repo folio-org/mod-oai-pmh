@@ -1,5 +1,7 @@
 package org.folio.oaipmh.processors;
 
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -15,11 +17,13 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -51,6 +55,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
+import org.springframework.util.ReflectionUtils;
 
 import com.google.common.collect.Maps;
 
@@ -72,6 +77,7 @@ import io.vertx.core.parsetools.impl.JsonParserImpl;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
+import io.vertx.sqlclient.impl.Connection;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -101,6 +107,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   private static final int REQUEST_TIMEOUT = 604800000;
+  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -153,7 +160,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private void processBatch(Request request, Context context, PostgresClient postgresClient, Promise<Response> promise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
+  private void processBatch(Request request, Context context, PostgresClient postgresClient, Promise<Response> oaiPmhResponsePromise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
     try {
 
       int batchSize = Integer.parseInt(
@@ -163,19 +170,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       getNextInstances(request, requestId, batchSize, context, postgresClient).future().onComplete(fut -> {
         if (fut.failed()) {
           logger.error("Get instances failed: " + fut.cause());
-          promise.fail(fut.cause());
+          oaiPmhResponsePromise.fail(fut.cause());
           return;
         }
         List<JsonObject> instances = fut.result();
         logger.info("Processing instances: " + instances.size());
         if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
-          handleException(promise, new IllegalArgumentException(
+          handleException(oaiPmhResponsePromise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
           return;
         }
 
         if (!instances.isEmpty() && instances.get(0).getString(INSTANCE_ID_FIELD_NAME).equals(request.getNextRecordId())) {
-          handleException(promise, new IllegalArgumentException(
+          handleException(oaiPmhResponsePromise, new IllegalArgumentException(
             "Stale resumption token"));
           return;
         }
@@ -183,8 +190,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (CollectionUtils.isEmpty(instances)) {
           buildRecordsResponse(request, requestId, instances, new HashMap<>(),
             firstBatch, null, deletedRecordSupport)
-            .onSuccess(e -> postgresClient.closeClient(o -> promise.complete(e)))
-            .onFailure(e -> handleException(promise, e));
+            .onSuccess(e -> postgresClient.closeClient(o -> oaiPmhResponsePromise.complete(e)))
+            .onFailure(e -> handleException(oaiPmhResponsePromise, e));
           return;
         }
 
@@ -202,22 +209,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
-          deleteInstanceIds(request, instancesWithoutLast.stream()
+          deleteInstanceIds(instancesWithoutLast.stream()
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList()), requestId, postgresClient)
-            .future().onComplete(e -> postgresClient.closeClient(o -> promise.complete(result)));
-        }).onFailure(e -> handleException(promise, e)));
-        srsResponse.onFailure(t -> handleException(promise, t));
+            .future().onComplete(e -> postgresClient.closeClient(o -> oaiPmhResponsePromise.complete(result)));
+        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
+        srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
       });
     } catch (Exception e) {
-      handleException(promise, e);
+      handleException(oaiPmhResponsePromise, e);
     }
   }
 
-  private Promise<Void> deleteInstanceIds(Request request, List<String> instanceIds, String requestId, PostgresClient postgresClient) {
+  private Promise<Void> deleteInstanceIds(List<String> instanceIds, String requestId, PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     String instanceIdsStr = instanceIds.stream().map(e -> "'" + e + "'").collect(Collectors.joining(", "));
-    final String sql = String.format("DELETE FROM " + INSTANCES_TABLE_NAME + " WHERE " +
+    final String sql = format("DELETE FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = '%s' AND " + INSTANCE_ID_COLUMN_NAME + " IN (%s)", requestId, instanceIdsStr);
     postgresClient.startTx(conn -> {
       try {
@@ -237,7 +244,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Promise<List<JsonObject>> getNextInstances(Request request, String requestId, int batchSize, Context context, PostgresClient postgresClient) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    final String sql = String.format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
+    final String sql = format("SELECT json FROM " + INSTANCES_TABLE_NAME + " WHERE " +
       REQUEST_ID_COLUMN_NAME + " = '%s' ORDER BY " + INSTANCE_ID_COLUMN_NAME + " LIMIT %d", requestId, batchSize + 1);
     logger.info("selecting instances");
     postgresClient.startTx(conn -> {
@@ -252,8 +259,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .stream(reply.result().spliterator(), false)
                 .map(this::createJsonFromRow).map(e -> e.getJsonObject("json")).collect(toList());
               enrichInstances(list, request, context)
-                .future().onComplete(e ->
-                endTransaction(postgresClient, conn).future().onComplete(o -> promise.complete(e.result())));
+                .future().onComplete(enrichInstancesResult ->
+                    endTransaction(postgresClient, conn).future().onComplete(o -> {
+                      if(enrichInstancesResult.succeeded()) {
+                        promise.complete(enrichInstancesResult.result());
+                      } else {
+                        promise.fail(enrichInstancesResult.cause());
+                      }
+                    })
+                  );
             } else {
               logger.error("Selecting instances failed: " + reply.cause());
               endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, reply.cause()));
@@ -303,12 +317,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
                 itemsandholdingsfields);
             } else { // it can be the case only for testing
-              logger.info(String.format("Instance with instanceId %s wasn't in the request", instanceId));
+              logger.info(format("Instance with instanceId %s wasn't in the request", instanceId));
             }
           }
         }
 
-        if (databaseWriteStream.isTheLastBatch()) {
+        if (databaseWriteStream.isTheLastBatch() && !completePromise.future().isComplete()) {
           completePromise.complete(new ArrayList<>(instances.values()));
         }
       } catch (Exception e) {
@@ -482,7 +496,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
 
-    String inventoryQuery = String.format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
+    String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
 
     logger.info("Sending request to : " + inventoryQuery);
@@ -514,18 +528,51 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
-    databaseWriteStream.handleBatch(batch -> {
 
-      Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient);
-      logger.info("Batch progress: " + batch.size() + "_" + databaseWriteStream.isStreamEnded()
-        + "_" + databaseWriteStream.getItemsInQueueCount() + "_" + databaseWriteStream.getReturnedCount());
+    ArrayDeque<Promise<Connection>> queue;
+    try {
+      queue =  (ArrayDeque<Promise<Connection>>)
+        getValueFrom(getValueFrom(getValueFrom(postgresClient, "client"), "pool"),
+          "waiters");
+    } catch (NullPointerException ex){
+      logger.error("Cannot get the pool size. Object is null.");
+      oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
+      return completePromise;
+    }
+
+    databaseWriteStream.setCapacityChecker(()-> queue.size() > 20);
+
+    databaseWriteStream.handleBatch(batch -> {
+      Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, postgresClient, databaseWriteStream);
+      final Long returnedCount = databaseWriteStream.getReturnedCount();
+
+      if (returnedCount % 1000 == 0) {
+        logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+      }
 
       if (databaseWriteStream.isTheLastBatch()) {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);
       }
+      databaseWriteStream.invokeDrainHandler();
     });
 
     return completePromise;
+  }
+
+  /**
+   * Here the reflection is used by the reason that we need to have an access to vert.x "waiters" objects
+   * which are accumulated when batches are saved to database, the handling batches from inventory view
+   * is performed match faster versus saving to database. By this reason in some time we got a lot of
+   * waiters objects which holds many of others as well and this leads to OutOfMemory.
+   * In solution we just don't allow to request new batches while we have 20 waiters objects
+   * which perform saving instances to DB.
+   * In future we can consider using static AtomicInteger to count the number of current db requests.
+   * It will be more readable in code, but less reliable because wouldn't take into account other requests.
+   */
+  private Object getValueFrom(Object obj, String fieldName) {
+    Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
+    ReflectionUtils.makeAccessible(field);
+    return ReflectionUtils.getField(field, obj);
   }
 
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
@@ -534,13 +581,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
 
     inventoryQuery.handler(resp -> {
-      JsonParser jp = new JsonParserImpl(resp);
-      jp.objectValueMode();
-      jp.pipeTo(databaseWriteStream);
-      jp.endHandler(e -> {
-        databaseWriteStream.end();
-        inventoryHttpClient.close();
-      });
+      if(resp.statusCode() != 200) {
+        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
+        logger.error(errorMsg);
+        promise.fail(new IllegalStateException(errorMsg));
+      } else {
+        JsonParser jp = new JsonParserImpl(resp);
+        jp.objectValueMode();
+        jp.pipeTo(databaseWriteStream);
+        jp.endHandler(e -> {
+          databaseWriteStream.end();
+          inventoryHttpClient.close();
+        });
+      }
     });
 
     inventoryQuery.exceptionHandler(e -> {
@@ -556,7 +609,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return databaseWriteStream;
   }
 
-  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, PostgresClient postgresClient) {
+  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, PostgresClient postgresClient, BatchStreamWrapper databaseWriteStream) {
     Promise<Void> promise = Promise.promise();
     postgresClient.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
@@ -584,6 +637,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             promise.complete();
           }
           connection.close();
+          databaseWriteStream.invokeDrainHandler();
         });
       }
     });
@@ -592,7 +646,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
     final HttpClientRequest httpClientRequest = httpClient
-      .postAbs(String.format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
+      .postAbs(format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
 
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
@@ -609,7 +663,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, rh -> rh.bodyHandler(bh -> {
+      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResp -> srsResp.bodyHandler(bh -> {
+        if(srsResp.statusCode() != 200) {
+          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request().absoluteURI(), srsResp.statusMessage());
+          logger.error(errorMsg);
+          promise.fail(new IllegalStateException(errorMsg));
+        }
           try {
             final Object o = bh.toJson();
             if (o instanceof JsonObject) {
@@ -633,6 +692,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
 
     return promise.future();
+  }
+
+  private String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
+    return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
   }
 
   private List<String> extractListOfIdsForSRSRequest(List<JsonObject> batch) {
