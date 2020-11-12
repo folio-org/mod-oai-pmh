@@ -536,7 +536,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           "waiters");
     } catch (NullPointerException ex){
       logger.error("Cannot get the pool size. Object is null.");
-      throw new IllegalArgumentException("Cannot get the pool size. Object is null.");
+      oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
+      return completePromise;
     }
 
     databaseWriteStream.setCapacityChecker(()-> queue.size() > 20);
