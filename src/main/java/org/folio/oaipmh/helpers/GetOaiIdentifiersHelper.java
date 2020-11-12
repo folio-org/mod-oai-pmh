@@ -77,7 +77,7 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
         updatedBefore,
         null,
         request.getOffset(),
-        batchSize,
+        batchSize + 1,
         response -> response.bodyHandler(bh -> {
           try {
             final OAIPMH oaipmh = buildListIdentifiers(request, bh.toJsonObject());
@@ -88,20 +88,6 @@ public class GetOaiIdentifiersHelper extends AbstractHelper {
           }
         }));
 
-
-//      //region REMOVE IT
-//      // 2. Search for instances
-//       VertxCompletableFuture.from(ctx, httpClient.request(instanceEndpoint, request.getOkapiHeaders(), false))
-//        // 3. Verify response and build list of identifiers
-//        .thenApply(response -> buildListIdentifiers(request, response))
-//        // 4. Build final response to client (potentially blocking operation thus running on worker thread)
-//        .thenCompose(oai -> supplyBlockingAsync(ctx, () -> buildResponse(oai, request)))
-//        .thenAccept(promise::complete)
-//        .exceptionally(e -> {
-//          logger.error(GENERIC_ERROR, e);
-//          promise.fail(e);
-//          return null;
-//        });
     } catch (Exception e) {
       logger.error(GENERIC_ERROR, e);
       promise.fail(e);
