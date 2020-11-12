@@ -107,7 +107,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   private static final int REQUEST_TIMEOUT = 604800000;
-  private static final String ERROR_FROM_STORAGE = "Got error response from %s, message: %s";
+  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -570,7 +570,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     inventoryQuery.handler(resp -> {
       if(resp.statusCode() != 200) {
-        String errorMsg = getErrorFromStorageMessage("inventory-storage", resp.statusMessage());
+        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
         logger.error(errorMsg);
         promise.fail(new IllegalStateException(errorMsg));
       } else {
@@ -653,7 +653,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResp -> srsResp.bodyHandler(bh -> {
         if(srsResp.statusCode() != 200) {
-          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.statusMessage());
+          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request().absoluteURI(), srsResp.statusMessage());
           logger.error(errorMsg);
           promise.fail(new IllegalStateException(errorMsg));
         }
@@ -682,8 +682,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private String getErrorFromStorageMessage(String errorSource, String responseMessage) {
-    return format(ERROR_FROM_STORAGE, errorSource, responseMessage);
+  private String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
+    return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
   }
 
   private List<String> extractListOfIdsForSRSRequest(List<JsonObject> batch) {

@@ -28,6 +28,7 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
@@ -1996,6 +1997,28 @@ class OaiPmhImplTest {
       .extract()
       .asString();
     String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
+    assertTrue(body.contains(expectedMessage));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    String body = request.when()
+      .get()
+      .then()
+      .statusCode(500)
+      .extract()
+      .asString();
+    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
     assertTrue(body.contains(expectedMessage));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }

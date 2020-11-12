@@ -49,7 +49,6 @@ public class OkapiMockServer {
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
   private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
   private static final String ID_PARAM = "instanceId";
-  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
 
   // Dates
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
@@ -77,11 +76,14 @@ public class OkapiMockServer {
   static final String INVENTORY_27_INSTANCES_IDS_DATE = "2020-01-01";
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
-  public static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
-  public static final String EMPTY_INSATNCES_IDS_DATE = "1444-01-01";
+  static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
+  static final String EMPTY_INSATNCES_IDS_DATE = "1444-01-01";
+  static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
+  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
+  private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instances_0.json";
@@ -119,6 +121,9 @@ public class OkapiMockServer {
   private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
   private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
+  private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
+  private static final String ENRICHED_INSTANCES_JSON = "enriched_instances.json";
+  private static final String INSTANCE_IDS = "instanceIds";
 
   private final int port;
   private final Vertx vertx;
@@ -126,6 +131,16 @@ public class OkapiMockServer {
   public OkapiMockServer(Vertx vertx, int port) {
     this.port = port;
     this.vertx = vertx;
+  }
+
+  public void start(VertxTestContext context) {
+    HttpServer server = vertx.createHttpServer();
+
+    server.requestHandler(defineRoutes())
+      .listen(port, context.succeeding(result -> {
+        logger.info("The server has started");
+        context.completeNow();
+      }));
   }
 
   private Router defineRoutes() {
@@ -177,18 +192,21 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON);
       } else if(uri.contains(EMPTY_INSATNCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
-      }else {
+      } else if(uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
+        inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
+      } else {
         fail("There is no mock response");
       }
     }
   }
 
   private void handleStreamingInventoryItemsAndHoldingsResponse(RoutingContext ctx) {
-    String path = "inventory_view/enriched_instances.json";
-    Buffer buffer = vertx.fileSystem()
-      .readFileBlocking(path);
-    ctx.response()
-      .end(buffer);
+    JsonArray instanceIds = ctx.getBody().toJsonObject().getJsonArray(INSTANCE_IDS);
+    if(instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
+      failureResponse(ctx);
+    } else {
+      inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCES_JSON);
+    }
   }
 
   private void handleConfigurationModuleResponse(RoutingContext ctx) {
@@ -234,22 +252,12 @@ public class OkapiMockServer {
     }
   }
 
-  public void start(VertxTestContext context) {
-    HttpServer server = vertx.createHttpServer();
-
-    server.requestHandler(defineRoutes())
-      .listen(port, context.succeeding(result -> {
-        logger.info("The server has started");
-        context.completeNow();
-      }));
-  }
-
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody().toJsonArray();
     if(instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
     } else {
-      String mockSrsResponse = generateSrsPostResponseForResumptionTokenFlow(instanceIds);
+      String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
     }
   }
@@ -376,7 +384,7 @@ public class OkapiMockServer {
     return json.replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
   }
 
-  private String generateSrsPostResponseForResumptionTokenFlow(JsonArray instanceIds) {
+  private String generateSrsPostResponseForInstanceIds(JsonArray instanceIds) {
     String srsRecordTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_TEMPLATE_JSON));
     String srsRecordsResponseTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
     List<String> srsRecords = new ArrayList<>();
