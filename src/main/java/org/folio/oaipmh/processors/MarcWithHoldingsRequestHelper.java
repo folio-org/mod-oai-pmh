@@ -1,6 +1,7 @@
 package org.folio.oaipmh.processors;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -258,15 +259,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .stream(reply.result().spliterator(), false)
                 .map(this::createJsonFromRow).map(e -> e.getJsonObject("json")).collect(toList());
               enrichInstances(list, request, context)
-                .future().onComplete(enrichInstancesResult -> {
+                .future().onComplete(enrichInstancesResult ->
                     endTransaction(postgresClient, conn).future().onComplete(o -> {
                       if(enrichInstancesResult.succeeded()) {
                         promise.complete(enrichInstancesResult.result());
                       } else {
                         promise.fail(enrichInstancesResult.cause());
                       }
-                    });
-                  });
+                    })
+                  );
             } else {
               logger.error("Selecting instances failed: " + reply.cause());
               endTransaction(postgresClient, conn).future().onComplete(o -> handleException(promise, reply.cause()));
@@ -552,11 +553,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Object getValueFrom(Object obj, String fieldName) {
-    if(Objects.nonNull(obj)) {
-      Field field = ReflectionUtils.findField(obj.getClass(), fieldName);
+    try{
+      Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
       ReflectionUtils.makeAccessible(field);
       return ReflectionUtils.getField(field, obj);
-    } else {
+    } catch (NullPointerException ex){
       logger.error("Cannot get the pool size. Object is null.");
       throw new IllegalArgumentException("Cannot get the pool size. Object is null.");
     }
