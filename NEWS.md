@@ -1,3 +1,11 @@
+## 3.2.4 (Released)
+
+This release includes bug fixes related to marc21_withholdings metadataPrefix and incorrect number of records being returned from ListIdentifiers request.
+
+* [MODOAIPMH-254](https://issues.folio.org/browse/MODOAIPMH-254) Initial load does not contain resumptionToken
+* [MODOAIPMH-250](https://issues.folio.org/browse/MODOAIPMH-250) Invalid number of identifiers are returned when get ListIdentifiers
+* [MODOAIPMH-252](https://issues.folio.org/browse/MODOAIPMH-252) Mod OAI_PMH container fail after call
+
 ## 3.2.3 (Released)
 
 This release includes updating RMB version up to 31.1.5 which fixing issues with database interaction.
