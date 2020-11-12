@@ -1,10 +1,12 @@
-## 3.2.4 (Released)
+## 3.2.4 (Released) 2020-11-12
 
 This release includes bug fixes related to marc21_withholdings metadataPrefix and incorrect number of records being returned from ListIdentifiers request.
 
 * [MODOAIPMH-254](https://issues.folio.org/browse/MODOAIPMH-254) Initial load does not contain resumptionToken
 * [MODOAIPMH-250](https://issues.folio.org/browse/MODOAIPMH-250) Invalid number of identifiers are returned when get ListIdentifiers
 * [MODOAIPMH-252](https://issues.folio.org/browse/MODOAIPMH-252) Mod OAI_PMH container fail after call
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.2.3...v3.2.4)
 
 ## 3.2.3 (Released)
 
