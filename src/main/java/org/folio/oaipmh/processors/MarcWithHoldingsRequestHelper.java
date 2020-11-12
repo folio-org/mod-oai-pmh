@@ -559,6 +559,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completePromise;
   }
 
+  /**
+   * Here the reflection is used by the reason that we need to have an access to vert.x "waiters" objects
+   * which are accumulated when batches are saved to database, the handling batches from inventory view
+   * is performed match faster versus saving to database. By this reason in some time we got a lot of
+   * waiters objects which holds many of others as well and this leads to OutOfMemory.
+   * In solution we just don't allow to request new batches while we have 20 waiters objects
+   * which perform saving instances to DB.
+   * In future we can consider using static AtomicInteger to count the number of current db requests.
+   * It will be more readable in code, but less reliable because wouldn't take into account other requests.
+   */
   private Object getValueFrom(Object obj, String fieldName) {
     Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
     ReflectionUtils.makeAccessible(field);
