@@ -59,6 +59,17 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-formats.collection.get"
           ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/oai-pmh/clean-up-instances",
+          "permissionsRequired": [
+            "oai-pmh.clean-up-instances.post"
+          ],
+          "modulePermissions": [
+          ]
         }
       ]
     },
@@ -74,6 +85,23 @@
             "configuration.entries.collection.get",
             "configuration.entries.item.post"
           ]
+        }
+      ]
+    },
+    {
+      "id": "_timer",
+      "version": "1.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/oai-pmh/clean-up-instances",
+          "modulePermissions": [
+          ],
+          "unit": "hour",
+          "delay": "2"
         }
       ]
     }
@@ -146,6 +174,11 @@
       "description": "Retrieves filtering condition values"
     },
     {
+      "permissionName": "oai-pmh.clean-up-instances.post",
+      "displayName": "OAI-PMH - call to clean up retained instances",
+      "description": "Entry point to start clean up process of retained instances"
+    },
+    {
       "permissionName": "oai-pmh.set.all",
       "displayName": "OAI-PMH Set - all permissions",
       "description": "Entire set of permissions for managing oai-pmh set items",
@@ -155,7 +188,8 @@
         "oai-pmh.sets.item.put",
         "oai-pmh.sets.item.delete",
         "oai-pmh.sets.item.collection.get",
-        "oai-pmh.filtering-conditions.get"
+        "oai-pmh.filtering-conditions.get",
+        "oai-pmh.clean-up-instances.post"
       ]
     }
   ],

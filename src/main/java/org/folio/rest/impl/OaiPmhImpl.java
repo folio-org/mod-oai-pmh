@@ -34,6 +34,7 @@ import java.util.function.Function;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.folio.dataimport.util.OkapiConnectionParams;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
@@ -46,6 +47,7 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
+import org.folio.oaipmh.service.IndetifiersCleanUpService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.OAIPMH;
@@ -59,6 +61,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class OaiPmhImpl implements Oai {
 
@@ -66,6 +69,9 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
+
+  @Autowired
+  private IndetifiersCleanUpService indetifiersCleanUpService;
 
   private VerbValidator validator = new VerbValidator();
 
@@ -142,6 +148,14 @@ public class OaiPmhImpl implements Oai {
           asyncResultHandler.handle(getFutureWithErrorResponse());
         }
       }).exceptionally(handleError(asyncResultHandler));
+  }
+
+  @Override
+  public void postOaiCleanUpInstances(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    vertxContext.runOnContext(v -> indetifiersCleanUpService.cleanUp(new OkapiConnectionParams(okapiHeaders, vertxContext.owner()), vertxContext)
+      .map(PostOaiCleanUpInstancesResponse.respond204())
+      .map(Response.class::cast)
+      .onComplete(asyncResultHandler));
   }
 
   private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>> asyncResultHandler) {
