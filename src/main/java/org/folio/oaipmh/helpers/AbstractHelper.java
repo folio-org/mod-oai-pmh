@@ -237,9 +237,9 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Adds difference between current time zone and UTC to date. Is used when date is going to be used for SRC client search criteria
-   * be the reason that SRC equates the date to UTC date which in result removes or adds time diff between current time zone and
-   * UTC. This prevents to invalid time borders requesting.
+   * Adds difference between the current time zone and UTC to 'date' param. Is used when 'date' is going to be used for SRC client
+   * search criteria by the reason that SRC equates the date to UTC date by subtracting the diff between current time zone and UTC
+   * which leads to invalid time borders requesting.
    *
    * @param date - date to be updated
    * @return updated date
