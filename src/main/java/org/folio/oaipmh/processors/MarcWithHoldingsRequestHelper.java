@@ -477,11 +477,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {
     Map<String, String> paramMap = new HashMap<>();
-    Date date = convertStringToDate(request.getFrom(), false);
+    Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
       paramMap.put(START_DATE_PARAM_NAME, dateFormat.format(date));
     }
-    date = convertStringToDate(request.getUntil(), true);
+    date = convertStringToDate(request.getUntil(), true, false);
     if (date != null) {
       paramMap.put(END_DATE_PARAM_NAME, dateFormat.format(date));
     }

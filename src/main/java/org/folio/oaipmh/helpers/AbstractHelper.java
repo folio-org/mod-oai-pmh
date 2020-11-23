@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers;
 
+import static java.util.TimeZone.getDefault;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -33,14 +34,17 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -206,9 +210,10 @@ public abstract class AbstractHelper implements VerbHelper {
    * Parse a date from string and compensate one date or one second because in SRS the dates are non-inclusive.
    * @param dateTimeString - date/time supplied
    * @param shouldCompensateUntilDate = if the date is used as until parameter
+   * @param shouldEqualizeTimeBetweenZones whether the time should be updated by diff between current time zone and UTC
    * @return date that will be used to query SRS
    */
-  protected Date convertStringToDate(String dateTimeString, boolean shouldCompensateUntilDate) {
+  protected Date convertStringToDate(String dateTimeString, boolean shouldCompensateUntilDate, boolean shouldEqualizeTimeBetweenZones) {
     try {
       if (StringUtils.isEmpty(dateTimeString)) {
         return null;
@@ -221,12 +226,33 @@ public abstract class AbstractHelper implements VerbHelper {
           date = DateUtils.addSeconds(date, 1);
         }
       }
+      if(shouldEqualizeTimeBetweenZones) {
+        return addTimeDiffBetweenCurrentTimeZoneAndUTC(date);
+      }
       return date;
     } catch (DateTimeParseException | ParseException e) {
       logger.error(e);
       return null;
-
     }
+  }
+
+  /**
+   * Adds difference between the current time zone and UTC to 'date' param. Is used when 'date' is going to be used for SRC client
+   * search criteria by the reason that SRC equates the date to UTC date by subtracting the diff between current time zone and UTC
+   * which leads to invalid time borders requesting.
+   *
+   * @param date - date to be updated
+   * @return updated date
+   */
+  private Date addTimeDiffBetweenCurrentTimeZoneAndUTC(Date date) {
+    int secondsDiff = ZoneId.systemDefault()
+      .getRules()
+      .getOffset(date.toInstant())
+      .getTotalSeconds();
+    Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
+    calendar.setTime(date);
+    calendar.add(Calendar.SECOND, secondsDiff);
+    return calendar.getTime();
   }
 
   protected boolean validateIdentifier(Request request) {
