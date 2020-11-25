@@ -155,7 +155,7 @@ class SetServiceImplTest extends AbstractSetTest {
 
   @Test
   void shouldUpdateAndReturnSetItem_whenUpdateSetByIdAndSuchSetItemWithIdExists(VertxTestContext testContext) {
-    setService.updateSetById(EXISTENT_SET_ID, UPDATE_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+    setService.updateSetById(EXISTENT_SET_ID, UPDATE_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());
@@ -169,7 +169,7 @@ class SetServiceImplTest extends AbstractSetTest {
 
   @Test
   void shouldNotUpdateSetItemAndThrowException_whenSuchSetItemWithIdDoesNotExist(VertxTestContext testContext) {
-    setService.updateSetById(NONEXISTENT_SET_ID, UPDATE_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+    setService.updateSetById(NONEXISTENT_SET_ID, UPDATE_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID)
       .onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof NotFoundException);
         assertEquals(EXPECTED_NOT_FOUND_MSG, throwable.getMessage());
@@ -179,7 +179,7 @@ class SetServiceImplTest extends AbstractSetTest {
 
   @Test
   void shouldSaveAndReturnSavedSetItem_whenSaveSet(VertxTestContext testContext) {
-    setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+    setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());
@@ -195,7 +195,7 @@ class SetServiceImplTest extends AbstractSetTest {
   void shouldNotSaveAndThrowException_whenSaveSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
     testContext.verify(() -> {
       POST_SET_ENTRY.setId(EXISTENT_SET_ID);
-      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID)
         .onComplete(testContext.failing(throwable -> {
           assertTrue(throwable instanceof IllegalArgumentException);
           assertEquals(EXPECTED_ITEM_WITH_ID_ALREADY_EXISTS_MSG, throwable.getMessage());
@@ -208,12 +208,12 @@ class SetServiceImplTest extends AbstractSetTest {
   @Test
   void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
-      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID).onComplete(result -> {
         FolioSet setWithExistedSetSpecValue = result.result();
         setWithExistedSetSpecValue.setId(UUID.randomUUID().toString());
         setWithExistedSetSpecValue.setName("unique name");
         setWithExistedSetSpecValue.setSetSpec(setWithExistedSetSpecValue.getSetSpec().toUpperCase());
-        setService.saveSet(setWithExistedSetSpecValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
+        setService.saveSet(setWithExistedSetSpecValue, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
           assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
@@ -225,12 +225,12 @@ class SetServiceImplTest extends AbstractSetTest {
   @Test
   void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue_CaseInsensitive(VertxTestContext testContext) {
     testContext.verify(() -> {
-      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID).onComplete(result -> {
+      setService.saveSet(POST_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID).onComplete(result -> {
         FolioSet setWithExistedNameValue = result.result();
         setWithExistedNameValue.setId(UUID.randomUUID().toString());
         setWithExistedNameValue.setSetSpec("unique setSpec");
         setWithExistedNameValue.setName(setWithExistedNameValue.getName().toUpperCase());
-        setService.saveSet(setWithExistedNameValue, TEST_TENANT_ID, TEST_USER_ID).onFailure(throwable -> {
+        setService.saveSet(setWithExistedNameValue, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
           assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
@@ -289,7 +289,7 @@ class SetServiceImplTest extends AbstractSetTest {
   }
 
   private void loadTestData(VertxTestContext testContext) {
-    setDao.saveSet(INITIAL_TEST_SET_ENTRY, TEST_TENANT_ID, TEST_USER_ID)
+    setDao.saveSet(INITIAL_TEST_SET_ENTRY, TEST_TENANT_ID, OkapiMockServer.TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());

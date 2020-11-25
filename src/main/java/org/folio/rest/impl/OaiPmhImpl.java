@@ -34,7 +34,6 @@ import java.util.function.Function;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.folio.dataimport.util.OkapiConnectionParams;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
@@ -47,13 +46,14 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
-import org.folio.oaipmh.service.IndetifiersCleanUpService;
+import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -61,7 +61,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class OaiPmhImpl implements Oai {
 
@@ -69,11 +68,13 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
+  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 7200;
 
   @Autowired
-  private IndetifiersCleanUpService indetifiersCleanUpService;
+  private InstancesService instancesService;
 
-  private VerbValidator validator = new VerbValidator();
+  @Autowired
+  private VerbValidator validator;
 
   public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
@@ -152,9 +153,10 @@ public class OaiPmhImpl implements Oai {
 
   @Override
   public void postOaiCleanUpInstances(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    vertxContext.runOnContext(v -> indetifiersCleanUpService.cleanUp(new OkapiConnectionParams(okapiHeaders, vertxContext.owner()), vertxContext)
+    vertxContext.runOnContext(v -> instancesService.cleanExpiredInstances(okapiHeaders.get(OKAPI_TENANT), INSTANCES_EXPIRATION_TIME_IN_SECONDS)
       .map(PostOaiCleanUpInstancesResponse.respond204())
       .map(Response.class::cast)
+      .otherwise(throwable -> PostOaiCleanUpInstancesResponse.respond500WithTextPlain(throwable.getMessage()))
       .onComplete(asyncResultHandler));
   }
 

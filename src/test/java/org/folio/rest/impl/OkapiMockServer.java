@@ -39,6 +39,8 @@ public class OkapiMockServer {
 
   private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
+  public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
+
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";

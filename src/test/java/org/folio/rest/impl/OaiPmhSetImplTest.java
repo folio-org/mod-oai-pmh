@@ -69,7 +69,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
-  private Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
+  private Header okapiUserHeader = new Header("X-Okapi-User-Id", OkapiMockServer.TEST_USER_ID);
 
   private SetDao setDao;
 
@@ -114,7 +114,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @BeforeEach
   private void initTestData(VertxTestContext testContext) {
-    setDao.saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, TEST_USER_ID)
+    setDao.saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());
