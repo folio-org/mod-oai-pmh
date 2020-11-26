@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
+import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.Future;
@@ -45,4 +47,28 @@ public class InstancesServiceImpl implements InstancesService {
       });
   }
 
+  @Override
+  public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
+    return instancesDao.saveRequestMetadata(requestMetadata, tenantId);
+  }
+
+  @Override
+  public Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId) {
+    return instancesDao.deleteRequestMetadataByRequestId(requestId, tenantId);
+  }
+
+  @Override
+  public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
+    return instancesDao.deleteInstancesById(instIds, tenantId);
+  }
+
+  @Override
+  public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
+    return instancesDao.saveInstances(instances, tenantId);
+  }
+
+  @Override
+  public Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId) {
+    return instancesDao.getInstancesList(offset, limit, tenantId);
+  }
 }
