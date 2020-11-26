@@ -20,6 +20,8 @@ public interface InstancesDao {
 
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
 
+  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId);
+
   Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId);
 
   /**

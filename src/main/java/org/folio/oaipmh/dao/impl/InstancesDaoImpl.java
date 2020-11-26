@@ -9,11 +9,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
+import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
@@ -57,11 +59,19 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
-    requestMetadata.setId(UUID.randomUUID());
+    if(Objects.isNull(requestMetadata.getId()) && StringUtils.isNotEmpty(requestMetadata.getId().toString())) {
+      requestMetadata.setId(UUID.randomUUID());
+    }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
         .set(toDatabaseRecord(requestMetadata)))
       .map(raw -> requestMetadata));
+  }
+
+  //TODO finish it and use in MWHRH
+  @Override
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId) {
+    return getQueryExecutor()
   }
 
   @Override
