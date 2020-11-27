@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.*;
@@ -118,7 +120,7 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
     CompositeFuture.all(futures)
       .onSuccess(v -> testContext.completeNow())
       .onFailure(throwable -> {
-        if(throwable instanceof NotFoundException) {
+        if (throwable instanceof NotFoundException) {
           testContext.completeNow();
         } else {
           testContext.failNow(throwable);
@@ -160,9 +162,42 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.verify(() -> {
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
-          assertNotNull(requestMetadataLb.getId());
+          assertNotNull(requestMetadataLb.getRequestId());
           testContext.completeNow();
         }));
+    });
+  }
+
+  @Test
+  void shouldUpdateRequestMetadata_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      OffsetDateTime date = OffsetDateTime.now();
+      requestMetadata.setLastUpdatedDate(date);
+      instancesService.updateRequestMetadataByRequestId(requestMetadata.getRequestId().toString(), requestMetadata, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+        assertEquals(date, res.getLastUpdatedDate());
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenUpdateRequestMetadataWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      instancesService.updateRequestMetadataByRequestId(nonExistentRequestMetadata.getRequestId().toString(), nonExistentRequestMetadata, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof NotFoundException);
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof IllegalStateException);
+        testContext.completeNow();
+      }));
     });
   }
 

@@ -16,7 +16,7 @@ public interface InstancesDao {
    * @param expirationPeriodInSeconds - expiration time in seconds
    * @return list of expired request ids
    */
-  Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds); //
+  Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds);
 
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
 
@@ -31,7 +31,7 @@ public interface InstancesDao {
    * @param requestIds - request ids for which instance cleaning is performed
    * @return true if some entities were removed, false if there no entities to be removed by provided request ids
    */
-  Future<Boolean> deleteExpiredInstancesByRequestId(String tenantId, List<String> requestIds); //
+  Future<Boolean> deleteExpiredInstancesByRequestId(String tenantId, List<String> requestIds);
 
   Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId);
 

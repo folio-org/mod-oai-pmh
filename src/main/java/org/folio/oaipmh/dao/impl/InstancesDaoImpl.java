@@ -1,20 +1,12 @@
 package org.folio.oaipmh.dao.impl;
 
-import static org.folio.rest.jooq.tables.Instances.INSTANCES;
-import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
-
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import javax.ws.rs.NotFoundException;
-
+import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.Future;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -28,16 +20,21 @@ import org.jooq.JSON;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
-import io.vertx.core.Future;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.sqlclient.Row;
+import javax.ws.rs.NotFoundException;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.folio.rest.jooq.tables.Instances.INSTANCES;
+import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
 
 @Repository
 public class InstancesDaoImpl implements InstancesDao {
 
+  public static final String REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST = "Request metadata with requestId - \"%s\" does not exists";
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   private PostgresClientFactory postgresClientFactory;
@@ -59,8 +56,9 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
-    if(Objects.isNull(requestMetadata.getId()) && StringUtils.isNotEmpty(requestMetadata.getId().toString())) {
-      requestMetadata.setId(UUID.randomUUID());
+    UUID uuid = requestMetadata.getRequestId();
+    if (Objects.isNull(uuid) && StringUtils.isEmpty(uuid.toString())) {
+      throw new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId");
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
@@ -68,28 +66,47 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(raw -> requestMetadata));
   }
 
-  //TODO finish it and use in MWHRH
   @Override
   public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId) {
-    return getQueryExecutor()
+    requestMetadataLb.setRequestId(UUID.fromString(requestId));
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
+      .set(toDatabaseRecord(requestMetadataLb))
+      .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+      .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      })
+    );
+  }
+
+  private Optional<RequestMetadataLb> toOptionalRequestMetadata(RowSet<Row> rows) {
+    if (rows.rowCount() == 1) {
+      Row row = rows.iterator().next();
+      RequestMetadataLb requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
+      return Optional.of(requestMetadataLb);
+    }
+    return Optional.empty();
   }
 
   @Override
   public Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .execute(dslContext -> dslContext.deleteFrom(REQUEST_METADATA_LB)
-        .where(REQUEST_METADATA_LB.REQUEST_ID.eq(requestId)))
+        .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(res -> {
         if (res == 1) {
           return true;
         }
-        throw new NotFoundException(String.format("Request metadata with requestId - \"%s\" does not exists", requestId));
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
       }));
   }
 
   private Record toDatabaseRecord(RequestMetadataLb requestMetadata) {
-    return new RequestMetadataLbRecord().setId(requestMetadata.getId())
-      .setRequestId(requestMetadata.getRequestId())
+    return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
       .setLastUpdatedDate(requestMetadata.getLastUpdatedDate());
   }
 
@@ -138,7 +155,7 @@ public class InstancesDaoImpl implements InstancesDao {
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
       InsertValuesStep3<InstancesRecord, UUID, JSON, String> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
-          INSTANCES.JSON, INSTANCES.REQUEST_ID);
+        INSTANCES.JSON, INSTANCES.REQUEST_ID);
       instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
       return insertValues;
     })
@@ -184,7 +201,7 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(row -> {
         RequestMetadataLb pojo = RowMappers.getRequestMetadataLbMapper()
           .apply(row.unwrap());
-        return pojo.getRequestId();
+        return pojo.getRequestId().toString();
       })
       .collect(Collectors.toList());
     logger.debug("Expired request ids result: " + String.join(",", ids));

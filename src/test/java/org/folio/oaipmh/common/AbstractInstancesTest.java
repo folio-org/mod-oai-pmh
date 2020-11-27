@@ -36,18 +36,17 @@ public abstract class AbstractInstancesTest {
   protected static final JSON EMPTY_JSON = JSON.valueOf("\"{}\"");
 
   protected List<String> requestIds = List.of(EXPIRED_REQUEST_ID, REQUEST_ID);
-
   protected List<String> instancesIds = List.of(EXPIRED_INSTANCE_ID, INSTANCE_ID);
   protected List<String> nonExistentInstancesIds = List.of(NON_EXISTENT_INSTANCE_ID);
 
   protected static final OffsetDateTime notExpiredDate = OffsetDateTime.now(ZoneId.systemDefault());
   protected static final OffsetDateTime expiredDate = OffsetDateTime.now(ZoneId.systemDefault()).minusSeconds(INSTANCES_EXPIRATION_TIME_IN_SECONDS);
 
-  protected static final RequestMetadataLb expiredRequestMetadata = new RequestMetadataLb().setId(UUID.fromString(EXPIRED_REQUEST_ID))
-    .setRequestId(EXPIRED_REQUEST_ID)
+  protected static final RequestMetadataLb expiredRequestMetadata = new RequestMetadataLb().setRequestId(UUID.fromString(EXPIRED_REQUEST_ID))
     .setLastUpdatedDate(expiredDate);
-  protected static final RequestMetadataLb requestMetadata = new RequestMetadataLb().setId(UUID.fromString(REQUEST_ID))
-    .setRequestId(REQUEST_ID)
+  protected static final RequestMetadataLb requestMetadata = new RequestMetadataLb().setRequestId(UUID.fromString(REQUEST_ID))
+    .setLastUpdatedDate(notExpiredDate);
+  protected static final RequestMetadataLb nonExistentRequestMetadata = new RequestMetadataLb().setRequestId(UUID.fromString(NON_EXISTENT_REQUEST_ID))
     .setLastUpdatedDate(notExpiredDate);
 
   protected static final Instances instance_1 = new Instances().setInstanceId(UUID.fromString(EXPIRED_INSTANCE_ID))

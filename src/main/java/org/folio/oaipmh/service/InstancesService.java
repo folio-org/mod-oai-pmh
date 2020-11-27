@@ -21,6 +21,8 @@ public interface InstancesService {
 
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
 
+  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId);
+
   Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId);
 
   Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId);

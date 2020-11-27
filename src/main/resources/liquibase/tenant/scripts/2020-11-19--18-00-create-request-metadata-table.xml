@@ -6,11 +6,8 @@
 
   <changeSet id="2020-11-19--18-00-create-request-metadata-table.xml" author="Illia Borysenko">
     <createTable tableName="request_metadata_lb">
-      <column name="id" type="uuid">
+      <column name="request_id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>
-      </column>
-      <column name="request_id" type="varchar(255)">
-        <constraints nullable="false"/>
       </column>
       <column name="last_updated_date" type="timestamptz">
         <constraints nullable="false"/>
