@@ -2,6 +2,7 @@ package org.folio.oaipmh.dao;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.PreDestroy;
 
@@ -90,6 +91,10 @@ public class PostgresClientFactory {
     PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
     POOL_CACHE.put(tenantId, client);
     return client;
+  }
+
+  public static Optional<PgPool> getPool(String tenantId) {
+    return Optional.ofNullable(POOL_CACHE.get(tenantId));
   }
 
   // NOTE: This should be able to get database configuration without PostgresClient.

@@ -79,10 +79,6 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.completeNow();
   }
 
-  private void mockData() {
-
-  }
-
   @AfterAll
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
