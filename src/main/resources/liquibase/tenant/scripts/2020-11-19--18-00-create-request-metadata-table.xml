@@ -15,4 +15,8 @@
     </createTable>
   </changeSet>
 
+  <changeSet id="2020-11-19--18-00-change-json-to-text-column-in-instances-table.xml" author="Illia Daliek">
+    <modifyDataType tableName="instances" columnName="json" newDataType="text" schemaName="${database.defaultSchemaName}"/>
+  </changeSet>
+
 </databaseChangeLog>

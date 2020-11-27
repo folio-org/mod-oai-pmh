@@ -30,7 +30,6 @@ import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
-import org.jooq.JSON;
 import org.openarchives.oai._2.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ReflectionUtils;
@@ -225,7 +224,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     instancesService.getInstancesList(0, batchSize + 1, request.getTenant()).compose(instances -> {
       List<JsonObject> jsonInstances = instances.stream()
         .map(Instances::getJson)
-        .map(JSON::toString)
         .map(JsonObject::new)
         .collect(Collectors.toList());
       return enrichInstances(jsonInstances, request, context);
@@ -458,12 +456,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     Optional<PgPool> pgPool = PostgresClientFactory.getPool(request.getTenant());
     try {
-      if(pgPool.isPresent()) {
+      if (pgPool.isPresent()) {
         queue.set((ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters"));
       } else {
         throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
       }
-    } catch (NullPointerException ex ) {
+    } catch (NullPointerException ex) {
       logger.error("Cannot get the pool size. Object for retrieving field is null.");
       oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
       return completePromise;
@@ -561,7 +559,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private List<Instances> toInstancesList(List<JsonEvent> jsonEventInstances, String requestId) {
     return jsonEventInstances.stream().map(JsonEvent::objectValue).map(inst ->
       new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
-        .setJson(JSON.valueOf(inst.toString()))
+        .setJson(inst.toString())
         .setRequestId(requestId)
     ).collect(Collectors.toList());
   }

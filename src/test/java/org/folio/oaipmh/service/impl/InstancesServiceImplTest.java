@@ -19,8 +19,10 @@ import java.util.stream.Collectors;
 import javax.ws.rs.NotFoundException;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
@@ -31,6 +33,7 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Spy;
@@ -40,15 +43,14 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
 public class InstancesServiceImplTest extends AbstractInstancesTest {
 
   private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private static final int EXPIRED_REQUEST_IDS_TIME = 1000;
   private static final int EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME = 2000;
-  private static final int EXPIRED_REQUEST_IDS_DAO_ERROR_TIME = 3000;
   private static final int ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
 
   private static final String REQUEST_ID_DAO_ERROR = "c75afb20-1812-45ab-badf-16d569502a99";
@@ -57,14 +59,13 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   private static List<String> validRequestIds = Collections.singletonList(REQUEST_ID_DAO_DB_SUCCESS_RESPONSE);
   private static List<String> daoErrorRequestId = Collections.singletonList(REQUEST_ID_DAO_ERROR);
 
-  @Spy
   @Autowired
   private InstancesDao instancesDao;
   @Autowired
   private InstancesServiceImpl instancesService;
 
   @BeforeAll
-  static void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+  void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClient.getInstance(vertx)
       .startEmbeddedPostgres();
 
@@ -74,6 +75,9 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
     } catch (Exception ex) {
       testContext.failNow(ex);
     }
+    Context context = vertx.getOrCreateContext();
+    SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+    SpringContextUtil.autowireDependencies(this, context);
     new OkapiMockServer(vertx, mockPort).start(testContext);
     LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
     testContext.completeNow();

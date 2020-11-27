@@ -16,7 +16,6 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.jooq.InsertValuesStep3;
-import org.jooq.JSON;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
@@ -25,7 +24,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.folio.rest.jooq.tables.Instances.INSTANCES;
@@ -146,28 +148,15 @@ public class InstancesDaoImpl implements InstancesDao {
       }));
   }
 
-  private List<String> toList(QueryResult queryResult) {
-    QueryResult queryResult1 = queryResult.unwrap();
-    return Collections.emptyList();
-  }
-
   @Override
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
-      InsertValuesStep3<InstancesRecord, UUID, JSON, String> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
+      InsertValuesStep3<InstancesRecord, UUID, String, String> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
         INSTANCES.JSON, INSTANCES.REQUEST_ID);
       instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
       return insertValues;
     })
       .map(rows -> null));
-  }
-
-  private List<InstancesRecord> listToRecords(List<Instances> instances) {
-    return instances.stream()
-      .map(instance -> new InstancesRecord().setInstanceId(instance.getInstanceId())
-        .setRequestId(instance.getRequestId())
-        .setJson(instance.getJson()))
-      .collect(Collectors.toList());
   }
 
   @Override
@@ -187,8 +176,7 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(row -> {
         Instances pojo = new Instances();
         pojo.setInstanceId(row.getUUID(INSTANCES.INSTANCE_ID.getName()));
-        pojo.setJson(JSON.valueOf(row.getBuffer(INSTANCES.JSON.getName())
-          .toString()));
+        pojo.setJson(row.getString(INSTANCES.JSON.getName()));
         pojo.setRequestId(row.getString(INSTANCES.REQUEST_ID.getName()));
         return pojo;
       })

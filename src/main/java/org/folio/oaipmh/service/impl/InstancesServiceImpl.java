@@ -8,6 +8,7 @@ import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -74,5 +75,10 @@ public class InstancesServiceImpl implements InstancesService {
   @Override
   public Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId) {
     return instancesDao.getInstancesList(offset, limit, tenantId);
+  }
+
+  @Autowired
+  public InstancesDao setInstancesDao() {
+    return instancesDao;
   }
 }
