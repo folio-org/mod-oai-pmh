@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
@@ -105,7 +106,7 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   @AfterEach
   void cleanUp(VertxTestContext testContext) {
     List<Future> futures = new ArrayList<>();
-    requestIds.forEach(elem -> futures.add(instancesDao.deleteRequestMetadataByRequestId(elem, OAI_TEST_TENANT)));
+    requestIds.forEach(requestId -> futures.add(instancesDao.deleteRequestMetadataByRequestId(requestId, OAI_TEST_TENANT)));
 
     instancesDao.getInstancesList(0, 100, OAI_TEST_TENANT).onComplete(result -> {
       if (result.succeeded() && CollectionUtils.isNotEmpty(result.result())) {
@@ -147,23 +148,22 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   }
 
   @Test
-  void shouldReturnFailedFuture_whenErrorOccurredInDao(VertxTestContext testContext) {
-    when(instancesDao.deleteExpiredInstancesByRequestId(OAI_TEST_TENANT, anyList()))
-      .thenThrow(new IllegalStateException("dao error"));
-    testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
-      .onComplete(testContext.failing(throwable -> {
-        assertEquals("dao error", throwable.getMessage());
-        testContext.completeNow();
-      })));
-  }
-
-  @Test
   void shouldSaveRequestMetadata(VertxTestContext testContext) {
     testContext.verify(() -> {
+      UUID id = UUID.randomUUID();
+      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      requestMetadata.setRequestId(id);
+      requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb.getRequestId());
-          testContext.completeNow();
+          instancesService.deleteRequestMetadataByRequestId(id.toString(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+            if (res) {
+              testContext.completeNow();
+            } else {
+              testContext.failNow(new IllegalStateException("Cannot delete test request metadata with request id: " + id.toString()));
+            }
+          }));
         }));
     });
   }
@@ -228,10 +228,11 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesService.deleteInstancesById(instancesIds, OAI_TEST_TENANT)
-        .onComplete(testContext.succeeding(res -> {
+        .onSuccess(res -> {
           assertTrue(res);
           testContext.completeNow();
-        }));
+        })
+        .onFailure(testContext::failNow);
     });
   }
 

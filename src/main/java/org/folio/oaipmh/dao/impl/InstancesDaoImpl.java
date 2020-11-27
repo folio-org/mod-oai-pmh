@@ -59,8 +59,8 @@ public class InstancesDaoImpl implements InstancesDao {
   @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
-    if (Objects.isNull(uuid) && StringUtils.isEmpty(uuid.toString())) {
-      throw new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId");
+    if (Objects.isNull(uuid) || StringUtils.isEmpty(uuid.toString())) {
+      return Future.failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
@@ -120,7 +120,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .where(INSTANCES.REQUEST_ID.in(requestIds)))
       .map(res -> {
         String requestIdsString = String.join(",", requestIds);
-        if (res == 1) {
+        if (res > 1) {
           logger.debug("Instances associated with requestIds[{}] have been removed.", requestIdsString);
           return true;
         } else {
@@ -138,7 +138,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .where(INSTANCES.INSTANCE_ID.in(instIds)))
       .map(res -> {
         String instanceIds = String.join(",", instIds);
-        if (res == 1) {
+        if (res > 1) {
           logger.debug("Instances with ids [{}] have been removed.", instanceIds);
           return true;
         } else {
