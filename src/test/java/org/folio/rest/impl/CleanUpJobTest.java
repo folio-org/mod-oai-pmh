@@ -110,11 +110,6 @@ public class CleanUpJobTest extends AbstractInstancesTest {
     }).onFailure(testContext::failNow);
   }
 
-  @Test
-  void shouldReturn204AndDoNotClearInstances_whenThereNoAnyExpiredRequestIds(VertxTestContext testContext) {
-
-  }
-
   @Override
   protected InstancesDao getInstancesDao() {
     return instancesDao;

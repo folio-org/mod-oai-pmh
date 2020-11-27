@@ -33,6 +33,7 @@ import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.*;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -49,16 +50,13 @@ import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
+import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -70,11 +68,12 @@ public class OaiPmhImpl implements Oai {
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
   private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 7200;
 
-  @Autowired
   private InstancesService instancesService;
-
-  @Autowired
   private VerbValidator validator;
+
+  public OaiPmhImpl() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
@@ -196,4 +195,13 @@ public class OaiPmhImpl implements Oai {
     return isVerbNameCorrect ? VerbType.fromValue(verbName) : VerbType.UNKNOWN;
   }
 
+  @Autowired
+  public void setInstancesService(InstancesService instancesService) {
+    this.instancesService = instancesService;
+  }
+
+  @Autowired
+  public void setValidator(VerbValidator validator) {
+    this.validator = validator;
+  }
 }

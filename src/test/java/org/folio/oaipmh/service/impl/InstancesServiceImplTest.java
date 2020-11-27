@@ -1,27 +1,11 @@
 package org.folio.oaipmh.service.impl;
 
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.when;
-
-import java.sql.Connection;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import javax.ws.rs.NotFoundException;
-
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
@@ -37,12 +21,19 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import javax.ws.rs.NotFoundException;
+import java.sql.Connection;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.junit.Assert.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -142,7 +133,7 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   void shouldReturnFutureWithExpiredIds_whenThereExpiredRequestIdsArePresented(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
       .onComplete(testContext.succeeding(ids -> {
-        assertTrue(ids.contains(REQUEST_ID_DAO_DB_SUCCESS_RESPONSE));
+        assertTrue(ids.contains(EXPIRED_REQUEST_ID));
         testContext.completeNow();
       })));
   }
@@ -174,7 +165,7 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
       instancesService.updateRequestMetadataByRequestId(requestMetadata.getRequestId().toString(), requestMetadata, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
-        assertEquals(date, res.getLastUpdatedDate());
+        assertNotNull(res);
         testContext.completeNow();
       }));
     });
@@ -182,12 +173,12 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnFailedFuture_whenUpdateRequestMetadataWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
-    testContext.verify(() -> {
+    testContext.verify(() ->
       instancesService.updateRequestMetadataByRequestId(nonExistentRequestMetadata.getRequestId().toString(), nonExistentRequestMetadata, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof NotFoundException);
         testContext.completeNow();
-      }));
-    });
+      }))
+    );
   }
 
   @Test
@@ -259,7 +250,10 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT)
-      .onComplete(testContext.succeeding(instancesList -> assertFalse(instancesList.isEmpty()))));
+      .onComplete(testContext.succeeding(instancesList -> {
+        assertFalse(instancesList.isEmpty());
+        testContext.completeNow();
+      })));
   }
 
   @Test

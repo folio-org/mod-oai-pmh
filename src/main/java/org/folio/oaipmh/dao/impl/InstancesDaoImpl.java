@@ -120,7 +120,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .where(INSTANCES.REQUEST_ID.in(requestIds)))
       .map(res -> {
         String requestIdsString = String.join(",", requestIds);
-        if (res > 1) {
+        if (res > 0) {
           logger.debug("Instances associated with requestIds[{}] have been removed.", requestIdsString);
           return true;
         } else {
@@ -138,7 +138,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .where(INSTANCES.INSTANCE_ID.in(instIds)))
       .map(res -> {
         String instanceIds = String.join(",", instIds);
-        if (res > 1) {
+        if (res > 0) {
           logger.debug("Instances with ids [{}] have been removed.", instanceIds);
           return true;
         } else {
