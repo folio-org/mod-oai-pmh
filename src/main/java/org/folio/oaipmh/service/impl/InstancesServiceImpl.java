@@ -1,9 +1,10 @@
 package org.folio.oaipmh.service.impl;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+
+import java.util.Collections;
+import java.util.List;
+
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.jooq.tables.pojos.Instances;
@@ -11,10 +12,10 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 @Service
 public class InstancesServiceImpl implements InstancesService {
@@ -53,7 +54,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId) {
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
+      String tenantId) {
     return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
   }
 
@@ -69,11 +71,7 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
-    try {
-      return instancesDao.saveInstances(instances, tenantId);
-    } catch (Throwable throwable) {
-      return Future.failedFuture(throwable);
-    }
+    return instancesDao.saveInstances(instances, tenantId);
   }
 
   @Override
