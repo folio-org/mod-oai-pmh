@@ -341,7 +341,8 @@ public class OkapiMockServer {
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
     String path = INVENTORY_VIEW_PATH + jsonFileName;
-    Buffer buffer = vertx.fileSystem().readFileBlocking(path);
+    String response = getJsonObjectFromFile(path);
+    Buffer buffer = Buffer.buffer(response);
     routingContext.response().setStatusCode(200).end(buffer);
   }
 
