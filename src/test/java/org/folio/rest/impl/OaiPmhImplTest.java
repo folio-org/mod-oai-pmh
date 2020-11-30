@@ -1913,7 +1913,7 @@ class OaiPmhImplTest {
 
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(NO_RECORDS_MATCH));
   }
-
+//kek3
   @Test
   void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
@@ -1978,28 +1978,28 @@ class OaiPmhImplTest {
     assertTrue(body.contains(expectedMessage));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
-
-  @Test
-  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_SRS_ERROR_RESPONSE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    String body = request.when()
-      .get()
-      .then()
-      .statusCode(500)
-      .extract()
-      .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
-    assertTrue(body.contains(expectedMessage));
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
+//kek2
+//  @Test
+//  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
+//    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+//
+//    RequestSpecification request = createBaseRequest()
+//      .with()
+//      .param(VERB_PARAM, LIST_RECORDS.value())
+//      .param(FROM_PARAM, DATE_SRS_ERROR_RESPONSE)
+//      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+//
+//    String body = request.when()
+//      .get()
+//      .then()
+//      .statusCode(500)
+//      .extract()
+//      .asString();
+//    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
+//    assertTrue(body.contains(expectedMessage));
+//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+//  }
 
   @Test
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {

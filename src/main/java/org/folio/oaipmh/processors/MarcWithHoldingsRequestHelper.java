@@ -454,9 +454,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-    Optional<PgPool> pgPool = PostgresClientFactory.getPool(request.getTenant());
+    PgPool pgPool = PostgresClientFactory.getPool(vertxContext.owner(), request.getTenant());
     try {
-      if (pgPool.isPresent()) {
+      if (Objects.nonNull(pgPool)) {
         queue.set((ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters"));
       } else {
         throw new IllegalStateException("Cannot obtain the pool. Pool is null.");

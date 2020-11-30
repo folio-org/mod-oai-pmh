@@ -93,8 +93,8 @@ public class PostgresClientFactory {
     return client;
   }
 
-  public static Optional<PgPool> getPool(String tenantId) {
-    return Optional.ofNullable(POOL_CACHE.get(tenantId));
+  public static PgPool getPool(Vertx vertx, String tenantId) {
+    return getCachedPool(vertx, tenantId);
   }
 
   // NOTE: This should be able to get database configuration without PostgresClient.
