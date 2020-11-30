@@ -1,0 +1,28 @@
+{
+  "instanceid": "set_instance_id",
+  "itemsandholdingsfields": {
+    "items": [
+      {
+        "id": "set_instance_item_id",
+        "volume": null,
+        "location": {
+          "location": {
+            "campusId": "set_instance_item_campusId_id",
+            "libraryId": "set_instance_item__libraryId_id",
+            "campusName": "City Campus",
+            "libraryName": "Datalogisk Institut",
+            "institutionId": "set_instance_item_id_institutionId",
+            "institutionName": "Københavns Universitet"
+          }
+        },
+        "callNumber": {
+          "callNumber": "some-callnumber"
+        },
+        "enumeration": null,
+        "materialType": "book",
+        "electronicAccess": null
+      }
+    ],
+    "instanceid": "set_instance_id"
+  }
+}

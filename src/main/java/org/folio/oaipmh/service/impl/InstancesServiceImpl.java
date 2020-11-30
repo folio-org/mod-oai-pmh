@@ -69,7 +69,11 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
-    return instancesDao.saveInstances(instances, tenantId);
+    try {
+      return instancesDao.saveInstances(instances, tenantId);
+    } catch (Throwable throwable) {
+      return Future.failedFuture(throwable);
+    }
   }
 
   @Override

@@ -19,6 +19,7 @@ import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
+import javax.validation.constraints.NotEmpty;
 import javax.ws.rs.NotFoundException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -36,8 +37,9 @@ import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
 @Repository
 public class InstancesDaoImpl implements InstancesDao {
 
-  public static final String REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST = "Request metadata with requestId - \"%s\" does not exists";
   protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+  private static final String REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST = "Request metadata with requestId - \"%s\" does not exists";
 
   private PostgresClientFactory postgresClientFactory;
 
@@ -150,6 +152,10 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
+    if(instances.isEmpty()) {
+      logger.debug("Skip saving instances. Instances list is empty.");
+      return Future.succeededFuture();
+    }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
       InsertValuesStep3<InstancesRecord, UUID, String, String> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
         INSTANCES.JSON, INSTANCES.REQUEST_ID);

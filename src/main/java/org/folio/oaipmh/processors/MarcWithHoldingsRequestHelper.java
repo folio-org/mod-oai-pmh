@@ -30,6 +30,7 @@ import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ReflectionUtils;
@@ -83,7 +84,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
-  public static final AtomicInteger activeQuiresCount = new AtomicInteger();
+//  public static final AtomicInteger activeQuiresCount = new AtomicInteger();
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -104,6 +105,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
+  }
+
+  private MarcWithHoldingsRequestHelper() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
   /**
@@ -522,6 +527,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jp.endHandler(e -> {
           databaseWriteStream.end();
           inventoryHttpClient.close();
+        })
+        .exceptionHandler(throwable -> {
+          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+          databaseWriteStream.end();
+          inventoryHttpClient.close();
+          promise.fail(throwable);
         });
       }
     });
@@ -543,12 +554,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, requestId);
-    instancesService.saveInstances(instancesList, request.getTenant()).onComplete(res -> {
+    instancesService.saveInstances(instancesList, request.getTenant()).onComplete(res -> { //here NPE
       if (res.failed()) {
-        logger.error("Cannot get connection for saving ids: " + res.cause().getMessage(), res.cause());
+        logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
         promise.fail(res.cause());
       } else {
-        logger.info("Save instance complete");
+        logger.info("Save instances complete");
         promise.complete();
         databaseWriteStream.invokeDrainHandler();
       }
