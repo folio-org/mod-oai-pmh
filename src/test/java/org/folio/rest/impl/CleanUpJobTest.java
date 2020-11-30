@@ -8,19 +8,24 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
+import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
+import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -35,12 +40,16 @@ import java.util.stream.Collectors;
 import static java.util.Objects.nonNull;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
+import static org.folio.rest.jooq.Tables.INSTANCES;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 public class CleanUpJobTest extends AbstractInstancesTest {
+
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -61,6 +70,7 @@ public class CleanUpJobTest extends AbstractInstancesTest {
     String moduleVersion = PomReader.INSTANCE.getVersion();
     String moduleId = moduleName + "-" + moduleVersion;
 
+    logger.info("Test setup starting for " + moduleId);
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
@@ -77,12 +87,7 @@ public class CleanUpJobTest extends AbstractInstancesTest {
         Context context = vertx.getOrCreateContext();
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
-        try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-          connection.prepareStatement("create schema oaitest_mod_oai_pmh")
-            .execute();
-        } catch (Exception ex) {
-          testContext.failNow(ex);
-        }
+        TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
         LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
         new OkapiMockServer(vertx, mockPort).start(testContext);
         testContext.completeNow();
@@ -90,6 +95,12 @@ public class CleanUpJobTest extends AbstractInstancesTest {
         testContext.failNow(e);
       }
     }));
+  }
+
+  @AfterAll
+  void afterAll() {
+    PostgresClientFactory.closeAll();
+    PostgresClient.stopEmbeddedPostgres();
   }
 
   @Test

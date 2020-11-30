@@ -43,6 +43,8 @@ import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIM
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -99,7 +101,10 @@ import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.common.TestUtil;
+import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jooq.Tables;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -152,6 +157,7 @@ import net.jcip.annotations.NotThreadSafe;
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
+
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
@@ -214,15 +220,14 @@ class OaiPmhImplTest {
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
-    try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh").execute();
-    }
+    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
   }
 
   @AfterAll
   void cleanUpAfterAll() {
+    PostgresClientFactory.closeAll();
     PostgresClient.stopEmbeddedPostgres();
   }
 

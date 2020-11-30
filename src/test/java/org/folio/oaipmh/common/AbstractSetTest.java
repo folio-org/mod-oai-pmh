@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableList;
 
 public abstract class AbstractSetTest {
 
-  protected static final String TEST_TENANT_ID = "oaiTest";
   protected static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   protected static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 

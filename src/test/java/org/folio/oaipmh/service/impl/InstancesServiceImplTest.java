@@ -4,6 +4,8 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -11,6 +13,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
+import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.impl.OkapiMockServer;
@@ -33,11 +36,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.jooq.Tables.INSTANCES;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
 import static org.junit.Assert.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
 public class InstancesServiceImplTest extends AbstractInstancesTest {
+
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -58,15 +65,10 @@ public class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @BeforeAll
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+    logger.info("Test setup starting for " + TestUtil.getModuleId());
     PostgresClient.getInstance(vertx)
       .startEmbeddedPostgres();
-
-    try (Connection connection = SingleConnectionProvider.getConnection(vertx, TEST_TENANT_ID)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
-        .execute();
-    } catch (Exception ex) {
-      testContext.failNow(ex);
-    }
+    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
     Context context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);

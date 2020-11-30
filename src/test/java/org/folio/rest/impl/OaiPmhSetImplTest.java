@@ -4,12 +4,12 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
-import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractSetTest;
+import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.RestVerticle;
@@ -75,11 +75,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
-    String moduleName = PomReader.INSTANCE.getModuleName()
-      .replaceAll("_", "-");
-    String moduleVersion = PomReader.INSTANCE.getVersion();
-    String moduleId = moduleName + "-" + moduleVersion;
-    logger.info("Test setup starting for " + moduleId);
+    logger.info("Test setup starting for " + TestUtil.getModuleId());
 
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
@@ -97,12 +93,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         Context context = vertx.getOrCreateContext();
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
-        try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-          connection.prepareStatement("create schema oaitest_mod_oai_pmh")
-            .execute();
-        } catch (Exception ex) {
-          testContext.failNow(ex);
-        }
+        TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
         LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
         new OkapiMockServer(vertx, mockPort).start(testContext);
         testContext.completeNow();
@@ -143,6 +134,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @AfterAll
   void afterAll() {
+    PostgresClient.stopEmbeddedPostgres();
     PostgresClientFactory.closeAll();
   }
 
