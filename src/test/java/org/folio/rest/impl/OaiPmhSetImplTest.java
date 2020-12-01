@@ -134,7 +134,6 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @AfterAll
   void afterAll() {
-    PostgresClient.stopEmbeddedPostgres();
     PostgresClientFactory.closeAll();
   }
 
