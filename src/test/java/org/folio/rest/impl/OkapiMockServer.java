@@ -125,7 +125,6 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
   private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
-  private static final String ENRICHED_INSTANCES_JSON = "enriched_instances.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
 
@@ -210,7 +209,7 @@ public class OkapiMockServer {
       .toJsonObject()
       .getJsonArray(INSTANCE_IDS);
     logger.debug("Before building response for enriched instances, instanceIds: " + String.join(",", instanceIds.getList()));
-    if (instanceIds.size() <= 1 && instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
+    if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
       logger.debug("Failure EI response");
       failureResponse(ctx);
     } else {
@@ -267,7 +266,7 @@ public class OkapiMockServer {
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody()
       .toJsonArray();
-    if (instanceIds.size() <=1 && instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
+    if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);

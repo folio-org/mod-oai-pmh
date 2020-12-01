@@ -20,11 +20,6 @@ public class TestUtil {
       connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
         .execute();
       connection.setSchema("oaitest_mod_oai_pmh");
-      String truncatedTables = tables.stream()
-        .map(Named::getName)
-        .collect(Collectors.joining(","));
-      connection.prepareStatement("TRUNCATE " + truncatedTables)
-        .execute();
     } catch (Exception ex) {
       testContext.failNow(ex);
     }
