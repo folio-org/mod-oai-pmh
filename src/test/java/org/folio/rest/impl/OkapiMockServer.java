@@ -209,9 +209,12 @@ public class OkapiMockServer {
     JsonArray instanceIds = ctx.getBody()
       .toJsonObject()
       .getJsonArray(INSTANCE_IDS);
-    if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
+    logger.debug("Before building response for enriched instances, instanceIds: " + String.join(",", instanceIds.getList()));
+    if (instanceIds.size() <= 1 && instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
+      logger.debug("Failure EI response");
       failureResponse(ctx);
     } else {
+      logger.debug("Success EI response");
       inventoryViewSuccessResponse(ctx, instanceIds);
     }
   }
@@ -264,7 +267,7 @@ public class OkapiMockServer {
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody()
       .toJsonArray();
-    if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
+    if (instanceIds.size() <=1 && instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
@@ -341,13 +344,23 @@ public class OkapiMockServer {
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
     String path = INVENTORY_VIEW_PATH + jsonFileName;
-    String response = getJsonObjectFromFile(path);
-    Buffer buffer = Buffer.buffer(response);
+//    String response = getJsonObjectFromFile(path);
+//    Buffer buffer = Buffer.buffer(response);
+    System.out.println("Path value" + path);
+    logger.debug("Logger: Path value: " + path);
+    Buffer buffer;
+    try {
+      buffer = vertx.fileSystem().readFileBlocking(path);
+    } catch (Exception ex) {
+      buffer = vertx.fileSystem().readFileBlocking(path);
+    }
     routingContext.response().setStatusCode(200).end(buffer);
   }
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, JsonArray instanceIds) {
+    logger.debug("building enriched instances response for instanceIds: " + String.join("," ,instanceIds.getList()));
     String response = generateEnrichedInstancesResponse(instanceIds);
+    logger.debug("Built response: " + response);
     Buffer buffer = Buffer.buffer(response);
     routingContext.response()
       .setStatusCode(200)

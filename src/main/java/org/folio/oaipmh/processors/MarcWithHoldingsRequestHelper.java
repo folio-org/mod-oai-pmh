@@ -1,6 +1,71 @@
 package org.folio.oaipmh.processors;
 
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+
+import java.lang.reflect.Field;
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.oaipmh.service.InstancesService;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.spring.SpringContextUtil;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.ReflectionUtils;
+
 import com.google.common.collect.Maps;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -17,48 +82,6 @@ import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.impl.Connection;
-import org.apache.commons.collections4.CollectionUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.folio.rest.jooq.tables.pojos.Instances;
-import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.folio.rest.tools.utils.TenantTool;
-import org.folio.spring.SpringContextUtil;
-import org.openarchives.oai._2.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ReflectionUtils;
-
-import javax.ws.rs.core.Response;
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.*;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -83,8 +106,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
-
-//  public static final AtomicInteger activeQuiresCount = new AtomicInteger();
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -126,11 +147,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
 
       String requestId;
+      RequestMetadataLb requestMetadata = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
+        requestMetadata.setRequestId(UUID.fromString(requestId));
+        instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
+          .onFailure(th ->  handleException(promise, th));
       } else {
         requestId = request.getRequestId();
-        updateLastUpdateDateForRequestMetadata(requestId, request.getTenant());
+        instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
+          .onFailure(th -> handleException(promise, th));
       }
 
       Promise<Void> fetchingIdsPromise;
@@ -150,17 +176,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       handleException(promise, e);
     }
     return promise.future();
-  }
-
-  //TODO можно ли просто закомплитать внешний промис вместо срова экспшина
-  private void updateLastUpdateDateForRequestMetadata(String requestId, String tenantId) {
-    RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
-    requestMetadataLb.setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
-    instancesService.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId).onComplete(res -> {
-      if (res.failed()) {
-        throw new IllegalStateException(res.cause().getMessage(), res.cause());
-      }
-    });
   }
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
@@ -251,6 +266,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
     enrichInventoryClientRequest.end(entries.encode());
+
+    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    try {
+      queue.set(getWaitersQueue(context.owner(), request));
+    } catch (NullPointerException ex) {
+      logger.error("Cannot get the pool size. Object for retrieving field is null.");
+      completePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
+      return completePromise.future();
+    } catch (IllegalStateException ex) {
+      logger.error(ex.getMessage());
+      completePromise.fail(ex);
+      return completePromise.future();
+    }
+
+    databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
     databaseWriteStream.handleBatch(batch -> {
       try {
@@ -459,13 +489,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-    PgPool pgPool = PostgresClientFactory.getPool(vertxContext.owner(), request.getTenant());
     try {
-      if (Objects.nonNull(pgPool)) {
-        queue.set((ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters"));
-      } else {
-        throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
-      }
+      queue.set(getWaitersQueue(vertxContext.owner(), request));
     } catch (NullPointerException ex) {
       logger.error("Cannot get the pool size. Object for retrieving field is null.");
       oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
@@ -510,6 +535,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return ReflectionUtils.getField(field, obj);
   }
 
+  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) throws NullPointerException, IllegalStateException {
+    PgPool pgPool = PostgresClientFactory.getPool(vertx, request.getTenant());
+    if (Objects.nonNull(pgPool)) {
+      return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+    } else {
+      throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
+    }
+  }
+
   private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
     final Vertx vertx = vertxContext.owner();
 
@@ -518,7 +552,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     inventoryQuery.handler(resp -> {
       if (resp.statusCode() != 200) {
         String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-        logger.error(errorMsg);
+        resp.bodyHandler(buffer -> {
+          logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString());
+        });
         promise.fail(new IllegalStateException(errorMsg));
       } else {
         JsonParser jp = new JsonParserImpl(resp);
