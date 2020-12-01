@@ -1,13 +1,10 @@
 package org.folio.oaipmh.common;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.rest.tools.PomReader;
-import org.jooq.Named;
 import org.jooq.Table;
 
 import io.vertx.core.Vertx;
