@@ -82,6 +82,7 @@ public class OkapiMockServer {
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSATNCES_IDS_DATE = "1444-01-01";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
+  static final String SOME_DATE = "1999-01-01";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -199,7 +200,8 @@ public class OkapiMockServer {
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
       } else {
-        fail("There is no mock response");
+        logger.debug("No mocks for the response, returning the default instance id");
+        inventoryViewSuccessResponse(ctx, "default_instance.json");
       }
     }
   }
@@ -304,6 +306,9 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+        successResponse(ctx, json);
+      } else if (uri.contains(SOME_DATE)) {
+        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + "/some_srs_record.json");
         successResponse(ctx, json);
       } else {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
