@@ -80,7 +80,7 @@ public class OkapiMockServer {
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
-  static final String EMPTY_INSATNCES_IDS_DATE = "1444-01-01";
+  static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
 
   // Instance UUID
@@ -194,7 +194,7 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, ALL_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_SRS_ERROR_RESPONSE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON);
-      } else if (uri.contains(EMPTY_INSATNCES_IDS_DATE)) {
+      } else if (uri.contains(EMPTY_INSTANCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
@@ -343,9 +343,6 @@ public class OkapiMockServer {
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
     String path = INVENTORY_VIEW_PATH + jsonFileName;
-//    String response = getJsonObjectFromFile(path);
-//    Buffer buffer = Buffer.buffer(response);
-    System.out.println("Path value" + path);
     logger.debug("Logger: Path value: " + path);
     Buffer buffer;
     try {
@@ -353,6 +350,7 @@ public class OkapiMockServer {
     } catch (Exception ex) {
       buffer = vertx.fileSystem().readFileBlocking(path);
     }
+    logger.debug("Ending response for instance ids with buffer: " + buffer.toString());
     routingContext.response().setStatusCode(200).end(buffer);
   }
 

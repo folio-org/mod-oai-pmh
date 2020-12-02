@@ -33,13 +33,14 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSATNCES_IDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
+import static org.folio.rest.impl.OkapiMockServer.SOME_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -1917,7 +1918,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, EMPTY_INSATNCES_IDS_DATE)
+      .param(FROM_PARAM, EMPTY_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -2103,5 +2104,30 @@ class OaiPmhImplTest {
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
   }
+
+
+//  @ParameterizedTest
+//  @MethodSource("allMetadataPrefixes")
+//  void test(MetadataPrefix metadataPrefix) {
+//    RequestSpecification request = createBaseRequest()
+//      .with()
+//      .param(VERB_PARAM, LIST_RECORDS.value())
+//      .param(FROM_PARAM, SOME_DATE)
+//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+//
+//    verify200WithXml(request, LIST_RECORDS);
+//  }
+
+
+  private static Stream<Arguments> allMetadataPrefixes() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      if (!prefix.getName().equals(MetadataPrefix.DC.getName())) {
+        builder.add(Arguments.arguments(prefix));
+      }
+    }
+    return builder.build();
+  }
+
 
 }
