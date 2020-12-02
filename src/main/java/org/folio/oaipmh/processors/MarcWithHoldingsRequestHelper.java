@@ -528,7 +528,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
    * In future we can consider using static AtomicInteger to count the number of current db requests.
    * It will be more readable in code, but less reliable because wouldn't take into account other requests.
    */
-  private Object getValueFrom(Object obj, String fieldName) {
+  private Object getValueFrom(Object obj, String fieldName) throws NullPointerException {
     Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
     ReflectionUtils.makeAccessible(field);
     return ReflectionUtils.getField(field, obj);
