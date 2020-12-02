@@ -66,7 +66,7 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
-  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 7200;
+  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
   private InstancesService instancesService;
   private VerbValidator validator;

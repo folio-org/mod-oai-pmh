@@ -132,7 +132,6 @@ public class InstancesDaoImpl implements InstancesDao {
       }));
   }
 
-  // possible problem -> before passing list of string convert it to list of UUID's
   @Override
   public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
@@ -174,7 +173,6 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(this::queryResultToInstancesList));
   }
 
-  // inline variable
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
     List<Instances> instances = queryResult.stream()
       .map(QueryResult::unwrap)
