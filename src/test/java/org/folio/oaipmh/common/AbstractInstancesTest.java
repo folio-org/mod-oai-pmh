@@ -23,7 +23,7 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 
 public abstract class AbstractInstancesTest {
 
-  protected static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 7200;
+  protected static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
   protected static final String COMMON_JSON = "{\"instanceId\": \"00000000-0000-4000-a000-000000000000\", \"source\": \"FOLIO\", \"updatedDate\": \"2020-06-15T11:07:48.563Z\",  \"deleted\": \"false\",  \"suppressFromDiscovery\": \"false\"}" ;
 
