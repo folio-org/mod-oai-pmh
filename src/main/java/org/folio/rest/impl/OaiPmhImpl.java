@@ -33,7 +33,6 @@ import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.*;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -57,6 +56,11 @@ import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
