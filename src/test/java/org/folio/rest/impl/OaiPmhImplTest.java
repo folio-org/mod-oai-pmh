@@ -33,7 +33,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSATNCES_IDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
@@ -1918,7 +1918,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, EMPTY_INSATNCES_IDS_DATE)
+      .param(FROM_PARAM, EMPTY_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -2106,17 +2106,17 @@ class OaiPmhImplTest {
   }
 
 
-  @ParameterizedTest
-  @MethodSource("allMetadataPrefixes")
-  void test(MetadataPrefix metadataPrefix) {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, SOME_DATE)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    verify200WithXml(request, LIST_RECORDS);
-  }
+//  @ParameterizedTest
+//  @MethodSource("allMetadataPrefixes")
+//  void test(MetadataPrefix metadataPrefix) {
+//    RequestSpecification request = createBaseRequest()
+//      .with()
+//      .param(VERB_PARAM, LIST_RECORDS.value())
+//      .param(FROM_PARAM, SOME_DATE)
+//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+//
+//    verify200WithXml(request, LIST_RECORDS);
+//  }
 
 
   private static Stream<Arguments> allMetadataPrefixes() {
