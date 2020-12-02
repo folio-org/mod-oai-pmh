@@ -2106,7 +2106,6 @@ class OaiPmhImplTest {
   }
 
 
-
   @ParameterizedTest
   @MethodSource("allMetadataPrefixes")
   void test(MetadataPrefix metadataPrefix) {

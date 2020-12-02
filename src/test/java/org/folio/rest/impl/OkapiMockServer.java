@@ -128,6 +128,9 @@ public class OkapiMockServer {
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
+  private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
+  private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
+  private static final String IGOR_SOME_SRS_RECORD = "/some_srs_record.json";
 
   private final int port;
   private final Vertx vertx;
@@ -201,7 +204,7 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
       } else {
         logger.debug("No mocks for the response, returning the default instance id");
-        inventoryViewSuccessResponse(ctx, "default_instance.json");
+        inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
     }
   }
@@ -270,6 +273,8 @@ public class OkapiMockServer {
       .toJsonArray();
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
+    } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
+      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + IGOR_SOME_SRS_RECORD));
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
@@ -308,7 +313,7 @@ public class OkapiMockServer {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
       } else if (uri.contains(SOME_DATE)) {
-        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + "/some_srs_record.json");
+        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + IGOR_SOME_SRS_RECORD);
         successResponse(ctx, json);
       } else {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
