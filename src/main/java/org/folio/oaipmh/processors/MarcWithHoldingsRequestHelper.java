@@ -548,9 +548,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     inventoryQuery.handler(resp -> {
       if (resp.statusCode() != 200) {
         String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-        resp.bodyHandler(buffer -> {
-          logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString());
-        });
+        resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
         promise.fail(new IllegalStateException(errorMsg));
       } else {
         JsonParser jp = new JsonParserImpl(resp);

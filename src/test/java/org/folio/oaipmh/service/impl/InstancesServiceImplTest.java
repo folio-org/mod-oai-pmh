@@ -11,7 +11,6 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.NotFoundException;
-import java.sql.Connection;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +40,7 @@ import static org.junit.Assert.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
-public class InstancesServiceImplTest extends AbstractInstancesTest {
+class InstancesServiceImplTest extends AbstractInstancesTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

@@ -46,7 +46,7 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
-public class CleanUpJobTest extends AbstractInstancesTest {
+class CleanUpJobTest extends AbstractInstancesTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 

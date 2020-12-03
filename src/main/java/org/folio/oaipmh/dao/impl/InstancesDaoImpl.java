@@ -19,7 +19,6 @@ import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
-import javax.validation.constraints.NotEmpty;
 import javax.ws.rs.NotFoundException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -174,7 +173,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
-    List<Instances> instances = queryResult.stream()
+    return queryResult.stream()
       .map(QueryResult::unwrap)
       .map(Row.class::cast)
       .map(row -> {
@@ -185,7 +184,6 @@ public class InstancesDaoImpl implements InstancesDao {
         return pojo;
       })
       .collect(Collectors.toList());
-    return instances;
   }
 
   private List<String> mapRequestIdsResultToList(QueryResult requestIds) {
