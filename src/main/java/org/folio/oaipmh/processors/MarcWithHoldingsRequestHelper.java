@@ -527,7 +527,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return ReflectionUtils.getField(field, obj);
   }
 
-  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) throws IllegalStateException {
+  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) {
     PgPool pgPool = PostgresClientFactory.getPool(vertx, request.getTenant());
     if (Objects.nonNull(pgPool)) {
       try {
