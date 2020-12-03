@@ -269,10 +269,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(context.owner(), request));
-    } catch (NullPointerException ex) {
-      logger.error("Cannot get the pool size. Object for retrieving field is null.");
-      completePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
-      return completePromise.future();
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       completePromise.fail(ex);
@@ -490,13 +486,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(vertxContext.owner(), request));
-    } catch (NullPointerException ex) {
-      logger.error("Cannot get the pool size. Object for retrieving field is null.");
-      oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
-      return completePromise;
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       oaiPmhResponsePromise.fail(ex);
+      return completePromise;
     }
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
@@ -528,16 +521,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
    * In future we can consider using static AtomicInteger to count the number of current db requests.
    * It will be more readable in code, but less reliable because wouldn't take into account other requests.
    */
-  private Object getValueFrom(Object obj, String fieldName) throws NullPointerException {
+  private Object getValueFrom(Object obj, String fieldName) {
     Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
     ReflectionUtils.makeAccessible(field);
     return ReflectionUtils.getField(field, obj);
   }
 
-  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) throws NullPointerException, IllegalStateException {
+  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) throws IllegalStateException {
     PgPool pgPool = PostgresClientFactory.getPool(vertx, request.getTenant());
     if (Objects.nonNull(pgPool)) {
-      return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+      try {
+        return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+      } catch (NullPointerException ex) {
+        throw new IllegalStateException("Cannot get the pool size. Object for retrieving field is null.");
+      }
     } else {
       throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
     }
