@@ -1,350 +1,542 @@
 {
   "sourceRecords": [
     {
-      "recordId": "replace_record_UUID",
-      "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
+      "id": "75fc92ce-fe40-4515-949e-076394aedb7f",
+      "deleted": false,
+      "snapshotId": "67dfac11-1caf-4470-9ad1-d533f6360bdd",
+      "matchedId": "75fc92ce-fe40-4515-949e-076394aedb7f",
+      "generation": 0,
       "recordType": "MARC",
+      "rawRecord": {
+        "id": "75fc92ce-fe40-4515-949e-076394aedb7f",
+        "content": "{\"leader\": \"02035cam a22004454a 4500\", \"fields\": [{\"001\": \"2182389\"}, {\"005\": \"20171108132600.0\"}, {\"008\": \"070718t20082008mduab    b    001 0 eng  \"}, {\"010\": {\"subfields\": [{\"a\": \"  2007029526\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"020\": {\"subfields\": [{\"a\": \"9780742534100 (cloth : alk. paper)\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"020\": {\"subfields\": [{\"a\": \"0742534103 (cloth : alk. paper)\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"020\": {\"subfields\": [{\"a\": \"9780742534117 (pbk. : alk. paper)\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"020\": {\"subfields\": [{\"a\": \"0742534111 (pbk. : alk. paper)\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"035\": {\"subfields\": [{\"a\": \"(OCoLC)ocn156874791\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"035\": {\"subfields\": [{\"a\": \"(OCoLC)156874791\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"035\": {\"subfields\": [{\"a\": \"2182389\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"040\": {\"subfields\": [{\"a\": \"DLC\"}, {\"c\": \"DLC\"}, {\"d\": \"BTCTA\"}, {\"d\": \"BAKER\"}, {\"d\": \"C#P\"}, {\"d\": \"YDXCP\"}, {\"d\": \"IXA\"}, {\"d\": \"UtOrBLW\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"043\": {\"subfields\": [{\"a\": \"e-fr---\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"049\": {\"subfields\": [{\"a\": \"ALMM\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"050\": {\"subfields\": [{\"a\": \"DC149\"}, {\"b\": \".N44 2008\"}], \"ind1\": \"0\", \"ind2\": \"0\"}}, {\"082\": {\"subfields\": [{\"a\": \"944.04\"}, {\"2\": \"22\"}], \"ind1\": \"0\", \"ind2\": \"0\"}}, {\"100\": {\"subfields\": [{\"a\": \"Neely, Sylvia.\"}, {\"0\": \"http://id.loc.gov/authorities/names/n90717906\"}], \"ind1\": \"1\", \"ind2\": \" \"}}, {\"245\": {\"subfields\": [{\"a\": \"A concise history of the French Revolution /\"}, {\"c\": \"Sylvia Neely.\"}], \"ind1\": \"1\", \"ind2\": \"2\"}}, {\"264\": {\"subfields\": [{\"a\": \"Lanham :\"}, {\"b\": \"Rowman & Littlefield Publishers,\"}, {\"c\": \"[2008]\"}], \"ind1\": \" \", \"ind2\": \"1\"}}, {\"264\": {\"subfields\": [{\"a\": \"Lanham :\"}, {\"b\": \"Distributed by National Book Network\"}], \"ind1\": \" \", \"ind2\": \"2\"}}, {\"264\": {\"subfields\": [{\"c\": \"008\"}], \"ind1\": \" \", \"ind2\": \"4\"}}, {\"300\": {\"subfields\": [{\"a\": \"xvii, 287 pages :\"}, {\"b\": \"illustrations, maps ;\"}, {\"c\": \"24 cm.\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"336\": {\"subfields\": [{\"a\": \"text\"}, {\"b\": \"txt\"}, {\"2\": \"rdacontent\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"337\": {\"subfields\": [{\"a\": \"unmediated\"}, {\"b\": \"n\"}, {\"2\": \"rdamedia\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"338\": {\"subfields\": [{\"a\": \"volume\"}, {\"b\": \"nc\"}, {\"2\": \"rdacarrier\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"490\": {\"subfields\": [{\"a\": \"Critical issues in history\"}], \"ind1\": \"1\", \"ind2\": \" \"}}, {\"504\": {\"subfields\": [{\"a\": \"Includes bibliographical references (p. 267-274) and index.\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"505\": {\"subfields\": [{\"a\": \"The Ancien Regime, its critics and supporters -- The financial crisis -- The Estates General and the General Assembly -- Creating the new regime -- Polarization and the flight to Varennes -- The failure of constitutional government -- The Convention -- Terror and war -- Thermidor and the Directory.\"}], \"ind1\": \"0\", \"ind2\": \" \"}}, {\"651\": {\"subfields\": [{\"a\": \"France\"}, {\"x\": \"History\"}, {\"y\": \"Revolution, 1789-1799.\"}, {\"0\": \"http://id.loc.gov/authorities/subjects/sh85051319\"}], \"ind1\": \" \", \"ind2\": \"0\"}}, {\"830\": {\"subfields\": [{\"a\": \"Critical issues in history.\"}, {\"0\": \"http://id.loc.gov/authorities/names/n99002874\"}], \"ind1\": \" \", \"ind2\": \"0\"}}, {\"938\": {\"subfields\": [{\"a\": \"Baker & Taylor\"}, {\"b\": \"BKTY\"}, {\"c\": \"24.95\"}, {\"d\": \"18.71\"}, {\"i\": \"0742534103\"}, {\"n\": \"0007433208\"}, {\"s\": \"active\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"938\": {\"subfields\": [{\"a\": \"YBP Library Services\"}, {\"b\": \"YANK\"}, {\"n\": \"2612951\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"938\": {\"subfields\": [{\"a\": \"Baker & Taylor\"}, {\"b\": \"BKTY\"}, {\"c\": \"22.95\"}, {\"d\": \"22.95\"}, {\"i\": \"0742534111\"}, {\"n\": \"0007618566\"}, {\"s\": \"active\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"938\": {\"subfields\": [{\"a\": \"Baker and Taylor\"}, {\"b\": \"BTCP\"}, {\"n\": \"BK0007618566\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"994\": {\"subfields\": [{\"a\": \"C0\"}, {\"b\": \"ALM\"}], \"ind1\": \" \", \"ind2\": \" \"}}, {\"999\": {\"subfields\": [{\"i\": \"482b0d18-39dc-480d-80b4-746e87efd4e8\"}, {\"s\": \"75fc92ce-fe40-4515-949e-076394aedb7f\"}], \"ind1\": \"f\", \"ind2\": \"f\"}}]}"
+      },
       "parsedRecord": {
-        "id": "e5eef701-8880-47eb-a7c3-8b2dddd1ebe3",
+        "id": "75fc92ce-fe40-4515-949e-076394aedb7f",
         "content": {
-          "leader": "01344nja a2200289 c 4500",
+          "leader": "02035cam a22004454a 4500",
           "fields": [
             {
-              "001": "1011162431"
+              "001": "2182389"
             },
             {
-              "003": "DE-601"
+              "005": "20171108132600.0"
             },
             {
-              "005": "20180118183625.0"
+              "008": "070718t20082008mduab    b    001 0 eng  "
             },
             {
-              "007": "su uuuuuuuuuuu"
+              "010": {
+                "subfields": [
+                  {
+                    "a": "  2007029526"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
             },
             {
-              "008": "180118s2017                  000 0 ger d"
+              "020": {
+                "subfields": [
+                  {
+                    "a": "9780742534100 (cloth : alk. paper)"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "020": {
+                "subfields": [
+                  {
+                    "a": "0742534103 (cloth : alk. paper)"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "020": {
+                "subfields": [
+                  {
+                    "a": "9780742534117 (pbk. : alk. paper)"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "020": {
+                "subfields": [
+                  {
+                    "a": "0742534111 (pbk. : alk. paper)"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
             },
             {
               "035": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "(DE-599)GBV1011162431"
+                    "a": "(OCoLC)ocn156874791"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "035": {
+                "subfields": [
+                  {
+                    "a": "(OCoLC)156874791"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "035": {
+                "subfields": [
+                  {
+                    "a": "2182389"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
               "040": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "b": "ger"
+                    "a": "DLC"
                   },
                   {
-                    "c": "GBVCP"
+                    "c": "DLC"
                   },
                   {
-                    "e": "rda"
+                    "d": "BTCTA"
+                  },
+                  {
+                    "d": "BAKER"
+                  },
+                  {
+                    "d": "C#P"
+                  },
+                  {
+                    "d": "YDXCP"
+                  },
+                  {
+                    "d": "IXA"
+                  },
+                  {
+                    "d": "UtOrBLW"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
-              "041": {
-                "ind1": "0",
-                "ind2": " ",
+              "043": {
                 "subfields": [
                   {
-                    "a": "ger"
+                    "a": "e-fr---"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "049": {
+                "subfields": [
+                  {
+                    "a": "ALMM"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "050": {
+                "subfields": [
+                  {
+                    "a": "DC149"
+                  },
+                  {
+                    "b": ".N44 2008"
+                  }
+                ],
+                "ind1": "0",
+                "ind2": "0"
+              }
+            },
+            {
+              "082": {
+                "subfields": [
+                  {
+                    "a": "944.04"
+                  },
+                  {
+                    "2": "22"
+                  }
+                ],
+                "ind1": "0",
+                "ind2": "0"
               }
             },
             {
               "100": {
-                "ind1": "1",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "Bach, Johann Sebastian"
+                    "a": "Neely, Sylvia."
                   },
                   {
-                    "e": "KomponistIn"
-                  },
-                  {
-                    "4": "cmp"
-                  },
-                  {
-                    "0": "(DE-601)134579348"
-                  },
-                  {
-                    "0": "(DE-588)11850553X"
+                    "0": "http://id.loc.gov/authorities/names/n90717906"
                   }
-                ]
-              }
-            },
-            {
-              "240": {
+                ],
                 "ind1": "1",
-                "ind2": "0",
-                "subfields": [
-                  {
-                    "0": "(DE-601)701589477"
-                  },
-                  {
-                    "0": "(DE-588)300007736"
-                  },
-                  {
-                    "a": "Ich habe genung"
-                  }
-                ]
+                "ind2": " "
               }
             },
             {
               "245": {
-                "ind1": "1",
-                "ind2": "0",
                 "subfields": [
                   {
-                    "a": "Cantatas for bass"
+                    "a": "A concise history of the French Revolution /"
                   },
                   {
-                    "n": "4"
-                  },
-                  {
-                    "p": "Ich habe genug : BWV 82 / Johann Sebastian Bach ; Matthias Goerne, baritone ; Freiburger Barockorchester, Gottfried von der Goltz, violin and conductor"
+                    "c": "Sylvia Neely."
                   }
-                ]
+                ],
+                "ind1": "1",
+                "ind2": "2"
               }
             },
             {
-              "246": {
-                "ind1": "1",
-                "ind2": "3",
+              "264": {
                 "subfields": [
                   {
-                    "i": "Abweichender Titel"
+                    "a": "Lanham :"
                   },
                   {
-                    "a": "Ich habe genung"
+                    "b": "Rowman & Littlefield Publishers,"
+                  },
+                  {
+                    "c": "[2008]"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": "1"
+              }
+            },
+            {
+              "264": {
+                "subfields": [
+                  {
+                    "a": "Lanham :"
+                  },
+                  {
+                    "b": "Distributed by National Book Network"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": "2"
+              }
+            },
+            {
+              "264": {
+                "subfields": [
+                  {
+                    "c": "2008"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": "4"
               }
             },
             {
               "300": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "Track 10-14"
+                    "a": "xvii, 287 pages :"
+                  },
+                  {
+                    "b": "illustrations, maps ;"
+                  },
+                  {
+                    "c": "24 cm."
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
               "336": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "aufgeführte Musik"
+                    "a": "text"
                   },
                   {
-                    "b": "prm"
+                    "b": "txt"
                   },
                   {
                     "2": "rdacontent"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
               "337": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "audio"
+                    "a": "unmediated"
                   },
                   {
-                    "b": "s"
+                    "b": "n"
                   },
                   {
                     "2": "rdamedia"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
               "338": {
-                "ind1": " ",
-                "ind2": " ",
                 "subfields": [
                   {
-                    "a": "Audiodisk"
+                    "a": "volume"
                   },
                   {
-                    "b": "sd"
+                    "b": "nc"
                   },
                   {
                     "2": "rdacarrier"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
-              "700": {
+              "490": {
+                "subfields": [
+                  {
+                    "a": "Critical issues in history"
+                  }
+                ],
                 "ind1": "1",
-                "ind2": " ",
-                "subfields": [
-                  {
-                    "a": "Arfken, Katharina"
-                  },
-                  {
-                    "e": "InstrumentalmusikerIn"
-                  },
-                  {
-                    "4": "itr"
-                  },
-                  {
-                    "0": "(DE-601)576364940"
-                  },
-                  {
-                    "0": "(DE-588)135158265"
-                  }
-                ]
+                "ind2": " "
               }
             },
             {
-              "700": {
-                "ind1": "1",
-                "ind2": " ",
+              "504": {
                 "subfields": [
                   {
-                    "a": "Goltz, Gottfried von der"
-                  },
-                  {
-                    "e": "DirigentIn"
-                  },
-                  {
-                    "4": "cnd"
-                  },
-                  {
-                    "0": "(DE-601)081724969"
-                  },
-                  {
-                    "0": "(DE-588)122080912"
+                    "a": "Includes bibliographical references (p. 267-274) and index."
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
-              "710": {
-                "ind1": "2",
-                "ind2": " ",
+              "505": {
                 "subfields": [
                   {
-                    "a": "Freiburger Barockorchester"
-                  },
-                  {
-                    "e": "InstrumentalmusikerIn"
-                  },
-                  {
-                    "4": "itr"
-                  },
-                  {
-                    "0": "(DE-601)12121060X"
-                  },
-                  {
-                    "0": "(DE-588)5066798-1"
+                    "a": "The Ancien Regime, its critics and supporters -- The financial crisis -- The Estates General and the General Assembly -- Creating the new regime -- Polarization and the flight to Varennes -- The failure of constitutional government -- The Convention -- Terror and war -- Thermidor and the Directory."
                   }
-                ]
-              }
-            },
-            {
-              "773": {
+                ],
                 "ind1": "0",
-                "ind2": " ",
-                "subfields": [
-                  {
-                    "w": "(DE-601)895161729"
-                  },
-                  {
-                    "t": "Cantatas for bass, Bach, Johann Sebastian. - Arles : Harmonia Mundi"
-                  }
-                ]
+                "ind2": " "
               }
             },
             {
-              "900": {
-                "ind1": " ",
-                "ind2": " ",
+              "651": {
                 "subfields": [
                   {
-                    "a": "GBV"
+                    "a": "France"
                   },
                   {
-                    "b": "SBB-PK Berlin <1+1A>"
+                    "x": "History"
+                  },
+                  {
+                    "y": "Revolution, 1789-1799."
+                  },
+                  {
+                    "0": "http://id.loc.gov/authorities/subjects/sh85051319"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": "0"
               }
             },
             {
-              "954": {
-                "ind1": " ",
-                "ind2": " ",
+              "830": {
                 "subfields": [
                   {
-                    "0": "SBB-PK Berlin <1+1A>"
+                    "a": "Critical issues in history."
                   },
                   {
-                    "a": "11"
-                  },
-                  {
-                    "b": "1742288871"
-                  },
-                  {
-                    "c": "01"
-                  },
-                  {
-                    "x": "0001"
+                    "0": "http://id.loc.gov/authorities/names/n99002874"
                   }
-                ]
+                ],
+                "ind1": " ",
+                "ind2": "0"
+              }
+            },
+            {
+              "938": {
+                "subfields": [
+                  {
+                    "a": "Baker & Taylor"
+                  },
+                  {
+                    "b": "BKTY"
+                  },
+                  {
+                    "c": "24.95"
+                  },
+                  {
+                    "d": "18.71"
+                  },
+                  {
+                    "i": "0742534103"
+                  },
+                  {
+                    "n": "0007433208"
+                  },
+                  {
+                    "s": "active"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "938": {
+                "subfields": [
+                  {
+                    "a": "YBP Library Services"
+                  },
+                  {
+                    "b": "YANK"
+                  },
+                  {
+                    "n": "2612951"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "938": {
+                "subfields": [
+                  {
+                    "a": "Baker & Taylor"
+                  },
+                  {
+                    "b": "BKTY"
+                  },
+                  {
+                    "c": "22.95"
+                  },
+                  {
+                    "d": "22.95"
+                  },
+                  {
+                    "i": "0742534111"
+                  },
+                  {
+                    "n": "0007618566"
+                  },
+                  {
+                    "s": "active"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "938": {
+                "subfields": [
+                  {
+                    "a": "Baker and Taylor"
+                  },
+                  {
+                    "b": "BTCP"
+                  },
+                  {
+                    "n": "BK0007618566"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "994": {
+                "subfields": [
+                  {
+                    "a": "C0"
+                  },
+                  {
+                    "b": "ALM"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
               }
             },
             {
               "999": {
-                "ind1": "f",
-                "ind2": "f",
                 "subfields": [
                   {
-                    "s": "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc"
+                    "i": "482b0d18-39dc-480d-80b4-746e87efd4e8"
                   },
                   {
-                    "i": "00000000-0000-4000-a000-000000000000"
+                    "s": "75fc92ce-fe40-4515-949e-076394aedb7f"
                   }
-                ]
+                ],
+                "ind1": "f",
+                "ind2": "f"
               }
             }
           ]
         }
       },
-      "externalIdsHolder": {
-        "instanceId": "instanceId_replace"
-      },
       "additionalInfo": {
         "suppressDiscovery": false
       },
+      "externalIdsHolder": {
+        "instanceId": "482b0d18-39dc-480d-80b4-746e87efd4e8"
+      },
       "metadata": {
-        "createdDate": "2018-11-20T07:23:11.172+0000",
-        "createdByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092",
-        "updatedDate": "2018-11-20T07:23:11.172+0000",
-        "updatedByUserId": "9df9917d-5c28-5326-82c6-e590e3b56092"
-      }
+        "createdDate": "2020-12-02T11:24:07.230+0000",
+        "createdByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50",
+        "updatedDate": "2020-12-02T11:24:07.230+0000",
+        "updatedByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50"
+      },
+      "state": "ACTUAL",
+      "leaderRecordStatus": "c"
     }
   ],
   "totalRecords": 1

@@ -2106,17 +2106,17 @@ class OaiPmhImplTest {
   }
 
 
-//  @ParameterizedTest
-//  @MethodSource("allMetadataPrefixes")
-//  void test(MetadataPrefix metadataPrefix) {
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-//      .param(FROM_PARAM, SOME_DATE)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//
-//    verify200WithXml(request, LIST_RECORDS);
-//  }
+  @ParameterizedTest
+  @MethodSource("allMetadataPrefixes")
+  void test(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, SOME_DATE)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    verify200WithXml(request, LIST_RECORDS);
+  }
 
 
   private static Stream<Arguments> allMetadataPrefixes() {
