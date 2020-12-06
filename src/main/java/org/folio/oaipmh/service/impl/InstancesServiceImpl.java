@@ -45,6 +45,9 @@ public class InstancesServiceImpl implements InstancesService {
           promise.complete(Collections.emptyList());
           return promise.future();
         }
+      }).onFailure(th -> {
+        logger.error(th.getMessage(), th);
+        promise.fail(th);
       });
   }
 
