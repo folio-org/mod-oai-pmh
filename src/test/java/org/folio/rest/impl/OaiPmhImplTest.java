@@ -2104,29 +2104,4 @@ class OaiPmhImplTest {
     this.instancesService = instancesService;
   }
 
-
-//  @ParameterizedTest
-//  @MethodSource("allMetadataPrefixes")
-//  void test(MetadataPrefix metadataPrefix) {
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-//      .param(FROM_PARAM, SOME_DATE)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//
-//    verify200WithXml(request, LIST_RECORDS);
-//  }
-
-
-  private static Stream<Arguments> allMetadataPrefixes() {
-    Stream.Builder<Arguments> builder = Stream.builder();
-    for (MetadataPrefix prefix : MetadataPrefix.values()) {
-      if (!prefix.getName().equals(MetadataPrefix.DC.getName())) {
-        builder.add(Arguments.arguments(prefix));
-      }
-    }
-    return builder.build();
-  }
-
-
 }
