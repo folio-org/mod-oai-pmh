@@ -1,0 +1,38 @@
+#%RAML 1.0
+title: OAI-PMH API
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v3
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: OAI-PMH Business Logic API
+    content: provides endpoint for triggering clean up process of expired instances from instances table.
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+/oai-pmh/clean-up-instances:
+  displayName: Clean up data for outdated requests from instances table
+  description: API to start clean up mechanism of retained records from instances table
+  post:
+    is: [validate]
+    responses:
+      204:
+      400:
+        description: "Bad request"
+        body:
+          text/plain:
+            example: "Bad request"
+      422:
+        description: "Unprocessable Entity"
+        body:
+          application/json:
+            type: errors
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"

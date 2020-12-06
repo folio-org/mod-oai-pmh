@@ -46,7 +46,6 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
-import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.folio.spring.SpringContextUtil;
@@ -70,9 +69,7 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
-  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
-  private InstancesService instancesService;
   private VerbValidator validator;
 
   public OaiPmhImpl() {
@@ -154,15 +151,6 @@ public class OaiPmhImpl implements Oai {
       }).exceptionally(handleError(asyncResultHandler));
   }
 
-  @Override
-  public void postOaiCleanUpInstances(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    vertxContext.runOnContext(v -> instancesService.cleanExpiredInstances(okapiHeaders.get(OKAPI_TENANT), INSTANCES_EXPIRATION_TIME_IN_SECONDS)
-      .map(PostOaiCleanUpInstancesResponse.respond204())
-      .map(Response.class::cast)
-      .otherwise(throwable -> PostOaiCleanUpInstancesResponse.respond500WithTextPlain(throwable.getMessage()))
-      .onComplete(asyncResultHandler));
-  }
-
   private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>> asyncResultHandler) {
     return throwable -> {
       asyncResultHandler.handle(getFutureWithErrorResponse());
@@ -197,11 +185,6 @@ public class OaiPmhImpl implements Oai {
     boolean isVerbNameCorrect = Arrays.stream(VerbType.values())
       .anyMatch(verb -> verb.value().equals(verbName));
     return isVerbNameCorrect ? VerbType.fromValue(verbName) : VerbType.UNKNOWN;
-  }
-
-  @Autowired
-  public void setInstancesService(InstancesService instancesService) {
-    this.instancesService = instancesService;
   }
 
   @Autowired

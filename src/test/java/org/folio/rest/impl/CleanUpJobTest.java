@@ -53,7 +53,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private static final String CLEAN_UP_INSTANCES_PATH = "/oai/clean-up-instances";
+  private static final String CLEAN_UP_INSTANCES_PATH = "/oai-pmh/clean-up-instances";
 
   private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
