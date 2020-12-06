@@ -4,11 +4,9 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.jooq.JSON;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -18,7 +16,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 
@@ -26,7 +23,7 @@ public abstract class AbstractInstancesTest {
 
   protected static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
-  protected static final String COMMON_JSON = "{\"instanceId\": \"00000000-0000-4000-a000-000000000000\", \"source\": \"FOLIO\", \"updatedDate\": \"2020-06-15T11:07:48.563Z\",  \"deleted\": \"false\",  \"suppressFromDiscovery\": \"false\"}" ;
+  protected static final String COMMON_JSON = "{\"instanceId\": \"00000000-0000-4000-a000-000000000000\", \"source\": \"FOLIO\", \"updatedDate\": \"2020-06-15T11:07:48.563Z\",  \"deleted\": \"false\",  \"suppressFromDiscovery\": \"false\"}";
 
   protected static final String EXPIRED_REQUEST_ID = UUID.randomUUID().toString();
   protected static final String REQUEST_ID = UUID.randomUUID().toString();
@@ -62,12 +59,14 @@ public abstract class AbstractInstancesTest {
 
   @BeforeEach
   void setup(VertxTestContext testContext) {
-    List<Future> futures = new ArrayList<>();
-    requestMetadataList.forEach(elem -> futures.add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
-    futures.add(getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT));
-    CompositeFuture.all(futures)
-      .onSuccess(v -> testContext.completeNow())
-      .onFailure(testContext::failNow);
+    List<Future> saveRequestMetadataFutures = new ArrayList<>();
+    requestMetadataList.forEach(elem -> saveRequestMetadataFutures.add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
+
+    CompositeFuture.all(saveRequestMetadataFutures)
+      .onSuccess(v -> getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT)
+        .onSuccess(e -> testContext.completeNow())
+        .onFailure(testContext::failNow)
+      ).onFailure(testContext::failNow);
   }
 
   @AfterEach
@@ -84,7 +83,7 @@ public abstract class AbstractInstancesTest {
     CompositeFuture.all(futures)
       .onSuccess(v -> promise.complete())
       .onFailure(throwable -> {
-        if(throwable instanceof NotFoundException) {
+        if (throwable instanceof NotFoundException) {
           promise.complete();
         } else {
           promise.fail(throwable);
