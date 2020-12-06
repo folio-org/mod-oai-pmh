@@ -1,14 +1,19 @@
 package org.folio.oaipmh.service.impl;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import org.apache.commons.collections4.CollectionUtils;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.jooq.Tables.INSTANCES;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+import javax.ws.rs.NotFoundException;
+
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractInstancesTest;
@@ -16,31 +21,31 @@ import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.impl.OkapiMockServer;
-import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.ws.rs.NotFoundException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.INSTANCES;
-import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
-import static org.junit.Assert.*;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
-class InstancesServiceImplTest extends AbstractInstancesTest {
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class InstancesServiceImplTest extends AbstractInstancesTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -84,42 +89,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     }));
   }
 
-  @BeforeEach
-  void setup(VertxTestContext testContext) {
-    List<Future> futures = new ArrayList<>();
-    requestMetadataList.forEach(elem -> futures.add(instancesDao.saveRequestMetadata(elem, OAI_TEST_TENANT)));
-    futures.add(instancesDao.saveInstances(instancesList, OAI_TEST_TENANT));
-    CompositeFuture.all(futures)
-      .onSuccess(v -> testContext.completeNow())
-      .onFailure(testContext::failNow);
-  }
-
-  @AfterEach
-  void cleanUp(VertxTestContext testContext) {
-    List<Future> futures = new ArrayList<>();
-    requestIds.forEach(requestId -> futures.add(instancesDao.deleteRequestMetadataByRequestId(requestId, OAI_TEST_TENANT)));
-
-    instancesDao.getInstancesList(0, 100, OAI_TEST_TENANT).onComplete(result -> {
-      if (result.succeeded() && CollectionUtils.isNotEmpty(result.result())) {
-        List<Instances> instances = result.result();
-        List<String> instancesIds = instances.stream().map(Instances::getInstanceId).map(UUID::toString).collect(Collectors.toList());
-        futures.add(instancesDao.deleteInstancesById(instancesIds, OAI_TEST_TENANT));
-      } else {
-        futures.add(Future.failedFuture(result.cause()));
-      }
-    });
-
-    CompositeFuture.all(futures)
-      .onSuccess(v -> testContext.completeNow())
-      .onFailure(throwable -> {
-        if (throwable instanceof NotFoundException) {
-          testContext.completeNow();
-        } else {
-          testContext.failNow(throwable);
-        }
-      });
-  }
-
+  @Order(1)
   @Test
   void shouldReturnFutureWithEmptyList_whenThereNoExpiredRequestIds(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, ZERO_EXPIRED_INSTANCES_TIME)
@@ -129,6 +99,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       })));
   }
 
+  @Order(2)
   @Test
   void shouldReturnFutureWithExpiredIds_whenThereExpiredRequestIdsArePresented(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
@@ -138,6 +109,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       })));
   }
 
+  @Order(3)
   @Test
   void shouldSaveRequestMetadata(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -159,6 +131,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(4)
   @Test
   void shouldUpdateRequestMetadata_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -171,6 +144,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(5)
   @Test
   void shouldReturnFailedFuture_whenUpdateRequestMetadataWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() ->
@@ -181,6 +155,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     );
   }
 
+  @Order(6)
   @Test
   void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -192,6 +167,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(7)
   @Test
   void shouldReturnSucceededFuture_whenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataExists(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -203,6 +179,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(8)
   @Test
   void shouldReturnFailedFuture_whenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataDoesNotExist(
     VertxTestContext testContext) {
@@ -215,6 +192,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(9)
   @Test
   void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -227,6 +205,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(10)
   @Test
   void shouldReturnSucceedFutureWithFalseValue_whenDeleteInstancesByIdsAndSuchInstancesDoNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -238,6 +217,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(11)
   @Test
   void shouldReturnSucceededFuture_whenSaveInstances(VertxTestContext testContext) {
     testContext.verify(() -> {
@@ -247,6 +227,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     });
   }
 
+  @Order(12)
   @Test
   void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT)
@@ -256,10 +237,10 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       })));
   }
 
+  @Order(13)
   @Test
   void shouldReturnSucceedFutureWithEmptyList_whenGetInstancesListAndThereNoAnyInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.deleteInstancesById(instancesIds, OAI_TEST_TENANT)
-      .compose(res -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT))
+    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT))
       .onComplete(testContext.succeeding(instancesList -> {
         assertTrue(instancesList.isEmpty());
         testContext.completeNow();

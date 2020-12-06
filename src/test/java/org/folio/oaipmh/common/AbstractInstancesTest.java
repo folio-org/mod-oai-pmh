@@ -2,6 +2,7 @@ package org.folio.oaipmh.common;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -51,10 +52,10 @@ public abstract class AbstractInstancesTest {
 
   protected static final Instances instance_1 = new Instances().setInstanceId(UUID.fromString(EXPIRED_INSTANCE_ID))
     .setJson(COMMON_JSON)
-    .setRequestId(EXPIRED_REQUEST_ID);
+    .setRequestId(UUID.fromString(EXPIRED_REQUEST_ID));
   protected static final Instances instance_2 = new Instances().setInstanceId(UUID.fromString(INSTANCE_ID))
     .setJson(COMMON_JSON)
-    .setRequestId(REQUEST_ID);
+    .setRequestId(UUID.fromString(REQUEST_ID));
 
   protected static final List<Instances> instancesList = List.of(instance_1, instance_2);
   protected static final List<RequestMetadataLb> requestMetadataList = List.of(expiredRequestMetadata, requestMetadata);
@@ -71,28 +72,25 @@ public abstract class AbstractInstancesTest {
 
   @AfterEach
   void cleanUp(VertxTestContext testContext) {
+    cleanData().onSuccess(v -> testContext.completeNow())
+      .onFailure(testContext::failNow);
+  }
+
+  protected Future<Void> cleanData() {
+    Promise<Void> promise = Promise.promise();
     List<Future> futures = new ArrayList<>();
     requestIds.forEach(elem -> futures.add(getInstancesDao().deleteRequestMetadataByRequestId(elem, OAI_TEST_TENANT)));
 
-    getInstancesDao().getInstancesList(0, 100, OAI_TEST_TENANT).onComplete(result -> {
-      if (result.succeeded() && CollectionUtils.isNotEmpty(result.result())) {
-        List<Instances> instances = result.result();
-        List<String> instancesIds = instances.stream().map(Instances::getInstanceId).map(UUID::toString).collect(Collectors.toList());
-        futures.add(getInstancesDao().deleteInstancesById(instancesIds, OAI_TEST_TENANT));
-      } else {
-        futures.add(Future.failedFuture(result.cause()));
-      }
-    });
-
     CompositeFuture.all(futures)
-      .onSuccess(v -> testContext.completeNow())
+      .onSuccess(v -> promise.complete())
       .onFailure(throwable -> {
         if(throwable instanceof NotFoundException) {
-          testContext.completeNow();
+          promise.complete();
         } else {
-          testContext.failNow(throwable);
+          promise.fail(throwable);
         }
       });
+    return promise.future();
   }
 
   protected abstract InstancesDao getInstancesDao();

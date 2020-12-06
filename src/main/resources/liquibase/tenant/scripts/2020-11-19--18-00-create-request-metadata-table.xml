@@ -4,7 +4,7 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
-  <changeSet id="2020-11-19--18-00-create-request-metadata-table.xml" author="Illia Borysenko">
+  <changeSet id="2020-11-19--18-00-create-request-metadata-table" author="Illia Borysenko">
     <createTable tableName="request_metadata_lb">
       <column name="request_id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>
@@ -15,8 +15,18 @@
     </createTable>
   </changeSet>
 
-  <changeSet id="2020-11-19--18-00-change-json-to-text-column-in-instances-table.xml" author="Illia Daliek">
+  <changeSet id="2020-11-19--18-00-change-json-to-text-column-in-instances-table" author="Illia Daliek">
     <modifyDataType tableName="instances" columnName="json" newDataType="text" schemaName="${database.defaultSchemaName}"/>
+  </changeSet>
+
+  <changeSet id="2020-11-19--18-00-change-varchar-to-uuid-column-in-instances-table" author="">
+    <modifyDataType tableName="instances" columnName="request_id" newDataType="uuid"/>
+  </changeSet>
+
+  <changeSet id="2020-11-19--18-00-add-foreign-key-constraint-to-request-id-field-of-request-metadata-lb-table" author="">
+    <addForeignKeyConstraint baseTableName="instances" baseColumnNames="request_id"
+                             constraintName="requestIdForeignKey" referencedTableName="request_metadata_lb"
+                             referencedColumnNames="request_id" onDelete="CASCADE" onUpdate="NO ACTION"/>
   </changeSet>
 
 </databaseChangeLog>

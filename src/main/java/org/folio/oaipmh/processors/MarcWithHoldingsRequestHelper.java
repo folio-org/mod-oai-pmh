@@ -583,7 +583,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   //fix vertx json to jooq JSON mapping
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream) {
     Promise<Void> promise = Promise.promise();
-    List<Instances> instancesList = toInstancesList(instances, requestId);
+    List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     instancesService.saveInstances(instancesList, request.getTenant()).onComplete(res -> { //here NPE
       if (res.failed()) {
         logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
@@ -597,7 +597,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private List<Instances> toInstancesList(List<JsonEvent> jsonEventInstances, String requestId) {
+  private List<Instances> toInstancesList(List<JsonEvent> jsonEventInstances, UUID requestId) {
     return jsonEventInstances.stream().map(JsonEvent::objectValue).map(inst ->
       new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
         .setJson(inst.toString())

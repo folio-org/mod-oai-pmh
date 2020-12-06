@@ -1,12 +1,20 @@
 package org.folio.oaipmh.dao.impl;
 
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
-import io.vertx.core.Future;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowSet;
+import static org.folio.rest.jooq.tables.Instances.INSTANCES;
+import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.NotFoundException;
+
 import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -19,19 +27,13 @@ import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
-import javax.ws.rs.NotFoundException;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.folio.rest.jooq.tables.Instances.INSTANCES;
-import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
+import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.Future;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 
 @Repository
 public class InstancesDaoImpl implements InstancesDao {
@@ -155,7 +157,7 @@ public class InstancesDaoImpl implements InstancesDao {
       return Future.succeededFuture();
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
-      InsertValuesStep3<InstancesRecord, UUID, String, String> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
+      InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
         INSTANCES.JSON, INSTANCES.REQUEST_ID);
       instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
       return insertValues;
@@ -173,17 +175,18 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
-    return queryResult.stream()
+    List<Instances> instances = queryResult.stream()
       .map(QueryResult::unwrap)
       .map(Row.class::cast)
       .map(row -> {
         Instances pojo = new Instances();
         pojo.setInstanceId(row.getUUID(INSTANCES.INSTANCE_ID.getName()));
         pojo.setJson(row.getString(INSTANCES.JSON.getName()));
-        pojo.setRequestId(row.getString(INSTANCES.REQUEST_ID.getName()));
+        pojo.setRequestId(row.getUUID(INSTANCES.REQUEST_ID.getName()));
         return pojo;
       })
       .collect(Collectors.toList());
+    return instances;
   }
 
   private List<String> mapRequestIdsResultToList(QueryResult requestIds) {
