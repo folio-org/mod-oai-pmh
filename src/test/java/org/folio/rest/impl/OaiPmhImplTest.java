@@ -33,7 +33,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSATNCES_IDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
@@ -43,6 +43,8 @@ import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIM
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -54,7 +56,6 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyString;
-import static org.hamcrest.Matchers.isIn;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -74,7 +75,6 @@ import static org.openarchives.oai._2.VerbType.UNKNOWN;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -85,6 +85,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -94,16 +95,22 @@ import javax.xml.bind.JAXBElement;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.common.TestUtil;
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -126,6 +133,7 @@ import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ElementType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import gov.loc.marc21.slim.DataFieldType;
 import gov.loc.marc21.slim.SubfieldatafieldType;
@@ -137,8 +145,10 @@ import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -152,6 +162,7 @@ import net.jcip.annotations.NotThreadSafe;
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
+
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
@@ -185,9 +196,13 @@ class OaiPmhImplTest {
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
+  private InstancesService instancesService;
+
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
     resetSystemProperties();
+    VertxOptions options = new VertxOptions();
+    options.setBlockedThreadCheckInterval(1000*60*60);
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     String moduleName = PomReader.INSTANCE.getModuleName()
                                           .replaceAll("_", "-");  // RMB normalizes the dash to underscore, fix back
@@ -205,6 +220,9 @@ class OaiPmhImplTest {
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
+      Context context = vertx.getOrCreateContext();
+      SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+      SpringContextUtil.autowireDependencies(this, context);
       getLogger().info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
       // Once MockServer starts, it indicates to junit that process is finished by calling context.completeNow()
       new OkapiMockServer(vertx, mockPort).start(testContext);
@@ -214,18 +232,30 @@ class OaiPmhImplTest {
     PostgresClient client = PostgresClient.getInstance(vertx);
     client.startEmbeddedPostgres();
 
-    try (Connection connection = SingleConnectionProvider.getConnection(vertx, OAI_TEST_TENANT)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh").execute();
-    }
+    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
 
     LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
   }
 
   @AfterAll
   void cleanUpAfterAll() {
+    PostgresClientFactory.closeAll();
     PostgresClient.stopEmbeddedPostgres();
   }
 
+  @BeforeEach
+  void setUpBeforeEach() {
+    // Set default decoderConfig
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
+    RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
+  }
+
+  @AfterEach
+  void cleanUp(VertxTestContext testContext) {
+    instancesService.cleanExpiredInstances(OAI_TEST_TENANT, 0)
+      .onSuccess(e -> testContext.completeNow())
+      .onFailure(testContext::failNow);
+  }
 
   protected Logger getLogger() {
     return logger;
@@ -260,13 +290,6 @@ class OaiPmhImplTest {
       return jaxbElement.getName().getLocalPart().equals("rights")
         && value.equals("discovery suppressed") || value.equals("discovery not suppressed");
     };
-  }
-
-  @BeforeEach
-  void setUpBeforeEach() {
-    // Set default decoderConfig
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-    RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
   }
 
   @Test
@@ -1095,37 +1118,37 @@ class OaiPmhImplTest {
     testContext.completeNow();
   }
 
-//  @ParameterizedTest
-//  @EnumSource(MetadataPrefix.class)
-//  void getOaiGetRecordVerbWithExistingIdentifier(MetadataPrefix metadataPrefix) {
-//    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, GET_RECORD.value())
-//      .param(IDENTIFIER_PARAM, identifier)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
-//    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
-//    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
-//    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
-//    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
-//  }
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordVerbWithExistingIdentifier(MetadataPrefix metadataPrefix) {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+  }
 
-//  @ParameterizedTest
-//  @EnumSource(MetadataPrefix.class)
-//  void getOaiGetRecordVerbWithNonExistingIdentifier(MetadataPrefix metadataPrefix) {
-//    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, GET_RECORD.value())
-//      .param(IDENTIFIER_PARAM, identifier)
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-//
-//    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
-//    assertThat(oaipmh.getGetRecord(), is(nullValue()));
-//    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
-//
-//  }
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordVerbWithNonExistingIdentifier(MetadataPrefix metadataPrefix) {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
+    assertThat(oaipmh.getGetRecord(), is(nullValue()));
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
+
+  }
 
   @Test
   void getOaiMetadataFormats(VertxTestContext testContext) {
@@ -1553,23 +1576,6 @@ class OaiPmhImplTest {
     return requestSpecification.config(config);
   }
 
-  private void verifyContentEncodingHeader(ValidatableResponse response) {
-    String acceptEncoding = response.extract()
-                            .header(String.valueOf(HttpHeaders.ACCEPT_ENCODING));
-    if (acceptEncoding == null) {
-      response.header(String.valueOf(HttpHeaders.CONTENT_ENCODING), nullValue());
-    } else {
-      List<String> values = Arrays.stream(acceptEncoding.split(","))
-                                  .map(String::toLowerCase)
-                                  .collect(Collectors.toList());
-      if (values.contains("identity")) {
-        response.header(String.valueOf(HttpHeaders.CONTENT_ENCODING), nullValue());
-      } else {
-        response.header(String.valueOf(HttpHeaders.CONTENT_ENCODING).toLowerCase(), isIn(values));
-      }
-    }
-  }
-
   private static Stream<Arguments> metadataPrefixAndEncodingProvider() {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
@@ -1906,7 +1912,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, EMPTY_INSATNCES_IDS_DATE)
+      .param(FROM_PARAM, EMPTY_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -1923,7 +1929,6 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
-//      .param()
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
@@ -2088,4 +2093,10 @@ class OaiPmhImplTest {
     totalRecords.addAll(records);
     return resumptionToken;
   }
+
+  @Autowired
+  public void setInstancesService(InstancesService instancesService) {
+    this.instancesService = instancesService;
+  }
+
 }

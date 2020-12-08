@@ -48,15 +48,18 @@ import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
+import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -67,7 +70,11 @@ public class OaiPmhImpl implements Oai {
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
 
-  private VerbValidator validator = new VerbValidator();
+  private VerbValidator validator;
+
+  public OaiPmhImpl() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
@@ -180,4 +187,8 @@ public class OaiPmhImpl implements Oai {
     return isVerbNameCorrect ? VerbType.fromValue(verbName) : VerbType.UNKNOWN;
   }
 
+  @Autowired
+  public void setValidator(VerbValidator validator) {
+    this.validator = validator;
+  }
 }

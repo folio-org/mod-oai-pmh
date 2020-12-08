@@ -68,6 +68,15 @@ Notes:
 * Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader. 
 * For verb `ListRecords` and metadata prefix `marc21_withholdings`, holding and item fields from [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage)  are returned along with the corresponding records from [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage)
 
+### About Marc21 with holdings and initial load
+Oai-pmh supports marc21_withholdings metadata prefix for ListRecords request. Handling this metadata prefix differs from marc21 and oai_dc. Request processing of marc21_whithholdings involves “initial-load” (IL) process.  Initial load is a process when all instances ids with some metadata are retrieved from inventory via inventory-hierarchy API and put to instances table of the local oia-pmh database. Since there may be a lot of instances, such process can take significant time for processing. For 8 million instances it takes around 6-7 minutes to save instances and respond the first batch of records. Each next batch of records does not take the same time because instances are loaded to DB only once for each harvesting process. After initial-load is completed the first batch of instances ids is processed.<br/>
+
+To differ each set of saved instances between several marc21_withholdings requests/initial-loads the “requestId” param is used. Such request id is generated for each single harvester doing the request and describes the request until harvesting will be ended. Request id is stored among resumptionTokens generated for harvester in scope of single harvesting process. As well request id is stored into next database tables – “request_metadata_lb” and “instances”. First table holds request id as primary key and date column for keeping last updated date of request id.<br/>
+
+At the first time, the last updated date is set during the initial-load and then is updated when each next batch of records is requested via resumptionToken which holds such request id. Instances table as well holds particular requestId as foreign key for associating instance ids with particular harvesting process. By default, each batch of instance ids are removed from database when requesting records via resumptionToken, i.e. when a request with resumption token is sent then required instances ids are processed and then they are cleaned from the database.<br/>
+
+But in a case when harvester lost his resumptionToken then saved instances ids with metadata that have not been retrieved and processed yet will be kept in DB and never will be cleaned. For preventing this case, request id has an expired period which for now equals to one day(24 h.) Therefore, when some request ids with expired last updated date exist then both such request ids and associated with them instances ids start to be considered as expired and will be removed from DB by cleaning job which are run each 2 hours.<br/>
+
 ### Issue tracker
 
 See project [MODOAIPMH](https://issues.folio.org/browse/MODOAIPMH)

@@ -1,17 +1,5 @@
 package org.folio.oaipmh.dao;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.annotation.PreDestroy;
-
-import org.folio.rest.persist.PostgresClient;
-import org.jooq.Configuration;
-import org.jooq.SQLDialect;
-import org.jooq.impl.DefaultConfiguration;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -20,6 +8,16 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+import org.folio.rest.persist.PostgresClient;
+import org.jooq.Configuration;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DefaultConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PreDestroy;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class PostgresClientFactory {
@@ -90,6 +88,10 @@ public class PostgresClientFactory {
     PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
     POOL_CACHE.put(tenantId, client);
     return client;
+  }
+
+  public static PgPool getPool(Vertx vertx, String tenantId) {
+    return getCachedPool(vertx, tenantId);
   }
 
   // NOTE: This should be able to get database configuration without PostgresClient.

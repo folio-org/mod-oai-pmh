@@ -20,7 +20,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.domain.Verb;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.springframework.stereotype.Component;
 
+@Component
 public class VerbValidator {
 
   private static final String VERB_NOT_IMPLEMENTED_ERROR_MESSAGE = "Bad verb. Verb \'%s\' is not implemented";
