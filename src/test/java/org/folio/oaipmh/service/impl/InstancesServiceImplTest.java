@@ -93,7 +93,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   }
 
   @Test
-  void shouldReturnFutureWithExpiredIds_whenThereExpiredRequestIdsArePresented(VertxTestContext testContext) {
+  void shouldReturnFutureWithExpiredIds_whenExpiredRequestIdsArePresented(VertxTestContext testContext) {
     testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
       .onComplete(testContext.succeeding(ids -> {
         assertTrue(ids.contains(EXPIRED_REQUEST_ID));

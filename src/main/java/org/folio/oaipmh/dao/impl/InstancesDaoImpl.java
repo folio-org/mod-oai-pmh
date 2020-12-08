@@ -116,24 +116,6 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<Boolean> deleteExpiredInstancesByRequestId(String tenantId, List<String> requestIds) {
-    logger.debug("Deleting instances associated with requestIds[{}]", String.join(",", requestIds));
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
-      .execute(dslContext -> dslContext.deleteFrom(INSTANCES)
-        .where(INSTANCES.REQUEST_ID.in(requestIds)))
-      .map(res -> {
-        String requestIdsString = String.join(",", requestIds);
-        if (res > 0) {
-          logger.debug("Instances associated with requestIds[{}] have been removed.", requestIdsString);
-          return true;
-        } else {
-          logger.debug("Cannot delete instances: there no any instances associated with requestIds[{}]", requestIdsString);
-          return false;
-        }
-      }));
-  }
-
-  @Override
   public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .execute(dslContext -> dslContext.deleteFrom(INSTANCES)
