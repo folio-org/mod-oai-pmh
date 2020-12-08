@@ -18,10 +18,14 @@ documentation:
 #    type: !include schemas/OAI-PMH.xsd#OAI-PMH
 #    description: OAI-PMH root element
 
+types:
+  errors: !include raml-util/schemas/errors.schema
+
 traits:
   partionable: !include traits/partitionable.raml
   selective: !include traits/selective.raml
   metadataPrefix: !include traits/metadataPrefix.raml
+  validate: !include raml-util/traits/validation.raml
 
 resourceTypes:
   list: !include rtypes/list.raml
@@ -89,4 +93,3 @@ resourceTypes:
               example:
                 strict: false
                 value: !include examples/service_unavailable.sample
-

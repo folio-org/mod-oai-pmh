@@ -12,4 +12,5 @@ xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
   <include file="scripts/2020-08-28--11-00-add-unique-constraint-for-name-and-set_spec-columns.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-09-02--17-00-drop-sample-data.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-09-03--12-00-add-case-insensitive-unique-constraints.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2020-11-19--18-00-create-request-metadata-table.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

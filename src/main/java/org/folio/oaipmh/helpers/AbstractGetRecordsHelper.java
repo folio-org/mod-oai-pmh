@@ -1,5 +1,35 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang.StringUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
+
+import javax.ws.rs.core.Response;
+import java.io.UnsupportedEncodingException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -8,36 +38,9 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.lang.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  private static final Logger logger = LoggerFactory.getLogger(AbstractGetRecordsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -47,73 +50,80 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
       }
-
-      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-        request.getTenant(), request.getOkapiToken());
-
-      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
-      final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-
-      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
-      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
-
-      int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getTenant(),
-          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
-      srsClient.getSourceStorageSourceRecords(
-        null,
-        null,
-        request.getIdentifier() != null ? request.getStorageIdentifier() : null,
-        "MARC",
-        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-        //2. use suppressed from discovery filtering only when deleted record support is enabled
-        deletedRecordsSupport ? null : suppressedRecordsSupport,
-        deletedRecordsSupport,
-        null,
-        updatedAfter,
-        updatedBefore,
-        null,
-        request.getOffset(),
-        batchSize + 1,
-        response -> {
-          try {
-            if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
-              response.bodyHandler(bh -> {
-                final Response responseCompletableFuture = buildRecordsResponse(ctx, request, bh.toJsonObject());
-                promise.complete(responseCompletableFuture);
-              });
-            } else {
-              logger.error("ListRecords response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
-              throw new IllegalStateException(response.statusMessage());
-            }
-          } catch (Exception e) {
-            logger.error("Exception getting ListRecords", e);
-            promise.fail(e);
-          }
-        });
-
+      requestAndProcessSrsRecords(request, ctx, promise);
     } catch (Exception e) {
       handleException(promise, e);
     }
     return promise.future();
   }
 
-  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
-    oaipmh.withErrors(createNoRecordsFoundError());
-    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) throws UnsupportedEncodingException {
+    final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+      request.getTenant(), request.getOkapiToken());
+
+    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+    final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
+    final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
+
+    int batchSize = Integer.parseInt(
+      RepositoryConfigurationUtil.getProperty(request.getTenant(),
+        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+
+    srsClient.getSourceStorageSourceRecords(
+      null,
+      null,
+      request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+      "MARC",
+      //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+      //2. use suppressed from discovery filtering only when deleted record support is enabled
+      deletedRecordsSupport ? null : suppressedRecordsSupport,
+      deletedRecordsSupport,
+      null,
+      updatedAfter,
+      updatedBefore,
+      null,
+      request.getOffset(),
+      batchSize + 1,
+      getSrsRecordsBodyHandler(request, ctx, promise));
   }
 
-  private Response buildRecordsResponse(Context ctx, Request request,
-                                                           JsonObject instancesResponseBody) {
+  private Handler<HttpClientResponse> getSrsRecordsBodyHandler(Request request, Context ctx, Promise<Response> promise) {
+    return response -> {
+      try {
+        if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
+          response.bodyHandler(bh -> {
+            try {
+              JsonObject srsRecords = bh.toJsonObject();
+              final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
+              promise.complete(responseCompletableFuture);
+            } catch (DecodeException ex) {
+              String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+              logger.error(msg, ex, ex.getMessage());
+              promise.fail(new IllegalStateException(msg, ex));
+            }
+          });
+        } else {
+          logger.error(request.getVerb().value() + " response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+          throw new IllegalStateException(response.statusMessage());
+        }
+      } catch (Exception e) {
+        logger.error("Exception getting " + request.getVerb().value(), e);
+        promise.fail(e);
+      }
+    };
+  }
+
+  protected Response processRecords(Context ctx, Request request,
+                                    JsonObject instancesResponseBody) {
     JsonArray instances = storageHelper.getItems(instancesResponseBody);
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
 
     logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
 
-    // In case the request is based on resumption token, the response should be validated if no missed records since previous response
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()  //
+      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       return getResponseHelper().buildFailureResponse(oaipmh, request);
@@ -167,7 +177,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             if (suppressedRecordsProcessingEnabled) {
               source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, instance);
             }
-            record.withMetadata(buildOaiMetadata(request, source));
+            try {
+              record.withMetadata(buildOaiMetadata(request, source));
+            } catch (Exception e) {
+              logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+              logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
+              continue;
+            }
           } else {
             context.put(recordId, instance);
           }
@@ -180,22 +196,33 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return records;
   }
 
-
-  private void handleException(Promise<Response> future, Throwable e) {
-    logger.error(GENERIC_ERROR_MESSAGE, e);
-    future.fail(e);
+  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordsFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
-  private javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
+  protected javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
     if (!oai.getErrors().isEmpty()) {
       return getResponseHelper().buildFailureResponse(oai, request);
     }
     return getResponseHelper().buildSuccessResponse(oai);
   }
 
+  protected void handleException(Promise<Response> promise, Throwable e) {
+    logger.error(GENERIC_ERROR_MESSAGE, e);
+    promise.fail(e);
+  }
+
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
 
-  protected abstract void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records);
+  protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
+    if (!records.isEmpty()) {
+      logger.debug("{} records found for the request.", records.size());
+      oaipmh.withListRecords(new ListRecordsType().withRecords(records));
+    } else {
+      oaipmh.withErrors(createNoRecordsFoundError());
+    }
+  }
 
   protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);
 

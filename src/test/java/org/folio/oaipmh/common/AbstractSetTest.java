@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.List;
 
+import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 
@@ -13,8 +14,6 @@ import com.google.common.collect.ImmutableList;
 
 public abstract class AbstractSetTest {
 
-  protected static final String TEST_TENANT_ID = "oaiTest";
-  protected static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
   protected static final String EXISTENT_SET_ID = "16287799-d37a-49fb-ac8c-09e9e9fcbd4d";
   protected static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 
@@ -73,8 +72,8 @@ public abstract class AbstractSetTest {
   }
 
   protected void verifyMetadata(FolioSet folioSet) {
-    assertEquals(TEST_USER_ID, folioSet.getCreatedByUserId());
-    assertEquals(TEST_USER_ID, folioSet.getUpdatedByUserId());
+    assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getCreatedByUserId());
+    assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getUpdatedByUserId());
     assertNotNull(folioSet.getCreatedDate());
     assertNotNull(folioSet.getUpdatedDate());
   }
