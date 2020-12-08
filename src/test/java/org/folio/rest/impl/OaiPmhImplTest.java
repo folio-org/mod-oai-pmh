@@ -252,12 +252,7 @@ class OaiPmhImplTest {
 
   @AfterEach
   void cleanUp(VertxTestContext testContext) {
-    instancesService.getInstancesList(0, 100, OAI_TEST_TENANT)
-      .map(instances -> instances.stream()
-        .map(Instances::getInstanceId)
-        .map(UUID::toString)
-        .collect(Collectors.toList()))
-      .compose(instances -> instancesService.deleteInstancesById(instances, OAI_TEST_TENANT))
+    instancesService.cleanExpiredInstances(OAI_TEST_TENANT, 0)
       .onSuccess(e -> testContext.completeNow())
       .onFailure(testContext::failNow);
   }
