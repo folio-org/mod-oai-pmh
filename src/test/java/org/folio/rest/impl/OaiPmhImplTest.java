@@ -1044,11 +1044,11 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
-  void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix) {
+  @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(VERB_PARAM, verb.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(FROM_PARAM, SRS_RECORD_WITH_INVALID_JSON_STRUCTURE);
 
@@ -1637,6 +1637,16 @@ class OaiPmhImplTest {
         if (!prefix.getName().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName())) {
           builder.add(Arguments.arguments(prefix, verb));
         }
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> allMetadataPrefixesAndListVerbsProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (VerbType verb : LIST_VERBS) {
+          builder.add(Arguments.arguments(prefix, verb));
       }
     }
     return builder.build();
