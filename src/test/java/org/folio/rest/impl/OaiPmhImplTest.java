@@ -1055,19 +1055,18 @@ class OaiPmhImplTest {
     verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
   }
 
-  //TODO found out how to make record inconvertible to xml
-//  @ParameterizedTest
-//  @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", /*"MARC21WITHHOLDINGS"*/})
-//  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-//      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-//      .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
-//
-//    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
-//    verifyListResponse(response, LIST_RECORDS, 1);
-//  }
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
+  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
+      .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
+
+    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(response, LIST_RECORDS, 1);
+  }
 
   @Test
   void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
