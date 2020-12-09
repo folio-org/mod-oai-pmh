@@ -11,31 +11,38 @@ public interface InstancesDao {
 
   /**
    * Returns request ids which last updated date is 'expirationPeriodInSeconds' seconds less than the current date.
-   *
-   * @param tenantId                  - tenant id
-   * @param expirationPeriodInSeconds - expiration time in seconds
-   * @return list of expired request ids
    */
   Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds);
 
+  /**
+   * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.
+   */
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
 
-  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId);
+  /**
+   * Updates request metadata by request id.
+   */
+  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
+      String tenantId);
 
+  /**
+   * Deletes request metadata by request id. Due to foreign key constraint all instances with such request id will be deleted as
+   * well.
+   */
   Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId);
 
   /**
-   * Removes instances which are associated with specified request ids.
-   *
-   * @param tenantId   - tenant id
-   * @param requestIds - request ids for which instance cleaning is performed
-   * @return true if some entities were removed, false if there no entities to be removed by provided request ids
+   * Deletes batch of instances by provided ids list.
    */
-  Future<Boolean> deleteExpiredInstancesByRequestId(String tenantId, List<String> requestIds);
-
   Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId);
 
+  /**
+   * Saves batch of instances.
+   */
   Future<Void> saveInstances(List<Instances> instances, String tenantId);
 
+  /**
+   * Retrieves instances by offset and limit.
+   */
   Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId);
 }

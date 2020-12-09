@@ -1,20 +1,19 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import static java.util.Objects.nonNull;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
+import static org.folio.rest.jooq.Tables.INSTANCES;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -32,29 +31,29 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.sql.Connection;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static java.util.Objects.nonNull;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
-import static org.folio.rest.jooq.Tables.INSTANCES;
-import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
-import static org.junit.Assert.assertFalse;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
-public class CleanUpJobTest extends AbstractInstancesTest {
+class CleanUpJobTest extends AbstractInstancesTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
 
-  private static final String CLEAN_UP_INSTANCES_PATH = "/oai/clean-up-instances";
+  private static final String CLEAN_UP_INSTANCES_PATH = "/oai-pmh/clean-up-instances";
 
   private Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);

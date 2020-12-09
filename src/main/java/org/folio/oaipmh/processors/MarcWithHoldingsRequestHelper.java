@@ -35,7 +35,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
@@ -270,10 +269,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(context.owner(), request));
-    } catch (NullPointerException ex) {
-      logger.error("Cannot get the pool size. Object for retrieving field is null.");
-      completePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
-      return completePromise.future();
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       completePromise.fail(ex);
@@ -491,13 +486,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(vertxContext.owner(), request));
-    } catch (NullPointerException ex) {
-      logger.error("Cannot get the pool size. Object for retrieving field is null.");
-      oaiPmhResponsePromise.fail(new IllegalArgumentException("Cannot get the pool size. Object is null."));
-      return completePromise;
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       oaiPmhResponsePromise.fail(ex);
+      return completePromise;
     }
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
@@ -535,10 +527,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return ReflectionUtils.getField(field, obj);
   }
 
-  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) throws NullPointerException, IllegalStateException {
+  private ArrayDeque<Promise<Connection>> getWaitersQueue(Vertx vertx, Request request) {
     PgPool pgPool = PostgresClientFactory.getPool(vertx, request.getTenant());
     if (Objects.nonNull(pgPool)) {
-      return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+      try {
+        return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+      } catch (NullPointerException ex) {
+        throw new IllegalStateException("Cannot get the pool size. Object for retrieving field is null.");
+      }
     } else {
       throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
     }
@@ -552,9 +548,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     inventoryQuery.handler(resp -> {
       if (resp.statusCode() != 200) {
         String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-        resp.bodyHandler(buffer -> {
-          logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString());
-        });
+        resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
         promise.fail(new IllegalStateException(errorMsg));
       } else {
         JsonParser jp = new JsonParserImpl(resp);
@@ -589,7 +583,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   //fix vertx json to jooq JSON mapping
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream) {
     Promise<Void> promise = Promise.promise();
-    List<Instances> instancesList = toInstancesList(instances, requestId);
+    List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     instancesService.saveInstances(instancesList, request.getTenant()).onComplete(res -> { //here NPE
       if (res.failed()) {
         logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
@@ -603,7 +597,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private List<Instances> toInstancesList(List<JsonEvent> jsonEventInstances, String requestId) {
+  private List<Instances> toInstancesList(List<JsonEvent> jsonEventInstances, UUID requestId) {
     return jsonEventInstances.stream().map(JsonEvent::objectValue).map(inst ->
       new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
         .setJson(inst.toString())

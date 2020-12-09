@@ -1,10 +1,10 @@
 package org.folio.oaipmh.service.impl;
 
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-
-import java.util.Collections;
-import java.util.List;
-
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.jooq.tables.pojos.Instances;
@@ -12,10 +12,11 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 
 @Service
 public class InstancesServiceImpl implements InstancesService {
@@ -31,21 +32,25 @@ public class InstancesServiceImpl implements InstancesService {
   @Override
   public Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds) {
     Promise<List<String>> promise = Promise.promise();
-    return instancesDao.getExpiredRequestIds(tenantId, expirationTimeSeconds)
-      .compose(ids -> {
+    instancesDao.getExpiredRequestIds(tenantId, expirationTimeSeconds)
+      .onSuccess(ids -> {
+        List<Future> futures = new ArrayList<>();
         if (isNotEmpty(ids)) {
-          instancesDao.deleteExpiredInstancesByRequestId(tenantId, ids)
-            .onSuccess(result -> promise.complete(ids))
+          ids.forEach(id -> futures.add(instancesDao.deleteRequestMetadataByRequestId(id, tenantId)));
+          CompositeFuture.all(futures)
+            .onSuccess(v -> promise.complete(ids))
             .onFailure(throwable -> {
               logger.error("Error occurred during deleting instances by request ids: " + ids, throwable);
               promise.fail(throwable);
             });
-          return promise.future();
         } else {
           promise.complete(Collections.emptyList());
-          return promise.future();
         }
-      });
+      }).onFailure(th -> {
+      logger.error(th.getMessage());
+      promise.fail(th);
+    });
+    return promise.future();
   }
 
   @Override
@@ -55,7 +60,7 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-      String tenantId) {
+                                                                    String tenantId) {
     return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
   }
 

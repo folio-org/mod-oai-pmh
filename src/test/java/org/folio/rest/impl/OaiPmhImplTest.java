@@ -28,8 +28,6 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.folio.oaipmh.MetadataPrefix.DC;
-import static org.folio.oaipmh.MetadataPrefix.MARC21XML;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
@@ -42,8 +40,6 @@ import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -256,12 +252,7 @@ class OaiPmhImplTest {
 
   @AfterEach
   void cleanUp(VertxTestContext testContext) {
-    instancesService.getInstancesList(0, 100, OAI_TEST_TENANT)
-      .map(instances -> instances.stream()
-        .map(Instances::getInstanceId)
-        .map(UUID::toString)
-        .collect(Collectors.toList()))
-      .compose(instances -> instancesService.deleteInstancesById(instances, OAI_TEST_TENANT))
+    instancesService.cleanExpiredInstances(OAI_TEST_TENANT, 0)
       .onSuccess(e -> testContext.completeNow())
       .onFailure(testContext::failNow);
   }
@@ -401,30 +392,6 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
     getLogger().debug(format("==== getOaiRecordsWithDateTimeRange(%s, %s) successfully completed ====", prefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = MetadataPrefix.class, names = { "MARC21XML", "DC"})
-  void shouldBuildRecordsResponseWithOldAMetadataDate(MetadataPrefix metadataPrefix) {
-      RequestSpecification request = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(FROM_PARAM, SRS_RECORD_WITH_OLD_METADATA_DATE)
-        .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-      verify200WithXml(request, LIST_RECORDS);
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = MetadataPrefix.class, names = { "MARC21XML", "DC"})
-  void shouldBuildRecordsResponseWithNewMetadataDate(MetadataPrefix metadataPrefix) {
-      RequestSpecification request = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(FROM_PARAM, SRS_RECORD_WITH_NEW_METADATA_DATE)
-        .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-      verify200WithXml(request, LIST_RECORDS);
   }
 
   private OAIPMH verifyOaiListVerbWithDateRange(VerbType verb, MetadataPrefix prefix, String encoding) {
@@ -950,7 +917,7 @@ class OaiPmhImplTest {
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithNoRecordsFoundFromStorage(VerbType verb) {
-    String metadataPrefix = DC.getName();
+    String metadataPrefix = MetadataPrefix.DC.getName();
     String from = NO_RECORDS_DATE;
     String set = "all";
 
@@ -1097,7 +1064,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, DC.getName())
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
       .param(UNTIL_PARAM, OkapiMockServer.ERROR_UNTIL_DATE);
 
     verify500WithErrorMessage(request);
@@ -1423,7 +1390,7 @@ class OaiPmhImplTest {
       assertThat(record.getMetadata(), is(notNullValue()));
       if (metadataPrefix == MetadataPrefix.MARC21XML) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
-      } else if (metadataPrefix == DC) {
+      } else if (metadataPrefix == MetadataPrefix.DC) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
       }
       verifyHeader(record.getHeader());
@@ -2131,4 +2098,5 @@ class OaiPmhImplTest {
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
   }
+
 }
