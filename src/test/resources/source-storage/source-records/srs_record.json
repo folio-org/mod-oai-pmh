@@ -258,7 +258,7 @@
               "264": {
                 "subfields": [
                   {
-                    "c": "2008"
+                    "c": "\u00a92008"
                   }
                 ],
                 "ind1": " ",
@@ -359,7 +359,7 @@
               "505": {
                 "subfields": [
                   {
-                    "a": "The Ancien Regime, its critics and supporters -- The financial crisis -- The Estates General and the General Assembly -- Creating the new regime -- Polarization and the flight to Varennes -- The failure of constitutional government -- The Convention -- Terror and war -- Thermidor and the Directory."
+                    "a": "The Ancien Re\u0301gime, its critics and supporters -- The financial crisis -- The Estates General and the General Assembly -- Creating the new regime -- Polarization and the flight to Varennes -- The failure of constitutional government -- The Convention -- Terror and war -- Thermidor and the Directory."
                   }
                 ],
                 "ind1": "0",
@@ -527,12 +527,12 @@
         "suppressDiscovery": false
       },
       "externalIdsHolder": {
-        "instanceId": "482b0d18-39dc-480d-80b4-746e87efd4e8"
+        "instanceId": "1ed91465-7a75-4d96-bf34-4dfbd89790d5"
       },
       "metadata": {
-        "createdDate": "2020-12-02T11:24:07.230+0000",
+        "createdDate": "2020-09-03T07:47:40.097",
         "createdByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50",
-        "updatedDate": "2020-12-02T11:24:07.230+0000",
+        "updatedDate": "2020-09-03T07:47:40.097",
         "updatedByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50"
       },
       "state": "ACTUAL",
