@@ -131,7 +131,9 @@ public class OkapiMockServer {
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
-
+  private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
+  private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
+  private static final String SRS_RECORD = "/srs_record.json";
   private final int port;
   private final Vertx vertx;
 
