@@ -1,0 +1,29 @@
+stages:
+  - name: Build
+    steps:
+      - runScriptConfig:
+          image: grizzlysoftware/maven-non-root:3.6.2-11.0.4-jdk-stretch
+          shellScript: mvn package -DskipTests
+  - name: Build Docker with DIND
+    steps:
+      - publishImageConfig:
+          dockerfilePath: ./Dockerfile
+          buildContext: .
+          tag: docker.dev.folio.org/mod-oai-pmh:concorde-${CICD_EXECUTION_SEQUENCE}
+          pushRemote: true
+          registry: docker.dev.folio.org
+  - name: Deploy
+    steps:
+      - applyAppConfig:
+          catalogTemplate: p-v4mss:concorde-helmcharts-mod-data-export
+          version: 0.1.32
+          answers:
+            image.repository: docker.dev.folio.org/mod-oai-pmh
+            image.tag: concorde-${CICD_EXECUTION_SEQUENCE}
+            javaOptions: -XX:MaxRAMPercentage=85.0 -XX:+UseG1GC -Dbucket.name=folio-concorde
+            resources.limits.cpu: 250m
+            resources.limits.memory: 1Gi
+          targetNamespace: concorde
+          name: mod-oai-pmh
+timeout: 60
+notification: {}
