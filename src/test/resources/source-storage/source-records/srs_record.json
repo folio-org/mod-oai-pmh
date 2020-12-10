@@ -530,9 +530,9 @@
         "instanceId": "1ed91465-7a75-4d96-bf34-4dfbd89790d5"
       },
       "metadata": {
-        "createdDate": "2020-09-03T07:47:40.097",
+        "createdDate": "REPLACE_ME",
         "createdByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50",
-        "updatedDate": "2020-09-03T07:47:40.097",
+        "updatedDate": "REPLACE_ME",
         "updatedByUserId": "d916e883-f8f1-4188-bc1d-f0dce1511b50"
       },
       "state": "ACTUAL",

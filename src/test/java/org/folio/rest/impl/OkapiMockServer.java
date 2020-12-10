@@ -82,6 +82,10 @@ public class OkapiMockServer {
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
+  static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
+  static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
+  static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
+  static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -127,6 +131,9 @@ public class OkapiMockServer {
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
+  private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
+  private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
+  private static final String SRS_RECORD = "/srs_record.json";
 
   private final int port;
   private final Vertx vertx;
@@ -199,7 +206,8 @@ public class OkapiMockServer {
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
       } else {
-        fail("There is no mock response");
+        logger.debug("No mocks for the response, returning the default instance id");
+        inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
     }
   }
@@ -268,6 +276,8 @@ public class OkapiMockServer {
       .toJsonArray();
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
+    } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
+      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD));
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
@@ -305,6 +315,12 @@ public class OkapiMockServer {
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
+      } else if (uri.contains(SRS_RECORD_WITH_OLD_METADATA_DATE)) {
+        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
+        successResponse(ctx, json.replaceAll("REPLACE_ME", OLD_METADATA_DATE_FORMAT));
+      } else if (uri.contains(SRS_RECORD_WITH_NEW_METADATA_DATE)) {
+        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
+        successResponse(ctx, json.replaceAll("REPLACE_ME", NEW_METADATA_DATE_FORMAT));
       } else {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
@@ -414,10 +430,10 @@ public class OkapiMockServer {
     List<String> enrichedInstances = instancesIds.stream()
       .map(Object::toString)
       .map(instanceId ->  enrichedInstanceTemplate.replace("set_instance_id", instanceId)
-          .replace("set_instance_item_id", randomId())
-          .replace("set_instance_item_campusId_id", randomId())
-          .replace("set_instance_item__libraryId_id", randomId())
-          .replace("set_instance_item_id_institutionId", randomId())
+        .replace("set_instance_item_id", randomId())
+        .replace("set_instance_item_campusId_id", randomId())
+        .replace("set_instance_item__libraryId_id", randomId())
+        .replace("set_instance_item_id_institutionId", randomId())
       )
       .collect(Collectors.toList());
     return String.join("", enrichedInstances);
@@ -426,7 +442,7 @@ public class OkapiMockServer {
   private String generateSrsPostResponseForInstanceIds(JsonArray instanceIds) {
     String srsRecordTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_TEMPLATE_JSON));
     String srsRecordsResponseTemplate = requireNonNull(
-        getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
+      getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
     List<String> srsRecords = new ArrayList<>();
     instanceIds.stream()
       .map(Object::toString)
