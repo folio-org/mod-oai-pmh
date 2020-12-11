@@ -40,11 +40,13 @@ import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
+import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
+import static org.folio.rest.impl.OkapiMockServer.TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML;
 import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
 import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -165,6 +167,7 @@ import net.jcip.annotations.NotThreadSafe;
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
 
+  public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
@@ -1063,9 +1066,34 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(UNTIL_PARAM, OkapiMockServer.RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE);
 
-    verify500WithErrorMessage(request);
+    verify500(request);
 
     getLogger().debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
+      .param(FROM_PARAM, SRS_RECORD_WITH_INVALID_JSON_STRUCTURE);
+
+    verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
+  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
+      .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
+
+    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(response, LIST_RECORDS, 1);
   }
 
   @Test
@@ -1093,7 +1121,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
       .param(UNTIL_PARAM, OkapiMockServer.ERROR_UNTIL_DATE);
 
-    verify500WithErrorMessage(request);
+    verify500(request);
   }
 
   @ParameterizedTest
@@ -1237,7 +1265,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_METADATA_FORMATS.value())
       .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
 
-    verify500WithErrorMessage(request);
+    verify500(request);
 
     testContext.completeNow();
   }
@@ -1314,7 +1342,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, IDENTIFY.value());
 
     try {
-      verify500WithErrorMessage(request);
+      verify500(request);
     } finally {
       System.setProperty(propKey, prop);
     }
@@ -1368,7 +1396,7 @@ class OaiPmhImplTest {
     return oaipmh;
   }
 
-  private void verify500WithErrorMessage(RequestSpecification request) {
+  private void verify500(RequestSpecification request) {
     String response = request
       .when()
         .get()
@@ -1381,6 +1409,22 @@ class OaiPmhImplTest {
           .asString();
 
     assertThat(response, is(notNullValue()));
+  }
+
+  private void verify500WithErrorMessage(RequestSpecification request, String message) {
+    String response = request
+      .when()
+      .get()
+      .then()
+      .statusCode(500)
+      .contentType(ContentType.TEXT)
+      .log().all()
+      .extract()
+      .body()
+      .asString();
+
+    assertThat(response, is(notNullValue()));
+    assertEquals(response, message);
   }
 
   private void verifyRepositoryInfoResponse(OAIPMH oaipmhFromString) {
@@ -1621,6 +1665,16 @@ class OaiPmhImplTest {
         if (!prefix.getName().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName())) {
           builder.add(Arguments.arguments(prefix, verb));
         }
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> allMetadataPrefixesAndListVerbsProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (VerbType verb : LIST_VERBS) {
+          builder.add(Arguments.arguments(prefix, verb));
       }
     }
     return builder.build();

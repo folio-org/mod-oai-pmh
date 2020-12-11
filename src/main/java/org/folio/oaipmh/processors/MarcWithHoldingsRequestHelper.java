@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.json.DecodeException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -147,30 +148,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       String requestId;
       RequestMetadataLb requestMetadata = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+      Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
         requestMetadata.setRequestId(UUID.fromString(requestId));
-        instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
-          .onFailure(th ->  handleException(promise, th));
+        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
+          .onFailure(th -> handleException(promise, th));
       } else {
         requestId = request.getRequestId();
-        instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
           .onFailure(th -> handleException(promise, th));
       }
-
-      Promise<Void> fetchingIdsPromise;
-      if (resumptionToken == null
-        || request.getRequestId() == null) { // the first request from EDS
-        /**
-         * here the postgres client is not used any more, but at 'createBatchStream' method
-         * we don't allow to write data faster then retrieving from response and such approach
-         * should be integrated with jooq request
-         */
-        fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-        fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
-      } else {
-        processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
-      }
+      updateRequestMetadataFuture.compose(res -> {
+        Promise<Void> fetchingIdsPromise = null;
+        if (resumptionToken == null
+          || request.getRequestId() == null) { // the first request from EDS
+          /**
+           * here the postgres client is not used any more, but at 'createBatchStream' method
+           * we don't allow to write data faster then retrieving from response and such approach
+           * should be integrated with jooq request
+           */
+          fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
+          fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
+        } else {
+          processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
+        }
+        return fetchingIdsPromise != null ? fetchingIdsPromise.future() : Future.succeededFuture();
+      }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
       handleException(promise, e);
     }
@@ -384,22 +388,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    List<RecordType> records = new ArrayList<>();
-
-    for (JsonObject inventoryInstance : batch) {
-      final String instanceId = inventoryInstance.getString(INSTANCE_ID_FIELD_NAME);
+    List<RecordType> records =new ArrayList<>();
+    batch.stream()
+      .filter(instance -> {
+          final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+          final JsonObject srsInstance = srsResponse.get(instanceId);
+          return Objects.nonNull(srsInstance);
+        }
+      ).forEach(instance -> {
+      final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
       final JsonObject srsInstance = srsResponse.get(instanceId);
-      if (srsInstance == null) {
-        continue;
-      }
-      JsonObject updatedSrsInstance = metadataManager
-        .populateMetadataWithItemsData(srsInstance, inventoryInstance,
-          suppressedRecordsProcessing);
-      String identifierPrefix = request.getIdentifierPrefix();
-      RecordType record = new RecordType()
-        .withHeader(createHeader(inventoryInstance)
-          .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
+      RecordType record = createRecord(request, instance, instanceId);
 
+      JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance, suppressedRecordsProcessing);
       if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
         record.getHeader().setStatus(StatusType.DELETED);
       }
@@ -409,14 +410,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
           source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
         }
-        record.withMetadata(buildOaiMetadata(request, source));
+        try {
+          record.withMetadata(buildOaiMetadata(request, source));
+        } catch (Exception e) {
+          logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+          logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
+          return;
+        }
       }
-
       if (filterInstance(request, srsInstance)) {
         records.add(record);
       }
-    }
+    });
     return records;
+  }
+
+  private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
+    String identifierPrefix = request.getIdentifierPrefix();
+    return new RecordType()
+      .withHeader(createHeader(instance)
+        .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
   }
 
   @Override
@@ -558,12 +571,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           databaseWriteStream.end();
           inventoryHttpClient.close();
         })
-        .exceptionHandler(throwable -> {
-          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
-          databaseWriteStream.end();
-          inventoryHttpClient.close();
-          promise.fail(throwable);
-        });
+          .exceptionHandler(throwable -> {
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+            databaseWriteStream.end();
+            inventoryHttpClient.close();
+            promise.fail(throwable);
+          });
       }
     });
 
@@ -643,6 +656,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               logger.debug("Can't process response from SRS: {0}", bh.toString());
             }
             promise.complete(result);
+          } catch (DecodeException ex) {
+            String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+            handleException(promise, new IllegalStateException(msg, ex));
           } catch (Exception e) {
             handleException(promise, e);
           }

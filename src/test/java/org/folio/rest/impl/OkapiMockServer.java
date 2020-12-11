@@ -1,27 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
-import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
-import static org.folio.oaipmh.Constants.LOCATION_URI;
-import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -35,6 +13,28 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.LOCATION_URI;
+import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
@@ -64,6 +64,8 @@ public class OkapiMockServer {
   private static final String ERROR_UNTIL_DATE_STORAGE = "2010-10-10T10:10:11";
   static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE = "2001-01-01T01:01:01Z";
   // 1 second should be added to storage until date time
+  static final String SRS_RECORD_WITH_INVALID_JSON_STRUCTURE = "2020-02-02";
+  static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML = "2020-03-03";
   private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02";
   static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
   private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00";
@@ -89,6 +91,8 @@ public class OkapiMockServer {
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
+  static final String INVALID_SRS_RECORD_INSTANCE_ID = "68aaeff5-6c78-4498-9cdc-66cdc0f834b2";
+  static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID = "7b6d9a58-ab67-414b-a33f-7db11ea16178";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
   private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
 
@@ -103,6 +107,9 @@ public class OkapiMockServer {
   private static final String INSTANCES_10_TOTAL_RECORDS_10 = "/instances_10_totalRecords_10.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_11 = "/instances_10_totalRecords_11.json";
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
+  public static final String SRS_RECORD_WITH_INVALID_JSON = "/srs_record_with_invalid_json.json";
+  public static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON = "/two_records_one_cannot_be_converted_to_xml.json";
+  public static final String INVALID_SRS_RECORD_INSTANCE_ID_JSON = "invalid_srs_record_instance_id.json";
 
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
@@ -131,6 +138,7 @@ public class OkapiMockServer {
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
+  public static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON = "two_records_one_cannot_be_converted_to_xml_instance_ids.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
   private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
   private static final String SRS_RECORD = "/srs_record.json";
@@ -172,18 +180,17 @@ public class OkapiMockServer {
     router.get(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleRecordStorageResultGetResponse);
 
-    router.post(SOURCE_STORAGE_RESULT_URI)
-      .handler(this::handleRecordStorageResultPostResponse);
-
     router.get(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleSourceRecordStorageResponse);
 
     router.get(CONFIGURATIONS_ENTRIES)
       .handler(this::handleConfigurationModuleResponse);
 
+    //related to MarcWithHoldingsRequestHelper
+    router.post(SOURCE_STORAGE_RESULT_URI)
+      .handler(this::handleRecordStorageResultPostResponse);
     router.post(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
       .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
-    // need to set a proper value to this constant cause i don't now what the second view endpoint is
     router.get(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)
       .handler(this::handleStreamingInventoryInstanceIdsResponse);
     return router;
@@ -205,12 +212,17 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
+      } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
+        inventoryViewSuccessResponse(ctx, INVALID_SRS_RECORD_INSTANCE_ID_JSON);
+      } else if(uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
+        inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
       } else {
         logger.debug("No mocks for the response, returning the default instance id");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
     }
   }
+
 
   private void handleStreamingInventoryItemsAndHoldingsResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody()
@@ -276,6 +288,10 @@ public class OkapiMockServer {
       .toJsonArray();
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
+    } else if (instanceIds.contains(INVALID_SRS_RECORD_INSTANCE_ID)) {
+      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
+    } else if (instanceIds.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID)) {
+      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
     } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
       successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD));
     } else {
@@ -315,6 +331,10 @@ public class OkapiMockServer {
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
+      } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
+      } else if (uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
       } else if (uri.contains(SRS_RECORD_WITH_OLD_METADATA_DATE)) {
         String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
         successResponse(ctx, json.replaceAll("REPLACE_ME", OLD_METADATA_DATE_FORMAT));
