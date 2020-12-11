@@ -148,30 +148,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       String requestId;
       RequestMetadataLb requestMetadata = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+      Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
         requestMetadata.setRequestId(UUID.fromString(requestId));
-        instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
+        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
           .onFailure(th -> handleException(promise, th));
       } else {
         requestId = request.getRequestId();
-        instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
           .onFailure(th -> handleException(promise, th));
       }
-
-      Promise<Void> fetchingIdsPromise;
-      if (resumptionToken == null
-        || request.getRequestId() == null) { // the first request from EDS
-        /**
-         * here the postgres client is not used any more, but at 'createBatchStream' method
-         * we don't allow to write data faster then retrieving from response and such approach
-         * should be integrated with jooq request
-         */
-        fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-        fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
-      } else {
-        processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
-      }
+      updateRequestMetadataFuture.compose(res -> {
+        Promise<Void> fetchingIdsPromise = null;
+        if (resumptionToken == null
+          || request.getRequestId() == null) { // the first request from EDS
+          /**
+           * here the postgres client is not used any more, but at 'createBatchStream' method
+           * we don't allow to write data faster then retrieving from response and such approach
+           * should be integrated with jooq request
+           */
+          fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
+          fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
+        } else {
+          processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
+        }
+        return fetchingIdsPromise != null ? fetchingIdsPromise.future() : Future.succeededFuture();
+      }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
       handleException(promise, e);
     }
