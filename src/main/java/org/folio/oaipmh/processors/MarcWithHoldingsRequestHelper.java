@@ -424,10 +424,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
     String identifierPrefix = request.getIdentifierPrefix();
-    RecordType record = new RecordType()
+    return new RecordType()
       .withHeader(createHeader(instance)
         .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
-    return record;
   }
 
   @Override
