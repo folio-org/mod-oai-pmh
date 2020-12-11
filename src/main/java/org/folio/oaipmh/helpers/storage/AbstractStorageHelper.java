@@ -1,27 +1,20 @@
 package org.folio.oaipmh.helpers.storage;
 
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import org.apache.commons.lang.time.DateUtils;
+
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-
-import io.vertx.core.json.JsonObject;
-
 public abstract class AbstractStorageHelper implements StorageHelper {
+  protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-  /**
-   * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
-   * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
-   */
-  private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-    .parseCaseInsensitive()
-    .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-    .optionalStart().appendOffset("+HH:MM", "Z").optionalEnd()
-    .optionalStart().appendOffset("+HHmm", "Z").optionalEnd()
-    .toFormatter();
+  private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"};
 
   @Override
   public Integer getTotalRecords(JsonObject entries) {
@@ -30,15 +23,21 @@ public abstract class AbstractStorageHelper implements StorageHelper {
 
   @Override
   public Instant getLastModifiedDate(JsonObject record) {
-    // Get metadat described by ramls/raml-util/schemas/metadata.schema
     JsonObject metadata = record.getJsonObject("metadata");
-    Instant datetime = Instant.EPOCH;
+    Instant instant = Instant.EPOCH;
     if (metadata != null) {
-      Optional<String> date = Optional.ofNullable(metadata.getString("updatedDate"));
-      // According to metadata.schema the createdDate is required so it should be always available
-      datetime = formatter.parse(date.orElseGet(() -> metadata.getString("createdDate")), Instant::from);
+      try {
+        String lastModifiedDate = metadata.getString("updatedDate");
+        if (lastModifiedDate == null) {
+          // According to metadata.schema the createdDate is required so it should be always available
+          lastModifiedDate = metadata.getString("createdDate");
+        }
+        instant = DateUtils.parseDateStrictly(lastModifiedDate, patterns).toInstant();
+      } catch (ParseException parseException) {
+        logger.error("Unable to parse the last modified date", parseException);
+        return instant.truncatedTo(ChronoUnit.SECONDS);
+      }
     }
-    return datetime.truncatedTo(ChronoUnit.SECONDS);
+    return instant.truncatedTo(ChronoUnit.SECONDS);
   }
-
 }

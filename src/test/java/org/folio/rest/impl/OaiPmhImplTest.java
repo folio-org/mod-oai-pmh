@@ -41,6 +41,8 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
+import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
+import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -456,7 +458,31 @@ class OaiPmhImplTest {
     getLogger().debug("==== getOaiRecordsWithDateRange() successfully completed ====");
   }
 
-  @Test
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC21XML", "DC"})
+  void shouldBuildRecordsResponseWithOldAMetadataDate(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, SRS_RECORD_WITH_OLD_METADATA_DATE)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    verify200WithXml(request, LIST_RECORDS);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = MetadataPrefix.class, names = { "MARC21XML", "DC"})
+  void shouldBuildRecordsResponseWithNewMetadataDate(MetadataPrefix metadataPrefix) {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, SRS_RECORD_WITH_NEW_METADATA_DATE)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    verify200WithXml(request, LIST_RECORDS);
+  }
+
+    @Test
   void getOaiRecordsWithMixedDateAndDateTimeRange() {
 
     getLogger().debug("==== Starting getOaiRecordsWithMixedDateAndDateTimeRange() ====");
