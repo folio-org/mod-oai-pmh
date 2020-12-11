@@ -26,9 +26,11 @@ import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
@@ -154,23 +156,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getOkapiHeaders(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    Map<String, RecordType> records = Collections.emptyMap();
     if (instances != null && !instances.isEmpty()) {
+      Map<String, RecordType> records = new HashMap<>();
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
-      records = new LinkedHashMap<>();
       String identifierPrefix = request.getIdentifierPrefix();
-      for (Object entity : instances) {
-        JsonObject instance = (JsonObject) entity;
-        String recordId = storageHelper.getRecordId(instance);
-        String identifierId = storageHelper.getIdentifierId(instance);
-        if (StringUtils.isNotEmpty(identifierId)) {
-          RecordType record = new RecordType()
-            .withHeader(createHeader(instance)
-              .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-          if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
-            record.getHeader().setStatus(StatusType.DELETED);
-          }
+      instances.stream()
+        .map(JsonObject.class::cast)
+        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
+        .forEach(instance -> {
+          String recordId = storageHelper.getRecordId(instance);
+          String identifierId = storageHelper.getIdentifierId(instance);
+          RecordType record = createRecord(request, identifierPrefix, instance, identifierId);
           // Some repositories like SRS can return record source data along with other info
           String source = storageHelper.getInstanceRecordSource(instance);
           if (source != null && record.getHeader().getStatus() == null) {
@@ -182,7 +179,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             } catch (Exception e) {
               logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
               logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
-              continue;
+              return;
             }
           } else {
             context.put(recordId, instance);
@@ -190,10 +187,20 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (filterInstance(request, instance)) {
             records.put(recordId, record);
           }
-        }
-      }
+        });
+      return records;
     }
-    return records;
+    return Collections.emptyMap();
+  }
+
+  private RecordType createRecord(Request request, String identifierPrefix, JsonObject instance, String identifierId) {
+    RecordType record = new RecordType()
+      .withHeader(createHeader(instance)
+        .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
+    if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
+      record.getHeader().setStatus(StatusType.DELETED);
+    }
+    return record;
   }
 
   private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {

@@ -63,6 +63,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
   /**
    * Check if there are identifiers built and construct success response, otherwise return response with error(s)
    */
+  @Override
   protected javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
     if (oai.getListIdentifiers() == null) {
       return getResponseHelper().buildFailureResponse(oai, request);

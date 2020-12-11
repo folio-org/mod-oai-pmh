@@ -152,7 +152,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         requestId = UUID.randomUUID().toString();
         requestMetadata.setRequestId(UUID.fromString(requestId));
         instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
-          .onFailure(th ->  handleException(promise, th));
+          .onFailure(th -> handleException(promise, th));
       } else {
         requestId = request.getRequestId();
         instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
@@ -385,22 +385,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    List<RecordType> records = new ArrayList<>();
-
-    for (JsonObject inventoryInstance : batch) {
-      final String instanceId = inventoryInstance.getString(INSTANCE_ID_FIELD_NAME);
+    List<RecordType> records =new ArrayList<>();
+    batch.stream()
+      .filter(instance -> {
+          final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+          final JsonObject srsInstance = srsResponse.get(instanceId);
+          return Objects.nonNull(srsInstance);
+        }
+      ).forEach(instance -> {
+      final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
       final JsonObject srsInstance = srsResponse.get(instanceId);
-      if (srsInstance == null) {
-        continue;
-      }
-      JsonObject updatedSrsInstance = metadataManager
-        .populateMetadataWithItemsData(srsInstance, inventoryInstance,
-          suppressedRecordsProcessing);
-      String identifierPrefix = request.getIdentifierPrefix();
-      RecordType record = new RecordType()
-        .withHeader(createHeader(inventoryInstance)
-          .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
+      RecordType record = createRecord(request, instance, instanceId);
 
+      JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance, suppressedRecordsProcessing);
       if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
         record.getHeader().setStatus(StatusType.DELETED);
       }
@@ -415,15 +412,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         } catch (Exception e) {
           logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
           logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
-          continue;
+          return;
         }
       }
-
       if (filterInstance(request, srsInstance)) {
         records.add(record);
       }
-    }
+    });
     return records;
+  }
+
+  private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
+    String identifierPrefix = request.getIdentifierPrefix();
+    RecordType record = new RecordType()
+      .withHeader(createHeader(instance)
+        .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
+    return record;
   }
 
   @Override
@@ -565,12 +569,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           databaseWriteStream.end();
           inventoryHttpClient.close();
         })
-        .exceptionHandler(throwable -> {
-          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
-          databaseWriteStream.end();
-          inventoryHttpClient.close();
-          promise.fail(throwable);
-        });
+          .exceptionHandler(throwable -> {
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+            databaseWriteStream.end();
+            inventoryHttpClient.close();
+            promise.fail(throwable);
+          });
       }
     });
 
