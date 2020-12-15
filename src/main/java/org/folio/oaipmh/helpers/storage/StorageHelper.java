@@ -80,7 +80,6 @@ public interface StorageHelper {
 
   JsonArray getRecordsItems(JsonObject entries);
 
-  @Deprecated
   String getId(JsonObject entry);
 
   /**
