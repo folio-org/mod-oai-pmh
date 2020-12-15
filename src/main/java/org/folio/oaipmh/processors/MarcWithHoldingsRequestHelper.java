@@ -19,12 +19,10 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
@@ -39,7 +37,6 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.json.DecodeException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -54,7 +51,6 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
-import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -73,6 +69,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -639,7 +636,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               final JsonArray records = entries.getJsonArray("sourceRecords");
               records.stream()
                 .filter(Objects::nonNull)
-                .map(r -> (JsonObject) r)
+                .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
               logger.debug("Can't process response from SRS: {0}", bh.toString());
