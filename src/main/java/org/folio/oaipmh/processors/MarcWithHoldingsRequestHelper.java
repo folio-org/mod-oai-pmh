@@ -21,8 +21,6 @@ import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
@@ -109,17 +107,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
   private InstancesService instancesService;
-
-  /**
-   * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
-   * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
-   */
-  private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-    .parseCaseInsensitive()
-    .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-    .optionalStart().appendOffset("+HH:MM", "Z").optionalEnd()
-    .optionalStart().appendOffset("+HHmm", "Z").optionalEnd()
-    .toFormatter();
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
