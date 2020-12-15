@@ -168,7 +168,7 @@
     </annotation>
     <sequence>
       <element name="identifier" type="oai:identifierType"/>
-      <element name="datestamp" type="oai:UTCdatetimeType"/>
+      <element name="datestamp" type="string"/>
       <element name="setSpec" type="oai:setSpecType" minOccurs="0" maxOccurs="unbounded"/>
     </sequence>
     <attribute name="status" type="oai:statusType" use="optional"/>

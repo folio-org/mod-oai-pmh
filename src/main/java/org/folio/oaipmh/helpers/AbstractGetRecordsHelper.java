@@ -193,7 +193,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private RecordType createRecord(Request request, String identifierPrefix, JsonObject instance, String identifierId) {
     RecordType record = new RecordType()
-      .withHeader(createHeader(instance)
+      .withHeader(createHeader(instance, request)
         .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
     if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
       record.getHeader().setStatus(StatusType.DELETED);

@@ -428,19 +428,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
     String identifierPrefix = request.getIdentifierPrefix();
     return new RecordType()
-      .withHeader(createHeader(instance)
+      .withHeader(createHeader(instance, request)
         .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
-  }
-
-  @Override
-  protected HeaderType createHeader(JsonObject instance) {
-    String updatedDate = instance.getString("updatedDate");
-    Instant datetime = formatter.parse(updatedDate, Instant::from)
-      .truncatedTo(ChronoUnit.SECONDS);
-
-    return new HeaderType()
-      .withDatestamp(datetime)
-      .withSetSpecs("all");
   }
 
   private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {

@@ -1,9 +1,12 @@
 package org.folio.oaipmh.helpers.storage;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang.time.DateUtils;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -35,6 +38,7 @@ public abstract class AbstractStorageHelper implements StorageHelper {
         instant = DateUtils.parseDateStrictly(lastModifiedDate, patterns).toInstant();
       } catch (ParseException parseException) {
         logger.error("Unable to parse the last modified date", parseException);
+        //TODO pass context here to get TG setting and in case of lowest value do truncatedTo days.
         return instant.truncatedTo(ChronoUnit.SECONDS);
       }
     }
