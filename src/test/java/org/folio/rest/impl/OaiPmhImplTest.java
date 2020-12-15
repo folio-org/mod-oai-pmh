@@ -576,7 +576,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
-//kek
+  
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
   void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {
