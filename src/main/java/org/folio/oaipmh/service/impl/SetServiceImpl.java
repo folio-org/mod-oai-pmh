@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.WebClient;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
@@ -33,8 +37,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.JsonObject;
 
 @Service
@@ -82,13 +84,12 @@ public class SetServiceImpl implements SetService {
   @Override
   public Future<FilteringConditionValueCollection> getFilteringConditions(Map<String, String> okapiHeaders) {
     Promise<FilteringConditionValueCollection> promise = Promise.promise();
-    HttpClient vertxHttpClient = Vertx.vertx()
-      .createHttpClient();
-    Future<JsonObject> locationFuture = getFilteringConditionValues(LOCATION_URI, vertxHttpClient, okapiHeaders);
-    Future<JsonObject> illPoliciesFuture = getFilteringConditionValues(ILL_POLICIES_URI, vertxHttpClient, okapiHeaders);
-    Future<JsonObject> materialTypesFuture = getFilteringConditionValues(MATERIAL_TYPES_URI, vertxHttpClient, okapiHeaders);
-    Future<JsonObject> resourceTypeFuture = getFilteringConditionValues(RESOURCE_TYPES_URI, vertxHttpClient, okapiHeaders);
-    Future<JsonObject> instanceFormatsFuture = getFilteringConditionValues(INSTANCE_FORMATS_URI, vertxHttpClient, okapiHeaders);
+    WebClient webClient = WebClient.create(Vertx.vertx());
+    Future<JsonObject> locationFuture = getFilteringConditionValues(LOCATION_URI, webClient, okapiHeaders);
+    Future<JsonObject> illPoliciesFuture = getFilteringConditionValues(ILL_POLICIES_URI, webClient, okapiHeaders);
+    Future<JsonObject> materialTypesFuture = getFilteringConditionValues(MATERIAL_TYPES_URI, webClient, okapiHeaders);
+    Future<JsonObject> resourceTypeFuture = getFilteringConditionValues(RESOURCE_TYPES_URI, webClient, okapiHeaders);
+    Future<JsonObject> instanceFormatsFuture = getFilteringConditionValues(INSTANCE_FORMATS_URI, webClient, okapiHeaders);
 
     CompositeFuture.all(locationFuture, illPoliciesFuture, materialTypesFuture, resourceTypeFuture, instanceFormatsFuture)
       .onComplete(result -> {
@@ -113,7 +114,7 @@ public class SetServiceImpl implements SetService {
     return promise.future();
   }
 
-  private Future<JsonObject> getFilteringConditionValues(String requestUri, HttpClient httpClient,
+  private Future<JsonObject> getFilteringConditionValues(String requestUri, WebClient webClient,
       Map<String, String> okapiHeaders) {
     Promise<JsonObject> promise = Promise.promise();
     requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
@@ -122,24 +123,21 @@ public class SetServiceImpl implements SetService {
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    HttpClientRequest httpClientRequest = httpClient.getAbs(okapiUrl.concat(requestUri))
+    HttpRequest<Buffer> httpRequest = webClient.requestAbs(HttpMethod.GET, okapiUrl.concat(requestUri))
       .putHeader(OKAPI_TOKEN, token)
       .putHeader(OKAPI_TENANT, tenant)
       .putHeader(ACCEPT, APPLICATION_JSON);
 
-    httpClientRequest.handler(response -> {
-      if (response.statusCode() == 200) {
-        response.bodyHandler(body -> {
-          JsonObject jsonObject = new JsonObject(body);
+    httpRequest.send()
+      .onSuccess(response -> {
+        if (response.statusCode() == 200) {
+          JsonObject jsonObject = new JsonObject(response.body());
           promise.complete(jsonObject);
-        });
-      } else {
-        promise.fail(new IllegalStateException(response.statusCode() + " " + response.statusMessage()));
-      }
-    })
-      .exceptionHandler(promise::fail);
-    httpClientRequest.end();
-
+        } else {
+          promise.fail(new IllegalStateException(response.statusCode() + " " + response.statusMessage()));
+        }
+      })
+      .onFailure(handler -> promise.fail(handler));
     return promise.future();
   }
 

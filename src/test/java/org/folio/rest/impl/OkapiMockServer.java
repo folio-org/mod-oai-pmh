@@ -7,8 +7,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
-  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
 
   public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 

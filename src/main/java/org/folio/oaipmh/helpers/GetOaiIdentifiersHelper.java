@@ -1,11 +1,32 @@
 package org.folio.oaipmh.helpers;
 
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+
+import java.util.Date;
+import java.util.List;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.openarchives.oai._2.ListIdentifiersType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
@@ -24,7 +45,8 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiIdentifiersHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiIdentifiersHelper.class);
+  private static final String GENERIC_ERROR = "Error happened while processing ListIdentifiers verb request";
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {

@@ -7,6 +7,7 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 
 import java.util.Date;
 
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -22,13 +23,12 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {

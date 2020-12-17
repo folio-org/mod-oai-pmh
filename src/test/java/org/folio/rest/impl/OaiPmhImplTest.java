@@ -99,6 +99,7 @@ import javax.xml.bind.JAXBElement;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.logging.log4j.LogManager;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.Constants;
@@ -155,8 +156,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.jcip.annotations.NotThreadSafe;
@@ -165,9 +165,9 @@ import net.jcip.annotations.NotThreadSafe;
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
+  private final Logger logger = LogManager.getLogger(this.getClass());
 
   public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
   private static final String ROOT_PATH = "/oai";
@@ -576,7 +576,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
-  
+
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
   void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {

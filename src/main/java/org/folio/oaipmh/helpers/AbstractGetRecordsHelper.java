@@ -8,9 +8,10 @@ import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
@@ -37,10 +38,15 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(AbstractGetRecordsHelper.class);
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {

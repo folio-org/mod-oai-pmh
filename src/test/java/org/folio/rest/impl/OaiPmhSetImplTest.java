@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractSetTest;
@@ -50,15 +51,14 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhSetImplTest extends AbstractSetTest {
-  private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
+  private static final Logger logger = LogManager.getLogger(OaiPmhSetImplTest.class);
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();

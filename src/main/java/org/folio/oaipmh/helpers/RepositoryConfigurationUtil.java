@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
@@ -23,8 +24,7 @@ import org.openarchives.oai._2.DeletedRecordType;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class RepositoryConfigurationUtil {
@@ -33,7 +33,7 @@ public class RepositoryConfigurationUtil {
 
   }
 
-  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
+  private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
 
   private static final String QUERY = "module==OAIPMH";
 

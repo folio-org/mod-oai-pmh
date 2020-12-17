@@ -1,7 +1,9 @@
 package org.folio.oaipmh.helpers.streaming;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
@@ -45,18 +47,20 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public WriteStream<JsonEvent> write(JsonEvent data) {
-    return write(data, null);
+  public Future<Void> write(JsonEvent data) {
+    Promise<Void> promise = Promise.promise();
+    write(data, null);
+    promise.complete();
+    return promise.future();
   }
 
   @Override
-  public synchronized WriteStream<JsonEvent> write(JsonEvent data,
+  public synchronized void write(JsonEvent data,
                                                    Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
     if (dataList.size() >= batchSize) {
       runBatchHandler();
     }
-    return this;
   }
 
   private void runBatchHandler() {
@@ -87,9 +91,12 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public synchronized void end() {
+  public synchronized Future<Void> end() {
+    Promise<Void> promise = Promise.promise();
     streamEnded = true;
     runBatchHandler();
+    promise.complete();
+    return promise.future();
   }
 
   @Override

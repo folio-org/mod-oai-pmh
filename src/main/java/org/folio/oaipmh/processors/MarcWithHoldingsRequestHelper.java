@@ -17,6 +17,50 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
+import com.google.common.collect.Maps;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.impl.Connection;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.oaipmh.service.InstancesService;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.spring.SpringContextUtil;
+import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.ReflectionUtils;
+
+import javax.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.OffsetDateTime;
@@ -32,51 +76,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.folio.rest.jooq.tables.pojos.Instances;
-import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.folio.rest.tools.utils.TenantTool;
-import org.folio.spring.SpringContextUtil;
-import org.openarchives.oai._2.ListRecordsType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ReflectionUtils;
-
-import com.google.common.collect.Maps;
-
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.parsetools.impl.JsonParserImpl;
-import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.impl.Connection;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -104,7 +103,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
@@ -207,11 +206,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
 
-        Future<Map<String, JsonObject>> srsResponse = Future.future();
+
+        Future<Map<String, JsonObject>> srsResponse;
         if (CollectionUtils.isNotEmpty(instances)) {
           srsResponse = requestSRSByIdentifiers(srsClient, instancesWithoutLast, deletedRecordSupport);
         } else {
-          srsResponse.complete();
+          srsResponse = Future.succeededFuture();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
@@ -247,14 +247,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
     Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getString(INSTANCE_ID_FIELD_NAME), Function.identity()));
     Promise<List<JsonObject>> completePromise = Promise.promise();
-    HttpClient httpClient = context.owner().createHttpClient();
+    WebClient webClient = WebClient.create(Vertx.vertx());
 
-    HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
+    String inventoryInstanceUri = format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT);
+    HttpRequest<Buffer> enrichInventoryRequest = createEnrichInventoryRequest(webClient, request, inventoryInstanceUri);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(completePromise, context);
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-    enrichInventoryClientRequest.end(entries.encode());
+    enrichInventoryRequest.sendJsonObject(entries)
+      .onSuccess(response -> writeResponseToStream(webClient, response, buildInvetoryUpdatedInstancesQuery(request), databaseWriteStream, completePromise))
+      .onFailure(e -> {
+        logger.error(e.getMessage(), e);
+        handleException(completePromise, e);
+      });
 
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
@@ -418,7 +424,23 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
   }
 
-  private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {
+  private HttpRequest<Buffer> buildInventoryQuery(WebClient webClient, Request request) {
+    String inventoryQuery = buildInvetoryUpdatedInstancesQuery(request);
+
+    logger.info("Sending request to : " + inventoryQuery);
+
+    final HttpRequest<Buffer> httpRequest = webClient.getAbs(inventoryQuery);
+
+    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
+
+    httpRequest.timeout(REQUEST_TIMEOUT);
+
+    return httpRequest;
+  }
+
+  private String buildInvetoryUpdatedInstancesQuery(Request request) {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
@@ -439,20 +461,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
 
-    String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
-
-
-    logger.info("Sending request to : " + inventoryQuery);
-    final HttpClientRequest httpClientRequest = httpClient
-      .getAbs(inventoryQuery);
-
-    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
-
-    httpClientRequest.setTimeout(REQUEST_TIMEOUT);
-
-    return httpClientRequest;
+    return format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
   }
 
   private boolean isSkipSuppressed(Request request) {
@@ -467,10 +476,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
     options.setIdleTimeout(REQUEST_TIMEOUT);
-    HttpClient httpClient = vertxContext.owner().createHttpClient(options);
-    HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
-    httpClientRequest.sendHead();
+    WebClient webClient = WebClient.create(Vertx.vertx());
+    HttpRequest<Buffer> httpRequest = buildInventoryQuery(webClient, request);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(oaiPmhResponsePromise , vertxContext);
+    httpRequest.send()
+      .onSuccess(response -> writeResponseToStream(webClient, response, buildInvetoryUpdatedInstancesQuery(request), databaseWriteStream, oaiPmhResponsePromise))
+      .onFailure(e -> {
+        logger.error(e.getMessage(), e);
+        handleException(oaiPmhResponsePromise, e);
+      });
+
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(vertxContext.owner(), request));
@@ -528,10 +543,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
+  private BatchStreamWrapper getBatchHttpStream(Promise<?> promise, Context vertxContext) {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
+    databaseWriteStream.exceptionHandler(e -> {
+      if (e != null) {
+        handleException(promise, e);
+      }
+    });
 
     inventoryQuery.handler(resp -> {
       if (resp.statusCode() != 200) {
@@ -594,16 +614,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ).collect(Collectors.toList());
   }
 
-  private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
-    final HttpClientRequest httpClientRequest = httpClient
-      .postAbs(format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
-
-    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-
-    return httpClientRequest;
+  private HttpRequest<Buffer> createEnrichInventoryRequest(WebClient webClient, Request request, String uri) {
+    final HttpRequest<Buffer> httpRequest = webClient.postAbs(uri);
+    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
+    httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
+    return httpRequest;
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,

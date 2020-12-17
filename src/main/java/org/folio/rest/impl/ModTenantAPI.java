@@ -17,6 +17,7 @@ import java.util.Properties;
 import javax.ws.rs.core.Response;
 
 import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
@@ -38,11 +39,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 public class ModTenantAPI extends TenantAPI {
-  private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
+  private final Logger logger = LogManager.getLogger(ModTenantAPI.class);
 
   private static final String CONFIG_DIR_PATH = "config";
   private static final String QUERY = "module==OAIPMH and configName==%s";
