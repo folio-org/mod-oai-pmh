@@ -1,49 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseConverter;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.MetadataType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.SetType;
-import org.openarchives.oai._2.StatusType;
-
-import javax.ws.rs.core.Response;
-import java.math.BigInteger;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.stream.Collectors;
-
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -69,6 +25,53 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+
+import java.math.BigInteger;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.openarchives.oai._2.GranularityType;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.MetadataType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.SetType;
+import org.openarchives.oai._2.StatusType;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -203,8 +206,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Parse a date from string and compensate one date or one second because in SRS the dates are non-inclusive.
-   * @param dateTimeString - date/time supplied
-   * @param shouldCompensateUntilDate = if the date is used as until parameter
+   *
+   * @param dateTimeString                 - date/time supplied
+   * @param shouldCompensateUntilDate      = if the date is used as until parameter
    * @param shouldEqualizeTimeBetweenZones whether the time should be updated by diff between current time zone and UTC
    * @return date that will be used to query SRS
    */
@@ -214,14 +218,14 @@ public abstract class AbstractHelper implements VerbHelper {
         return null;
       }
       Date date = DateUtils.parseDate(dateTimeString, dateFormats);
-      if (shouldCompensateUntilDate){
-        if (dateTimeString.matches(DATE_ONLY_PATTERN)){
+      if (shouldCompensateUntilDate) {
+        if (dateTimeString.matches(DATE_ONLY_PATTERN)) {
           date = DateUtils.addDays(date, 1);
-        }else{
+        } else {
           date = DateUtils.addSeconds(date, 1);
         }
       }
-      if(shouldEqualizeTimeBetweenZones) {
+      if (shouldEqualizeTimeBetweenZones) {
         return addTimeDiffBetweenCurrentTimeZoneAndUTC(date);
       }
       return date;
@@ -271,10 +275,11 @@ public abstract class AbstractHelper implements VerbHelper {
    *
    * @param identifierPrefix oai-identifier prefix
    * @param instance         the instance item returned by storage service
+   * @param request          oai-pmh request
    * @return populated {@link HeaderType}
    */
-  protected HeaderType populateHeader(String identifierPrefix, JsonObject instance) {
-    return createHeader(instance)
+  protected HeaderType populateHeader(String identifierPrefix, JsonObject instance, Request request) {
+    return createHeader(instance, request)
       .withIdentifier(getIdentifier(identifierPrefix, instance));
   }
 
@@ -282,12 +287,22 @@ public abstract class AbstractHelper implements VerbHelper {
    * Creates {@link HeaderType} and Datestamp and Set
    *
    * @param instance the instance item returned by storage service
+   * @param request  oai-pmh request
    * @return populated {@link HeaderType}
    */
-  protected HeaderType createHeader(JsonObject instance) {
-    return new HeaderType()
-      .withDatestamp(getInstanceDate(instance))
-      .withSetSpecs("all");
+  protected HeaderType createHeader(JsonObject instance, Request request) {
+    HeaderType headerType = new HeaderType().withSetSpecs("all");
+    Instant instant = getInstanceDate(instance);
+    String date;
+    if (isDateOnlyGranularity(request)) {
+      instant = instant.truncatedTo(ChronoUnit.DAYS);
+      LocalDate time = LocalDate.ofInstant(instant, ZoneId.systemDefault());
+      date = ISO_UTC_DATE_ONLY.format(time);
+    } else {
+      LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+      date = ISO_UTC_DATE_TIME.format(time);
+    }
+    return headerType.withDatestamp(date);
   }
 
   /**
@@ -410,7 +425,7 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
-    HeaderType header = populateHeader(identifierPrefix, instance);
+    HeaderType header = populateHeader(identifierPrefix, instance, request);
     if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
       header.setStatus(StatusType.DELETED);
     }
@@ -419,27 +434,20 @@ public abstract class AbstractHelper implements VerbHelper {
 
   /**
    * Checks if request sequences can be resumed without losing records in case of partitioning the whole result set.
-   * <br/>
-   * The following state is an indicator that flow cannot be safely resumed:
-   * <li>No instances are returned</li>
-   * <li>Current total number of records is less than the previous one and the first
-   * record id does not match one stored in the resumptionToken</li>
-   * <br/>
-   * See <a href="https://issues.folio.org/browse/MODOAIPMH-10">MODOAIPMH-10</a> for more details.
    *
-   * @param request
-   * @param totalRecords
-   * @param instances
-   * @return
+   * @param request      oai-pmh request
+   * @param totalRecords records count into the system
+   * @param instances    instances from srs
+   * @return true if resumptionToken valid and request sequence can continue
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
     boolean isDeletedRecords = isDeletedRecordsEnabled(request);
     int firstPosition = 0;
     return instances != null && instances.size() > 0
-        && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
-            isDeletedRecords ? storageHelper.getId(instances.getJsonObject(firstPosition))
-                : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
+      && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),
+      isDeletedRecords ? storageHelper.getId(instances.getJsonObject(firstPosition))
+        : storageHelper.getRecordId(instances.getJsonObject(firstPosition))));
   }
 
   private List<String> getSupportedSetSpecs() {

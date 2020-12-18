@@ -89,8 +89,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -108,7 +108,6 @@ import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -197,6 +196,11 @@ class OaiPmhImplTest {
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
   private final Header tokenHeader = new Header("X-Okapi-Token", "eyJhbGciOiJIUzI1NiJ9");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
+
+  private static final String DATE_ONLY_REXEXP = "[\\d]{4}-[\\d]{2}-[\\d]{2}";
+  private static final String DATE_TIME_REGEXP = DATE_ONLY_REXEXP + "T[\\d]{2}:[\\d]{2}:[\\d]{2}Z";
+  private Pattern DATE_ONLY_PATTERN = Pattern.compile(DATE_ONLY_REXEXP);
+  private Pattern DATE_TIME_PATTERN = Pattern.compile(DATE_TIME_REGEXP);
 
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
@@ -571,6 +575,87 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("10")));
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
+  }
+  
+  @ParameterizedTest
+  @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyHeaderDateStamp(oaipmh, verb, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+  }
+
+  @ParameterizedTest
+  @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  void headersDatestampsShouldCorrespondToDateTimeGranularitySetting(MetadataPrefix prefix, VerbType verb) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD.value());
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, THREE_INSTANCES_DATE)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyHeaderDateStamp(oaipmh, verb, GranularityType.YYYY_MM_DD.value());
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+  }
+
+  @ParameterizedTest
+  @MethodSource("allMetadataPrefixesAndGranularityTypesProvider")
+  void headerDatestampOfGetRecordVerbShouldCorrespondToGranularitySetting(MetadataPrefix prefix, GranularityType granularityType) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, granularityType.value());
+
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, GET_RECORD);
+    verifyHeaderDateStamp(oaipmh, GET_RECORD, granularityType.value());
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+  }
+
+  private void verifyHeaderDateStamp(OAIPMH oaipmh, VerbType verbType, String timeGranularity) {
+    String verb = verbType.value();
+    if (verb.equals(LIST_RECORDS.value())) {
+      oaipmh.getListRecords().getRecords().stream()
+        .map(RecordType::getHeader)
+        .map(HeaderType::getDatestamp)
+        .forEach(headerDateStamp -> verifyHeaderDateStamp(headerDateStamp, timeGranularity));
+    } else if (verb.equals(LIST_IDENTIFIERS.value())) {
+      oaipmh.getListIdentifiers().getHeaders().stream()
+        .map(HeaderType::getDatestamp)
+        .forEach(headerDateStamp -> verifyHeaderDateStamp(headerDateStamp, timeGranularity));
+    } else if (verb.equals(GET_RECORD.value())) {
+      String datestamp = oaipmh.getGetRecord()
+        .getRecord()
+        .getHeader()
+        .getDatestamp();
+      verifyHeaderDateStamp(datestamp, timeGranularity);
+    }
+  }
+
+  private void verifyHeaderDateStamp(String datestamp, String timeGranularity) {
+    if (timeGranularity.equals(GranularityType.YYYY_MM_DD.value())) {
+      assertTrue(DATE_ONLY_PATTERN.matcher(datestamp).matches());
+    } else {
+      assertTrue(DATE_TIME_PATTERN.matcher(datestamp).matches());
+    }
   }
 
   @ParameterizedTest
@@ -1675,6 +1760,16 @@ class OaiPmhImplTest {
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
       for (VerbType verb : LIST_VERBS) {
           builder.add(Arguments.arguments(prefix, verb));
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> allMetadataPrefixesAndGranularityTypesProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (GranularityType granularity : GranularityType.values()) {
+        builder.add(Arguments.arguments(prefix, granularity));
       }
     }
     return builder.build();

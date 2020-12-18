@@ -19,12 +19,8 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
@@ -39,7 +35,6 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.json.DecodeException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -54,7 +49,6 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
-import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -73,6 +67,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -112,17 +107,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
   private InstancesService instancesService;
-
-  /**
-   * The dates returned by inventory storage service are in format "2018-09-19T02:52:08.873+0000".
-   * Using {@link DateTimeFormatter#ISO_LOCAL_DATE_TIME} and just in case 2 offsets "+HHmm" and "+HH:MM"
-   */
-  private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-    .parseCaseInsensitive()
-    .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-    .optionalStart().appendOffset("+HH:MM", "Z").optionalEnd()
-    .optionalStart().appendOffset("+HHmm", "Z").optionalEnd()
-    .toFormatter();
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
@@ -428,19 +412,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
     String identifierPrefix = request.getIdentifierPrefix();
     return new RecordType()
-      .withHeader(createHeader(instance)
+      .withHeader(createHeader(instance, request)
         .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
-  }
-
-  @Override
-  protected HeaderType createHeader(JsonObject instance) {
-    String updatedDate = instance.getString("updatedDate");
-    Instant datetime = formatter.parse(updatedDate, Instant::from)
-      .truncatedTo(ChronoUnit.SECONDS);
-
-    return new HeaderType()
-      .withDatestamp(datetime)
-      .withSetSpecs("all");
   }
 
   private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {
@@ -650,7 +623,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               final JsonArray records = entries.getJsonArray("sourceRecords");
               records.stream()
                 .filter(Objects::nonNull)
-                .map(r -> (JsonObject) r)
+                .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
               logger.debug("Can't process response from SRS: {0}", bh.toString());
