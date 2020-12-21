@@ -27,6 +27,13 @@
     <modifyDataType tableName="instances" columnName="request_id" newDataType="uuid"/>
   </changeSet>
 
+  <changeSet id="2020-12-18--16-00-enrich-request-metadata-lb-with-request-ids-from-instances-table" author="Illia Daliek">
+    <sql>
+      WITH request_ids_to_move AS (SELECT DISTINCT inst.request_id FROM ${database.defaultSchemaName}.instances inst LEFT JOIN ${database.defaultSchemaName}.request_metadata_lb rm ON inst.request_id = rm.request_id WHERE rm.request_id is null)
+      INSERT INTO ${database.defaultSchemaName}.request_metadata_lb SELECT request_ids_to_move.request_id, current_timestamp FROM request_ids_to_move;
+    </sql>
+  </changeSet>
+
   <changeSet id="2020-11-19--18-00-add-foreign-key-constraint-to-request-id-field-of-request-metadata-lb-table" author="Illia Daliek">
     <addForeignKeyConstraint baseTableName="instances" baseColumnNames="request_id"
                              constraintName="requestIdForeignKey" referencedTableName="request_metadata_lb"
