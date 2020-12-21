@@ -6,27 +6,6 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Properties;
-
-import javax.ws.rs.core.Response;
-
-import org.apache.http.HttpStatus;
-import org.apache.logging.log4j.LogManager;
-import org.folio.liquibase.LiquibaseUtil;
-import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
-import org.folio.oaipmh.mappers.PropertyNameMapper;
-import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Config;
-import org.folio.rest.jaxrs.model.TenantAttributes;
-import org.folio.spring.SpringContextUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AsyncResult;
@@ -36,10 +15,30 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.liquibase.LiquibaseUtil;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.jaxrs.model.Config;
+import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
 
 public class ModTenantAPI extends TenantAPI {
   private final Logger logger = LogManager.getLogger(ModTenantAPI.class);
@@ -57,7 +56,7 @@ public class ModTenantAPI extends TenantAPI {
 
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
-      final Handler<AsyncResult<Response>> handlers, final Context context) {
+                         final Handler<AsyncResult<Response>> handlers, final Context context) {
     super.postTenant(entity, headers, postTenantAsyncResultHandler -> {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
@@ -110,8 +109,14 @@ public class ModTenantAPI extends TenantAPI {
     Promise<String> promise = Promise.promise();
     try {
       logger.info(String.format("Getting configurations with configName = '%s'", configName));
-      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
-          response -> handleModConfigurationGetResponse(response, client, configName, promise));
+      Promise<HttpResponse<Buffer>> responsePromise = Promise.promise();
+      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, responsePromise);
+      responsePromise.future()
+        .onSuccess(response -> handleModConfigurationGetResponse(response, client, configName, promise))
+        .onFailure(e -> {
+          logger.error(String.format("Error while processing config with configName '%s'. '%s'", configName, e.getMessage()), e);
+          promise.fail(e.getMessage());
+        });
     } catch (Exception e) {
       logger.error(String.format("Error while processing config with configName '%s'. '%s'", configName, e.getMessage()), e);
       promise.fail(e.getMessage());
@@ -119,28 +124,24 @@ public class ModTenantAPI extends TenantAPI {
     return promise.future();
   }
 
-  private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
-      Promise<String> promise) {
+  private void handleModConfigurationGetResponse(HttpResponse<Buffer> response, ConfigurationsClient client, String configName,
+                                                 Promise<String> promise) {
     if (response.statusCode() != 200) {
-      response.handler(buffer -> {
-        logger.error(buffer.toString());
-        promise.fail(buffer.toString());
-      });
+      logger.error(response.bodyAsBuffer().toString());
+      promise.fail(response.bodyAsBuffer().toString());
       return;
     }
-    response.bodyHandler(body -> {
-      JsonObject jsonConfig = body.toJsonObject();
-      JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
-      if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {} isn't exist. " + "Posting default configs for {} configuration group",
-            MODULE_NAME, configName);
-        postConfig(client, configName, promise);
-      } else {
-        logger.info("Configurations has been got successfully, applying configurations to module system properties");
-        populateSystemPropertiesWithConfig(jsonConfig);
-        promise.complete();
-      }
-    });
+    JsonObject jsonConfig = response.bodyAsJsonObject();
+    JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
+    if (configs.isEmpty()) {
+      logger.info("Configuration group with configName {} isn't exist. " + "Posting default configs for {} configuration group",
+        MODULE_NAME, configName);
+      postConfig(client, configName, promise);
+    } else {
+      logger.info("Configurations has been got successfully, applying configurations to module system properties");
+      populateSystemPropertiesWithConfig(jsonConfig);
+      promise.complete();
+    }
   }
 
   private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
@@ -150,12 +151,18 @@ public class ModTenantAPI extends TenantAPI {
     config.setModule(MODULE_NAME);
     config.setValue(getConfigValue(configName));
     try {
-      client.postConfigurationsEntries(null, config, resp -> {
-        if (resp.statusCode() != 201) {
-          logger
-            .error(String.format("Invalid response from mod-configuration. Cannot post config '%s'." + " Response message: : %s:%s",
+      client.postConfigurationsEntries(null, config, respAr -> {
+        if (respAr.succeeded()) {
+          HttpResponse<Buffer> resp = respAr.result();
+          if (resp.statusCode() != 201) {
+            logger
+              .error(String.format("Invalid response from mod-configuration. Cannot post config '%s'." + " Response message: : %s:%s",
                 configName, resp.statusCode(), resp.statusMessage()));
-          promise.fail("Cannot post config. " + resp.statusMessage());
+            promise.fail("Cannot post config. " + resp.statusMessage());
+          }
+        } else if(respAr.failed()) {
+          logger.error(respAr.cause().getMessage(), respAr.cause());
+          promise.fail(respAr.cause().getMessage());
         }
       });
     } catch (Exception e) {

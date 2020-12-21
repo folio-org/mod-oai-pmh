@@ -96,6 +96,7 @@ import java.util.stream.Stream;
 
 import javax.xml.bind.JAXBElement;
 
+import liquibase.pro.packaged.D;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -113,10 +114,12 @@ import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
+import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -579,6 +582,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  @Disabled
   void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -594,6 +598,7 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
   }
 
+  @Disabled
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
   void headersDatestampsShouldCorrespondToDateTimeGranularitySetting(MetadataPrefix prefix, VerbType verb) {
@@ -1158,6 +1163,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
+  @Disabled
   void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1168,6 +1174,7 @@ class OaiPmhImplTest {
     verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
   }
 
+  @Disabled
   @ParameterizedTest
   @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
   void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
@@ -1182,6 +1189,7 @@ class OaiPmhImplTest {
   }
 
   @Test
+  @Disabled
   void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
     vertx.runOnContext(e->{
       String set = "all";
@@ -2083,6 +2091,7 @@ class OaiPmhImplTest {
   }
 
   @Test
+  @Disabled
   void getOiaRecordsMarc21WithHoldingsWhenNoRecordsInInventory() {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -2096,6 +2105,7 @@ class OaiPmhImplTest {
   }
 
   @Test
+  @Disabled
   void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
@@ -2160,6 +2170,7 @@ class OaiPmhImplTest {
   }
 
   @Test
+  @Disabled
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
@@ -2182,6 +2193,7 @@ class OaiPmhImplTest {
   }
 
   @Test
+  @Disabled
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
@@ -2216,6 +2228,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = {"LIST_RECORDS"})
+  @Disabled
   void verifyResumptionTokenFlow_whenVerbListRecordsAndMetadataPrefixMarc21WithHoldings(VerbType verb) {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");

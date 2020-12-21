@@ -23,9 +23,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -49,6 +47,7 @@ import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.ListRecordsType;
@@ -154,7 +153,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
            * should be integrated with jooq request
            */
           fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-          fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
+          fetchingIdsPromise.future()
+            .onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true))
+            .onFailure(e -> handleException(promise, e));
         } else {
           processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
         }
@@ -476,15 +477,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
     options.setIdleTimeout(REQUEST_TIMEOUT);
-    WebClient webClient = WebClient.create(Vertx.vertx());
+    WebClient webClient = WebClient.create(vertxContext.owner());
     HttpRequest<Buffer> httpRequest = buildInventoryQuery(webClient, request);
     BatchStreamWrapper databaseWriteStream = getBatchHttpStream(oaiPmhResponsePromise , vertxContext);
-    httpRequest.send()
-      .onSuccess(response -> writeResponseToStream(webClient, response, buildInvetoryUpdatedInstancesQuery(request), databaseWriteStream, oaiPmhResponsePromise))
-      .onFailure(e -> {
-        logger.error(e.getMessage(), e);
-        handleException(oaiPmhResponsePromise, e);
-      });
 
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
@@ -497,7 +492,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
-    databaseWriteStream.handleBatch(batch -> {
+    httpRequest.send()
+      .onSuccess(response -> writeResponseToStream(webClient, response, buildInvetoryUpdatedInstancesQuery(request), databaseWriteStream, oaiPmhResponsePromise))
+      .onFailure(e -> {
+        logger.error(e.getMessage(), e);
+        handleException(oaiPmhResponsePromise, e);
+      });
+
+    databaseWriteStream.handleBatch(batch -> handleBatch(batch, request, requestId, completePromise, databaseWriteStream));
+
+    return completePromise;
+  }
+
+  private void handleBatch(List<JsonEvent> batch, Request request, String requestId, Promise<Void> completePromise, BatchStreamWrapper databaseWriteStream) {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
       final Long returnedCount = databaseWriteStream.getReturnedCount();
 
@@ -509,9 +516,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);
       }
       databaseWriteStream.invokeDrainHandler();
-    });
-
-    return completePromise;
   }
 
   /**
@@ -552,41 +556,35 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         handleException(promise, e);
       }
     });
-
-    inventoryQuery.handler(resp -> {
-      if (resp.statusCode() != 200) {
-        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-        resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
-        promise.fail(new IllegalStateException(errorMsg));
-      } else {
-        resp.bodyHandler(buffer -> logger.info("Response " + buffer));
-        JsonParser jp = new JsonParserImpl(resp);
-        jp.objectValueMode();
-        jp.pipeTo(databaseWriteStream);
-        jp.endHandler(e -> {
-          databaseWriteStream.end();
-          inventoryHttpClient.close();
-        })
-          .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
-            databaseWriteStream.end();
-            inventoryHttpClient.close();
-            promise.fail(throwable);
-          });
-      }
-    });
-
-    inventoryQuery.exceptionHandler(e -> {
-      logger.error(e.getMessage(), e);
-      handleException(promise, e);
-    });
-
-    databaseWriteStream.exceptionHandler(e -> {
-      if (e != null) {
-        handleException(promise, e);
-      }
-    });
     return databaseWriteStream;
+  }
+
+  private void writeResponseToStream(WebClient inventoryWebClient, HttpResponse<Buffer> response, String requestUri, BatchStreamWrapper databaseWriteStream, Promise<?> completePromise) {
+    if (response.statusCode() != 200) {
+      String errorMsg = getErrorFromStorageMessage("inventory-storage", requestUri, response.statusMessage());
+      logger.error(errorMsg);
+      completePromise.fail(new IllegalStateException(errorMsg));
+    } else {
+      logger.info("Response " + response.bodyAsBuffer());
+      JsonParser jsonParser = JsonParser.newParser()
+        .objectValueMode();
+      jsonParser.pipeTo(databaseWriteStream)
+        .onFailure(e -> {
+          logger.error(e.getMessage(), e);
+          handleException(completePromise, e);
+        });
+      jsonParser.handle(response.bodyAsBuffer());
+      jsonParser.endHandler(e -> {
+        databaseWriteStream.end();
+        inventoryWebClient.close();
+      })
+        .exceptionHandler(throwable -> {
+          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+          databaseWriteStream.end();
+          inventoryWebClient.close();
+          completePromise.fail(throwable);
+        });
+    }
   }
 
   //fix vertx json to jooq JSON mapping

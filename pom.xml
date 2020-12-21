@@ -123,14 +123,14 @@
     <time-adapters.version>1.1.3</time-adapters.version>
     <jaxb2-basics.version>1.11.1</jaxb2-basics.version>
     <marc4j.version>2.8.3</marc4j.version>
-    <mod-configuration-client.version>5.4.0</mod-configuration-client.version>
+    <mod-configuration-client.version>5.6.0-SNAPSHOT</mod-configuration-client.version>
     <log4j-slf4j.version>2.13.0</log4j-slf4j.version>
     <restassured.version>4.3.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
     <srs.version>4.0.1</srs.version>
-    <jooq.version>3.13.2</jooq.version>
-    <vertx-jooq.generator.version>5.1.1</vertx-jooq.generator.version>
-    <vertx-jooq.classic-reactive.version>5.2.1</vertx-jooq.classic-reactive.version>
+    <jooq.version>3.13.6</jooq.version>
+    <vertx-jooq.generator.version>6.0.0</vertx-jooq.generator.version>
+    <vertx-jooq.classic-reactive.version>6.0.0</vertx-jooq.classic-reactive.version>
     <postgres.version>42.2.12</postgres.version>
   </properties>
 

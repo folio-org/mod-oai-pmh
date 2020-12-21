@@ -62,7 +62,6 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import org.apache.logging.log4j.Logger;
-import io.vertx.core.logging.LoggerFactory;
 
 public class OaiPmhImpl implements Oai {
 
