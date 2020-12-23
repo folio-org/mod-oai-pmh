@@ -85,6 +85,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
+  public static final String ENRICHED_INSTANCE_ID = "instanceid";
+
   private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
 
   private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
@@ -101,7 +103,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
-  public static final String ENRICHED_INSTANCE_ID = "instanceid";
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -538,6 +539,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
         promise.fail(new IllegalStateException(errorMsg));
       } else {
+        resp.bodyHandler(buffer -> logger.info("Response " + buffer));
         JsonParser jp = new JsonParserImpl(resp);
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
