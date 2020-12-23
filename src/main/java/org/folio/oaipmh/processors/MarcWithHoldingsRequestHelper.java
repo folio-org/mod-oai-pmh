@@ -101,6 +101,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
+  public static final String ENRICHED_INSTANCE_ID = "instanceid";
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -269,7 +270,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       try {
         for (JsonEvent jsonEvent : batch) {
           JsonObject value = jsonEvent.objectValue();
-          String instanceId = value.getString(INSTANCE_ID_FIELD_NAME);
+          String instanceId = value.getString(ENRICHED_INSTANCE_ID);
           Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
           if (itemsandholdingsfields instanceof JsonObject) {
             JsonObject instance = instances.get(instanceId);
