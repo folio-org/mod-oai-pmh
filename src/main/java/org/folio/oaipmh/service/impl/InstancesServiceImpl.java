@@ -1,12 +1,12 @@
 package org.folio.oaipmh.service.impl;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 @Service
 public class InstancesServiceImpl implements InstancesService {
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   private InstancesDao instancesDao;
 
@@ -37,7 +37,7 @@ public class InstancesServiceImpl implements InstancesService {
         List<Future> futures = new ArrayList<>();
         if (isNotEmpty(ids)) {
           ids.forEach(id -> futures.add(instancesDao.deleteRequestMetadataByRequestId(id, tenantId)));
-          CompositeFuture.all(futures)
+          GenericCompositeFuture.all(futures)
             .onSuccess(v -> promise.complete(ids))
             .onFailure(throwable -> {
               logger.error("Error occurred during deleting instances by request ids: " + ids, throwable);

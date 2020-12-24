@@ -19,6 +19,7 @@ import java.util.List;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Request;
 import org.openarchives.oai._2.DeletedRecordType;
 import org.openarchives.oai._2.DescriptionType;
@@ -30,8 +31,7 @@ import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -39,7 +39,7 @@ import io.vertx.core.logging.LoggerFactory;
  */
 public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiRepositoryInfoHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiRepositoryInfoHelper.class);
 
   private static final String STORAGE_IDENTIFIER_SAMPLE = "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc";
 

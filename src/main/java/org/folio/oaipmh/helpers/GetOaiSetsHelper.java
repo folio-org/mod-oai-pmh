@@ -5,6 +5,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.openarchives.oai._2.ListSetsType;
@@ -13,14 +14,13 @@ import org.openarchives.oai._2.OAIPMH;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Helper class that contains business logic for retrieving OAI-PMH set structure of a repository.
  */
 public class GetOaiSetsHelper extends AbstractHelper {
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiSetsHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiSetsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
