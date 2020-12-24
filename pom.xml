@@ -111,8 +111,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sonar.exclusions>**/ModTenantAPI.java</sonar.exclusions>
     <sonar.exclusions>**/PropertyNameMapper.java</sonar.exclusions>
+    <sonar.exclusions>**/SourceStorageSourceRecordsClient.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/ModTenantAPI.java</sonar.coverage.exclusions>
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java</sonar.coverage.exclusions>
+    <sonar.coverage.exclusions>**/SourceStorageSourceRecordsClient.java</sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
     <raml-module-builder.version>32.0.0</raml-module-builder.version>

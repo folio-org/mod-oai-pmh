@@ -48,10 +48,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public Future<Void> write(JsonEvent data) {
-    Promise<Void> promise = Promise.promise();
     write(data, null);
-    promise.complete();
-    return promise.future();
+    return Future.succeededFuture();
   }
 
   @Override
@@ -92,11 +90,9 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   @Override
   public synchronized Future<Void> end() {
-    Promise<Void> promise = Promise.promise();
     streamEnded = true;
     runBatchHandler();
-    promise.complete();
-    return promise.future();
+    return Future.succeededFuture();
   }
 
   @Override

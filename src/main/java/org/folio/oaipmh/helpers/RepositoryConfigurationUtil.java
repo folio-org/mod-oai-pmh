@@ -62,7 +62,7 @@ public class RepositoryConfigurationUtil {
       responsePromise.future().onSuccess(response -> {
         try {
           if (response.statusCode() != 200) {
-            logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
+            logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}", tenant,
               response.statusCode(), response.body());
             future.complete(null);
             return;
@@ -85,15 +85,15 @@ public class RepositoryConfigurationUtil {
 
           future.complete(null);
         } catch (Exception e) {
-          logger.error("Error getting configuration for {} tenant", e, tenant);
+          logger.error("Error getting configuration for {} tenant", tenant);
           future.completeExceptionally(e);
         }
       }).onFailure(e -> {
-        logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
+        logger.error("Error happened initializing mod-configurations client for {} tenant", tenant);
         future.completeExceptionally(e);
       });
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
+      logger.error("Error happened initializing mod-configurations client for {} tenant", tenant);
       future.completeExceptionally(e);
     }
     return future;

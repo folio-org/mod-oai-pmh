@@ -136,7 +136,7 @@ public class SourceStorageSourceRecordsClient {
     return request.send();
   }
 
-  public Future<HttpResponse<Buffer>> postSourceStorageSourceRecords(String idType, Boolean deleted, List List) throws Exception {
+  public Future<HttpResponse<Buffer>> postSourceStorageSourceRecords(String idType, Boolean deleted, List list) throws Exception {
     StringBuilder queryParams = new StringBuilder("?");
     if (idType != null) {
       queryParams.append("idType=");
@@ -151,8 +151,8 @@ public class SourceStorageSourceRecordsClient {
     }
 
     Buffer buffer = Buffer.buffer();
-    if (List != null) {
-      buffer.appendString(ClientHelpers.pojo2json(List));
+    if (list != null) {
+      buffer.appendString(ClientHelpers.pojo2json(list));
     }
 
     HttpRequest<Buffer> request = this.webClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());

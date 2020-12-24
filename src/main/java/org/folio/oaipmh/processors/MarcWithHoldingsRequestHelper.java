@@ -300,6 +300,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             completePromise.fail(e);
           }
         });
+      })
+      .onFailure(e -> {
+        logger.error(e.getMessage());
+        completePromise.fail(e);
       });
     return completePromise.future();
   }
