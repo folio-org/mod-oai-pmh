@@ -358,7 +358,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       logger.info("Build records response: " + records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-      if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
+      if (records.isEmpty() && nextInstanceId == null && firstBatch) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));

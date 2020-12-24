@@ -115,7 +115,7 @@
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java</sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
-    <raml-module-builder.version>32.0.0-SNAPSHOT</raml-module-builder.version>
+    <raml-module-builder.version>32.0.0</raml-module-builder.version>
     <vertx.version>4.0.0</vertx.version>
     <vertx-completable-future.version>0.1.2</vertx-completable-future.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
