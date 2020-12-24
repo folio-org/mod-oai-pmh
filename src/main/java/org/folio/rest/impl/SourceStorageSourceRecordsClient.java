@@ -1,11 +1,15 @@
 package org.folio.rest.impl;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import org.folio.rest.tools.ClientHelpers;
 import org.folio.rest.tools.utils.VertxUtils;
 
 import java.io.UnsupportedEncodingException;
@@ -14,6 +18,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 
 //TODO Should be replaced with the SourceStorageSourceRecordsClient from mod-source-record-storage-client
 // when it's upgraded to RMD version 32 and Vert.x version 4
@@ -129,5 +134,40 @@ public class SourceStorageSourceRecordsClient {
     }
 
     return request.send();
+  }
+
+  public Future<HttpResponse<Buffer>> postSourceStorageSourceRecords(String idType, Boolean deleted, List List) throws Exception {
+    StringBuilder queryParams = new StringBuilder("?");
+    if (idType != null) {
+      queryParams.append("idType=");
+      queryParams.append(URLEncoder.encode(idType, "UTF-8"));
+      queryParams.append("&");
+    }
+
+    if (deleted != null) {
+      queryParams.append("deleted=");
+      queryParams.append(deleted);
+      queryParams.append("&");
+    }
+
+    Buffer buffer = Buffer.buffer();
+    if (List != null) {
+      buffer.appendString(ClientHelpers.pojo2json(List));
+    }
+
+    HttpRequest<Buffer> request = this.webClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());
+    request.putHeader("Content-type", "application/json");
+    request.putHeader("Accept", "application/json,text/plain");
+    if (this.tenantId != null) {
+      request.putHeader("X-Okapi-Token", this.token);
+      request.putHeader("x-okapi-tenant", this.tenantId);
+    }
+
+    if (this.okapiUrl != null) {
+      request.putHeader("X-Okapi-Url", this.okapiUrl);
+    }
+
+    request.putHeader("Content-Length", buffer.length() + "");
+    return request.sendBuffer(buffer);
   }
 }
