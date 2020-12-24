@@ -213,7 +213,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedSetSpecValue.setSetSpec(setWithExistedSetSpecValue.getSetSpec().toUpperCase());
         setService.saveSet(setWithExistedSetSpecValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
+          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), ((PgException) throwable).getErrorMessage());
           testContext.completeNow();
         });
       });
@@ -230,7 +230,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedNameValue.setName(setWithExistedNameValue.getName().toUpperCase());
         setService.saveSet(setWithExistedNameValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
+          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), ((PgException) throwable).getErrorMessage());
           testContext.completeNow();
         });
       });
