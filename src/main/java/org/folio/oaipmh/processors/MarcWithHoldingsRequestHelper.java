@@ -85,6 +85,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
+  public static final String ENRICHED_INSTANCE_ID = "instanceid";
+
   private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
 
   private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
@@ -269,7 +271,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       try {
         for (JsonEvent jsonEvent : batch) {
           JsonObject value = jsonEvent.objectValue();
-          String instanceId = value.getString(INSTANCE_ID_FIELD_NAME);
+          String instanceId = value.getString(ENRICHED_INSTANCE_ID);
           Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
           if (itemsandholdingsfields instanceof JsonObject) {
             JsonObject instance = instances.get(instanceId);
@@ -537,6 +539,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
         promise.fail(new IllegalStateException(errorMsg));
       } else {
+        resp.bodyHandler(buffer -> logger.info("Response " + buffer));
         JsonParser jp = new JsonParserImpl(resp);
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
