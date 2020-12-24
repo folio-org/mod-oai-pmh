@@ -26,6 +26,7 @@ import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -45,7 +46,6 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.specification.RequestSpecification;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -121,7 +121,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
       folioSetCollection.getSets().forEach(set -> {
         list.add(setDao.deleteSetById(set.getId(), OAI_TEST_TENANT));
       });
-      CompositeFuture.all(list).onComplete(result -> {
+      GenericCompositeFuture.all(list).onComplete(result -> {
         if(result.failed()) {
           testContext.failNow(result.cause());
         } else {

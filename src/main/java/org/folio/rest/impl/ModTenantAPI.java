@@ -9,7 +9,6 @@ import static org.folio.oaipmh.Constants.OKAPI_URL;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -25,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
@@ -63,7 +63,7 @@ public class ModTenantAPI extends TenantAPI {
       } else {
         Future<String> loadConfigurationDataFuture = loadConfigurationData(headers);
         Future<String> initDatabaseFuture = initDatabase(headers, context.owner());
-        CompositeFuture.all(loadConfigurationDataFuture, initDatabaseFuture)
+        GenericCompositeFuture.all(Arrays.asList(loadConfigurationDataFuture, initDatabaseFuture))
           .onComplete(future -> {
             String message;
             if (future.succeeded()) {
@@ -90,7 +90,7 @@ public class ModTenantAPI extends TenantAPI {
     List<Future> futures = new ArrayList<>();
 
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, client)));
-    CompositeFuture.all(futures)
+    GenericCompositeFuture.all(futures)
       .onComplete(future -> {
         String message;
         if (future.succeeded()) {

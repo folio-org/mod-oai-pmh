@@ -95,14 +95,14 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.Constants;
@@ -166,7 +166,7 @@ import java.util.stream.Stream;
 class OaiPmhImplTest {
 
   public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private final Logger logger = LogManager.getLogger(this.getClass());
 
   // API paths
   private static final String ROOT_PATH = "/oai";
