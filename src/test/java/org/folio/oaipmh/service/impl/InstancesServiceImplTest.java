@@ -3,6 +3,7 @@ package org.folio.oaipmh.service.impl;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.jooq.Tables.INSTANCES;
 import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -176,7 +177,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      instancesService.deleteInstancesById(instancesIds, OAI_TEST_TENANT)
+      instancesService.deleteInstancesById(instancesIds, REQUEST_ID, OAI_TEST_TENANT)
         .onSuccess(res -> {
           assertTrue(res);
           testContext.completeNow();
@@ -188,11 +189,26 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnSucceedFutureWithFalseValue_whenDeleteInstancesByIdsAndSuchInstancesDoNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      instancesService.deleteInstancesById(nonExistentInstancesIds, OAI_TEST_TENANT)
+      instancesService.deleteInstancesById(nonExistentInstancesIds, REQUEST_ID, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(res -> {
           assertFalse(res);
           testContext.completeNow();
         }));
+    });
+  }
+
+  @Test
+  void shouldReturnSucceedFutureWithFalseValue_whenDeletingExistentInstanceIdWithIncorrectRequestId(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      String randomRequestId = UUID.randomUUID().toString();
+      instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT).compose(res -> {
+        assertFalse(res);
+        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
+      }).onSuccess(instanceIdList -> {
+        assertEquals(1, instanceIdList.size());
+        assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
+        testContext.completeNow();
+      }).onFailure(testContext::failNow);
     });
   }
 

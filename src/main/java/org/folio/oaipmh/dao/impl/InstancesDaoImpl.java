@@ -63,7 +63,8 @@ public class InstancesDaoImpl implements InstancesDao {
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
     if (Objects.isNull(uuid) || StringUtils.isEmpty(uuid.toString())) {
-      return Future.failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
+      return Future
+        .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
@@ -72,26 +73,29 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb, String tenantId) {
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
+      String tenantId) {
     requestMetadataLb.setRequestId(UUID.fromString(requestId));
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
-      .set(toDatabaseRecord(requestMetadataLb))
-      .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
-      .returning())
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
+        .set(toDatabaseRecord(requestMetadataLb))
+        .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .returning())
       .map(this::toOptionalRequestMetadata)
       .map(optional -> {
         if (optional.isPresent()) {
           return optional.get();
         }
         throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
-      })
-    );
+      }));
   }
 
   private Optional<RequestMetadataLb> toOptionalRequestMetadata(RowSet<Row> rows) {
     if (rows.rowCount() == 1) {
-      Row row = rows.iterator().next();
-      RequestMetadataLb requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
+      Row row = rows.iterator()
+        .next();
+      RequestMetadataLb requestMetadataLb = RowMappers.getRequestMetadataLbMapper()
+        .apply(row);
       return Optional.of(requestMetadataLb);
     }
     return Optional.empty();
@@ -116,10 +120,11 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
+  public Future<Boolean> deleteInstancesById(List<String> instIds, String requestId, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .execute(dslContext -> dslContext.deleteFrom(INSTANCES)
-        .where(INSTANCES.INSTANCE_ID.in(instIds)))
+        .where(INSTANCES.INSTANCE_ID.in(instIds))
+        .and(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(res -> {
         String instanceIds = String.join(",", instIds);
         if (res > 0) {
@@ -134,13 +139,13 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<Void> saveInstances(List<Instances> instances, String tenantId) {
-    if(instances.isEmpty()) {
+    if (instances.isEmpty()) {
       logger.debug("Skip saving instances. Instances list is empty.");
       return Future.succeededFuture();
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
       InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
-        INSTANCES.JSON, INSTANCES.REQUEST_ID);
+          INSTANCES.JSON, INSTANCES.REQUEST_ID);
       instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
       return insertValues;
     })
@@ -150,7 +155,8 @@ public class InstancesDaoImpl implements InstancesDao {
   @Override
   public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext -> dslContext.selectFrom(INSTANCES).where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .orderBy(INSTANCES.INSTANCE_ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
@@ -175,7 +181,8 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(row -> {
         RequestMetadataLb pojo = RowMappers.getRequestMetadataLbMapper()
           .apply(row.unwrap());
-        return pojo.getRequestId().toString();
+        return pojo.getRequestId()
+          .toString();
       })
       .collect(Collectors.toList());
     logger.debug("Expired request ids result: " + String.join(",", ids));

@@ -219,7 +219,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           List<String> instanceIds = instancesWithoutLast.stream()
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList());
-          instancesService.deleteInstancesById(instanceIds, request.getTenant())
+          instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
             .onComplete(r -> oaiPmhResponsePromise.complete(result)); //need remove this close client maybe
         }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
         srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));

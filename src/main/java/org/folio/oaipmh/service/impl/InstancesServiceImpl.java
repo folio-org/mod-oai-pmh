@@ -47,10 +47,11 @@ public class InstancesServiceImpl implements InstancesService {
         } else {
           promise.complete(Collections.emptyList());
         }
-      }).onFailure(th -> {
-      logger.error(th.getMessage());
-      promise.fail(th);
-    });
+      })
+      .onFailure(th -> {
+        logger.error(th.getMessage());
+        promise.fail(th);
+      });
     return promise.future();
   }
 
@@ -61,7 +62,7 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-                                                                    String tenantId) {
+      String tenantId) {
     return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
   }
 
@@ -71,8 +72,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
-    return instancesDao.deleteInstancesById(instIds, tenantId);
+  public Future<Boolean> deleteInstancesById(List<String> instIds, String requestId, String tenantId) {
+    return instancesDao.deleteInstancesById(instIds, requestId, tenantId);
   }
 
   @Override
