@@ -1,9 +1,19 @@
 package org.folio.oaipmh.service.impl;
 
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.jooq.Tables.INSTANCES;
+import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import javax.ws.rs.NotFoundException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -24,18 +34,10 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.ws.rs.NotFoundException;
-import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.INSTANCES;
-import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -48,12 +50,6 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   private static final int EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME = 2000;
   private static final int ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
-
-  private static final String REQUEST_ID_DAO_ERROR = "c75afb20-1812-45ab-badf-16d569502a99";
-  private static final String REQUEST_ID_DAO_DB_SUCCESS_RESPONSE = "c86afb20-1812-45ab-badf-16d569502a99";
-
-  private static List<String> validRequestIds = Collections.singletonList(REQUEST_ID_DAO_DB_SUCCESS_RESPONSE);
-  private static List<String> daoErrorRequestId = Collections.singletonList(REQUEST_ID_DAO_ERROR);
 
   @Autowired
   private InstancesDao instancesDao;
@@ -181,7 +177,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      instancesService.deleteInstancesById(instancesIds, OAI_TEST_TENANT)
+      instancesService.deleteInstancesById(instancesIds, REQUEST_ID, OAI_TEST_TENANT)
         .onSuccess(res -> {
           assertTrue(res);
           testContext.completeNow();
@@ -193,11 +189,26 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnSucceedFutureWithFalseValue_whenDeleteInstancesByIdsAndSuchInstancesDoNotExist(VertxTestContext testContext) {
     testContext.verify(() -> {
-      instancesService.deleteInstancesById(nonExistentInstancesIds, OAI_TEST_TENANT)
+      instancesService.deleteInstancesById(nonExistentInstancesIds, REQUEST_ID, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(res -> {
           assertFalse(res);
           testContext.completeNow();
         }));
+    });
+  }
+
+  @Test
+  void shouldReturnSucceedFutureWithFalseValue_whenDeletingExistentInstanceIdWithIncorrectRequestId(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      String randomRequestId = UUID.randomUUID().toString();
+      instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT).compose(res -> {
+        assertFalse(res);
+        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
+      }).onSuccess(instanceIdList -> {
+        assertEquals(1, instanceIdList.size());
+        assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
+        testContext.completeNow();
+      }).onFailure(testContext::failNow);
     });
   }
 
@@ -212,7 +223,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT)
+    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT)
       .onComplete(testContext.succeeding(instancesList -> {
         assertFalse(instancesList.isEmpty());
         testContext.completeNow();
@@ -221,7 +232,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithEmptyList_whenGetInstancesListAndThereNoAnyInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(0, 100, OAI_TEST_TENANT))
+    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT))
       .onComplete(testContext.succeeding(instancesList -> {
         assertTrue(instancesList.isEmpty());
         testContext.completeNow();

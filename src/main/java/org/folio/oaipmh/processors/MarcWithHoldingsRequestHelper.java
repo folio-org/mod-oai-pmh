@@ -17,25 +17,24 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Maps;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.parsetools.impl.JsonParserImpl;
-import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.impl.Connection;
+import java.lang.reflect.Field;
+import java.math.BigInteger;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -61,22 +60,26 @@ import org.openarchives.oai._2.StatusType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ReflectionUtils;
 
-import javax.ws.rs.core.Response;
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import com.google.common.collect.Maps;
+
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.RequestOptions;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.parsetools.impl.JsonParserImpl;
+import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.impl.Connection;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -174,7 +177,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      getNextInstances(request, batchSize, context).future().onComplete(fut -> {
+      getNextInstances(request, batchSize, context, requestId).future().onComplete(fut -> {
         if (fut.failed()) {
           logger.error("Get instances failed: " + fut.cause());
           oaiPmhResponsePromise.fail(fut.cause());
@@ -216,7 +219,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           List<String> instanceIds = instancesWithoutLast.stream()
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList());
-          instancesService.deleteInstancesById(instanceIds, request.getTenant())
+          instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
             .onComplete(r -> oaiPmhResponsePromise.complete(result)); //need remove this close client maybe
         }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
         srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
@@ -226,9 +229,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context) {
+  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    instancesService.getInstancesList(0, batchSize + 1, request.getTenant()).compose(instances -> {
+    instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant()).compose(instances -> {
       List<JsonObject> jsonInstances = instances.stream()
         .map(Instances::getJson)
         .map(JsonObject::new)
@@ -309,10 +312,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<HttpClientRequest> createInventoryPostRequest(HttpClient httpClient, Request request) {
-    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
-    String okapiHost = okapiUrlParts.get(1).replace("//","");
-    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
-    return httpClient.request(HttpMethod.POST, okapiPort, okapiHost, INVENTORY_INSTANCES_ENDPOINT);
+    RequestOptions requestOptions = new RequestOptions();
+    requestOptions.setAbsoluteURI(request.getOkapiUrl() + INVENTORY_INSTANCES_ENDPOINT);
+    if(request.getOkapiUrl().contains("https")) {
+      requestOptions.setSsl(true);
+    }
+    requestOptions.setMethod(HttpMethod.POST);
+    return httpClient.request(requestOptions);
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
@@ -459,12 +465,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(Collectors.joining("&"));
 
     String inventoryQuery = format("%s?%s", INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
-    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
-    String okapiHost = okapiUrlParts.get(1).replace("//","");
-    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
     logger.info("Sending request to : " + inventoryQuery);
-
-    return  httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
+    RequestOptions requestOptions = new RequestOptions();
+    requestOptions.setAbsoluteURI(request.getOkapiUrl() + inventoryQuery);
+    if(request.getOkapiUrl().contains("https")) {
+      requestOptions.setSsl(true);
+    }
+    requestOptions.setMethod(HttpMethod.GET);
+    return httpClient.request(requestOptions);
   }
 
   private void appendHeadersAndSetTimeout(Request request, HttpClientRequest httpClientRequest) {
@@ -597,7 +605,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  //fix vertx json to jooq JSON mapping
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));

@@ -1,7 +1,11 @@
 package org.folio.oaipmh.service.impl;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -12,11 +16,8 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 @Service
 public class InstancesServiceImpl implements InstancesService {
@@ -46,10 +47,11 @@ public class InstancesServiceImpl implements InstancesService {
         } else {
           promise.complete(Collections.emptyList());
         }
-      }).onFailure(th -> {
-      logger.error(th.getMessage());
-      promise.fail(th);
-    });
+      })
+      .onFailure(th -> {
+        logger.error(th.getMessage());
+        promise.fail(th);
+      });
     return promise.future();
   }
 
@@ -60,7 +62,7 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-                                                                    String tenantId) {
+      String tenantId) {
     return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
   }
 
@@ -70,8 +72,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId) {
-    return instancesDao.deleteInstancesById(instIds, tenantId);
+  public Future<Boolean> deleteInstancesById(List<String> instIds, String requestId, String tenantId) {
+    return instancesDao.deleteInstancesById(instIds, requestId, tenantId);
   }
 
   @Override
@@ -80,8 +82,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId) {
-    return instancesDao.getInstancesList(offset, limit, tenantId);
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
+    return instancesDao.getInstancesList(limit, requestId, tenantId);
   }
 
   @Autowired

@@ -35,9 +35,9 @@ public interface InstancesService {
   Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId);
 
   /**
-   * Deletes batch of instances by provided ids list.
+   * Deletes batch of instances by provided ids list and request id.
    */
-  Future<Boolean> deleteInstancesById(List<String> instIds, String tenantId);
+  Future<Boolean> deleteInstancesById(List<String> instIds, String requestId, String tenantId);
 
   /**
    * Saves batch of instances.
@@ -45,8 +45,8 @@ public interface InstancesService {
   Future<Void> saveInstances(List<Instances> instances, String tenantId);
 
   /**
-   * Retrieves instances by offset and limit.
+   * Retrieves instances by limit and request id.
    */
-  Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
 }
