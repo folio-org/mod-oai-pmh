@@ -28,6 +28,7 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -312,7 +313,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
     String okapiHost = okapiUrlParts.get(1).replace("//","");
     Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
-    return httpClient.request(HttpMethod.POST, okapiPort, okapiHost, INVENTORY_INSTANCES_ENDPOINT);
+
+    RequestOptions requestOptions = new RequestOptions();
+    requestOptions.setAbsoluteURI(request.getOkapiUrl() + INVENTORY_INSTANCES_ENDPOINT);
+    requestOptions.setSsl(true);
+    requestOptions.setMethod(HttpMethod.POST);
+    return httpClient.request(requestOptions);
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
@@ -463,8 +469,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String okapiHost = okapiUrlParts.get(1).replace("//","");
     Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
     logger.info("Sending request to : " + inventoryQuery);
+    //TODO make 2 ways with port and without
+    RequestOptions requestOptions = new RequestOptions();
+    requestOptions.setAbsoluteURI(request.getOkapiUrl() + inventoryQuery);
+    requestOptions.setSsl(true);
+    requestOptions.setMethod(HttpMethod.GET);
+    return httpClient.request(requestOptions);
 
-    return  httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
+//    return  httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
   }
 
   private void appendHeadersAndSetTimeout(Request request, HttpClientRequest httpClientRequest) {
