@@ -104,16 +104,4 @@ public abstract class AbstractInstancesTest {
 
   protected abstract InstancesDao getInstancesDao();
 
-//  private void cleanInstances(VertxTestContext testContext) {
-//    List<Future> list = new ArrayList<>();
-//    getInstancesDao().getExpiredRequestIds(OAI_TEST_TENANT, 0)
-//      .onSuccess(requestIds -> {
-//        requestIds.forEach(id -> list.add(getInstancesDao().deleteRequestMetadataByRequestId(id, OAI_TEST_TENANT)));
-//      })
-//      .onFailure(testContext::failNow);
-//    GenericCompositeFuture.all(list)
-//      .onSuccess(v -> testContext.completeNow())
-//      .onFailure(testContext::failNow);
-//  }
-
 }
