@@ -2,7 +2,6 @@ package org.folio.oaipmh.service;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.stereotype.Service;
