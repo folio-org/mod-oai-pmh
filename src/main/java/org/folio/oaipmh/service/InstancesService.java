@@ -2,6 +2,7 @@ package org.folio.oaipmh.service;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.stereotype.Service;
@@ -45,8 +46,8 @@ public interface InstancesService {
   Future<Void> saveInstances(List<Instances> instances, String tenantId);
 
   /**
-   * Retrieves instances by offset and limit.
+   * Retrieves instances by limit and request id.
    */
-  Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
 }

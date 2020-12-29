@@ -113,7 +113,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
   }
 
   private void verifyExpiredInstancesHasBeenCleared(VertxTestContext testContext) {
-    instancesDao.getInstancesList(0, 100, OAI_TEST_TENANT).onSuccess(instances -> {
+    instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT).onSuccess(instances -> {
       List<String> instancesIds = instances.stream().map(Instances::getInstanceId).map(UUID::toString).collect(Collectors.toList());
       assertFalse(instancesIds.contains(EXPIRED_INSTANCE_ID));
       testContext.completeNow();

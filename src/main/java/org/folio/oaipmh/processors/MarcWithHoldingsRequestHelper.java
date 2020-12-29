@@ -175,7 +175,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      getNextInstances(request, batchSize, context).future().onComplete(fut -> {
+      getNextInstances(request, batchSize, context, requestId).future().onComplete(fut -> {
         if (fut.failed()) {
           logger.error("Get instances failed: " + fut.cause());
           oaiPmhResponsePromise.fail(fut.cause());
@@ -227,9 +227,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context) {
+  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    instancesService.getInstancesList(0, batchSize + 1, request.getTenant()).compose(instances -> {
+    instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant()).compose(instances -> {
       List<JsonObject> jsonInstances = instances.stream()
         .map(Instances::getJson)
         .map(JsonObject::new)
@@ -310,10 +310,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<HttpClientRequest> createInventoryPostRequest(HttpClient httpClient, Request request) {
-    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
-    String okapiHost = okapiUrlParts.get(1).replace("//","");
-    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
-
     RequestOptions requestOptions = new RequestOptions();
     requestOptions.setAbsoluteURI(request.getOkapiUrl() + INVENTORY_INSTANCES_ENDPOINT);
     if(request.getOkapiUrl().contains("https")) {
@@ -467,11 +463,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(Collectors.joining("&"));
 
     String inventoryQuery = format("%s?%s", INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
-    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
-    String okapiHost = okapiUrlParts.get(1).replace("//","");
-    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
     logger.info("Sending request to : " + inventoryQuery);
-    //TODO make 2 ways with port and without
     RequestOptions requestOptions = new RequestOptions();
     requestOptions.setAbsoluteURI(request.getOkapiUrl() + inventoryQuery);
     if(request.getOkapiUrl().contains("https")) {
@@ -479,8 +471,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     requestOptions.setMethod(HttpMethod.GET);
     return httpClient.request(requestOptions);
-
-//    return  httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
   }
 
   private void appendHeadersAndSetTimeout(Request request, HttpClientRequest httpClientRequest) {

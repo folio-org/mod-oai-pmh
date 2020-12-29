@@ -148,10 +148,10 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int offset, int limit, String tenantId) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext -> dslContext.selectFrom(INSTANCES)
-        .offset(offset)
+      .query(dslContext -> dslContext.selectFrom(INSTANCES).where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .orderBy(INSTANCES.INSTANCE_ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
   }
