@@ -316,7 +316,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     RequestOptions requestOptions = new RequestOptions();
     requestOptions.setAbsoluteURI(request.getOkapiUrl() + INVENTORY_INSTANCES_ENDPOINT);
-    requestOptions.setSsl(true);
+    if(request.getOkapiUrl().contains("https")) {
+      requestOptions.setSsl(true);
+    }
     requestOptions.setMethod(HttpMethod.POST);
     return httpClient.request(requestOptions);
   }
@@ -472,7 +474,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     //TODO make 2 ways with port and without
     RequestOptions requestOptions = new RequestOptions();
     requestOptions.setAbsoluteURI(request.getOkapiUrl() + inventoryQuery);
-    requestOptions.setSsl(true);
+    if(request.getOkapiUrl().contains("https")) {
+      requestOptions.setSsl(true);
+    }
     requestOptions.setMethod(HttpMethod.GET);
     return httpClient.request(requestOptions);
 
