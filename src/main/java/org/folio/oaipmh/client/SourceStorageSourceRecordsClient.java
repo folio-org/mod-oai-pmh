@@ -1,16 +1,4 @@
-package org.folio.rest.impl;
-
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
-import org.folio.rest.tools.ClientHelpers;
-import org.folio.rest.tools.utils.VertxUtils;
+package org.folio.oaipmh.client;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -19,6 +7,16 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+
+import org.folio.rest.tools.ClientHelpers;
+import org.folio.rest.tools.utils.VertxUtils;
+
+import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 
 //TODO Should be replaced with the SourceStorageSourceRecordsClient from mod-source-record-storage-client
 // when it's upgraded to RMD version 32 and Vert.x version 4

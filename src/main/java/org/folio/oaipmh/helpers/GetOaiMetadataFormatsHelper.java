@@ -17,7 +17,7 @@ import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.rest.impl.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.MetadataFormatType;
