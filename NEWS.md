@@ -1,3 +1,20 @@
+## 3.2.5 (Released) 2020-12-30
+
+This release mainly contains bug fixes related to marc21_withholdings request and upgrade of RMB up to 32.0.0 .
+
+* [MODOAIPMH-274](https://issues.folio.org/browse/MODOAIPMH-274) Retrieving loaded instance ids doesn't take the request id into account.
+* [MODOAIPMH-273](https://issues.folio.org/browse/MODOAIPMH-273) Missing holdings/item fields in ListRecords response with marc21_whitholdings
+* [MODOAIPMH-271](https://issues.folio.org/browse/MODOAIPMH-271) Create a database migration script to enrich new oai-pmh tables.
+* [MODOAIPMH-266](https://issues.folio.org/browse/MODOAIPMH-266) Upgrade to RMB 32
+* [MODOAIPMH-265](https://issues.folio.org/browse/MODOAIPMH-265) Refactor the dao layer and update the readme with initial-load description
+* [MODOAIPMH-259](https://issues.folio.org/browse/MODOAIPMH-259) HTML encoded entities in records make the OAI-PMH requests crash
+* [MODOAIPMH-258](https://issues.folio.org/browse/MODOAIPMH-258) Clean data for outdated requests from instance table
+* [MODOAIPMH-240](https://issues.folio.org/browse/MODOAIPMH-240) Newest git update introduces build loop
+* [MODOAIPMH-123](https://issues.folio.org/browse/MODOAIPMH-123) Datestamp in response doesn't correspond to time granularity
+* [MODOAIPMH-71](https://issues.folio.org/browse/MODOAIPMH-71) Handle json parsing exceptions gracefully
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.2.4...v3.2.5)
+
 ## 3.2.4 (Released) 2020-11-12
 
 This release includes bug fixes related to marc21_withholdings metadataPrefix and incorrect number of records being returned from ListIdentifiers request.
