@@ -436,6 +436,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String.valueOf(
         isSkipSuppressed(request)));
 
+    paramMap.put("onlyInstanceUpdateDate", "false");
+
     final String params = paramMap.entrySet().stream()
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
@@ -548,7 +550,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+          logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
             databaseWriteStream.end();
             inventoryHttpClient.close();
             promise.fail(throwable);
@@ -608,7 +610,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.info("Request to SRS: {0}", listOfIds);
+    logger.info("Request to SRS: {}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
@@ -628,7 +630,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
-              logger.debug("Can't process response from SRS: {0}", bh.toString());
+              logger.debug("Can't process response from SRS: {}", bh.toString());
             }
             promise.complete(result);
           } catch (DecodeException ex) {
