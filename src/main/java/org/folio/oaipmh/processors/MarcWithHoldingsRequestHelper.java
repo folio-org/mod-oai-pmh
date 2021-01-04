@@ -93,6 +93,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
 
+  private static final String ONLY_INSTANCE_UPDATE_DATE_PARAM_NAME = "onlyInstanceUpdateDate";
+
   private static final String START_DATE_PARAM_NAME = "startDate";
 
   private static final String END_DATE_PARAM_NAME = "endDate";
@@ -154,7 +156,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
            */
           fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
           fetchingIdsPromise.future().onComplete(e -> {
-            logger.debug("Loading instances complete, starting processing first batch");
+            logger.debug("Loading instances completed, starting processing first batch");
             processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true);
           });
         } else {
@@ -436,7 +438,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String.valueOf(
         isSkipSuppressed(request)));
 
-    paramMap.put("onlyInstanceUpdateDate", "false");
+    paramMap.put(ONLY_INSTANCE_UPDATE_DATE_PARAM_NAME, "false");
 
     final String params = paramMap.entrySet().stream()
       .map(e -> e.getKey() + "=" + e.getValue())
