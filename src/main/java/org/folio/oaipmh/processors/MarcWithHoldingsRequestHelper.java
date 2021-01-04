@@ -153,7 +153,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
            * should be integrated with jooq request
            */
           fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-          fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
+          fetchingIdsPromise.future().onComplete(e -> {
+            logger.debug("Loading instances complete, starting processing first batch");
+            processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true);
+          });
         } else {
           processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
         }
