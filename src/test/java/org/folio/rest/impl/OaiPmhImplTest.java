@@ -186,7 +186,7 @@ class OaiPmhImplTest {
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
 
-  private static final String RESUMPTION_TOKEN_TEMPLATE = "metadataPrefix=marc21_withholdings&offset=0&requestId=replace_request_id&nextRecordId=00012016-c38a-4cf5-b234-7ea23413d105";
+  private static final String RESUMPTION_TOKEN_TEMPLATE = "metadataPrefix=marc21_withholdings&offset=0&requestId=replace_request_id&nextRecordId=00012016-c38a-4cf5-b234-7ea23413d105&until=2021-01-08T14:28:41Z";
   private static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
 
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
@@ -2210,15 +2210,16 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldReturnInternalServerError_whenInvalidResToken(VertxTestContext testContext) {
-    testContext.verify(() -> {
-      UUID requestId = UUID.randomUUID();
-      String resTokenEmptyInstances = RESUMPTION_TOKEN_TEMPLATE.replaceAll("replace_request_id", requestId.toString());
+  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(VertxTestContext testContext) {
+    UUID requestId = UUID.randomUUID();
+    String resTokenEmptyInstances = Base64.getUrlEncoder()
+      .encodeToString(RESUMPTION_TOKEN_TEMPLATE.replaceAll("replace_request_id", requestId.toString()).getBytes());
 
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setRequestId(requestId)
-        .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setRequestId(requestId)
+      .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    testContext.verify(() -> {
       instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onSuccess(res -> {
-          RequestSpecification requestWithResumptionToken = createBaseRequest()
+        RequestSpecification requestWithResumptionToken = createBaseRequest()
           .with()
           .param(VERB_PARAM, LIST_RECORDS.value())
           .param(RESUMPTION_TOKEN_PARAM, resTokenEmptyInstances);
