@@ -11,6 +11,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.rest.impl.OkapiMockServer.ERROR_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT_2;
+import static org.folio.rest.impl.OkapiMockServer.INVALID_JSON_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.NON_EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -22,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.folio.oaipmh.Request;
 import org.folio.rest.impl.OkapiMockServer;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.codegen.annotations.Nullable;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -195,6 +198,18 @@ class RepositoryConfigurationUtilTest {
           testContext.completeNow();
         })
       );
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenInvalidJsonReturnedFromModConfig2(Vertx vertx, VertxTestContext testContext) throws Exception {
+    okapiHeaders.put(OKAPI_TENANT, INVALID_JSON_TENANT);
+    vertx.runOnContext(event -> {
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertx.getOrCreateContext()).exceptionally(th -> {
+        assertTrue(th instanceof DecodeException);
+        testContext.completeNow();
+        return null;
+      });
     });
   }
 }

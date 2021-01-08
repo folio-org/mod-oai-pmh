@@ -50,6 +50,7 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
+  public static final String INVALID_JSON_TENANT = "invalidJsonTenant";
   private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
   private static final String ID_PARAM = "instanceId";
 
@@ -254,6 +255,9 @@ public class OkapiMockServer {
       break;
     case ERROR_TENANT:
       failureResponse(ctx, 500, "Internal Server Error");
+      break;
+    case INVALID_JSON_TENANT:
+      successResponse(ctx, "&&@^$%^@$^&$");
       break;
     default:
       successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
