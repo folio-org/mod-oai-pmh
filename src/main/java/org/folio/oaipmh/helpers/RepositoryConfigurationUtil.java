@@ -20,8 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.client.ConfigurationsClient;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.DeletedRecordType;
 

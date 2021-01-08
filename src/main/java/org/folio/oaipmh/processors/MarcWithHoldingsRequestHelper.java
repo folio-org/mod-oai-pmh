@@ -46,7 +46,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.impl.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
