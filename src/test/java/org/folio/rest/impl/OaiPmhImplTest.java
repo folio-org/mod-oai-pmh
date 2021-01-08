@@ -81,6 +81,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,6 +91,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -108,6 +111,7 @@ import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -166,7 +170,6 @@ import net.jcip.annotations.NotThreadSafe;
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
 
-  public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
@@ -182,6 +185,9 @@ class OaiPmhImplTest {
   private static final List<VerbType> LIST_VERBS = Arrays.asList(LIST_RECORDS, LIST_IDENTIFIERS);
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
+
+  private static final String RESUMPTION_TOKEN_TEMPLATE = "metadataPrefix=marc21_withholdings&offset=0&requestId=replace_request_id&nextRecordId=00012016-c38a-4cf5-b234-7ea23413d105";
+  private static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
 
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
@@ -576,7 +582,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
-  
+
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
   void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {
@@ -2204,7 +2210,27 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
+  void shouldReturnInternalServerError_whenInvalidResToken(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      UUID requestId = UUID.randomUUID();
+      String resTokenEmptyInstances = RESUMPTION_TOKEN_TEMPLATE.replaceAll("replace_request_id", requestId.toString());
+
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setRequestId(requestId)
+        .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onSuccess(res -> {
+          RequestSpecification requestWithResumptionToken = createBaseRequest()
+          .with()
+          .param(VERB_PARAM, LIST_RECORDS.value())
+          .param(RESUMPTION_TOKEN_PARAM, resTokenEmptyInstances);
+        final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
+        assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
+        testContext.completeNow();
+      }).onFailure(testContext::failNow);
+    });
+  }
+
+  @Test
+  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken() {
     RequestSpecification requestWithResumptionToken = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
