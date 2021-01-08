@@ -9,25 +9,23 @@ import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
 import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
-import io.vertx.core.Context;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.DeletedRecordType;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
 
 public class RepositoryConfigurationUtil {
 
@@ -35,7 +33,7 @@ public class RepositoryConfigurationUtil {
 
   }
 
-  private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
+  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
 
   private static final String QUERY = "module==OAIPMH";
 
@@ -57,19 +55,19 @@ public class RepositoryConfigurationUtil {
 
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
-      Promise<HttpResponse<Buffer>> responsePromise = Promise.promise();
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, responsePromise);
-      responsePromise.future().onSuccess(response -> {
+
+      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, response -> response.bodyHandler(body -> {
+
         try {
           if (response.statusCode() != 200) {
-            logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}", tenant,
-              response.statusCode(), response.body());
+            logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
+              response.statusCode(), body);
             future.complete(null);
             return;
           }
 
           JsonObject config = new JsonObject();
-          response.bodyAsJsonObject()
+          body.toJsonObject()
             .getJsonArray(CONFIGS)
             .stream()
             .map(object -> (JsonObject) object)
@@ -85,15 +83,12 @@ public class RepositoryConfigurationUtil {
 
           future.complete(null);
         } catch (Exception e) {
-          logger.error("Error getting configuration for {} tenant", tenant);
+          logger.error("Error getting configuration for {} tenant", e, tenant);
           future.completeExceptionally(e);
         }
-      }).onFailure(e -> {
-        logger.error("Error happened initializing mod-configurations client for {} tenant", tenant);
-        future.completeExceptionally(e);
-      });
+      }));
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant", tenant);
+      logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
       future.completeExceptionally(e);
     }
     return future;

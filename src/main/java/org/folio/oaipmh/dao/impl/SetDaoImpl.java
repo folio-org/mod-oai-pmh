@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 import javax.ws.rs.NotFoundException;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.jaxrs.model.FilteringCondition;
@@ -38,7 +36,6 @@ import io.vertx.sqlclient.RowSet;
 
 @Repository
 public class SetDaoImpl implements SetDao {
-  protected final Logger logger = LogManager.getLogger(SetDaoImpl.class);
 
   private static final String ALREADY_EXISTS_ERROR_MSG = "Set with id '%s' already exists";
   private static final String NOT_FOUND_ERROR_MSG = "Set with id '%s' was not found";

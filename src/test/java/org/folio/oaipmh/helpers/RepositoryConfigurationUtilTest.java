@@ -31,6 +31,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.codegen.annotations.Nullable;
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -115,7 +117,6 @@ class RepositoryConfigurationUtilTest {
         testContext.verify(() -> {
           assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT).getString
             (REPOSITORY_MAX_RECORDS_PER_RESPONSE), equalTo(configValue));
-          Vertx.currentContext().config().clear();
           testContext.completeNow();
         })
       );

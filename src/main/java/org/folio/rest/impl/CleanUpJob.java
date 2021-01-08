@@ -7,8 +7,6 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances;
 import org.folio.spring.SpringContextUtil;
@@ -18,10 +16,12 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class CleanUpJob implements OaiPmhCleanUpInstances {
 
-  private final Logger logger = LogManager.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 

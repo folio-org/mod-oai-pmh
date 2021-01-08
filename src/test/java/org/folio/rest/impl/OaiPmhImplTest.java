@@ -30,7 +30,6 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
-import static org.folio.rest.impl.OkapiMockServer.DATE_INSTANCE_NO_SRS_RECORDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
@@ -78,31 +77,28 @@ import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 import static org.openarchives.oai._2.VerbType.UNKNOWN;
 
-import gov.loc.marc21.slim.DataFieldType;
-import gov.loc.marc21.slim.SubfieldatafieldType;
-import io.restassured.RestAssured;
-import io.restassured.config.DecoderConfig;
-import io.restassured.config.DecoderConfig.ContentDecoder;
-import io.restassured.config.RestAssuredConfig;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.response.ValidatableResponse;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import net.jcip.annotations.NotThreadSafe;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.xml.bind.JAXBElement;
+
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.Constants;
@@ -142,23 +138,28 @@ import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ElementType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.xml.bind.JAXBElement;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import gov.loc.marc21.slim.DataFieldType;
+import gov.loc.marc21.slim.SubfieldatafieldType;
+import io.restassured.RestAssured;
+import io.restassured.config.DecoderConfig;
+import io.restassured.config.DecoderConfig.ContentDecoder;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.response.ValidatableResponse;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import net.jcip.annotations.NotThreadSafe;
 
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
@@ -166,7 +167,7 @@ import java.util.stream.Stream;
 class OaiPmhImplTest {
 
   public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
-  private final Logger logger = LogManager.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
   private static final String ROOT_PATH = "/oai";
@@ -575,7 +576,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
-
+  
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
   void headersDatestampsShouldCorrespondToDateOnlyGranularitySetting(MetadataPrefix prefix, VerbType verb) {
@@ -1182,17 +1183,18 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
-    String set = "all";
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
-      .param(SET_PARAM, set)
-      .param(FROM_PARAM, DATE_INSTANCE_NO_SRS_RECORDS);
+    vertx.runOnContext(e->{
+      String set = "all";
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
+        .param(SET_PARAM, set);
 
-    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
-    OAIPMHerrorType error = oaipmh.getErrors().get(0);
-    assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+      OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+      OAIPMHerrorType error = oaipmh.getErrors().get(0);
+      assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+    });
   }
 
   @ParameterizedTest
