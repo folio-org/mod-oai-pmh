@@ -138,12 +138,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
         requestMetadata.setRequestId(UUID.fromString(requestId));
-        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
-          .onFailure(th -> handleException(promise, th));
+        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
-          .onFailure(th -> handleException(promise, th));
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant());
       }
       updateRequestMetadataFuture.compose(res -> {
         Promise<Void> fetchingIdsPromise = null;
