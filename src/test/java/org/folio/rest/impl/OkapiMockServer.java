@@ -232,6 +232,8 @@ public class OkapiMockServer {
     if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
       logger.debug("Failure EI response");
       failureResponse(ctx);
+    } else if(instanceIds.isEmpty()) {
+      successResponse(ctx, "");
     } else {
       logger.debug("Success EI response");
       inventoryViewSuccessResponse(ctx, instanceIds);
