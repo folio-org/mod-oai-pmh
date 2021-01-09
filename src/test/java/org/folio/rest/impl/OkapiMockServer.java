@@ -89,6 +89,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
   static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
+  public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -143,6 +144,7 @@ public class OkapiMockServer {
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
   private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
   private static final String SRS_RECORD = "/srs_record.json";
+  private static final String INVALID_JSON = "invalid.json";
 
   private final int port;
   private final Vertx vertx;
@@ -217,7 +219,9 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INVALID_SRS_RECORD_INSTANCE_ID_JSON);
       } else if(uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
         inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
-      } else {
+      } else if(uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
+        inventoryViewSuccessResponse(ctx, INVALID_JSON);
+      }else {
         logger.debug("No mocks for the response, returning the default instance id");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }

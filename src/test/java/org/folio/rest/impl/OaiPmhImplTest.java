@@ -38,6 +38,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_R
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
+import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -2252,6 +2253,17 @@ class OaiPmhImplTest {
       .parse(args, UTF_8, '&').stream()
       .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
     return params.get(REQUEST_ID_PARAM);
+  }
+
+  @Test
+  void shouldReturn500_whenInvalidJsonRespondedFromInventoryView() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVALID_INSTANCE_IDS_JSON_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    verify500(request);
   }
 
   @Test
