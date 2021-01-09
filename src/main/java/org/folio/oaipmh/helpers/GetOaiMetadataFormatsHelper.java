@@ -106,26 +106,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   }
 
   /**
-   * Validates inventory-mod-storage response and returns {@link OAIPMH} with populated
-   * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
-   * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
-   */
-  @Deprecated
-  private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
-    if (Response.isSuccess(response.getCode())) {
-      JsonArray instances = storageHelper.getItems(response.getBody());
-      if (instances != null && !instances.isEmpty()) {
-        return retrieveMetadataFormatsWithNoIdentifier(request);
-      }
-    } else {
-      // The storage service could not return an instance so we have to send 500 back to client
-      logger.error("No instance found. Service responded with error: " + response.getError());
-      throw new IllegalStateException(response.getError().toString());
-    }
-    return buildIdentifierNotFoundResponse(request);
-  }
-
-  /**
    * Builds {@linkplain javax.ws.rs.core.Response Response} with 'badArgument' error because passed identifier is invalid.
    * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
    */
