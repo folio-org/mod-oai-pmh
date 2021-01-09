@@ -1,8 +1,8 @@
 package org.folio.oaipmh;
 
 import gov.loc.marc21.slim.RecordType;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2_0.oai_dc.Dc;
@@ -29,7 +29,7 @@ import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
 
 @SuppressWarnings("squid:S1191") //The com.sun.xml.bind.marshaller.NamespacePrefixMapper is part of jaxb logic
 public class ResponseConverter {
-  private static final Logger logger = LogManager.getLogger(ResponseConverter.class);
+  private static final Logger logger = LoggerFactory.getLogger(ResponseConverter.class);
   private static final String SCHEMA_PATH = "ramls" + File.separator + "schemas" + File.separator;
   private static final String RESPONSE_SCHEMA = SCHEMA_PATH + "OAI-PMH.xsd";
   private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";

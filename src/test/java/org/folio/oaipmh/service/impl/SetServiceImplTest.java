@@ -13,6 +13,7 @@ import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -29,7 +30,6 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
 import org.folio.oaipmh.service.SetService;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
@@ -46,6 +46,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
@@ -101,7 +102,7 @@ class SetServiceImplTest extends AbstractSetTest {
       folioSetCollection.getSets().forEach(set -> {
         list.add(setDao.deleteSetById(set.getId(), OAI_TEST_TENANT));
       });
-      GenericCompositeFuture.all(list).onComplete(result -> {
+      CompositeFuture.all(list).onComplete(result -> {
         if(result.failed()) {
           testContext.failNow(result.cause());
         } else {
@@ -212,7 +213,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedSetSpecValue.setSetSpec(setWithExistedSetSpecValue.getSetSpec().toUpperCase());
         setService.saveSet(setWithExistedSetSpecValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), ((PgException) throwable).getErrorMessage());
+          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
         });
       });
@@ -229,7 +230,7 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedNameValue.setName(setWithExistedNameValue.getName().toUpperCase());
         setService.saveSet(setWithExistedNameValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), ((PgException) throwable).getErrorMessage());
+          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
           testContext.completeNow();
         });
       });
@@ -279,7 +280,7 @@ class SetServiceImplTest extends AbstractSetTest {
         List<Future> futures = new ArrayList<>();
         setItemCollection.getSets()
           .forEach(setItem -> futures.add(setDao.deleteSetById(setItem.getId(), OAI_TEST_TENANT)));
-        GenericCompositeFuture.all(futures)
+        CompositeFuture.all(futures)
           .onSuccess(compositeFuture -> testContext.completeNow())
           .onFailure(testContext::failNow);
       });

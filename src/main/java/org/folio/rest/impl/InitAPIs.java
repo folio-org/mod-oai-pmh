@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.logging.log4j.LogManager;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
@@ -19,13 +18,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * The class initializes system properties and checks if required configs are specified
  */
 public class InitAPIs implements InitAPI {
-  private final Logger logger = LogManager.getLogger(InitAPIs.class);
+  private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
 
   private static final String CONFIGURATION_PATH = "configuration.path";
   private static final String CONFIGURATION_FILES = "configuration.files";

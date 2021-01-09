@@ -5,31 +5,30 @@ import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.ext.web.client.HttpResponse;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.util.Date;
+
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.MetadataFormatType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
-import java.util.Date;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
-  private static final Logger logger = LogManager.getLogger(GetOaiMetadataFormatsHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -55,7 +54,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
       srsClient.getSourceStorageSourceRecords(
-        null,
+       null,
         null,
         request.getStorageIdentifier(),
         "MARC",
@@ -66,38 +65,35 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
         null,
         updatedAfter,
         updatedBefore,
-        null,
+         null,
         request.getOffset(),
-        batchSize)
-        .onSuccess(response -> handleSrsResponse(request, promise, response))
-        .onFailure(e -> {
-          logger.error("Exception getting list of identifiers", e);
-          promise.fail(e);
+        batchSize,
+         response -> {
+          try {
+            if (Response.isSuccess(response.statusCode())) {
+              response.bodyHandler(bh -> {
+                JsonArray instances = storageHelper.getItems(bh.toJsonObject());
+                if (instances != null && !instances.isEmpty()) {
+                  promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
+                }else{
+                  promise.complete(buildIdentifierNotFoundResponse(request));
+                }
+              });
+            } else {
+              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+              throw new IllegalStateException(response.statusMessage());
+            }
+
+          } catch (Exception e) {
+            logger.error("Exception getting list of identifiers", e);
+            promise.fail(e);
+          }
         });
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
       promise.fail(e);
     }
     return promise.future();
-  }
-
-  private void handleSrsResponse(Request request, Promise<javax.ws.rs.core.Response> promise, HttpResponse<Buffer> response) {
-    try {
-      if (Response.isSuccess(response.statusCode())) {
-        JsonArray instances = storageHelper.getItems(response.bodyAsJsonObject());
-        if (instances != null && !instances.isEmpty()) {
-          promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
-        } else {
-          promise.complete(buildIdentifierNotFoundResponse(request));
-        }
-      } else {
-        logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
-        throw new IllegalStateException(response.statusMessage());
-      }
-    } catch (Exception e) {
-      logger.error("Exception getting list of identifiers", e);
-      promise.fail(e);
-    }
   }
 
   /**
@@ -107,26 +103,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private javax.ws.rs.core.Response retrieveMetadataFormatsWithNoIdentifier(Request request) {
     OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withListMetadataFormats(getMetadataFormatTypes());
     return getResponseHelper().buildSuccessResponse(oaipmh);
-  }
-
-  /**
-   * Validates inventory-mod-storage response and returns {@link OAIPMH} with populated
-   * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
-   * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
-   */
-  @Deprecated
-  private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
-    if (Response.isSuccess(response.getCode())) {
-      JsonArray instances = storageHelper.getItems(response.getBody());
-      if (instances != null && !instances.isEmpty()) {
-        return retrieveMetadataFormatsWithNoIdentifier(request);
-      }
-    } else {
-      // The storage service could not return an instance so we have to send 500 back to client
-      logger.error("No instance found. Service responded with error: " + response.getError());
-      throw new IllegalStateException(response.getError().toString());
-    }
-    return buildIdentifierNotFoundResponse(request);
   }
 
   /**

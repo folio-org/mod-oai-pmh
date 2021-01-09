@@ -36,8 +36,6 @@ import java.util.stream.Collectors;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.AbstractHelper;
@@ -46,7 +44,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.tools.utils.TenantTool;
@@ -69,12 +67,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpClientResponse;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
@@ -88,7 +85,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
-  public static final String ENRICHED_INSTANCE_ID = "instanceid";
+  private static final String ENRICHED_INSTANCE_ID = "instanceid";
 
   private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
 
@@ -107,7 +104,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
-  private static final Logger logger = LogManager.getLogger(MarcWithHoldingsRequestHelper.class);
+  protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
@@ -141,12 +138,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
         requestMetadata.setRequestId(UUID.fromString(requestId));
-        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant())
-          .onFailure(th -> handleException(promise, th));
+        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant())
-          .onFailure(th -> handleException(promise, th));
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, requestMetadata, request.getTenant());
       }
       updateRequestMetadataFuture.compose(res -> {
         Promise<Void> fetchingIdsPromise = null;
@@ -210,9 +205,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
 
-        Future<Map<String, JsonObject>> srsResponse = Future.succeededFuture();
+        Future<Map<String, JsonObject>> srsResponse = Future.future();
         if (CollectionUtils.isNotEmpty(instances)) {
           srsResponse = requestSRSByIdentifiers(srsClient, instancesWithoutLast, deletedRecordSupport);
+        } else {
+          srsResponse.complete();
         }
         srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
@@ -249,76 +246,52 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getString(INSTANCE_ID_FIELD_NAME), Function.identity()));
     Promise<List<JsonObject>> completePromise = Promise.promise();
     HttpClient httpClient = context.owner().createHttpClient();
-    createInventoryPostRequest(httpClient, request)
-      .onSuccess(httpClientRequest -> {
-        httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-        httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-        httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
-        httpClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
-        BatchStreamWrapper databaseWriteStream = getBatchHttpStream(completePromise, context);
-        JsonObject entries = new JsonObject();
-        entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
-        entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-        httpClientRequest.send(entries.encode())
-          .onSuccess(httpClientResponse -> writeResponseToStream(httpClient, completePromise, httpClientRequest,
-            databaseWriteStream, httpClientResponse))
-          .onFailure(e -> {
-            logger.error(e.getMessage());
-            completePromise.fail(e);
-          });
+    HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
+    JsonObject entries = new JsonObject();
+    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
+    entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
+    enrichInventoryClientRequest.end(entries.encode());
 
-        AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-        try {
-          queue.set(getWaitersQueue(context.owner(), request));
-        } catch (IllegalStateException ex) {
-          logger.error(ex.getMessage());
-          completePromise.fail(ex);
+    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    try {
+      queue.set(getWaitersQueue(context.owner(), request));
+    } catch (IllegalStateException ex) {
+      logger.error(ex.getMessage());
+      completePromise.fail(ex);
+      return completePromise.future();
+    }
+
+    databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
+
+    databaseWriteStream.handleBatch(batch -> {
+      try {
+        for (JsonEvent jsonEvent : batch) {
+          JsonObject value = jsonEvent.objectValue();
+          String instanceId = value.getString(ENRICHED_INSTANCE_ID);
+          Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
+          if (itemsandholdingsfields instanceof JsonObject) {
+            JsonObject instance = instances.get(instanceId);
+            if (instance != null) {
+              enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
+              instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
+                itemsandholdingsfields);
+            } else { // it can be the case only for testing
+              logger.info(format("Instance with instanceId %s wasn't in the request", instanceId));
+            }
+          }
         }
 
-        databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
-
-        databaseWriteStream.handleBatch(batch -> {
-          try {
-            for (JsonEvent jsonEvent : batch) {
-              JsonObject value = jsonEvent.objectValue();
-              String instanceId = value.getString(ENRICHED_INSTANCE_ID);
-              Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
-              if (itemsandholdingsfields instanceof JsonObject) {
-                JsonObject instance = instances.get(instanceId);
-                if (instance != null) {
-                  enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
-                  instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
-                    itemsandholdingsfields);
-                } else { // it can be the case only for testing
-                  logger.info(format("Instance with instanceId %s wasn't in the request", instanceId));
-                }
-              }
-            }
-
-            if (databaseWriteStream.isTheLastBatch() && !completePromise.future().isComplete()) {
-              completePromise.complete(new ArrayList<>(instances.values()));
-            }
-          } catch (Exception e) {
-            completePromise.fail(e);
-          }
-        });
-      })
-      .onFailure(e -> {
-        logger.error(e.getMessage());
+        if (databaseWriteStream.isTheLastBatch() && !completePromise.future().isComplete()) {
+          completePromise.complete(new ArrayList<>(instances.values()));
+        }
+      } catch (Exception e) {
         completePromise.fail(e);
-      });
-    return completePromise.future();
-  }
+      }
+    });
 
-  private Future<HttpClientRequest> createInventoryPostRequest(HttpClient httpClient, Request request) {
-    RequestOptions requestOptions = new RequestOptions();
-    requestOptions.setAbsoluteURI(request.getOkapiUrl() + INVENTORY_INSTANCES_ENDPOINT);
-    if(request.getOkapiUrl().contains("https")) {
-      requestOptions.setSsl(true);
-    }
-    requestOptions.setMethod(HttpMethod.POST);
-    return httpClient.request(requestOptions);
+    return completePromise.future();
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
@@ -368,7 +341,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       logger.info("Build records response: " + records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-      if (records.isEmpty() && nextInstanceId == null && firstBatch) {
+      if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));
@@ -443,7 +416,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .withIdentifier(getIdentifier(identifierPrefix, instanceId)));
   }
 
-  private Future<HttpClientRequest> buildInventoryQuery(HttpClient httpClient, Request request) {
+  private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
@@ -464,22 +437,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
 
-    String inventoryQuery = format("%s?%s", INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
-    logger.info("Sending request to : " + inventoryQuery);
-    RequestOptions requestOptions = new RequestOptions();
-    requestOptions.setAbsoluteURI(request.getOkapiUrl() + inventoryQuery);
-    if(request.getOkapiUrl().contains("https")) {
-      requestOptions.setSsl(true);
-    }
-    requestOptions.setMethod(HttpMethod.GET);
-    return httpClient.request(requestOptions);
-  }
+    String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
-  private void appendHeadersAndSetTimeout(Request request, HttpClientRequest httpClientRequest) {
+    logger.info("Sending request to : " + inventoryQuery);
+    final HttpClientRequest httpClientRequest = httpClient
+      .getAbs(inventoryQuery);
+
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+
     httpClientRequest.setTimeout(REQUEST_TIMEOUT);
+
+    return httpClientRequest;
   }
 
   private boolean isSkipSuppressed(Request request) {
@@ -495,49 +465,34 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setConnectTimeout(REQUEST_TIMEOUT);
     options.setIdleTimeout(REQUEST_TIMEOUT);
     HttpClient httpClient = vertxContext.owner().createHttpClient(options);
-    buildInventoryQuery(httpClient, request)
-      .onSuccess(httpClientRequest -> {
-        appendHeadersAndSetTimeout(request, httpClientRequest);
-        BatchStreamWrapper databaseWriteStream = getBatchHttpStream(oaiPmhResponsePromise, vertxContext);
-        httpClientRequest.exceptionHandler(e -> {
-          logger.error(e.getMessage(), e);
-          handleException(oaiPmhResponsePromise, e);
-        });
-        httpClientRequest.send()
-          .onSuccess(response -> writeResponseToStream(httpClient, oaiPmhResponsePromise, httpClientRequest,
-            databaseWriteStream, response))
-          .onFailure(e -> {
-            logger.error(e.getMessage());
-            oaiPmhResponsePromise.fail(e);
-          });
-        AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-        try {
-          queue.set(getWaitersQueue(vertxContext.owner(), request));
-        } catch (IllegalStateException ex) {
-          logger.error(ex.getMessage());
-          oaiPmhResponsePromise.fail(ex);
-        }
+    HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
+    httpClientRequest.sendHead();
+    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    try {
+      queue.set(getWaitersQueue(vertxContext.owner(), request));
+    } catch (IllegalStateException ex) {
+      logger.error(ex.getMessage());
+      oaiPmhResponsePromise.fail(ex);
+      return completePromise;
+    }
 
-        databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
+    databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
-        databaseWriteStream.handleBatch(batch -> {
-          Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
-          final Long returnedCount = databaseWriteStream.getReturnedCount();
+    databaseWriteStream.handleBatch(batch -> {
+      Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
+      final Long returnedCount = databaseWriteStream.getReturnedCount();
 
-          if (returnedCount % 1000 == 0) {
-            logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
-          }
+      if (returnedCount % 1000 == 0) {
+        logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+      }
 
-          if (databaseWriteStream.isTheLastBatch()) {
-            savePromise.future().toCompletionStage().thenRun(completePromise::complete);
-          }
-          databaseWriteStream.invokeDrainHandler();
-        });
-      })
-      .onFailure(e -> {
-        logger.error(e.getMessage());
-        oaiPmhResponsePromise.fail(e);
-      });
+      if (databaseWriteStream.isTheLastBatch()) {
+        savePromise.future().toCompletionStage().thenRun(completePromise::complete);
+      }
+      databaseWriteStream.invokeDrainHandler();
+    });
+
     return completePromise;
   }
 
@@ -570,39 +525,45 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private BatchStreamWrapper getBatchHttpStream(Promise<?> promise, Context vertxContext) {
+  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
     final Vertx vertx = vertxContext.owner();
+
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
+
+    inventoryQuery.handler(resp -> {
+      if (resp.statusCode() != 200) {
+        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
+        resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
+        promise.fail(new IllegalStateException(errorMsg));
+      } else {
+        resp.bodyHandler(buffer -> logger.info("Response " + buffer));
+        JsonParser jp = new JsonParserImpl(resp);
+        jp.objectValueMode();
+        jp.pipeTo(databaseWriteStream);
+        jp.endHandler(e -> {
+          databaseWriteStream.end();
+          inventoryHttpClient.close();
+        })
+          .exceptionHandler(throwable -> {
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+            databaseWriteStream.end();
+            inventoryHttpClient.close();
+            promise.fail(throwable);
+          });
+      }
+    });
+
+    inventoryQuery.exceptionHandler(e -> {
+      logger.error(e.getMessage(), e);
+      handleException(promise, e);
+    });
+
     databaseWriteStream.exceptionHandler(e -> {
       if (e != null) {
         handleException(promise, e);
       }
     });
     return databaseWriteStream;
-  }
-
-  private void writeResponseToStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, BatchStreamWrapper databaseWriteStream, HttpClientResponse resp) {
-    if (resp.statusCode() != 200) {
-      String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-      resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
-      promise.fail(new IllegalStateException(errorMsg));
-    } else {
-      resp.bodyHandler(buffer -> logger.info("Response " + buffer));
-      logger.info("Response " + resp);
-      JsonParser jp = new JsonParserImpl(resp);
-      jp.objectValueMode();
-      jp.pipeTo(databaseWriteStream);
-      jp.endHandler(e -> {
-        databaseWriteStream.end();
-        inventoryHttpClient.close();
-      })
-        .exceptionHandler(throwable -> {
-          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
-          databaseWriteStream.end();
-          inventoryHttpClient.close();
-          promise.fail(throwable);
-        });
-    }
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream) {
@@ -629,6 +590,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ).collect(Collectors.toList());
   }
 
+  private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
+    final HttpClientRequest httpClientRequest = httpClient
+      .postAbs(format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
+
+    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+    httpClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
+
+    return httpClientRequest;
+  }
+
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
@@ -636,15 +609,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
-      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds)
-          .onSuccess(srsResp -> {
+      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResp -> srsResp.bodyHandler(bh -> {
           if (srsResp.statusCode() != 200) {
-            String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records", srsResp.statusMessage());
+            String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request().absoluteURI(), srsResp.statusMessage());
             logger.error(errorMsg);
             promise.fail(new IllegalStateException(errorMsg));
           }
           try {
-            final Object o = srsResp.bodyAsJsonObject();
+            final Object o = bh.toJson();
             if (o instanceof JsonObject) {
               JsonObject entries = (JsonObject) o;
               final JsonArray records = entries.getJsonArray("sourceRecords");
@@ -653,7 +625,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
-              logger.debug("Can't process response from SRS: {0}", srsResp.toString());
+              logger.debug("Can't process response from SRS: {0}", bh.toString());
             }
             promise.complete(result);
           } catch (DecodeException ex) {
@@ -663,10 +635,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             handleException(promise, e);
           }
         }
-      )
-      .onFailure(e -> {
-        handleException(promise, e);
-      });
+      ));
     } catch (Exception e) {
       handleException(promise, e);
     }

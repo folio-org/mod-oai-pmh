@@ -33,9 +33,7 @@ import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
-import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
@@ -61,11 +59,13 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class OaiPmhImpl implements Oai {
 
-  private final Logger logger = LogManager.getLogger(OaiPmhImpl.class);
+  private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
