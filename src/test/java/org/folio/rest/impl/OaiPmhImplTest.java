@@ -2,6 +2,8 @@ package org.folio.rest.impl;
 
 import static io.restassured.RestAssured.given;
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
@@ -22,6 +24,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
@@ -81,17 +84,15 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -111,7 +112,6 @@ import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
-import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -187,7 +187,6 @@ class OaiPmhImplTest {
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
 
-  private static final String RESUMPTION_TOKEN_TEMPLATE = "metadataPrefix=marc21_withholdings&offset=0&requestId=replace_request_id&nextRecordId=00012016-c38a-4cf5-b234-7ea23413d105&until=2021-01-08T14:28:41Z";
   private static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
 
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
@@ -1578,7 +1577,7 @@ class OaiPmhImplTest {
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
       if(recordsCount==10){
         List<HeaderType> headers = oaipmh.getListIdentifiers().getHeaders();
-        verifyIdentifiers(headers, getExpectedIdentifiers());
+        verifyIdentifiers(headers, getExpectedInstanceIds());
       }
     } else if (verb == LIST_RECORDS) {
       assertThat(oaipmh.getListRecords(), is(notNullValue()));
@@ -1589,7 +1588,7 @@ class OaiPmhImplTest {
         List<HeaderType> headers = oaipmh.getListRecords().getRecords().stream()
           .map(RecordType::getHeader)
           .collect(Collectors.toList());
-        verifyIdentifiers(headers, getExpectedIdentifiers());
+        verifyIdentifiers(headers, getExpectedInstanceIds());
       }
     } else {
       fail("Can't verify specified verb: " + verb);
@@ -1795,7 +1794,7 @@ class OaiPmhImplTest {
     return identifierWithPrefix.substring(IDENTIFIER_PREFIX.length());
   }
 
-  private List<String> getExpectedIdentifiers() {
+  private List<String> getExpectedInstanceIds() {
     //@formatter:of
     return Arrays.asList(
       "00000000-0000-4000-a000-000000000000",
@@ -2211,28 +2210,48 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
-//  @Test
-  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(VertxTestContext testContext) {
-    UUID requestId = UUID.randomUUID();
-    String resTokenEmptyInstances = Base64.getUrlEncoder()
-      .encodeToString(RESUMPTION_TOKEN_TEMPLATE.replaceAll("replace_request_id", requestId.toString()).getBytes());
+  @Test
+  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "8");
 
-    RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setRequestId(requestId)
-      .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
-    testContext.verify(() -> {
-      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onSuccess(res -> {
-        res.setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
-        instancesService.updateRequestMetadataByRequestId(requestId.toString(), res, OAI_TEST_TENANT).onSuccess(res2 -> {
-          RequestSpecification requestWithResumptionToken = createBaseRequest()
-            .with()
-            .param(VERB_PARAM, LIST_RECORDS.value())
-            .param(RESUMPTION_TOKEN_PARAM, resTokenEmptyInstances);
-          final OAIPMH oaipmh = verifyResponseWithErrors(requestWithResumptionToken, LIST_RECORDS, 400, 1);
-          assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(BAD_RESUMPTION_TOKEN));
-          testContext.completeNow();
-        }).onFailure(testContext::failNow);
-      }).onFailure(testContext::failNow);
+    RequestSpecification listRecordRequest = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_INVENTORY_10_INSTANCE_IDS)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 8);
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(resumptionToken, is(notNullValue()));
+    assertThat(resumptionToken.getValue(), is(notNullValue()));
+
+    String requestId = getRequestId(resumptionToken);
+    instancesService.deleteInstancesById(getExpectedInstanceIds(), requestId, OAI_TEST_TENANT)
+      .onFailure(testContext::failNow);
+
+    vertx.setTimer(5000, res -> {
+      RequestSpecification resumptionTokenRequest = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
+
+      verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
+      testContext.completeNow();
     });
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  private String getRequestId(ResumptionTokenType resumptionTokenType) {
+    String args = new String(Base64.getUrlDecoder().decode(resumptionTokenType.getValue()),
+      StandardCharsets.UTF_8);
+    Map<String, String> params;
+    params = URLEncodedUtils
+      .parse(args, UTF_8, '&').stream()
+      .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+    return params.get(REQUEST_ID_PARAM);
   }
 
   @Test
