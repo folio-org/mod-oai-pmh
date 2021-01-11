@@ -93,6 +93,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
 
+  private static final String ONLY_INSTANCE_UPDATE_DATE_PARAM_NAME = "onlyInstanceUpdateDate";
+
   private static final String START_DATE_PARAM_NAME = "startDate";
 
   private static final String END_DATE_PARAM_NAME = "endDate";
@@ -153,7 +155,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
            * should be integrated with jooq request
            */
           fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-          fetchingIdsPromise.future().onComplete(e -> processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true));
+          fetchingIdsPromise.future().onComplete(e -> {
+            logger.debug("Loading instances completed, starting processing first batch");
+            processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true);
+          });
         } else {
           processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
         }
@@ -433,6 +438,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String.valueOf(
         isSkipSuppressed(request)));
 
+    paramMap.put(ONLY_INSTANCE_UPDATE_DATE_PARAM_NAME, "false");
+
     final String params = paramMap.entrySet().stream()
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
@@ -545,7 +552,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+          logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
             databaseWriteStream.end();
             inventoryHttpClient.close();
             promise.fail(throwable);
@@ -605,7 +612,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.info("Request to SRS: {0}", listOfIds);
+    logger.info("Request to SRS: {}", listOfIds);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
@@ -625,7 +632,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
             } else {
-              logger.debug("Can't process response from SRS: {0}", bh.toString());
+              logger.debug("Can't process response from SRS: {}", bh.toString());
             }
             promise.complete(result);
           } catch (DecodeException ex) {
