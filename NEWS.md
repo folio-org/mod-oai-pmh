@@ -1,3 +1,11 @@
+## 3.2.6 (Released) 2021-01-09
+
+This release includes the exclusion of RMB 32.0.0 updating due to RMB bugs.
+
+* [MODOAIPMH-278](https://issues.folio.org/browse/MODOAIPMH-278) Revert RMB 32.0.0 due to RMB bugs.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.2.5...v3.2.6)
+
 ## 3.2.5 (Released) 2020-12-30
 
 This release mainly contains bug fixes related to marc21_withholdings request and upgrade of RMB up to 32.0.0 .
