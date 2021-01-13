@@ -1,3 +1,11 @@
+## 3.2.7 (Released) 2021-01-13
+
+This release includes the bug fix for marc21_withholdings metadata prefix request.
+
+* [MODOAIPMH-276](https://issues.folio.org/browse/MODOAIPMH-276) Changes to holdings or items are not triggering harvesting records with marc21_withholdings.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.2.6...v3.2.7)
+
 ## 3.2.6 (Released) 2021-01-09
 
 This release includes the exclusion of RMB 32.0.0 updating due to RMB bugs.
