@@ -486,6 +486,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
+    int batchSize = Integer.parseInt(
+        RepositoryConfigurationUtil.getProperty(request.getTenant(),
+          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+
     databaseWriteStream.handleBatch(batch -> {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
       final Long returnedCount = databaseWriteStream.getReturnedCount();
@@ -494,7 +498,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
       }
 
-      if (databaseWriteStream.isTheLastBatch()) {
+      if (databaseWriteStream.getReturnedCount() > batchSize) {
         savePromise.future().toCompletionStage().thenRun(completePromise::complete);
       }
       databaseWriteStream.invokeDrainHandler();
