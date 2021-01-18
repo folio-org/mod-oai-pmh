@@ -1,22 +1,5 @@
 package org.folio.oaipmh.processors;
 
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.OffsetDateTime;
@@ -77,6 +60,22 @@ import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.impl.Connection;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -243,7 +242,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         promise.fail(throwable);
         logger.error("Cannot save ids: " + throwable.getMessage(), throwable.getCause());
       }
-    ).onSuccess(promise::complete);
+    ).onSuccess(t -> {
+      if (t.size() == batchSize + 1) { //TODO: || isStreamEnded
+        promise.complete(t);
+      } else {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+        getNextInstances(request, batchSize, context, requestId);
+      }
+    });
     return promise;
   }
 
@@ -377,7 +387,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    List<RecordType> records =new ArrayList<>();
+    List<RecordType> records = new ArrayList<>();
     batch.stream()
       .filter(instance -> {
           final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
@@ -487,8 +497,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
     int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getTenant(),
-          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      RepositoryConfigurationUtil.getProperty(request.getTenant(),
+        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
     databaseWriteStream.handleBatch(batch -> {
       Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
@@ -556,7 +566,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-          logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
             databaseWriteStream.end();
             inventoryHttpClient.close();
             promise.fail(throwable);
