@@ -581,7 +581,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
         promise.fail(res.cause());
       } else {
-        logger.info("Save instances complete");
         promise.complete();
         databaseWriteStream.invokeDrainHandler();
       }
@@ -612,7 +611,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.info("Request to SRS: {}", listOfIds);
+    logger.debug("Request to SRS, list id size: {}", listOfIds.size());
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();

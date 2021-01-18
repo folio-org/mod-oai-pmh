@@ -66,6 +66,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           int size = Math.min(dataList.size(), batchSize);
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           page.increment();
+          returnedCount.add(batch.size());
           dataList.subList(0, batch.size()).clear();
           batchReadyHandler.handle(batch);
           if (isTheLastBatch()) {
@@ -77,7 +78,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   public synchronized void invokeDrainHandler() {
-    if (drainHandler != null && !writeQueueFull()) {
+    if (drainHandler != null && !writeQueueFull()
+    && !(streamEnded && dataList.isEmpty()) ) {
       drainHandler.handle(null);
     }
   }
