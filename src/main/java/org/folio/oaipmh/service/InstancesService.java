@@ -1,5 +1,6 @@
 package org.folio.oaipmh.service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.folio.rest.jooq.tables.pojos.Instances;
@@ -17,6 +18,8 @@ public interface InstancesService {
    */
   Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds);
 
+  Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
+
   /**
    * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.
    */
@@ -25,8 +28,8 @@ public interface InstancesService {
   /**
    * Updates request metadata by request id.
    */
-  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, boolean isStreamEnded,
-                                                             String tenantId);
+  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, OffsetDateTime lastUpdatedDate,
+      boolean isStreamEnded, String tenantId);
 
   /**
    * Deletes request metadata by request id. Due to foreign key constraint all instances with such request id will be deleted as

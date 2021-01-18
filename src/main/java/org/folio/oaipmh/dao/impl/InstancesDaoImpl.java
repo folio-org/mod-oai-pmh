@@ -60,6 +60,29 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
+  public Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor ->
+      queryExecutor.findOneRow(dslContext ->
+        dslContext.selectFrom(REQUEST_METADATA_LB)
+      .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
+        .map(this::toOptionalRequestMetadata)
+    .map(optionalRequestMetadata -> {
+      if (optionalRequestMetadata.isPresent()) {
+        return optionalRequestMetadata.get();
+      }
+      throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+    }));
+  }
+
+  private Optional<RequestMetadataLb> toOptionalRequestMetadata(Row row) {
+    RequestMetadataLb requestMetadataLb = null;
+    if (Objects.nonNull(row)) {
+      requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
+    }
+    return Objects.nonNull(requestMetadataLb) ? Optional.of(requestMetadataLb) : Optional.empty();
+  }
+
+  @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
     requestMetadata.setStreamEnded(false);
@@ -74,11 +97,11 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, boolean isStreamEnded,
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, OffsetDateTime lastUpdatedDate, boolean isStreamEnded,
       String tenantId) {
     RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
     requestMetadataLb.setRequestId(UUID.fromString(requestId))
-      .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()))
+      .setLastUpdatedDate(lastUpdatedDate)
       .setStreamEnded(isStreamEnded);
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)

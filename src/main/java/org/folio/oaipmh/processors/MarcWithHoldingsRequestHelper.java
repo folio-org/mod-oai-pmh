@@ -43,6 +43,7 @@ import org.springframework.util.ReflectionUtils;
 
 import com.google.common.collect.Maps;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -134,7 +135,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
 
       String requestId;
-      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      OffsetDateTime lastUpdateDate = OffsetDateTime.now(ZoneId.systemDefault());
+      RequestMetadataLb requestMetadata = new RequestMetadataLb()
+        .setLastUpdatedDate(lastUpdateDate);
+
       Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null || request.getRequestId() == null) {
         requestId = UUID.randomUUID().toString();
@@ -142,7 +146,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, false, request.getTenant());
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, lastUpdateDate,false, request.getTenant());
       }
       updateRequestMetadataFuture.compose(res -> {
         Promise<Void> fetchingIdsPromise = null;
@@ -232,19 +236,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant()).compose(instances -> {
+    Future<List<JsonObject>> getEnrichInstancesFuture = instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant()).compose(instances -> {
       List<JsonObject> jsonInstances = instances.stream()
         .map(Instances::getJson)
         .map(JsonObject::new)
         .collect(Collectors.toList());
       return enrichInstances(jsonInstances, request, context);
-    }).onFailure(throwable -> {
-        promise.fail(throwable);
-        logger.error("Cannot save ids: " + throwable.getMessage(), throwable.getCause());
-      }
-    ).onSuccess(t -> {
-      if (t.size() == batchSize + 1) { //TODO: || isStreamEnded
-        promise.complete(t);
+    });
+    Future<Boolean> getStreamEndedFuture = instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
+      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()));
+
+    CompositeFuture.all(getEnrichInstancesFuture, getStreamEndedFuture).onSuccess(v -> {
+      List<JsonObject> enrichInstances = getEnrichInstancesFuture.result();
+      boolean isStreamEnded = getStreamEndedFuture.result();
+      if (enrichInstances.size() == batchSize + 1 || isStreamEnded) {
+        promise.complete(enrichInstances);
       } else {
         try {
           Thread.sleep(1000);
@@ -253,7 +259,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         getNextInstances(request, batchSize, context, requestId);
       }
+    }).onFailure(throwable -> {
+      if(getEnrichInstancesFuture.failed()) {
+        logger.error("Cannot save ids: " + throwable.getMessage(), throwable.getCause());
+      } else if (getStreamEndedFuture.failed()){
+        logger.error("Cannot obtain request metadata in order to retrieve \"stream ended\" value.");
+      }
+      promise.fail(throwable);
     });
+
+
     return promise;
   }
 

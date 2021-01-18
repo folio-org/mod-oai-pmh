@@ -123,7 +123,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.verify(() -> {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
-      instancesService.updateRequestMetadataByRequestId(requestMetadata.getRequestId().toString(), requestMetadata, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+      instancesService.updateRequestMetadataByRequestId(requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(), false, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
         assertNotNull(res);
         testContext.completeNow();
       }));
@@ -133,7 +133,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnFailedFuture_whenUpdateRequestMetadataWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() ->
-      instancesService.updateRequestMetadataByRequestId(nonExistentRequestMetadata.getRequestId().toString(), nonExistentRequestMetadata, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+      instancesService.updateRequestMetadataByRequestId(nonExistentRequestMetadata.getRequestId().toString(),nonExistentRequestMetadata.getLastUpdatedDate(), false, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof NotFoundException);
         testContext.completeNow();
       }))
