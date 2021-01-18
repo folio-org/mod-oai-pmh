@@ -62,6 +62,7 @@ public class InstancesDaoImpl implements InstancesDao {
   @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
+    requestMetadata.setStreamEnded(false);
     if (Objects.isNull(uuid) || StringUtils.isEmpty(uuid.toString())) {
       return Future
         .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
@@ -73,9 +74,12 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, boolean isStreamEnded,
       String tenantId) {
-    requestMetadataLb.setRequestId(UUID.fromString(requestId));
+    RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
+    requestMetadataLb.setRequestId(UUID.fromString(requestId))
+      .setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()))
+      .setStreamEnded(isStreamEnded);
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
         .set(toDatabaseRecord(requestMetadataLb))

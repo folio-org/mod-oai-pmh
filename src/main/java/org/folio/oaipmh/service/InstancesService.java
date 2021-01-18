@@ -25,8 +25,8 @@ public interface InstancesService {
   /**
    * Updates request metadata by request id.
    */
-  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-      String tenantId);
+  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, boolean isStreamEnded,
+                                                             String tenantId);
 
   /**
    * Deletes request metadata by request id. Due to foreign key constraint all instances with such request id will be deleted as

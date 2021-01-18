@@ -61,9 +61,9 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-      String tenantId) {
-    return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
+  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, boolean isStreamEnded,
+                                                                    String tenantId) {
+    return instancesDao.updateRequestMetadataByRequestId(requestId, isStreamEnded, tenantId);
   }
 
   @Override
