@@ -128,7 +128,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Response> promise = Promise.promise();
     try {
       String resumptionToken = request.getResumptionToken();
-      final boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
@@ -150,24 +149,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
       vertxContext.put("requestId", requestId);
       vertxContext.put("tenantId", request.getTenant());
-      updateRequestMetadataFuture.compose(res -> {
-        Promise<Void> fetchingIdsPromise = null;
-        if (resumptionToken == null
-          || request.getRequestId() == null) { // the first request from EDS
-          /**
-           * here the postgres client is not used any more, but at 'createBatchStream' method
-           * we don't allow to write data faster then retrieving from response and such approach
-           * should be integrated with jooq request
-           */
-          fetchingIdsPromise = createBatchStream(request, promise, vertxContext, requestId);
-          fetchingIdsPromise.future().onComplete(e -> {
-            logger.debug("Loading instances completed, starting processing first batch");
-            processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, true);
-          });
+      updateRequestMetadataFuture.onSuccess(res -> {
+        if (resumptionToken == null || request.getRequestId() == null) { // the first request from EDS
+          downloadInstances(request, promise, vertxContext, requestId);
         } else {
-          processBatch(request, vertxContext, promise, deletedRecordSupport, requestId, false); //close client
+          processBatch(request, vertxContext, promise, requestId, false); //close client
         }
-        return fetchingIdsPromise != null ? fetchingIdsPromise.future() : Future.succeededFuture();
       }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
       handleException(promise, e);
@@ -175,9 +162,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, boolean deletedRecordSupport, String requestId, boolean firstBatch) {
+  private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId, boolean firstBatch) {
     try {
-
+      boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
@@ -227,7 +214,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList());
           instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
-            .onComplete(r -> oaiPmhResponsePromise.complete(result)); //need remove this close client maybe
+            .onComplete(r -> oaiPmhResponsePromise.complete(result));
         }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
         srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
       });
@@ -236,10 +223,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<Void> createBatchStream(Request request,
-                                          Promise<Response> oaiPmhResponsePromise,
-                                          Context vertxContext, String requestId) {
-    Promise<Void> completePromise = Promise.promise();
+  private void downloadInstances(Request request,
+                                 Promise<Response> oaiPmhResponsePromise,
+                                 Context vertxContext, String requestId) {
     final HttpClientOptions options = new HttpClientOptions();
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
@@ -254,7 +240,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       oaiPmhResponsePromise.fail(ex);
-      return completePromise;
     }
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
@@ -264,7 +249,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
     databaseWriteStream.handleBatch(batch -> {
-      Promise<Void> savePromise = saveInstancesIds(batch, request, requestId, databaseWriteStream);
+      saveInstancesIds(batch, request, requestId, databaseWriteStream);
       final Long returnedCount = databaseWriteStream.getReturnedCount();
 
       if (returnedCount % 1000 == 0) {
@@ -272,16 +257,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
 
       if (databaseWriteStream.getReturnedCount() > batchSize || databaseWriteStream.isStreamEnded()) {
-        if(!databaseWriteStream.isFirstBatchResponded()) {
-          databaseWriteStream.setFirstBatchResponded(true);
-          processBatch(request, vertxContext, oaiPmhResponsePromise, false, requestId, fir);
+        if(!databaseWriteStream.wasFirstBatchResponded()) {
+          processBatch(request, vertxContext, oaiPmhResponsePromise, requestId, true);
         }
       }
-
       databaseWriteStream.invokeDrainHandler();
     });
-
-    return completePromise;
   }
 
   private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {

@@ -8,6 +8,7 @@ import io.vertx.core.streams.WriteStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
@@ -22,7 +23,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private Handler<Throwable> exceptionHandler;
   private volatile Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize;
-  private volatile boolean firstBatchResponded = false;
+  private volatile AtomicBoolean firstBatchResponded = new AtomicBoolean();
 
   private volatile boolean streamEnded = false;
 
@@ -139,12 +140,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return returnedCount.longValue();
   }
 
-  public boolean isFirstBatchResponded() {
-    return firstBatchResponded;
-  }
-
-  public BatchStreamWrapper setFirstBatchResponded(boolean firstBatchResponded) {
-    this.firstBatchResponded = firstBatchResponded;
-    return this;
+  public boolean wasFirstBatchResponded() {
+    return firstBatchResponded.getAndSet(true);
   }
 }
