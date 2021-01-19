@@ -365,10 +365,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     Promise<Response> promise = Promise.promise();
     try {
-      logger.info("Build records response: " + batch.size());
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
 
-      logger.info("Build records response: " + records.size());
+      logger.info("Build records response, instances = {0}, instances with srs records = {1}", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {

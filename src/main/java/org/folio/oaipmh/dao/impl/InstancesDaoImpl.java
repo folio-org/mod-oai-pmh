@@ -143,7 +143,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private Record toDatabaseRecord(RequestMetadataLb requestMetadata) {
     return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
-      .setLastUpdatedDate(requestMetadata.getLastUpdatedDate());
+      .setLastUpdatedDate(requestMetadata.getLastUpdatedDate())
+      .setStreamEnded(requestMetadata.getStreamEnded());
   }
 
   @Override
@@ -184,7 +185,6 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .orderBy(INSTANCES.INSTANCE_ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
   }
