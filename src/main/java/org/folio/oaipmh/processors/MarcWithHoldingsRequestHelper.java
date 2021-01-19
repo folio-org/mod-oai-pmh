@@ -43,7 +43,6 @@ import org.springframework.util.ReflectionUtils;
 
 import com.google.common.collect.Maps;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -146,7 +145,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, lastUpdateDate,false, request.getTenant());
+        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, lastUpdateDate, false, request.getTenant());
       }
       updateRequestMetadataFuture.compose(res -> {
         Promise<Void> fetchingIdsPromise = null;
@@ -236,40 +235,43 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
     Promise<List<JsonObject>> promise = Promise.promise();
-    Future<List<JsonObject>> getEnrichInstancesFuture = instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant()).compose(instances -> {
-      List<JsonObject> jsonInstances = instances.stream()
-        .map(Instances::getJson)
-        .map(JsonObject::new)
-        .collect(Collectors.toList());
-      return enrichInstances(jsonInstances, request, context);
-    });
-    Future<Boolean> getStreamEndedFuture = instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
-      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()));
 
-    CompositeFuture.all(getEnrichInstancesFuture, getStreamEndedFuture).onSuccess(v -> {
-      List<JsonObject> enrichInstances = getEnrichInstancesFuture.result();
-      boolean isStreamEnded = getStreamEndedFuture.result();
-      if (enrichInstances.size() == batchSize + 1 || isStreamEnded) {
-        promise.complete(enrichInstances);
-      } else {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
+
+    final Promise<List<Instances>> listPromise = Promise.promise();
+    context.owner().setTimer(100, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
+
+    listPromise.future()
+      .compose(instances -> {
+        List<JsonObject> jsonInstances = instances.stream()
+          .map(Instances::getJson)
+          .map(JsonObject::new)
+          .collect(Collectors.toList());
+        return enrichInstances(jsonInstances, request, context);
+      }).onComplete(asyncResult -> {
+        if (asyncResult.succeeded()) {
+          promise.complete(asyncResult.result());
+        } else {
+          logger.error("Cannot save ids: " + asyncResult.cause().getMessage(), asyncResult.cause());
+        promise.fail(asyncResult.cause());
         }
-        getNextInstances(request, batchSize, context, requestId);
-      }
-    }).onFailure(throwable -> {
-      if(getEnrichInstancesFuture.failed()) {
-        logger.error("Cannot save ids: " + throwable.getMessage(), throwable.getCause());
-      } else if (getStreamEndedFuture.failed()){
-        logger.error("Cannot obtain request metadata in order to retrieve \"stream ended\" value.");
-      }
-      promise.fail(throwable);
-    });
-
+      });
 
     return promise;
+  }
+
+  private Future<List<Instances>> getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context, Long timerId) {
+    return instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
+      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
+      .compose(streamEnded -> instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
+        .onComplete(f -> {
+          context.owner().cancelTimer(timerId);
+          if (f.succeeded()) {
+            if (streamEnded || f.result().size() == batchSize + 1)
+              listPromise.complete(f.result());
+          } else {
+            logger.error(f.cause());
+          }
+        }));
   }
 
   private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
