@@ -22,6 +22,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private Handler<Throwable> exceptionHandler;
   private volatile Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize;
+  private volatile boolean firstBatchResponded = false;
 
   private volatile boolean streamEnded = false;
 
@@ -134,20 +135,16 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return streamEnded;
   }
 
-  public int getItemsInQueueCount() {
-    return dataList.size();
-  }
-
   public Long getReturnedCount() {
     return returnedCount.longValue();
   }
 
-  public void addReturnedItemsCount(long count) {
-    returnedCount.add(count);
+  public boolean isFirstBatchResponded() {
+    return firstBatchResponded;
   }
 
-  public Long getPage() {
-    return page.longValue();
+  public BatchStreamWrapper setFirstBatchResponded(boolean firstBatchResponded) {
+    this.firstBatchResponded = firstBatchResponded;
+    return this;
   }
-
 }
