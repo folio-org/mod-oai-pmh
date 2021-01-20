@@ -140,7 +140,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return returnedCount.longValue();
   }
 
-  public boolean wasFirstBatchResponded() {
+  public boolean setFirstBatchResponded() {
     return firstBatchResponded.getAndSet(true);
   }
 }

@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.WorkerExecutor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -108,8 +109,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
+  private final Vertx vertx;
 
   private InstancesService instancesService;
+  private final WorkerExecutor sharedWorkerExecutor;
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
@@ -117,6 +120,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private MarcWithHoldingsRequestHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+    vertx = Vertx.vertx();
+    sharedWorkerExecutor = vertx.createSharedWorkerExecutor("saving-executer", 2);
   }
 
   /**
@@ -146,14 +151,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         requestId = request.getRequestId();
         updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, lastUpdateDate, false, request.getTenant());
       }
-      vertxContext.put("requestId", requestId);
-      vertxContext.put("tenantId", request.getTenant());
+
       updateRequestMetadataFuture.onSuccess(res -> {
-        if (resumptionToken == null || request.getRequestId() == null) { // the first request from EDS
-          downloadInstances(request, promise, vertxContext, requestId);
-        } else {
-          processBatch(request, vertxContext, promise, requestId, false); //close client
-        }
+        processBatch(request, vertxContext, promise, requestId, (resumptionToken == null || request.getRequestId() == null)); //close client
+          sharedWorkerExecutor.executeBlocking(e->{
+            downloadInstances(request, promise, vertxContext, requestId);
+          }, f->Future.succeededFuture());
       }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
       handleException(promise, e);
@@ -231,7 +234,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setIdleTimeout(REQUEST_TIMEOUT);
     HttpClient httpClient = vertxContext.owner().createHttpClient(options);
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext, requestId, request.getTenant());
     httpClientRequest.sendHead();
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
@@ -255,11 +258,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
       }
 
-      if (databaseWriteStream.getReturnedCount() > batchSize || databaseWriteStream.isStreamEnded()) {
-        if(!databaseWriteStream.wasFirstBatchResponded()) {
-          processBatch(request, vertxContext, oaiPmhResponsePromise, requestId, true);
-        }
-      }
+      databaseWriteStream.setFirstBatchResponded();
+
       databaseWriteStream.invokeDrainHandler();
     });
   }
@@ -302,7 +302,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpClientRequest;
   }
 
-  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
+  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext, String requestId, String tenantId) {
     final Vertx vertx = vertxContext.owner();
 
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
@@ -318,8 +318,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
         jp.endHandler(e -> {
-          String requestId = vertxContext.get("requestId");
-          String tenantId = vertxContext.get("tenantId");
           databaseWriteStream.end(v -> instancesService.updateRequestMetadataByRequestId(requestId, OffsetDateTime.now(ZoneId.systemDefault()), true, tenantId));
           inventoryHttpClient.close();
         })
@@ -350,7 +348,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
     final Promise<List<Instances>> listPromise = Promise.promise();
-    context.owner().setTimer(100, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
+    context.owner().setTimer(500, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
 
     listPromise.future()
       .compose(instances -> {
@@ -358,7 +356,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .map(Instances::getJson)
           .map(JsonObject::new)
           .collect(Collectors.toList());
-        return enrichInstances(jsonInstances, request, context);
+        return enrichInstances(jsonInstances, request, context, requestId);
       }).onComplete(asyncResult -> {
         if (asyncResult.succeeded()) {
           promise.complete(asyncResult.result());
@@ -386,13 +384,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }));
   }
 
-  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
+  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context, String requestId) {
     Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getString(INSTANCE_ID_FIELD_NAME), Function.identity()));
     Promise<List<JsonObject>> completePromise = Promise.promise();
     HttpClient httpClient = context.owner().createHttpClient();
 
     HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context, requestId, request.getTenant());
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
