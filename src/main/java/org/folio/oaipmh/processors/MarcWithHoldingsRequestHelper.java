@@ -154,9 +154,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       updateRequestMetadataFuture.onSuccess(res -> {
         processBatch(request, vertxContext, promise, requestId, (resumptionToken == null || request.getRequestId() == null)); //close client
+        //if (resumptionToken == null || request.getRequestId() == null) { // the first request from EDS
           sharedWorkerExecutor.executeBlocking(e->{
             downloadInstances(request, promise, vertxContext, requestId);
           }, f->Future.succeededFuture());
+//        } else {
+
+    //    }
       }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
       handleException(promise, e);
@@ -257,9 +261,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (returnedCount % 1000 == 0) {
         logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
       }
-
+      
       databaseWriteStream.setFirstBatchResponded();
-
+      
       databaseWriteStream.invokeDrainHandler();
     });
   }
@@ -348,7 +352,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
     final Promise<List<Instances>> listPromise = Promise.promise();
-    context.owner().setTimer(500, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
+    context.owner().setTimer(100, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
 
     listPromise.future()
       .compose(instances -> {
