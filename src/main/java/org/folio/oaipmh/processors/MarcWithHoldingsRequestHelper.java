@@ -162,7 +162,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         processBatch(request, vertxContext, promise, requestId, isFirstBatch);
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(
-            blockingFeature -> downloadInstances(request, promise, downloadContext, requestId),
+            blockingFeature -> downloadInstances(request, promise, blockingFeature, downloadContext, requestId),
             asyncResult -> instancesService.updateRequestStreamEnded(requestId, true, request.getTenant()));
         }
       }).onFailure(th -> handleException(promise, th));
@@ -234,7 +234,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request,
-                                 Promise<Response> oaiPmhResponsePromise,
+                                 Promise<Response> oaiPmhResponsePromise, Promise downloadInstancesPromise,
                                  Context vertxContext, String requestId) {
     final HttpClientOptions options = new HttpClientOptions();
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
@@ -262,6 +262,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       if (returnedCount % 1000 == 0) {
         logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+      }
+
+      if (databaseWriteStream.isTheLastBatch()) {
+        downloadInstancesPromise.complete();
       }
 
       databaseWriteStream.invokeDrainHandler();
@@ -322,6 +326,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
         jp.endHandler(e -> {
+          logger.info("End handler, current number of instances: " + databaseWriteStream.getReturnedCount() + " ; DWS streamEnded: " + databaseWriteStream.isStreamEnded());
           databaseWriteStream.end();
           inventoryHttpClient.close();
         })
