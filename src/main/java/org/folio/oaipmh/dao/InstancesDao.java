@@ -23,10 +23,14 @@ public interface InstancesDao {
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
 
   /**
-   * Updates request metadata by request id.
+   * Updates request metadata update date column by request id.
    */
-  Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, OffsetDateTime lastUpdatedDate,
-      boolean isStreamEnded, String tenantId);
+  Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate, String tenantId);
+
+  /**
+   * Updates request metadata stream ended column by request id.
+   */
+  Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId);
 
   /**
    * Deletes request metadata by request id. Due to foreign key constraint all instances with such request id will be deleted as

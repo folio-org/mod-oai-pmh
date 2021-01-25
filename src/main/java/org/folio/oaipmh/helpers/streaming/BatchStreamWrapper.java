@@ -1,16 +1,16 @@
 package org.folio.oaipmh.helpers.streaming;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Supplier;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -23,7 +23,6 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private Handler<Throwable> exceptionHandler;
   private volatile Handler<List<JsonEvent>> batchReadyHandler;
   private volatile int batchSize;
-  private volatile AtomicBoolean firstBatchResponded = new AtomicBoolean();
 
   private volatile boolean streamEnded = false;
 
@@ -140,7 +139,4 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return returnedCount.longValue();
   }
 
-  public boolean setFirstBatchResponded() {
-    return firstBatchResponded.getAndSet(true);
-  }
 }

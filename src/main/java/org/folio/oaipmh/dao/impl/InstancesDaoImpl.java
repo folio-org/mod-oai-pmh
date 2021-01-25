@@ -97,15 +97,31 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, OffsetDateTime lastUpdatedDate, boolean isStreamEnded,
+  public Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate,
       String tenantId) {
     RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
     requestMetadataLb.setRequestId(UUID.fromString(requestId))
-      .setLastUpdatedDate(lastUpdatedDate)
-      .setStreamEnded(isStreamEnded);
+      .setLastUpdatedDate(lastUpdatedDate);
+
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
-        .set(toDatabaseRecord(requestMetadataLb))
+        .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
+        .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      }));
+  }
+
+  @Override
+  public Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
+        .set(REQUEST_METADATA_LB.STREAM_ENDED, isStreamEnded)
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
         .returning())
       .map(this::toOptionalRequestMetadata)

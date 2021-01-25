@@ -2,7 +2,6 @@ package org.folio.oaipmh.processors;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
@@ -32,11 +31,9 @@ import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
-import org.jooq.InsertValuesStep3;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -83,7 +80,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -119,7 +115,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final Vertx vertx;
 
   private InstancesService instancesService;
-  private final WorkerExecutor sharedWorkerExecutor;
+  private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
 
   public static MarcWithHoldingsRequestHelper getInstance() {
@@ -130,7 +126,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
     vertx = Vertx.vertx();
     downloadContext = vertx.getOrCreateContext();
-    sharedWorkerExecutor = vertx.createSharedWorkerExecutor("saving-executer", 5);
+    saveInstancesExecutor = vertx.createSharedWorkerExecutor("saving-executor", 5);
   }
 
   /**
@@ -158,16 +154,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestMetadataByRequestId(requestId, lastUpdateDate, false, request.getTenant());
+        updateRequestMetadataFuture = instancesService.updateRequestUpdatedDate(requestId, lastUpdateDate, request.getTenant());
       }
 
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null || request.getRequestId() == null;
         processBatch(request, vertxContext, promise, requestId, isFirstBatch);
         if (isFirstBatch) {
-          sharedWorkerExecutor.executeBlocking(e->{
-            downloadInstances(request, promise, downloadContext, requestId);
-          }, f->Future.succeededFuture());
+          saveInstancesExecutor.executeBlocking(
+            blockingFeature -> downloadInstances(request, promise, downloadContext, requestId),
+            asyncResult -> instancesService.updateRequestStreamEnded(requestId, true, request.getTenant()));
         }
       }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
@@ -260,12 +256,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
 
-    int batchSize = Integer.parseInt(
-      RepositoryConfigurationUtil.getProperty(request.getTenant(),
-        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
-
-
     databaseWriteStream.handleBatch(batch -> {
       saveInstancesIds(batch, request, requestId, databaseWriteStream, postgresClient);
       final Long returnedCount = databaseWriteStream.getReturnedCount();
@@ -273,8 +263,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (returnedCount % 1000 == 0) {
         logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
       }
-
-      databaseWriteStream.setFirstBatchResponded();
 
       databaseWriteStream.invokeDrainHandler();
     });
@@ -334,7 +322,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
         jp.endHandler(e -> {
-          databaseWriteStream.end(v -> instancesService.updateRequestMetadataByRequestId(requestId, OffsetDateTime.now(ZoneId.systemDefault()), true, tenantId));
+          databaseWriteStream.end();
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
