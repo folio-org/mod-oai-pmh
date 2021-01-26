@@ -188,7 +188,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         List<JsonObject> instances = fut.result();
         logger.info("Processing instances: " + instances.size());
-        if (CollectionUtils.isEmpty(instances) && !firstBatch) { // resumption token doesn't exist in context
+        if (CollectionUtils.isEmpty(instances) && !firstBatch) {
           handleException(oaiPmhResponsePromise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
           return;
@@ -235,14 +235,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request,
-                                 Promise<Response> oaiPmhResponsePromise, Promise downloadInstancesPromise,
+                                 Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
                                  Context vertxContext, String requestId) {
     final HttpClientOptions options = new HttpClientOptions();
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
     HttpClient httpClient = vertxContext.owner().createHttpClient(options);
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext, requestId, request.getTenant());
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
 
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
@@ -309,10 +309,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpClientRequest;
   }
 
-  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext, String requestId, String tenantId) {
-    final Vertx vertx = vertxContext.owner();
-
-    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertx, DATABASE_FETCHING_CHUNK_SIZE);
+  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
+    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertxContext.owner(), DATABASE_FETCHING_CHUNK_SIZE);
 
     inventoryQuery.handler(resp -> {
       if (resp.statusCode() != 200) {
@@ -363,7 +361,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .map(Instances::getJson)
           .map(JsonObject::new)
           .collect(Collectors.toList());
-        return enrichInstances(jsonInstances, request, context, requestId);
+        return enrichInstances(jsonInstances, request, context);
       }).onComplete(asyncResult -> {
         if (asyncResult.succeeded()) {
           promise.complete(asyncResult.result());
@@ -392,13 +390,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }));
   }
 
-  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context, String requestId) {
+  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
     Map<String, JsonObject> instances = result.stream().collect(toMap(e -> e.getString(INSTANCE_ID_FIELD_NAME), Function.identity()));
     Promise<List<JsonObject>> completePromise = Promise.promise();
     HttpClient httpClient = context.owner().createHttpClient();
 
     HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
-    BatchStreamWrapper enrichedInstancesStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context, requestId, request.getTenant());
+    BatchStreamWrapper enrichedInstancesStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
@@ -428,7 +426,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
               instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
                 itemsandholdingsfields);
-            } else { // it can be the case only for testing
+            } else {
               logger.info(format("Instance with instanceId %s wasn't in the request", instanceId));
             }
           }
@@ -601,7 +599,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId, BatchStreamWrapper databaseWriteStream, PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
-    saveInstances(instancesList, request.getTenant(), requestId, postgresClient).onComplete(res -> { //here NPE
+    saveInstances(instancesList, request.getTenant(), requestId, postgresClient).onComplete(res -> {
       if (res.failed()) {
         logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
         promise.fail(res.cause());
