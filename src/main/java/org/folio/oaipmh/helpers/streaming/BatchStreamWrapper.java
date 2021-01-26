@@ -1,15 +1,16 @@
 package org.folio.oaipmh.helpers.streaming;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.streams.WriteStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.streams.WriteStream;
 
 /**
  * WriteStream wrapper to read from the stream in batches.
@@ -66,6 +67,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
           int size = Math.min(dataList.size(), batchSize);
           ArrayList<JsonEvent> batch = new ArrayList<>(dataList.subList(0, size));
           page.increment();
+          returnedCount.add(batch.size());
           dataList.subList(0, batch.size()).clear();
           batchReadyHandler.handle(batch);
           if (isTheLastBatch()) {
@@ -77,7 +79,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   public synchronized void invokeDrainHandler() {
-    if (drainHandler != null && !writeQueueFull()) {
+    if (drainHandler != null && !writeQueueFull()
+    && !(streamEnded && dataList.isEmpty()) ) {
       drainHandler.handle(null);
     }
   }
@@ -132,20 +135,8 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return streamEnded;
   }
 
-  public int getItemsInQueueCount() {
-    return dataList.size();
-  }
-
   public Long getReturnedCount() {
     return returnedCount.longValue();
-  }
-
-  public void addReturnedItemsCount(long count) {
-    returnedCount.add(count);
-  }
-
-  public Long getPage() {
-    return page.longValue();
   }
 
 }

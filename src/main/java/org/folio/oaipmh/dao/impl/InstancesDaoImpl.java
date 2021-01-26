@@ -60,8 +60,32 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
+  public Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor ->
+      queryExecutor.findOneRow(dslContext ->
+        dslContext.selectFrom(REQUEST_METADATA_LB)
+      .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
+        .map(this::toOptionalRequestMetadata)
+    .map(optionalRequestMetadata -> {
+      if (optionalRequestMetadata.isPresent()) {
+        return optionalRequestMetadata.get();
+      }
+      throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+    }));
+  }
+
+  private Optional<RequestMetadataLb> toOptionalRequestMetadata(Row row) {
+    RequestMetadataLb requestMetadataLb = null;
+    if (Objects.nonNull(row)) {
+      requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
+    }
+    return Objects.nonNull(requestMetadataLb) ? Optional.of(requestMetadataLb) : Optional.empty();
+  }
+
+  @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
+    requestMetadata.setStreamEnded(false);
     if (Objects.isNull(uuid) || StringUtils.isEmpty(uuid.toString())) {
       return Future
         .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
@@ -73,12 +97,31 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
+  public Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate,
       String tenantId) {
-    requestMetadataLb.setRequestId(UUID.fromString(requestId));
+    RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
+    requestMetadataLb.setRequestId(UUID.fromString(requestId))
+      .setLastUpdatedDate(lastUpdatedDate);
+
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
-        .set(toDatabaseRecord(requestMetadataLb))
+        .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
+        .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      }));
+  }
+
+  @Override
+  public Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
+        .set(REQUEST_METADATA_LB.STREAM_ENDED, isStreamEnded)
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
         .returning())
       .map(this::toOptionalRequestMetadata)
@@ -116,7 +159,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private Record toDatabaseRecord(RequestMetadataLb requestMetadata) {
     return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
-      .setLastUpdatedDate(requestMetadata.getLastUpdatedDate());
+      .setLastUpdatedDate(requestMetadata.getLastUpdatedDate())
+      .setStreamEnded(requestMetadata.getStreamEnded());
   }
 
   @Override
@@ -157,7 +201,6 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .orderBy(INSTANCES.INSTANCE_ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
   }

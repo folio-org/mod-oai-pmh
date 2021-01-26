@@ -40,4 +40,18 @@
                              referencedColumnNames="request_id" onDelete="CASCADE" onUpdate="NO ACTION"/>
   </changeSet>
 
+  <changeSet id="2021-01-19--14-00-add-boolean-field-to-request-metadata" author="Illia Daliek">
+    <addColumn tableName="request_metadata_lb">
+      <column name="stream_ended" type="boolean" defaultValueBoolean="true">
+        <constraints nullable="false"/>
+      </column>
+    </addColumn>
+  </changeSet>
+
+  <changeSet id="2021-01-19--14-00-add-index-to-instances-table-on-instance_id-column" author="Illia Daliek">
+    <createIndex tableName="instances" indexName="instance_id_idx" unique="false">
+      <column name="instance_id"/>
+    </createIndex>
+  </changeSet>
+
 </databaseChangeLog>

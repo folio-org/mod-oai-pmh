@@ -119,11 +119,11 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   }
 
   @Test
-  void shouldUpdateRequestMetadata_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
+  void shouldUpdateRequestMetadataUpdatedDate_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
-      instancesService.updateRequestMetadataByRequestId(requestMetadata.getRequestId().toString(), requestMetadata, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+      instancesService.updateRequestUpdatedDate(requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
         assertNotNull(res);
         testContext.completeNow();
       }));
@@ -131,9 +131,31 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   }
 
   @Test
-  void shouldReturnFailedFuture_whenUpdateRequestMetadataWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
+  void shouldReturnFailedFuture_whenUpdateRequestMetadataUpdatedDateWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() ->
-      instancesService.updateRequestMetadataByRequestId(nonExistentRequestMetadata.getRequestId().toString(), nonExistentRequestMetadata, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+      instancesService.updateRequestUpdatedDate(nonExistentRequestMetadata.getRequestId().toString(),nonExistentRequestMetadata.getLastUpdatedDate(), OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof NotFoundException);
+        testContext.completeNow();
+      }))
+    );
+  }
+
+  @Test
+  void shouldUpdateRequestMetadataStreamEnded_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      OffsetDateTime date = OffsetDateTime.now();
+      requestMetadata.setLastUpdatedDate(date);
+      instancesService.updateRequestStreamEnded(requestMetadata.getRequestId().toString(), true, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+        assertNotNull(res);
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenUpdateRequestMetadataStreamEndedWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
+    testContext.verify(() ->
+      instancesService.updateRequestStreamEnded(nonExistentRequestMetadata.getRequestId().toString(), true, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof NotFoundException);
         testContext.completeNow();
       }))

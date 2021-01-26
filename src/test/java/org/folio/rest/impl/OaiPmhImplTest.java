@@ -118,7 +118,6 @@ import org.folio.rest.tools.PomReader;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -265,13 +264,6 @@ class OaiPmhImplTest {
     // Set default decoderConfig
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
-  }
-
-  @AfterEach
-  void cleanUp(VertxTestContext testContext) {
-    instancesService.cleanExpiredInstances(OAI_TEST_TENANT, 0)
-      .onSuccess(e -> testContext.completeNow())
-      .onFailure(testContext::failNow);
   }
 
   protected Logger getLogger() {

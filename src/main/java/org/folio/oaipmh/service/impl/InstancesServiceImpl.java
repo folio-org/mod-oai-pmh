@@ -2,6 +2,7 @@ package org.folio.oaipmh.service.impl;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -56,14 +57,23 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
+  public Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId) {
+    return instancesDao.getRequestMetadataByRequestId(requestId, tenantId);
+  }
+
+  @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     return instancesDao.saveRequestMetadata(requestMetadata, tenantId);
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByRequestId(String requestId, RequestMetadataLb requestMetadataLb,
-      String tenantId) {
-    return instancesDao.updateRequestMetadataByRequestId(requestId, requestMetadataLb, tenantId);
+  public Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate, String tenantId) {
+    return instancesDao.updateRequestUpdatedDate(requestId, lastUpdatedDate, tenantId);
+  }
+
+  @Override
+  public Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
+    return instancesDao.updateRequestStreamEnded(requestId, isStreamEnded, tenantId);
   }
 
   @Override
