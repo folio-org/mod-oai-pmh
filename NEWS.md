@@ -1,3 +1,12 @@
+## 3.2.8 (Released) 2021-01-26
+
+This release includes the bug fixes and improvements regarding marc21_withholdings metadata prefix processing.
+
+* [MODOAIPMH-282](https://issues.folio.org/browse/MODOAIPMH-282) On 7M records first response to the initial requests with marc21_withholdings metadataPrefix takes more than 20 min
+* [MODOAIPMH-284](https://issues.folio.org/browse/MODOAIPMH-284) Return response immediately after the required number of instances will be loaded instead of waiting for completion of all instances loading.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.2.7...v3.2.8)
+
 ## 3.2.7 (Released) 2021-01-13
 
 This release includes the bug fix for marc21_withholdings metadata prefix request.
