@@ -161,7 +161,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(
             blockingFeature -> downloadInstances(request, promise, blockingFeature, downloadContext, requestId),
-            asyncResult -> instancesService.updateRequestStreamEnded(requestId, true, request.getTenant()));
+            asyncResult -> {
+              instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
+              logger.info("Downloading instances complete");
+            });
         }
       }).onFailure(th -> handleException(promise, th));
     } catch (Exception e) {
@@ -322,7 +325,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
         jp.endHandler(e -> {
-          logger.info("End handler, current number of instances: " + databaseWriteStream.getReturnedCount() + " ; DWS streamEnded: " + databaseWriteStream.isStreamEnded());
           databaseWriteStream.end();
           inventoryHttpClient.close();
         })
