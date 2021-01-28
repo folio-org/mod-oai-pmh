@@ -12,6 +12,7 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,6 +38,7 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.google.common.collect.ImmutableList;
@@ -49,6 +51,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgException;
 
+@TestInstance(PER_CLASS)
 @ExtendWith(VertxExtension.class)
 class SetServiceImplTest extends AbstractSetTest {
 
@@ -60,17 +63,14 @@ class SetServiceImplTest extends AbstractSetTest {
   private static PostgresClientFactory postgresClientFactory;
   private SetService setService;
 
-  {
-    SetDao setDao = new SetDaoImpl(postgresClientFactory);
-    setService = new SetServiceImpl(setDao);
-  }
-
   @BeforeAll
-  static void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+  void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClientFactory.setShouldResetPool(true);
     postgresClientFactory = new PostgresClientFactory(vertx);
     PostgresClient.getInstance(vertx)
       .startEmbeddedPostgres();
+    SetDao setDao = new SetDaoImpl(postgresClientFactory);
+    setService = new SetServiceImpl(setDao);
 
     TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
     new OkapiMockServer(vertx, mockPort).start(testContext);
@@ -80,7 +80,7 @@ class SetServiceImplTest extends AbstractSetTest {
   }
 
   @AfterAll
-  static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
+  void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
