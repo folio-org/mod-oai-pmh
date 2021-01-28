@@ -169,7 +169,7 @@ import net.jcip.annotations.NotThreadSafe;
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
-public class OaiPmhImplTest {
+class OaiPmhImplTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
