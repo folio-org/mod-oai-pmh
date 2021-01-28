@@ -58,6 +58,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @BeforeAll
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+    PostgresClientFactory.setShouldResetPool(true);
     logger.info("Test setup starting for " + TestUtil.getModuleId());
     PostgresClient.getInstance(vertx)
       .startEmbeddedPostgres();

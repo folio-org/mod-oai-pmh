@@ -1,6 +1,8 @@
 package org.folio.oaipmh.dao;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.vertx.core.Context;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -8,6 +10,8 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+
+import org.folio.oaipmh.Request;
 import org.folio.rest.persist.PostgresClient;
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -35,6 +39,13 @@ public class PostgresClientFactory {
   private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
 
   private static final int POOL_SIZE = 20;
+
+  /**
+   * Such field is temporary solution which is used to allow resetting the pool in tests.
+   * In future the {@link org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper#getNextBatch(String, Request, int, Promise, Context, Long)}
+   * should be canceled when response with failure already responded.
+   */
+  private static boolean shouldResetPool = false;
 
   private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
 
@@ -78,9 +89,13 @@ public class PostgresClientFactory {
 
   private static PgPool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
-    if (POOL_CACHE.containsKey(tenantId)) {
+    if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
       LOG.debug("Using existing database connection pool for tenant {}", tenantId);
       return POOL_CACHE.get(tenantId);
+    }
+    if (shouldResetPool) {
+      POOL_CACHE.remove(tenantId);
+      shouldResetPool = false;
     }
     LOG.info("Creating new database connection pool for tenant {}", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId);
@@ -119,4 +134,7 @@ public class PostgresClientFactory {
     client.close();
   }
 
+  public static void setShouldResetPool(boolean shouldResetPool) {
+    PostgresClientFactory.shouldResetPool = shouldResetPool;
+  }
 }

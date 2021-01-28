@@ -12,8 +12,8 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -23,7 +23,6 @@ import java.util.UUID;
 import javax.ws.rs.NotFoundException;
 
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.liquibase.SingleConnectionProvider;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -37,10 +36,9 @@ import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.google.common.collect.ImmutableList;
@@ -53,6 +51,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgException;
 
+@TestInstance(PER_CLASS)
 @ExtendWith(VertxExtension.class)
 class SetServiceImplTest extends AbstractSetTest {
 
@@ -62,15 +61,16 @@ class SetServiceImplTest extends AbstractSetTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static PostgresClientFactory postgresClientFactory;
-
-  private SetDao setDao;
   private SetService setService;
 
   @BeforeAll
-  static void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+  void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
+    PostgresClientFactory.setShouldResetPool(true);
     postgresClientFactory = new PostgresClientFactory(vertx);
     PostgresClient.getInstance(vertx)
       .startEmbeddedPostgres();
+    SetDao setDao = new SetDaoImpl(postgresClientFactory);
+    setService = new SetServiceImpl(setDao);
 
     TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
     new OkapiMockServer(vertx, mockPort).start(testContext);
@@ -80,36 +80,12 @@ class SetServiceImplTest extends AbstractSetTest {
   }
 
   @AfterAll
-  static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
+  void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopEmbeddedPostgres();
       testContext.completeNow();
     }));
-  }
-
-  @BeforeEach
-  void setUp(VertxTestContext testContext) {
-    setDao = new SetDaoImpl(postgresClientFactory);
-    setService = new SetServiceImpl(setDao);
-    loadTestData(testContext);
-  }
-
-  @AfterEach
-  void cleanUp(VertxTestContext testContext) {
-    setDao.getSetList(0, 100, OAI_TEST_TENANT).onSuccess(folioSetCollection -> {
-      List<Future> list = new ArrayList<>();
-      folioSetCollection.getSets().forEach(set -> {
-        list.add(setDao.deleteSetById(set.getId(), OAI_TEST_TENANT));
-      });
-      CompositeFuture.all(list).onComplete(result -> {
-        if(result.failed()) {
-          testContext.failNow(result.cause());
-        } else {
-          testContext.completeNow();
-        }
-      });
-    });
   }
 
   @Test
@@ -286,16 +262,6 @@ class SetServiceImplTest extends AbstractSetTest {
       });
   }
 
-  private void loadTestData(VertxTestContext testContext) {
-    setDao.saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
-      .onComplete(result -> {
-        if (result.failed()) {
-          testContext.failNow(result.cause());
-        }
-        testContext.completeNow();
-      });
-  }
-
   private void verifyContainsItem(String item, Collection<SetsFilteringCondition> verifiedCollection) {
     boolean res = verifiedCollection.stream()
       .anyMatch(colItem -> colItem.getName()
@@ -303,4 +269,13 @@ class SetServiceImplTest extends AbstractSetTest {
     assertTrue(res);
   }
 
+  @Override
+  protected SetService getSetService() {
+    return setService;
+  }
+
+  @Override
+  protected PostgresClientFactory getPostgresClientFactory() {
+    return postgresClientFactory;
+  }
 }

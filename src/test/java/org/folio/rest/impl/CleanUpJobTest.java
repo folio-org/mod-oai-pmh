@@ -74,7 +74,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    PostgresClient client = PostgresClient.getInstance(vertx);
+    PostgresClient client = PostgresClient.getInstance(vertx, OAI_TEST_TENANT);
     client.startEmbeddedPostgres();
 
     JsonObject dpConfig = new JsonObject();

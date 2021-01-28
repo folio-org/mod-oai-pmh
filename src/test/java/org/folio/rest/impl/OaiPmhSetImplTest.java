@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -24,7 +23,7 @@ import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.dao.SetDao;
+import org.folio.oaipmh.service.SetService;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -32,9 +31,7 @@ import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,10 +41,8 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
 import io.restassured.specification.RequestSpecification;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -70,12 +65,13 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   private Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private Header okapiUserHeader = new Header("X-Okapi-User-Id", OkapiMockServer.TEST_USER_ID);
 
-  private SetDao setDao;
+  private PostgresClientFactory postgresClientFactory;
+  private SetService setService;
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
     logger.info("Test setup starting for " + TestUtil.getModuleId());
-
+    PostgresClientFactory.setShouldResetPool(true);
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
@@ -100,35 +96,6 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         testContext.failNow(e);
       }
     }));
-  }
-
-  @BeforeEach
-  private void initTestData(VertxTestContext testContext) {
-    setDao.saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
-      .onComplete(result -> {
-        if (result.failed()) {
-          testContext.failNow(result.cause());
-        } else {
-          testContext.completeNow();
-        }
-      });
-  }
-
-  @AfterEach
-  private void cleanTestData(VertxTestContext testContext) {
-    setDao.getSetList(0, 100, OAI_TEST_TENANT).onSuccess(folioSetCollection -> {
-      List<Future> list = new ArrayList<>();
-      folioSetCollection.getSets().forEach(set -> {
-        list.add(setDao.deleteSetById(set.getId(), OAI_TEST_TENANT));
-      });
-      CompositeFuture.all(list).onComplete(result -> {
-        if(result.failed()) {
-          testContext.failNow(result.cause());
-        } else {
-          testContext.completeNow();
-        }
-      });
-    });
   }
 
   @AfterAll
@@ -513,8 +480,23 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     return SET_PATH + "/" + id;
   }
 
+  @Override
+  public PostgresClientFactory getPostgresClientFactory() {
+    return postgresClientFactory;
+  }
+
   @Autowired
-  public void setSetDao(SetDao setDao) {
-    this.setDao = setDao;
+  public void setPostgresClientFactory(PostgresClientFactory postgresClientFactory) {
+    this.postgresClientFactory = postgresClientFactory;
+  }
+
+  @Override
+  public SetService getSetService() {
+    return setService;
+  }
+
+  @Autowired
+  public void setSetService(SetService setService) {
+    this.setService = setService;
   }
 }

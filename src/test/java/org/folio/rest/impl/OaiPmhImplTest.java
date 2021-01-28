@@ -254,9 +254,16 @@ class OaiPmhImplTest {
   }
 
   @AfterAll
-  void cleanUpAfterAll() {
+  void cleanUpAfterAll(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     PostgresClient.stopEmbeddedPostgres();
+    vertx.close(res -> {
+      if(res.succeeded()) {
+        testContext.completeNow();
+      } else {
+        testContext.failNow(res.cause());
+      }
+    });
   }
 
   @BeforeEach
