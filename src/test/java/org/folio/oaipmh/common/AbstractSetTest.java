@@ -1,16 +1,25 @@
 package org.folio.oaipmh.common;
 
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.jooq.tables.SetLb.SET_LB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.List;
 
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.service.SetService;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import com.google.common.collect.ImmutableList;
+
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxTestContext;
 
 public abstract class AbstractSetTest {
 
@@ -48,6 +57,28 @@ public abstract class AbstractSetTest {
     .withSetSpec("update SetSpec")
     .withFilteringConditions(mockFilteringConditions);
 
+  @BeforeEach
+  void setUp(VertxTestContext testContext) {
+    getSetService().saveSet(INITIAL_TEST_SET_ENTRY, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
+      .onComplete(result -> {
+        if (result.failed()) {
+          testContext.failNow(result.cause());
+        }
+        testContext.completeNow();
+      });
+  }
+
+  @AfterEach
+  protected void cleanTestData(VertxTestContext testContext) {
+    deleteSets().onSuccess(v -> testContext.completeNow())
+      .onFailure(testContext::failNow);
+  }
+
+  private Future<Integer> deleteSets() {
+    return getPostgresClientFactory().getQueryExecutor(OAI_TEST_TENANT)
+      .transaction(queryExecutor -> queryExecutor.execute(dslContext -> dslContext.deleteFrom(SET_LB)));
+  }
+
   protected void verifyMainSetData(FolioSet setWithExpectedData, FolioSet setToVerify, boolean checkIdEquals) {
     assertEquals(setWithExpectedData.getName(), setToVerify.getName());
     assertEquals(setWithExpectedData.getDescription(), setToVerify.getDescription());
@@ -78,4 +109,9 @@ public abstract class AbstractSetTest {
     assertNotNull(folioSet.getUpdatedDate());
   }
 
+  protected abstract SetService getSetService();
+
+  protected abstract PostgresClientFactory getPostgresClientFactory();
+
 }
+

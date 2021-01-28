@@ -169,7 +169,7 @@ import net.jcip.annotations.NotThreadSafe;
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
-class OaiPmhImplTest {
+public class OaiPmhImplTest {
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -254,9 +254,16 @@ class OaiPmhImplTest {
   }
 
   @AfterAll
-  void cleanUpAfterAll() {
+  void cleanUpAfterAll(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     PostgresClient.stopEmbeddedPostgres();
+    vertx.close(res -> {
+      if(res.succeeded()) {
+        testContext.completeNow();
+      } else {
+        testContext.failNow(res.cause());
+      }
+    });
   }
 
   @BeforeEach

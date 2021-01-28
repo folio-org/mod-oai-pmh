@@ -36,6 +36,8 @@ public class PostgresClientFactory {
 
   private static final int POOL_SIZE = 20;
 
+  private static boolean shouldResetPool = false;
+
   private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
 
   private Vertx vertx;
@@ -78,9 +80,13 @@ public class PostgresClientFactory {
 
   private static PgPool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
-    if (POOL_CACHE.containsKey(tenantId)) {
+    if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
       LOG.debug("Using existing database connection pool for tenant {}", tenantId);
       return POOL_CACHE.get(tenantId);
+    }
+    if (shouldResetPool) {
+      POOL_CACHE.remove(tenantId);
+      shouldResetPool = false;
     }
     LOG.info("Creating new database connection pool for tenant {}", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId);
@@ -119,4 +125,7 @@ public class PostgresClientFactory {
     client.close();
   }
 
+  public static void setShouldResetPool(boolean shouldResetPool) {
+    PostgresClientFactory.shouldResetPool = shouldResetPool;
+  }
 }
