@@ -2,18 +2,18 @@ package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.HttpResponse;
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -36,11 +36,12 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
+import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(AbstractGetRecordsHelper.class);
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -85,17 +86,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       updatedBefore,
       null,
       request.getOffset(),
-      batchSize + 1,
-      getSrsRecordsBodyHandler(request, ctx, promise));
+      batchSize + 1)
+      .onSuccess(response -> handleSrsRecordsResponse(response, request, ctx, promise))
+      .onFailure(e -> {
+        logger.error("Exception getting " + request.getVerb().value(), e);
+        promise.fail(e);
+      });
   }
 
-  private Handler<HttpClientResponse> getSrsRecordsBodyHandler(Request request, Context ctx, Promise<Response> promise) {
-    return response -> {
+  private void handleSrsRecordsResponse(HttpResponse<Buffer> response, Request request, Context ctx, Promise<Response> promise) {
       try {
-        if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
-          response.bodyHandler(bh -> {
+        if (isSuccess(response.statusCode())) {
             try {
-              JsonObject srsRecords = bh.toJsonObject();
+              JsonObject srsRecords = response.bodyAsJsonObject();
               final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
               promise.complete(responseCompletableFuture);
             } catch (DecodeException ex) {
@@ -103,7 +106,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               logger.error(msg, ex, ex.getMessage());
               promise.fail(new IllegalStateException(msg, ex));
             }
-          });
         } else {
           logger.error(request.getVerb().value() + " response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
           throw new IllegalStateException(response.statusMessage());
@@ -112,7 +114,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         logger.error("Exception getting " + request.getVerb().value(), e);
         promise.fail(e);
       }
-    };
   }
 
   protected Response processRecords(Context ctx, Request request,

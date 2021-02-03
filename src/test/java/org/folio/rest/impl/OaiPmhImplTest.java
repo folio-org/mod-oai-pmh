@@ -2,8 +2,6 @@ package org.folio.rest.impl;
 
 import static io.restassured.RestAssured.given;
 import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
@@ -24,7 +22,6 @@ import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
@@ -33,12 +30,12 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
+import static org.folio.rest.impl.OkapiMockServer.DATE_INSTANCE_NO_SRS_RECORDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
@@ -81,29 +78,31 @@ import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
 import static org.openarchives.oai._2.VerbType.UNKNOWN;
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.xml.bind.JAXBElement;
-
+import gov.loc.marc21.slim.DataFieldType;
+import gov.loc.marc21.slim.SubfieldatafieldType;
+import io.restassured.RestAssured;
+import io.restassured.config.DecoderConfig;
+import io.restassured.config.DecoderConfig.ContentDecoder;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.response.ValidatableResponse;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.Constants;
@@ -128,7 +127,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Spy;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.OAIPMH;
@@ -143,35 +141,31 @@ import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ElementType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import gov.loc.marc21.slim.DataFieldType;
-import gov.loc.marc21.slim.SubfieldatafieldType;
-import io.restassured.RestAssured;
-import io.restassured.config.DecoderConfig;
-import io.restassured.config.DecoderConfig.ContentDecoder;
-import io.restassured.config.RestAssuredConfig;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.response.ValidatableResponse;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import net.jcip.annotations.NotThreadSafe;
+import javax.xml.bind.JAXBElement;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
 
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  public static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
+  private final Logger logger = LogManager.getLogger(this.getClass());
 
   // API paths
   private static final String ROOT_PATH = "/oai";
@@ -186,8 +180,6 @@ class OaiPmhImplTest {
   private static final List<VerbType> LIST_VERBS = Arrays.asList(LIST_RECORDS, LIST_IDENTIFIERS);
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
-
-  private static final String EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS = "Invalid json has been returned from SRS, cannot parse response to json.";
 
   private static final String TEST_INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
   private static final String TEST_INSTANCE_EXPECTED_VALUE_FOR_MARC21 = "0";
@@ -211,7 +203,6 @@ class OaiPmhImplTest {
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
 
-  @Spy
   private InstancesService instancesService;
 
   @BeforeAll
@@ -1190,18 +1181,17 @@ class OaiPmhImplTest {
 
   @Test
   void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
-    vertx.runOnContext(e->{
-      String set = "all";
-      RequestSpecification request = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
-        .param(SET_PARAM, set);
+    String set = "all";
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName())
+      .param(SET_PARAM, set)
+      .param(FROM_PARAM, DATE_INSTANCE_NO_SRS_RECORDS);
 
-      OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
-      OAIPMHerrorType error = oaipmh.getErrors().get(0);
-      assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
-    });
+    OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
+    OAIPMHerrorType error = oaipmh.getErrors().get(0);
+    assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
   }
 
   @ParameterizedTest
@@ -1577,7 +1567,7 @@ class OaiPmhImplTest {
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
       if(recordsCount==10){
         List<HeaderType> headers = oaipmh.getListIdentifiers().getHeaders();
-        verifyIdentifiers(headers, getExpectedInstanceIds());
+        verifyIdentifiers(headers, getExpectedIdentifiers());
       }
     } else if (verb == LIST_RECORDS) {
       assertThat(oaipmh.getListRecords(), is(notNullValue()));
@@ -1588,7 +1578,7 @@ class OaiPmhImplTest {
         List<HeaderType> headers = oaipmh.getListRecords().getRecords().stream()
           .map(RecordType::getHeader)
           .collect(Collectors.toList());
-        verifyIdentifiers(headers, getExpectedInstanceIds());
+        verifyIdentifiers(headers, getExpectedIdentifiers());
       }
     } else {
       fail("Can't verify specified verb: " + verb);
@@ -1794,7 +1784,7 @@ class OaiPmhImplTest {
     return identifierWithPrefix.substring(IDENTIFIER_PREFIX.length());
   }
 
-  private List<String> getExpectedInstanceIds() {
+  private List<String> getExpectedIdentifiers() {
     //@formatter:of
     return Arrays.asList(
       "00000000-0000-4000-a000-000000000000",
@@ -2211,62 +2201,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "8");
-
-    RequestSpecification listRecordRequest = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_INVENTORY_10_INSTANCE_IDS)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 8);
-    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-    assertThat(resumptionToken, is(notNullValue()));
-    assertThat(resumptionToken.getValue(), is(notNullValue()));
-
-    String requestId = getRequestId(resumptionToken);
-    instancesService.deleteInstancesById(getExpectedInstanceIds(), requestId, OAI_TEST_TENANT)
-      .onFailure(testContext::failNow);
-
-    vertx.setTimer(5000, res -> {
-      RequestSpecification resumptionTokenRequest = createBaseRequest()
-        .with()
-        .param(VERB_PARAM, LIST_RECORDS.value())
-        .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-
-      verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
-      testContext.completeNow();
-    });
-
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
-
-  private String getRequestId(ResumptionTokenType resumptionTokenType) {
-    String args = new String(Base64.getUrlDecoder().decode(resumptionTokenType.getValue()),
-      StandardCharsets.UTF_8);
-    Map<String, String> params;
-    params = URLEncodedUtils
-      .parse(args, UTF_8, '&').stream()
-      .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
-    return params.get(REQUEST_ID_PARAM);
-  }
-
-  @Test
-  void shouldReturn500_whenInvalidJsonRespondedFromInventoryView() {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVALID_INSTANCE_IDS_JSON_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    verify500(request);
-  }
-
-  @Test
-  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken() {
+  void getOaiRecordsMarc21WithHoldingsWithBadResumptionToken(){
     RequestSpecification requestWithResumptionToken = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())

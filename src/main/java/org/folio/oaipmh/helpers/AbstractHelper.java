@@ -52,6 +52,7 @@ import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
@@ -70,8 +71,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -79,7 +79,7 @@ import io.vertx.core.logging.LoggerFactory;
 public abstract class AbstractHelper implements VerbHelper {
 
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
-  private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
+  private static final Logger logger = LogManager.getLogger(AbstractHelper.class);
   protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
 

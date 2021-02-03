@@ -12,6 +12,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.logging.log4j.LogManager;
 import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.SetService;
 import org.folio.rest.jaxrs.model.Error;
@@ -30,13 +31,12 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 import io.vertx.pgclient.PgException;
 
 public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
-  private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
+  private static final Logger logger = LogManager.getLogger(OaiPmhSetImpl.class);
 
   @Autowired
   private SetService setService;

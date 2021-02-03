@@ -1,7 +1,7 @@
 package org.folio.oaipmh.mappers;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.time.StopWatch;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * Converts MarcJson format to MarcXML format.
  */
 public class MarcXmlMapper implements Mapper {
-  private static final Logger logger = LoggerFactory.getLogger(MarcXmlMapper.class);
+  private static final Logger logger = LogManager.getLogger(MarcXmlMapper.class);
 
   private static final Pattern DOUBLE_BACKSLASH_PATTERN = Pattern.compile("\\\\\\\\");
 

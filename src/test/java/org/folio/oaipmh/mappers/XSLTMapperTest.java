@@ -1,7 +1,7 @@
 package org.folio.oaipmh.mappers;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XSLTMapperTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(XSLTMapperTest.class);
+  private static final Logger logger = LogManager.getLogger(XSLTMapperTest.class);
 
   private static final String SCHEMA_FILE_PATH = "ramls/schemas/oai_dc.xsd";
   private static final String INCORRECT_STYLESHEET_XSL = "incorrectStylesheet.xsl";

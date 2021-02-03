@@ -3,8 +3,8 @@ package org.folio.oaipmh.helpers;
 import java.util.Collection;
 import java.util.List;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -14,7 +14,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiRecordsHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiRecordsHelper.class);
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
