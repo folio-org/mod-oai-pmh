@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
@@ -46,18 +47,18 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public WriteStream<JsonEvent> write(JsonEvent data) {
-    return write(data, null);
+  public Future<Void> write(JsonEvent data) {
+    write(data, null);
+    return Future.succeededFuture();
   }
 
   @Override
-  public synchronized WriteStream<JsonEvent> write(JsonEvent data,
-                                                   Handler<AsyncResult<Void>> handler) {
+  public synchronized void write(JsonEvent data,
+                                 Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
     if (dataList.size() >= batchSize) {
       runBatchHandler();
     }
-    return this;
   }
 
   private void runBatchHandler() {
@@ -90,9 +91,10 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public synchronized void end() {
+  public synchronized Future<Void> end() {
     streamEnded = true;
     runBatchHandler();
+    return Future.succeededFuture();
   }
 
   @Override

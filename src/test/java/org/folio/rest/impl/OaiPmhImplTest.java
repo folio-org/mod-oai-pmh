@@ -1574,9 +1574,11 @@ class OaiPmhImplTest {
         verifyIdentifiers(headers, getExpectedIdentifiers());
       }
     } else if (verb == LIST_RECORDS) {
-      String prevResToken = oaipmh.getRequest().getResumptionToken();
-      String newResToken = oaipmh.getListRecords().getResumptionToken().getValue();
-      assertNotEquals(prevResToken, newResToken);
+      if (oaipmh.getListRecords().getResumptionToken()!=null) {
+        String prevResToken = oaipmh.getRequest().getResumptionToken();
+        String newResToken = oaipmh.getListRecords().getResumptionToken().getValue();
+        assertNotEquals(prevResToken, newResToken);
+      }
       assertThat(oaipmh.getListRecords(), is(notNullValue()));
       assertThat(oaipmh.getListRecords().getRecords(), hasSize(recordsCount));
       MetadataPrefix metadataPrefix = MetadataPrefix.fromName(oaipmh.getRequest().getMetadataPrefix());

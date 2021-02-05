@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
+import com.google.common.base.Splitter;
 import io.vertx.core.WorkerExecutor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
@@ -52,6 +53,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -213,67 +216,68 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
 
-        Future<Map<String, JsonObject>> srsResponse = Future.future();
-        if (CollectionUtils.isNotEmpty(instances)) {
-          srsResponse = requestSRSByIdentifiers(srsClient, instancesWithoutLast, deletedRecordSupport);
-        } else {
-          srsResponse.complete();
-        }
-        srsResponse.onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
-          firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
+
+        requestSRSByIdentifiers(srsClient, instancesWithoutLast, deletedRecordSupport).compose(res ->
+          buildRecordsResponse(request, requestId, instancesWithoutLast, res,
+          firstBatch, nextInstanceId, deletedRecordSupport)
+            .onSuccess(result -> {
           List<String> instanceIds = instancesWithoutLast.stream()
             .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
             .collect(toList());
           instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
             .onComplete(r -> oaiPmhResponsePromise.complete(result));
         }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
-        srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
       });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
   }
 
-  private void downloadInstances(Request request,
-                                 Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-                                 Context vertxContext, String requestId) {
+  private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
+      Context vertxContext, String requestId) {
     final HttpClientOptions options = new HttpClientOptions();
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
-    HttpClient httpClient = vertxContext.owner().createHttpClient(options);
-    HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
-    httpClientRequest.sendHead();
+    HttpClient httpClient = vertxContext.owner()
+      .createHttpClient(options);
 
-    PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
-
-    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-    try {
-      queue.set(getWaitersQueue((PgPool) getValueFrom(postgresClient, "client")));
-    } catch (IllegalStateException ex) {
-      logger.error(ex.getMessage());
-      oaiPmhResponsePromise.fail(ex);
-    }
-
-    databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
-
-    databaseWriteStream.handleBatch(batch -> {
-      saveInstancesIds(batch, request, requestId, databaseWriteStream, postgresClient);
-      final Long returnedCount = databaseWriteStream.getReturnedCount();
-
-      if (returnedCount % 1000 == 0) {
-        logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+    buildInventoryQuery(httpClient, request).onComplete(res -> {
+      if (res.failed()) {
+        logger.error(res.cause().getMessage(), res.cause());
+        oaiPmhResponsePromise.fail(res.cause());
+        return;
       }
+      HttpClientRequest httpClientRequest = res.result();
+      httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+      httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+      httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
 
-      if (databaseWriteStream.isTheLastBatch()) {
-        downloadInstancesPromise.complete();
-      }
+      httpClientRequest.setTimeout(REQUEST_TIMEOUT);
+      PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
+      BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest,
+          vertxContext, (PgPool) getValueFrom(postgresClient, "client"));
 
-      databaseWriteStream.invokeDrainHandler();
+
+
+      databaseWriteStream.handleBatch(batch -> {
+        saveInstancesIds(batch, request, requestId, databaseWriteStream, postgresClient);
+        final Long returnedCount = databaseWriteStream.getReturnedCount();
+
+        if (returnedCount % 1000 == 0) {
+          logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: "
+              + databaseWriteStream.isStreamEnded());
+        }
+
+        if (databaseWriteStream.isTheLastBatch()) {
+          downloadInstancesPromise.complete();
+        }
+
+        databaseWriteStream.invokeDrainHandler();
+      });
     });
   }
 
-  private HttpClientRequest buildInventoryQuery(HttpClient httpClient, Request request) {
+  private Future<HttpClientRequest> buildInventoryQuery(HttpClient httpClient, Request request) {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
@@ -294,32 +298,47 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .map(e -> e.getKey() + "=" + e.getValue())
       .collect(Collectors.joining("&"));
 
-    String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
+    String inventoryQuery = format("%s?%s",  INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
     logger.info("Sending request to : " + inventoryQuery);
-    final HttpClientRequest httpClientRequest = httpClient
-      .getAbs(inventoryQuery);
 
-    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
 
-    httpClientRequest.setTimeout(REQUEST_TIMEOUT);
+    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
+    String okapiHost = okapiUrlParts.get(1).replace("//","");
+    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
+
+    final Future<HttpClientRequest> httpClientRequest = httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
 
     return httpClientRequest;
   }
 
-  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext) {
+  private BatchStreamWrapper getBatchHttpStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext, PgPool pool) {
     BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertxContext.owner(), DATABASE_FETCHING_CHUNK_SIZE);
 
-    inventoryQuery.handler(resp -> {
-      if (resp.statusCode() != 200) {
-        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-        resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
+
+    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    try {
+      queue.set(getWaitersQueue(pool));
+    } catch (IllegalStateException ex) {
+      logger.error(ex.getMessage());
+      promise.fail(ex);
+    }
+
+    databaseWriteStream.setCapacityChecker(() -> queue.get()
+      .size() > 20);
+
+    inventoryQuery.send(resp -> {
+      if (resp.failed()) {
+        logger.error(resp.cause().getMessage(), resp.cause());
+        handleException(promise, resp.cause());
+        return;
+      }
+      final HttpClientResponse result = resp.result();
+      if (result.statusCode() != 200) {
+        String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), result.statusMessage());
         promise.fail(new IllegalStateException(errorMsg));
       } else {
-        resp.bodyHandler(buffer -> logger.info("Response " + buffer));
-        JsonParser jp = new JsonParserImpl(resp);
+        JsonParser jp = new JsonParserImpl(resp.result());
         jp.objectValueMode();
         jp.pipeTo(databaseWriteStream);
         jp.endHandler(e -> {
@@ -401,32 +420,38 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> completePromise = Promise.promise();
     HttpClient httpClient = context.owner().createHttpClient();
 
-    HttpClientRequest enrichInventoryClientRequest = createEnrichInventoryClientRequest(httpClient, request);
-    BatchStreamWrapper enrichedInstancesStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest, context);
-    JsonObject entries = new JsonObject();
-    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
-    entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-    enrichInventoryClientRequest.end(entries.encode());
+    createInventoryPostRequest(httpClient, request).onComplete(httpClientRequest -> {
+      if(httpClientRequest.failed()) {
+        logger.error(httpClientRequest.cause().getMessage(),httpClientRequest.cause());
+        completePromise.fail(httpClientRequest.cause());
+      }
+      HttpClientRequest enrichInventoryClientRequest = httpClientRequest.result();
+      enrichInventoryClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+      enrichInventoryClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+      enrichInventoryClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
+      enrichInventoryClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
+
+      BatchStreamWrapper enrichedInstancesStream = getBatchHttpStream(httpClient, completePromise, enrichInventoryClientRequest,
+          context, PostgresClientFactory.getPool(context.owner(), request.getTenant()));
+      JsonObject entries = new JsonObject();
+      entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
+      entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
+      enrichInventoryClientRequest.send(entries.encode())
+        .onSuccess(httpClientResponse -> writeResponseToStream(httpClient, completePromise, enrichInventoryClientRequest,
+          enrichedInstancesStream, httpClientResponse))
+        .onFailure(e -> {
+          logger.error(e.getMessage());
+          completePromise.fail(e);
+        });
 
 
-    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
-    try {
-      queue.set(getWaitersQueue(PostgresClientFactory.getPool(context.owner(), request.getTenant())));
-    } catch (IllegalStateException ex) {
-      logger.error(ex.getMessage());
-      completePromise.fail(ex);
-      return completePromise.future();
-    }
-
-    enrichedInstancesStream.setCapacityChecker(() -> queue.get().size() > 20);
-
-    enrichedInstancesStream.handleBatch(batch -> {
-      try {
-        for (JsonEvent jsonEvent : batch) {
-          JsonObject value = jsonEvent.objectValue();
-          String instanceId = value.getString(ENRICHED_INSTANCE_ID);
-          Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
-          if (itemsandholdingsfields instanceof JsonObject) {
+      enrichedInstancesStream.handleBatch(batch -> {
+        try {
+          for (JsonEvent jsonEvent : batch) {
+            JsonObject value = jsonEvent.objectValue();
+            String instanceId = value.getString(ENRICHED_INSTANCE_ID);
+            Object itemsandholdingsfields = value.getValue(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS);
+            if (itemsandholdingsfields instanceof JsonObject) {
             JsonObject instance = instances.get(instanceId);
             if (instance != null) {
               enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
@@ -445,9 +470,45 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         completePromise.fail(e);
       }
     });
-
+      });
     return completePromise.future();
   }
+
+
+
+
+
+  private void writeResponseToStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, BatchStreamWrapper databaseWriteStream, HttpClientResponse resp) {
+    if (resp.statusCode() != 200) {
+      String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
+      resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
+      promise.fail(new IllegalStateException(errorMsg));
+    } else {
+      resp.bodyHandler(buffer -> logger.info("Response " + buffer));
+      logger.info("Response " + resp);
+      JsonParser jp = new JsonParserImpl(resp);
+      jp.objectValueMode();
+      jp.pipeTo(databaseWriteStream);
+      jp.endHandler(e -> {
+        databaseWriteStream.end();
+        inventoryHttpClient.close();
+      })
+        .exceptionHandler(throwable -> {
+          logger.error("Error has been occurred at JsonParser while reading data from response. Message:{0}", throwable.getMessage(), throwable);
+          databaseWriteStream.end();
+          inventoryHttpClient.close();
+          promise.fail(throwable);
+        });
+    }
+  }
+
+
+
+
+
+
+
+
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
     if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
@@ -656,17 +717,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     ).collect(Collectors.toList());
   }
 
-  private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
-    final HttpClientRequest httpClientRequest = httpClient
-      .postAbs(format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
-
-    httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpClientRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpClientRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpClientRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-
-    return httpClientRequest;
+  private Future<HttpClientRequest> createInventoryPostRequest(HttpClient httpClient, Request request) {
+    List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
+    String okapiHost = okapiUrlParts.get(1).replace("//","");
+    Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
+    return httpClient.request(HttpMethod.POST, okapiPort, okapiHost, INVENTORY_INSTANCES_ENDPOINT);
   }
+
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
                                                                   List<JsonObject> batch, boolean deletedRecordSupport) {
