@@ -62,6 +62,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -1562,6 +1563,9 @@ class OaiPmhImplTest {
   private void verifyListResponse(OAIPMH oaipmh, VerbType verb, int recordsCount) {
     assertThat(oaipmh.getErrors(), is(empty()));
     if (verb == LIST_IDENTIFIERS) {
+      String prevResToken = oaipmh.getRequest().getResumptionToken();
+      String newResToken = oaipmh.getListIdentifiers().getResumptionToken().getValue();
+      assertNotEquals(prevResToken, newResToken);
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
@@ -1570,6 +1574,9 @@ class OaiPmhImplTest {
         verifyIdentifiers(headers, getExpectedIdentifiers());
       }
     } else if (verb == LIST_RECORDS) {
+      String prevResToken = oaipmh.getRequest().getResumptionToken();
+      String newResToken = oaipmh.getListRecords().getResumptionToken().getValue();
+      assertNotEquals(prevResToken, newResToken);
       assertThat(oaipmh.getListRecords(), is(notNullValue()));
       assertThat(oaipmh.getListRecords().getRecords(), hasSize(recordsCount));
       MetadataPrefix metadataPrefix = MetadataPrefix.fromName(oaipmh.getRequest().getMetadataPrefix());

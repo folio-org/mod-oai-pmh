@@ -348,6 +348,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return databaseWriteStream;
   }
 
+  /**
+   * If some error occures while parsing an invalid json response from inv.-storage the getNextBatch
+   * will not be informed about that and it will be continued in an infinite loop.
+   *
+   * NEED to establish the error feedback between downloading instances and requesting batches.
+   */
   private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
     Promise<List<JsonObject>> promise = Promise.promise();
 
