@@ -1181,7 +1181,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance(Vertx vertx) {
+  void getOaiRecordsWithMetadataPrefixMarc21WithHoldingsAndSrsHasNoRecordsForInventoryInstance() {
     String set = "all";
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1564,8 +1564,10 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors(), is(empty()));
     if (verb == LIST_IDENTIFIERS) {
       String prevResToken = oaipmh.getRequest().getResumptionToken();
-      String newResToken = oaipmh.getListIdentifiers().getResumptionToken().getValue();
-      assertNotEquals(prevResToken, newResToken);
+      ResumptionTokenType newResToken = oaipmh.getListIdentifiers().getResumptionToken();
+      if (prevResToken != null && newResToken != null) {
+        assertNotEquals(prevResToken, newResToken.getValue());
+      }
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);

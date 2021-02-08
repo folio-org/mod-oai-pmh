@@ -9,6 +9,19 @@ import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
 import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.DeletedRecordType;
+
 import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -16,18 +29,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.client.ConfigurationsClient;
-import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.DeletedRecordType;
-
-import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class RepositoryConfigurationUtil {
 

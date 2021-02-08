@@ -5,26 +5,27 @@ import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.ext.web.client.HttpResponse;
+import java.util.Date;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.MetadataFormatType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
-import java.util.Date;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.ext.web.client.HttpResponse;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
@@ -107,26 +108,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private javax.ws.rs.core.Response retrieveMetadataFormatsWithNoIdentifier(Request request) {
     OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withListMetadataFormats(getMetadataFormatTypes());
     return getResponseHelper().buildSuccessResponse(oaipmh);
-  }
-
-  /**
-   * Validates inventory-mod-storage response and returns {@link OAIPMH} with populated
-   * MetadataFormatTypes or needed Errors according to OAI-PMH2 specification
-   * @return {@linkplain javax.ws.rs.core.Response Response} with Identifier not found error
-   */
-  @Deprecated
-  private javax.ws.rs.core.Response verifyAndGetOaiPmhResponse(Request request, Response response) {
-    if (Response.isSuccess(response.getCode())) {
-      JsonArray instances = storageHelper.getItems(response.getBody());
-      if (instances != null && !instances.isEmpty()) {
-        return retrieveMetadataFormatsWithNoIdentifier(request);
-      }
-    } else {
-      // The storage service could not return an instance so we have to send 500 back to client
-      logger.error("No instance found. Service responded with error: " + response.getError());
-      throw new IllegalStateException(response.getError().toString());
-    }
-    return buildIdentifierNotFoundResponse(request);
   }
 
   /**

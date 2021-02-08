@@ -22,7 +22,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
-import org.folio.oaipmh.client.ConfigurationsClient;
+import org.folio.rest.client.ConfigurationsClient;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.okapi.common.GenericCompositeFuture;
