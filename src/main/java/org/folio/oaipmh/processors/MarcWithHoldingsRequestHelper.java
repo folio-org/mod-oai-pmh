@@ -188,12 +188,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       getNextInstances(request, batchSize, context, requestId).future().onComplete(fut -> {
         if (fut.failed()) {
-          logger.error("Get instances failed: " + fut.cause());
+          logger.error("Get instances failed:", fut.cause());
           oaiPmhResponsePromise.fail(fut.cause());
           return;
         }
         List<JsonObject> instances = fut.result();
-        logger.info("Processing instances: " + instances.size());
+        logger.info("Processing instances: {}", instances.size());
         if (CollectionUtils.isEmpty(instances) && !firstBatch) {
           handleException(oaiPmhResponsePromise, new IllegalArgumentException(
             "Specified resumption token doesn't exists"));
@@ -265,8 +265,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final Long returnedCount = databaseWriteStream.getReturnedCount();
 
         if (returnedCount % 1000 == 0) {
-          logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: "
-              + databaseWriteStream.isStreamEnded());
+          logger.info("Batch saving progress: {} returned so far, batch size: {}, http ended: {}", returnedCount, batch.size(),
+              databaseWriteStream.isStreamEnded());
         }
 
         if (databaseWriteStream.isTheLastBatch()) {
@@ -275,7 +275,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         databaseWriteStream.invokeDrainHandler();
       });
-      setupBatchHttpStream(databaseWriteStream, oaiPmhResponsePromise, httpClientRequest, vertxContext, (PgPool) getValueFrom(postgresClient, "client"), httpClient);
+      setupBatchHttpStream(databaseWriteStream, oaiPmhResponsePromise, httpClientRequest, (PgPool) getValueFrom(postgresClient, "client"), httpClient);
     });
   }
 
@@ -302,19 +302,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     String inventoryQuery = format("%s?%s",  INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
-    logger.info("Sending request to : " + inventoryQuery);
+    logger.info("Sending request to : {}", inventoryQuery);
 
 
     List<String> okapiUrlParts = Splitter.on(":").splitToList(request.getOkapiUrl());
     String okapiHost = okapiUrlParts.get(1).replace("//","");
     Integer okapiPort = Integer.valueOf(okapiUrlParts.get(2));
 
-    final Future<HttpClientRequest> httpClientRequest = httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
-
-    return httpClientRequest;
+    return httpClient.request(HttpMethod.GET, okapiPort, okapiHost, inventoryQuery);
   }
 
-  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpClientRequest inventoryQuery, Context vertxContext, PgPool pool, HttpClient inventoryHttpClient) {
+  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpClientRequest inventoryQuery, PgPool pool, HttpClient inventoryHttpClient) {
 
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
@@ -469,7 +467,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         completePromise.fail(e);
       }
     });
-      setupBatchHttpStream(enrichedInstancesStream, completePromise, enrichInventoryClientRequest, context, PostgresClientFactory.getPool(context.owner(), request.getTenant()), httpClient);
+      setupBatchHttpStream(enrichedInstancesStream, completePromise, enrichInventoryClientRequest, PostgresClientFactory.getPool(context.owner(), request.getTenant()), httpClient);
       });
     return completePromise.future();
   }
@@ -576,8 +574,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         try {
           record.withMetadata(buildOaiMetadata(request, source));
         } catch (Exception e) {
-          logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
-          logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
+          logger.error("Error occurred while converting record to xml representation. {}", e.getMessage(), e);
+          logger.debug("Skipping problematic record due the conversion error. Source record id - {}", storageHelper.getRecordId(srsInstance));
           return;
         }
       }

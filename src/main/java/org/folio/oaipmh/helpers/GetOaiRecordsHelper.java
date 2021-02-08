@@ -14,7 +14,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
-  private static final Logger logger = LogManager.getLogger(GetOaiRecordsHelper.class);
+  private static final Logger LOGGER = LogManager.getLogger(GetOaiRecordsHelper.class);
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
@@ -24,7 +24,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
-      logger.debug("{} records found for the request.", records.size());
+      LOGGER.debug("{} records found for the request.", records.size());
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());

@@ -49,7 +49,7 @@ public class MarcXmlMapper implements Mapper {
     } finally {
       if (timer != null) {
         timer.stop();
-        logger.debug(String.format("Marc-json converted to MarcXml after %d ms", timer.getTime()));
+        logger.debug("Marc-json converted to MarcXml after {} ms", timer.getTime());
       }
     }
   }

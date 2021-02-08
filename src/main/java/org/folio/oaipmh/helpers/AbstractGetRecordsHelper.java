@@ -103,7 +103,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
         promise.complete(responseCompletableFuture);
       } else {
-        logger.error("{} response from SRS status code: {}: {}", request.getVerb().value(), response.statusMessage(), response.statusCode());
+        logger.error("Response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
         throw new IllegalStateException(response.statusMessage());
       }
     } catch (DecodeException ex) {
@@ -177,7 +177,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+              logger.error("Error occurred while converting record to xml representation. {}", e.getMessage(), e);
               logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
               return;
             }

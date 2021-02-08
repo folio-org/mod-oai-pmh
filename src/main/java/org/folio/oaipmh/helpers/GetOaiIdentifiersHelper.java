@@ -26,8 +26,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
 
-  private static final Logger logger = LogManager.getLogger(GetOaiIdentifiersHelper.class);
-  private static final String GENERIC_ERROR = "Error happened while processing ListIdentifiers verb request";
+  private static final Logger LOGGER = LogManager.getLogger(GetOaiIdentifiersHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -91,7 +90,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
       return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
     }
     if (instances != null && !instances.isEmpty()) {
-      logger.debug("{} entries retrieved out of {}", instances.size(), totalRecords);
+      LOGGER.debug("{} entries retrieved out of {}", instances.size(), totalRecords);
 
       ListIdentifiersType identifiers = new ListIdentifiersType()
         .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
