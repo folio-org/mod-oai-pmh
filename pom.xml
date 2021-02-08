@@ -109,13 +109,16 @@
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <sonar.exclusions>**/ModTenantAPI.java</sonar.exclusions>
-    <sonar.exclusions>**/PropertyNameMapper.java</sonar.exclusions>
-    <sonar.exclusions>**/SourceStorageSourceRecordsClient.java</sonar.exclusions>
-    <sonar.coverage.exclusions>**/ModTenantAPI.java</sonar.coverage.exclusions>
-    <sonar.coverage.exclusions>**/BatchStreamWrapper.java</sonar.coverage.exclusions>
-    <sonar.coverage.exclusions>**/SourceStorageSourceRecordsClient.java</sonar.coverage.exclusions>
-    <sonar.coverage.exclusions>**/ConfigurationsClient.java</sonar.coverage.exclusions>
+    <sonar.exclusions>
+      **/PropertyNameMapper.java,**/ModTenantAPI.java,
+      **/SourceStorageSourceRecordsClient.java
+    </sonar.exclusions>
+    <sonar.coverage.exclusions>
+      **/BatchStreamWrapper.java,
+      **/ModTenantAPI.java,
+      **/BatchStreamWrapper.java,
+      **/SourceStorageSourceRecordsClient.java
+    </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
     <raml-module-builder.version>32.0.2</raml-module-builder.version>
