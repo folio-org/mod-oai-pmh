@@ -91,31 +91,30 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       batchSize + 1)
       .onSuccess(response -> handleSrsRecordsResponse(response, request, ctx, promise))
       .onFailure(e -> {
-        logger.error("Exception getting " + request.getVerb().value(), e);
+        logger.error("Exception getting {}", request.getVerb().value(), e);
         promise.fail(e);
       });
   }
 
   private void handleSrsRecordsResponse(HttpResponse<Buffer> response, Request request, Context ctx, Promise<Response> promise) {
-      try {
-        if (isSuccess(response.statusCode())) {
-            try {
-              JsonObject srsRecords = response.bodyAsJsonObject();
-              final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
-              promise.complete(responseCompletableFuture);
-            } catch (DecodeException ex) {
-              String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-              logger.error(msg, ex, ex.getMessage());
-              promise.fail(new IllegalStateException(msg, ex));
-            }
-        } else {
-          logger.error(request.getVerb().value() + " response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
-          throw new IllegalStateException(response.statusMessage());
-        }
-      } catch (Exception e) {
-        logger.error("Exception getting " + request.getVerb().value(), e);
-        promise.fail(e);
+    try {
+      if (isSuccess(response.statusCode())) {
+        JsonObject srsRecords = response.bodyAsJsonObject();
+        final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
+        promise.complete(responseCompletableFuture);
+      } else {
+        logger.error("{} response from SRS status code: {}: {}", request.getVerb().value(), response.statusMessage(), response.statusCode());
+        throw new IllegalStateException(response.statusMessage());
       }
+    } catch (DecodeException ex) {
+      String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+      logger.error(msg, ex, ex.getMessage());
+      promise.fail(new IllegalStateException(msg, ex));
+    } catch (Exception e) {
+      logger.error("Exception getting {}", request.getVerb()
+        .value(), e);
+      promise.fail(e);
+    }
   }
 
   protected Response processRecords(Context ctx, Request request,
