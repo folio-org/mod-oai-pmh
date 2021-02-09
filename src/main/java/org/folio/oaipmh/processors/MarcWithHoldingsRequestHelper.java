@@ -336,12 +336,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (resp.failed()) {
         logger.error(resp.cause().getMessage(), resp.cause());
         handleException(promise, resp.cause());
+        inventoryHttpClient.close();
         return;
       }
       final HttpClientResponse result = resp.result();
       if (result.statusCode() != 200) {
         String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), result.statusMessage());
         promise.fail(new IllegalStateException(errorMsg));
+        inventoryHttpClient.close();
       } else {
         JsonParser jp = new JsonParserImpl(resp.result());
         jp.objectValueMode();
