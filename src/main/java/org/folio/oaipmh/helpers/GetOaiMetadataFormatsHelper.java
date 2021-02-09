@@ -92,7 +92,9 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
           promise.complete(buildIdentifierNotFoundResponse(request));
         }
       } else {
-        logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+        String statusMessage = response.statusMessage();
+        int statusCode = response.statusCode();
+        logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", statusMessage, statusCode);
         throw new IllegalStateException(response.statusMessage());
       }
     } catch (Exception e) {

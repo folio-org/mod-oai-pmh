@@ -103,7 +103,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
         promise.complete(responseCompletableFuture);
       } else {
-        LOGGER.error("Response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+        String statusMessage = response.statusMessage();
+        int statusCode = response.statusCode();
+        LOGGER.error("Response from SRS status code: {}: {}", statusMessage, statusCode);
         throw new IllegalStateException(response.statusMessage());
       }
     } catch (DecodeException ex) {

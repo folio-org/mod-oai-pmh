@@ -489,24 +489,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void writeResponseToStream(HttpClient inventoryHttpClient, Promise<?> promise, HttpClientRequest inventoryQuery, BatchStreamWrapper databaseWriteStream, HttpClientResponse resp) {
     if (resp.statusCode() != 200) {
-      String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
-      resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
-      promise.fail(new IllegalStateException(errorMsg));
+      String errorFromStorageMessage = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
+      String errorMessage = errorFromStorageMessage + resp.statusCode() + "body: {}";
+      resp.bodyHandler(buffer -> logger.error(errorMessage, buffer.toString()));
+      promise.fail(new IllegalStateException(errorFromStorageMessage));
     } else {
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
       jp.pipeTo(databaseWriteStream);
-      jp.endHandler(e -> {
-        databaseWriteStream.end();
-        inventoryHttpClient.close();
-      })
+      jp.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, inventoryHttpClient))
         .exceptionHandler(throwable -> {
           logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(), throwable);
-          databaseWriteStream.end();
-          inventoryHttpClient.close();
+          closeStreamRelatedObjects(databaseWriteStream, inventoryHttpClient);
           promise.fail(throwable);
         });
     }
+  }
+
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, HttpClient inventoryHttpClient) {
+    databaseWriteStream.end();
+    inventoryHttpClient.close();
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {

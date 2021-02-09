@@ -72,7 +72,8 @@ public class XSLTMapper extends MarcXmlMapper {
     } finally {
       if (timer != null) {
         timer.stop();
-        logger.debug(String.format("MarcXml converted to other format by XSLT transformation after %d ms", timer.getTime()));
+        long time = timer.getTime();
+        logger.debug("MarcXml converted to other format by XSLT transformation after {} ms", time);
       }
     }
   }
