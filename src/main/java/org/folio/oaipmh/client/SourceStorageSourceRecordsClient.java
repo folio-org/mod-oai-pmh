@@ -168,4 +168,8 @@ public class SourceStorageSourceRecordsClient {
     request.putHeader("Content-Length", buffer.length() + "");
     return request.sendBuffer(buffer);
   }
+
+  public void close() {
+    webClient.close();
+  }
 }

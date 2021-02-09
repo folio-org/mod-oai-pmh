@@ -710,46 +710,52 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
       List<JsonObject> batch, boolean deletedRecordSupport) {
-      final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
+    final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.info("Request to SRS: {}", listOfIds);
-      Promise<Map<String, JsonObject>> promise = Promise.promise();
-      try {
-        final Map<String, JsonObject> result = Maps.newHashMap();
+    Promise<Map<String, JsonObject>> promise = Promise.promise();
+    try {
+      final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds)
-          .onSuccess(srsResp -> {
-            if (srsResp.statusCode() != 200) {
-            String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records", srsResp.statusMessage());
-              logger.error(errorMsg);
-              promise.fail(new IllegalStateException(errorMsg));
-              return;
-            }
-            try {
-            final Object o = srsResp.bodyAsJsonObject();
-              if (o instanceof JsonObject) {
-                JsonObject entries = (JsonObject) o;
-                final JsonArray records = entries.getJsonArray("sourceRecords");
-                records.stream()
-                  .filter(Objects::nonNull)
-                  .map(JsonObject.class::cast)
-                  .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-              } else {
-              logger.debug("Can't process response from SRS: {}", srsResp);
-              }
-              promise.complete(result);
-            } catch (DecodeException ex) {
-              String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-              handleException(promise, new IllegalStateException(msg, ex));
-            } catch (Exception e) {
-              handleException(promise, e);
-            }
+        .onSuccess(srsResp -> {
+          if (srsResp.statusCode() != 200) {
+            String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
+                srsResp.statusMessage());
+            logger.error(errorMsg);
+            srsClient.close();
+            promise.fail(new IllegalStateException(errorMsg));
+            return;
           }
-      )
-      .onFailure(e -> handleException(promise, e));
-      } catch (Exception e) {
-        handleException(promise, e);
-      }
-
-      return promise.future();
+          try {
+            final Object o = srsResp.bodyAsJsonObject();
+            if (o instanceof JsonObject) {
+              JsonObject entries = (JsonObject) o;
+              final JsonArray records = entries.getJsonArray("sourceRecords");
+              records.stream()
+                .filter(Objects::nonNull)
+                .map(JsonObject.class::cast)
+                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
+                  .getString("instanceId"), jo));
+            } else {
+              logger.debug("Can't process response from SRS: {}", srsResp);
+            }
+            promise.complete(result);
+          } catch (DecodeException ex) {
+            String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+            handleException(promise, new IllegalStateException(msg, ex));
+          } catch (Exception e) {
+            handleException(promise, e);
+          } finally {
+            srsClient.close();
+          }
+        })
+        .onFailure(e -> {
+          srsClient.close();
+          handleException(promise, e);
+        });
+    } catch (Exception e) {
+      handleException(promise, e);
+    }
+    return promise.future();
   }
 
   private String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
