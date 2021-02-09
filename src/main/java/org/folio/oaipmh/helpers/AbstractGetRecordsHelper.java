@@ -43,7 +43,7 @@ import io.vertx.ext.web.client.HttpResponse;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  private final Logger LOGGER = LogManager.getLogger(AbstractGetRecordsHelper.class);
+  private static final Logger LOGGER = LogManager.getLogger(AbstractGetRecordsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
