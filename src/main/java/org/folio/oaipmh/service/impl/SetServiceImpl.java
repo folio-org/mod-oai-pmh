@@ -97,6 +97,7 @@ public class SetServiceImpl implements SetService {
     GenericCompositeFuture.all(futures)
       .onComplete(result -> {
         if (result.failed()) {
+          webClient.close();
           promise.fail(result.cause());
         } else {
           List<SetsFilteringCondition> values = new ArrayList<>();
@@ -111,6 +112,7 @@ public class SetServiceImpl implements SetService {
 
           FilteringConditionValueCollection filteringConditionValueCollection = new FilteringConditionValueCollection()
             .withSetsFilteringConditions(values);
+          webClient.close();
           promise.complete(filteringConditionValueCollection);
         }
       });
