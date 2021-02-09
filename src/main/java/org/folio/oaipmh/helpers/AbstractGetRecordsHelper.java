@@ -225,12 +225,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
 
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
-    if (!records.isEmpty()) {
-      LOGGER.debug("{} records found for the request.", records.size());
-      oaipmh.withListRecords(new ListRecordsType().withRecords(records));
-    } else {
-      oaipmh.withErrors(createNoRecordsFoundError());
-    }
+    LOGGER.debug("{} records found for the request.", records.size());
+    oaipmh.withListRecords(new ListRecordsType().withRecords(records));
   }
 
   protected abstract void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken);

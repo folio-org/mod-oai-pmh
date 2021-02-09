@@ -43,11 +43,8 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
-    if (!records.isEmpty()) {
-      oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
-    } else {
-      oaipmh.withErrors(createNoRecordsFoundError());
-    }
+    oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator()
+      .next()));
   }
 
   @Override
