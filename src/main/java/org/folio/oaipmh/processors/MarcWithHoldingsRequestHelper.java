@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -115,6 +116,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
   private final Vertx vertx;
+
+  public static final int POLLING_TIME_INTERVAL = 500;
+
+  public static final int MAX_WAIT_UNTIL_TIMEOUT = 20000;
+
+  public static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
 
   private InstancesService instancesService;
   private final WorkerExecutor saveInstancesExecutor;
@@ -375,7 +382,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
     final Promise<List<Instances>> listPromise = Promise.promise();
-    context.owner().setPeriodic(500, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
+
+    AtomicInteger retryCount = new AtomicInteger();
+
+    context.owner().setPeriodic(POLLING_TIME_INTERVAL, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer, retryCount));
 
     listPromise.future()
       .compose(instances -> {
@@ -396,7 +406,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private Future<List<Instances>> getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context, Long timerId) {
+  private Future<List<Instances>> getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context, Long timerId, AtomicInteger retryCount) {
+    if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
+      return Future.failedFuture("The instance list is empty after "+retryCount.get()+" attempts. Stop polling and return fail response");
+    }
     return instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
@@ -720,9 +733,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           if (srsResp.statusCode() != 200) {
             String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
                 srsResp.statusMessage());
-            logger.error(errorMsg);
             srsClient.close();
-            promise.fail(new IllegalStateException(errorMsg));
+            handleException(promise, new IllegalStateException(errorMsg));
             return;
           }
           try {
