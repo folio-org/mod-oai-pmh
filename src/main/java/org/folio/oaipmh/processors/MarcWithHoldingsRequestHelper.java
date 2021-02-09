@@ -388,7 +388,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (asyncResult.succeeded()) {
           promise.complete(asyncResult.result());
         } else {
-          logger.error("Cannot save ids: " + asyncResult.cause().getMessage(), asyncResult.cause());
+          logger.error("Cannot save ids: {}", asyncResult.cause().getMessage(), asyncResult.cause());
         promise.fail(asyncResult.cause());
         }
       });
@@ -478,8 +478,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
       promise.fail(new IllegalStateException(errorMsg));
     } else {
-      resp.bodyHandler(buffer -> logger.info("Response " + buffer));
-      logger.info("Response " + resp);
       JsonParser jp = new JsonParserImpl(resp);
       jp.objectValueMode();
       jp.pipeTo(databaseWriteStream);
@@ -654,7 +652,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, request.getTenant(), requestId, postgresClient).onComplete(res -> {
       if (res.failed()) {
-        logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
+        logger.error("Cannot saving ids, error from database: {}", res.cause().getMessage(), res.cause());
         promise.fail(res.cause());
       } else {
         promise.complete();
@@ -678,7 +676,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + ".instances (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
       if (e.failed()) {
-        logger.error("Save instance Ids failed: " + e.cause().getMessage());
+        logger.error("Save instance Ids failed: {}", e.cause().getMessage());
         promise.fail(e.cause());
       } else {
         PgConnection connection = e.result();
@@ -735,7 +733,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                   .map(JsonObject.class::cast)
                   .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
               } else {
-              logger.debug("Can't process response from SRS: {}", srsResp.toString());
+              logger.debug("Can't process response from SRS: {}", srsResp);
               }
               promise.complete(result);
             } catch (DecodeException ex) {

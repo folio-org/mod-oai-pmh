@@ -43,7 +43,7 @@ import io.vertx.ext.web.client.HttpResponse;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  protected final Logger logger = LogManager.getLogger(getClass());
+  private final Logger LOGGER = LogManager.getLogger(AbstractGetRecordsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -91,7 +91,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       batchSize + 1)
       .onSuccess(response -> handleSrsRecordsResponse(response, request, ctx, promise))
       .onFailure(e -> {
-        logger.error("Exception getting {}", request.getVerb().value(), e);
+        LOGGER.error("Exception getting {}", request.getVerb().value(), e);
         promise.fail(e);
       });
   }
@@ -103,15 +103,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
         promise.complete(responseCompletableFuture);
       } else {
-        logger.error("Response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+        LOGGER.error("Response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
         throw new IllegalStateException(response.statusMessage());
       }
     } catch (DecodeException ex) {
       String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-      logger.error(msg, ex, ex.getMessage());
+      LOGGER.error(msg, ex, ex.getMessage());
       promise.fail(new IllegalStateException(msg, ex));
     } catch (Exception e) {
-      logger.error("Exception getting {}", request.getVerb()
+      LOGGER.error("Exception getting {}", request.getVerb()
         .value(), e);
       promise.fail(e);
     }
@@ -122,7 +122,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonArray instances = storageHelper.getItems(instancesResponseBody);
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
 
-    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
+    LOGGER.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
@@ -177,8 +177,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.error("Error occurred while converting record to xml representation. {}", e.getMessage(), e);
-              logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
+              LOGGER.error("Error occurred while converting record to xml representation. {}", e.getMessage(), e);
+              LOGGER.debug("Skipping problematic record due the conversion error. Source record id - {}", recordId);
               return;
             }
           } else {
@@ -216,7 +216,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void handleException(Promise<Response> promise, Throwable e) {
-    logger.error(GENERIC_ERROR_MESSAGE, e);
+    LOGGER.error(GENERIC_ERROR_MESSAGE, e);
     promise.fail(e);
   }
 
@@ -224,7 +224,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
-      logger.debug("{} records found for the request.", records.size());
+      LOGGER.debug("{} records found for the request.", records.size());
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());

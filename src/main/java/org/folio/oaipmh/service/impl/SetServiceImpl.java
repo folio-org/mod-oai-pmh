@@ -140,7 +140,7 @@ public class SetServiceImpl implements SetService {
           promise.fail(new IllegalStateException(response.statusCode() + " " + response.statusMessage()));
         }
       })
-      .onFailure(handler -> promise.fail(handler));
+      .onFailure(promise::fail);
     return promise.future();
   }
 

@@ -42,7 +42,7 @@ public class InstancesServiceImpl implements InstancesService {
           GenericCompositeFuture.all(futures)
             .onSuccess(v -> promise.complete(ids))
             .onFailure(throwable -> {
-              logger.error("Error occurred during deleting instances by request ids: " + ids, throwable);
+              logger.error("Error occurred during deleting instances by request ids: {}", ids, throwable);
               promise.fail(throwable);
             });
         } else {
