@@ -734,7 +734,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 .filter(Objects::nonNull)
                 .map(JsonObject.class::cast)
                 .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
-                  .getString("instanceId"), jo));
+                  .getString(INSTANCE_ID_FIELD_NAME), jo));
             } else {
               logger.debug("Can't process response from SRS: {}", srsResp);
             }
