@@ -1,7 +1,7 @@
 package org.folio.oaipmh.mappers;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.time.StopWatch;
 
 import javax.xml.XMLConstants;
@@ -23,7 +23,7 @@ import java.io.InputStream;
  * This class add XSLT post-processing to transform MarcXML to desired XML format.
  */
 public class XSLTMapper extends MarcXmlMapper {
-  private static final Logger logger = LoggerFactory.getLogger(XSLTMapper.class);
+  private static final Logger logger = LogManager.getLogger(XSLTMapper.class);
 
   private static final String MAPPER_CREATION_ERROR_MESSAGE = "Can't create mapper with provided stylesheet.";
   private static final String MAPPER_TRANSFORMATION_ERROR_MESSAGE = "Can't transform xml.";
@@ -72,7 +72,8 @@ public class XSLTMapper extends MarcXmlMapper {
     } finally {
       if (timer != null) {
         timer.stop();
-        logger.debug(String.format("MarcXml converted to other format by XSLT transformation after %d ms", timer.getTime()));
+        long time = timer.getTime();
+        logger.debug("MarcXml converted to other format by XSLT transformation after {} ms", time);
       }
     }
   }

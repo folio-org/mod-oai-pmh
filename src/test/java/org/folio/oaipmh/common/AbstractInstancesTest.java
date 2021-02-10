@@ -1,10 +1,10 @@
 package org.folio.oaipmh.common;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.oaipmh.dao.InstancesDao;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.junit.jupiter.api.AfterEach;
@@ -72,7 +72,7 @@ public abstract class AbstractInstancesTest {
     requestMetadataList
       .forEach(elem -> saveRequestMetadataFutures.add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
 
-    CompositeFuture.all(saveRequestMetadataFutures)
+    GenericCompositeFuture.all(saveRequestMetadataFutures)
       .onSuccess(v -> getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT)
         .onSuccess(e -> testContext.completeNow())
         .onFailure(testContext::failNow))
@@ -90,7 +90,7 @@ public abstract class AbstractInstancesTest {
     List<Future> futures = new ArrayList<>();
     requestIds.forEach(elem -> futures.add(getInstancesDao().deleteRequestMetadataByRequestId(elem, OAI_TEST_TENANT)));
 
-    CompositeFuture.all(futures)
+    GenericCompositeFuture.all(futures)
       .onSuccess(v -> promise.complete())
       .onFailure(throwable -> {
         if (throwable instanceof NotFoundException) {

@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
@@ -37,15 +38,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 class RecordMetadataManagerTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";

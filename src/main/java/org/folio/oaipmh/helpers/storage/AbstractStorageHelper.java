@@ -9,11 +9,11 @@ import java.time.temporal.ChronoUnit;
 import org.apache.commons.lang.time.DateUtils;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public abstract class AbstractStorageHelper implements StorageHelper {
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"};
 
