@@ -28,7 +28,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
@@ -226,8 +226,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .collect(toList());
           instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
             .onComplete(r -> oaiPmhResponsePromise.complete(result));
-        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
-        srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
+        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)))
+        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
       });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
@@ -663,39 +663,43 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
-                                                                  List<JsonObject> batch, boolean deletedRecordSupport) {
+      List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.debug("Request to SRS, list id size: {}", listOfIds.size());
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResp -> srsResp.bodyHandler(bh -> {
-          if (srsResp.statusCode() != 200) {
-            String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request().absoluteURI(), srsResp.statusMessage());
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
-          }
-          try {
-            final Object o = bh.toJson();
-            if (o instanceof JsonObject) {
-              JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("sourceRecords");
-              records.stream()
-                .filter(Objects::nonNull)
-                .map(JsonObject.class::cast)
-                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-            } else {
-              logger.debug("Can't process response from SRS: {}", bh.toString());
-            }
-            promise.complete(result);
-          } catch (DecodeException ex) {
-            String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-            handleException(promise, new IllegalStateException(msg, ex));
-          } catch (Exception e) {
-            handleException(promise, e);
-          }
+        if (srsResp.statusCode() != 200) {
+          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request()
+            .absoluteURI(), srsResp.statusMessage());
+          srsClient.close();
+          handleException(promise, new IllegalStateException(errorMsg));
+          return;
         }
-      ));
+        try {
+          final Object o = bh.toJson();
+          if (o instanceof JsonObject) {
+            JsonObject entries = (JsonObject) o;
+            final JsonArray records = entries.getJsonArray("sourceRecords");
+            records.stream()
+              .filter(Objects::nonNull)
+              .map(JsonObject.class::cast)
+              .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
+                .getString("instanceId"), jo));
+          } else {
+            logger.debug("Can't process response from SRS: {}", bh.toString());
+          }
+          promise.complete(result);
+        } catch (DecodeException ex) {
+          String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+          handleException(promise, new IllegalStateException(msg, ex));
+        } catch (Exception e) {
+          handleException(promise, e);
+        } finally {
+          srsClient.close();
+        }
+      }));
     } catch (Exception e) {
       handleException(promise, e);
     }
