@@ -14,8 +14,6 @@ import java.util.UUID;
 
 import javax.ws.rs.NotFoundException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractInstancesTest;
@@ -36,6 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -43,7 +43,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 class InstancesServiceImplTest extends AbstractInstancesTest {
 
-  private final Logger logger = LogManager.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();

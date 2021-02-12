@@ -26,17 +26,17 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 class StorageHelperTest {
-  private static final Logger logger = LogManager.getLogger(StorageHelperTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(StorageHelperTest.class);
 
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
