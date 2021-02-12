@@ -12,13 +12,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Is used for reading json configuration files from resources and mapping them to {@link JsonObject} instances.
@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 @Component
 public class ConfigurationHelper {
 
-  private static final Logger LOGGER = LogManager.getLogger(ConfigurationHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConfigurationHelper.class);
 
   private static ConfigurationHelper instance;
 
@@ -55,7 +55,7 @@ public class ConfigurationHelper {
       .getResourceAsStream(configJsonPath)) {
       if (is == null) {
         String message = format("Unable open the resource file %s", configJsonPath);
-        LOGGER.error(message);
+        logger.error(message);
         throw new IllegalArgumentException(message);
       }
       try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
@@ -65,7 +65,7 @@ public class ConfigurationHelper {
         return new JsonObject(config);
       }
     } catch (IOException | IllegalArgumentException ex) {
-      LOGGER.error(ex.getMessage(), ex);
+      logger.error(ex.getMessage(), ex);
       throw new IllegalStateException(ex);
     }
   }

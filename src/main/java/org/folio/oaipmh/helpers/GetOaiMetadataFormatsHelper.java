@@ -7,13 +7,11 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 
 import java.util.Date;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.tools.client.Response;
 import org.openarchives.oai._2.ListMetadataFormatsType;
 import org.openarchives.oai._2.MetadataFormatType;
@@ -23,14 +21,14 @@ import org.openarchives.oai._2.OAIPMHerrorcodeType;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
-import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
-  private static final Logger logger = LogManager.getLogger(GetOaiMetadataFormatsHelper.class);
+  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -56,7 +54,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
       srsClient.getSourceStorageSourceRecords(
-        null,
+       null,
         null,
         request.getStorageIdentifier(),
         "MARC",
@@ -67,40 +65,35 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
         null,
         updatedAfter,
         updatedBefore,
-        null,
+         null,
         request.getOffset(),
-        batchSize)
-        .onSuccess(response -> handleSrsResponse(request, promise, response))
-        .onFailure(e -> {
-          logger.error("Exception getting list of identifiers", e);
-          promise.fail(e);
+        batchSize,
+         response -> {
+          try {
+            if (Response.isSuccess(response.statusCode())) {
+              response.bodyHandler(bh -> {
+                JsonArray instances = storageHelper.getItems(bh.toJsonObject());
+                if (instances != null && !instances.isEmpty()) {
+                  promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
+                }else{
+                  promise.complete(buildIdentifierNotFoundResponse(request));
+                }
+              });
+            } else {
+              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+              throw new IllegalStateException(response.statusMessage());
+            }
+
+          } catch (Exception e) {
+            logger.error("Exception getting list of identifiers", e);
+            promise.fail(e);
+          }
         });
     } catch (Exception e) {
       logger.error("Error happened while processing ListMetadataFormats verb request", e);
       promise.fail(e);
     }
     return promise.future();
-  }
-
-  private void handleSrsResponse(Request request, Promise<javax.ws.rs.core.Response> promise, HttpResponse<Buffer> response) {
-    try {
-      if (Response.isSuccess(response.statusCode())) {
-        JsonArray instances = storageHelper.getItems(response.bodyAsJsonObject());
-        if (instances != null && !instances.isEmpty()) {
-          promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
-        } else {
-          promise.complete(buildIdentifierNotFoundResponse(request));
-        }
-      } else {
-        String statusMessage = response.statusMessage();
-        int statusCode = response.statusCode();
-        logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", statusMessage, statusCode);
-        throw new IllegalStateException(response.statusMessage());
-      }
-    } catch (Exception e) {
-      logger.error("Exception getting list of identifiers", e);
-      promise.fail(e);
-    }
   }
 
   /**

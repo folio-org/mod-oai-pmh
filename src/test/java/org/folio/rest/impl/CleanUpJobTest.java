@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractInstancesTest;
@@ -41,6 +39,8 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
 @TestInstance(PER_CLASS)
 class CleanUpJobTest extends AbstractInstancesTest {
 
-  private final Logger logger = LogManager.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();

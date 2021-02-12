@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 import javax.ws.rs.NotFoundException;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
@@ -32,13 +30,15 @@ import org.springframework.stereotype.Repository;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
 @Repository
 public class InstancesDaoImpl implements InstancesDao {
 
-  protected final Logger logger = LogManager.getLogger(InstancesDaoImpl.class);
+  protected final Logger logger = LoggerFactory.getLogger(getClass());
 
   private static final String REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST = "Request metadata with requestId - \"%s\" does not exists";
 
@@ -228,8 +228,7 @@ public class InstancesDaoImpl implements InstancesDao {
           .toString();
       })
       .collect(Collectors.toList());
-    String idsList = String.join(",", ids);
-    logger.debug("Expired request ids result: {}", idsList);
+    logger.debug("Expired request ids result: " + String.join(",", ids));
     return ids;
   }
 

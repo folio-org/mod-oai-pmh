@@ -5,11 +5,11 @@ import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import org.folio.oaipmh.Request;
 import org.folio.rest.persist.PostgresClient;
@@ -26,7 +26,7 @@ import java.util.Map;
 @Component
 public class PostgresClientFactory {
 
-  private static final Logger LOG = LogManager.getLogger(PostgresClientFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PostgresClientFactory.class);
 
   public static final Configuration configuration = new DefaultConfiguration().set(SQLDialect.POSTGRES);
 

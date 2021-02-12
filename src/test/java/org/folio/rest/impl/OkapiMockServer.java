@@ -7,8 +7,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
 
-  private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
 
   public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 
@@ -50,6 +50,7 @@ public class OkapiMockServer {
   public static final String EXIST_CONFIG_TENANT = "test_diku";
   public static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
   public static final String NON_EXIST_CONFIG_TENANT = "not_diku";
+  public static final String INVALID_JSON_TENANT = "invalidJsonTenant";
   private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
   private static final String ID_PARAM = "instanceId";
 
@@ -84,11 +85,11 @@ public class OkapiMockServer {
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
-  static final String DATE_INSTANCE_NO_SRS_RECORDS = "2020-12-24";
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
   static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
+  public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
 
   // Instance UUID
   static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
@@ -137,14 +138,13 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
   private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
-  private static final String INSTANCE_NO_SRS_RECORDS_JSON = "instance_no_srs_records.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
   public static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON = "two_records_one_cannot_be_converted_to_xml_instance_ids.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
-  private static final String INSTANCE_ID_NO_SRS_RECORDS = "94fc7d52-453f-49d4-a8ba-1ff543fb77f1";
   private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
   private static final String SRS_RECORD = "/srs_record.json";
+  private static final String INVALID_JSON = "invalid.json";
 
   private final int port;
   private final Vertx vertx;
@@ -215,13 +215,13 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
-      } else if (uri.contains(DATE_INSTANCE_NO_SRS_RECORDS)) {
-        inventoryViewSuccessResponse(ctx, INSTANCE_NO_SRS_RECORDS_JSON);
       } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
         inventoryViewSuccessResponse(ctx, INVALID_SRS_RECORD_INSTANCE_ID_JSON);
       } else if(uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
         inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
-      } else {
+      } else if(uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
+        inventoryViewSuccessResponse(ctx, INVALID_JSON);
+      }else {
         logger.debug("No mocks for the response, returning the default instance id");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
@@ -237,6 +237,8 @@ public class OkapiMockServer {
     if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
       logger.debug("Failure EI response");
       failureResponse(ctx);
+    } else if(instanceIds.isEmpty()) {
+      successResponse(ctx, "");
     } else {
       logger.debug("Success EI response");
       inventoryViewSuccessResponse(ctx, instanceIds);
@@ -257,6 +259,9 @@ public class OkapiMockServer {
       break;
     case ERROR_TENANT:
       failureResponse(ctx, 500, "Internal Server Error");
+      break;
+    case INVALID_JSON_TENANT:
+      successResponse(ctx, "&&@^$%^@$^&$");
       break;
     default:
       successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
@@ -299,8 +304,6 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
     } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
       successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD));
-    } else if (instanceIds.contains(INSTANCE_ID_NO_SRS_RECORDS)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
