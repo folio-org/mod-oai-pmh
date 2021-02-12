@@ -111,10 +111,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sonar.exclusions>**/PropertyNameMapper.java,
       **/ModTenantAPI.java,
-      **/SourceStorageSourceRecordsClient</sonar.exclusions>
+      **/SourceStorageSourceRecordsClient.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java,
       **/ModTenantAPI.java,
-      **/SourceStorageSourceRecordsClient
+      **/SourceStorageSourceRecordsClient.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
