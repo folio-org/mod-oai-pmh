@@ -371,23 +371,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .map(JsonObject::new)
           .collect(Collectors.toList());
         return enrichInstances(jsonInstances, request, context);
-      }).onComplete(asyncResult -> {
-        if (asyncResult.succeeded()) {
-          promise.complete(asyncResult.result());
-        } else {
-          logger.error("Cannot save ids: " + asyncResult.cause().getMessage(), asyncResult.cause());
-        promise.fail(asyncResult.cause());
-        }
+      }).onSuccess(promise::complete)
+      .onFailure(throwable -> {
+        logger.error("Cannot save ids: {}", throwable.getMessage(), throwable);
+        promise.fail(throwable);
       });
 
     return promise;
   }
 
-  private Future<List<Instances>> getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context, Long timerId, AtomicInteger retryCount) {
+  private void getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context,
+                            Long timerId, AtomicInteger retryCount) {
     if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
-      return Future.failedFuture("The instance list is empty after "+retryCount.get()+" attempts. Stop polling and return fail response");
+      context.owner().cancelTimer(timerId);
+      listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response"));
     }
-    return instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
+    instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
         .onComplete(f -> {
