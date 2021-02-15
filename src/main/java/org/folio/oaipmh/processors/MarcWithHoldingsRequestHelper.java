@@ -113,9 +113,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
   private final Vertx vertx;
 
-  public static final int POLLING_TIME_INTERVAL = 1000;
+  public static final int POLLING_TIME_INTERVAL = 500;
 
-  public static final int MAX_WAIT_UNTIL_TIMEOUT = 60000;
+  public static final int MAX_WAIT_UNTIL_TIMEOUT = 1000*60*20;
 
   public static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private InstancesService instancesService;
