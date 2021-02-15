@@ -54,4 +54,10 @@
     </createIndex>
   </changeSet>
 
+  <changeSet id="2021-02-23--13-00-add-index-to-instances-table-on-request_id-column" author="Illia Daliek">
+    <createIndex tableName="instances" indexName="request_id_idx" unique="false">
+      <column name="request_id"/>
+    </createIndex>
+  </changeSet>
+
 </databaseChangeLog>

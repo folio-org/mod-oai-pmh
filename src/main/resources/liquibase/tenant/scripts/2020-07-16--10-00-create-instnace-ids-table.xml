@@ -18,4 +18,10 @@
     </createTable>
   </changeSet>
 
+  <changeSet id="2021-02-24--12-00-add-autoIncrement-pk" author="Illia Daliek">
+    <addColumn tableName="instances">
+      <column name="id" type="integer" autoIncrement="true"/>
+    </addColumn>
+  </changeSet>
+
 </databaseChangeLog>
