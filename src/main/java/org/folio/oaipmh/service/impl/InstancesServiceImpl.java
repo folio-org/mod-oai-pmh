@@ -96,6 +96,11 @@ public class InstancesServiceImpl implements InstancesService {
     return instancesDao.getInstancesList(limit, requestId, tenantId);
   }
 
+  @Override
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
+    return instancesDao.getInstancesList(limit, requestId, id, tenantId);
+  }
+
   @Autowired
   public InstancesDao setInstancesDao() {
     return instancesDao;

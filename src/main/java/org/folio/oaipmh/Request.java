@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -49,9 +50,10 @@ public class Request {
   private int totalRecords;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
-
    /** The id of the request. */
   private String requestId;
+  /** The PK id of the first record in the next set of results used for partitioning. */
+  private int nextInstancePkValue;
 
   /**
    * Builder used to build the request.
@@ -188,6 +190,10 @@ public class Request {
     return nextRecordId;
   }
 
+  public int getNextInstancePkValue() {
+    return nextInstancePkValue;
+  }
+
   public String getRequestId() {
     return requestId;
   }
@@ -202,6 +208,10 @@ public class Request {
 
   public String getOkapiUrl() {
     return okapiUrl;
+  }
+
+  public void setNextInstancePkValue(int nextInstancePkValue) {
+    this.nextInstancePkValue = nextInstancePkValue;
   }
 
   /**
@@ -242,6 +252,7 @@ public class Request {
       this.totalRecords = value == null ? 0 : Integer.parseInt(value);
       this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
       this.requestId = params.get(REQUEST_ID_PARAM);
+      this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
     } catch (Exception e) {
       return false;
     }

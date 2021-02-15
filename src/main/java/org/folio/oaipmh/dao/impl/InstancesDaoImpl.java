@@ -201,6 +201,18 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  @Override
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.ID.greaterOrEqual(id))
+        .orderBy(INSTANCES.ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
   }
@@ -214,6 +226,7 @@ public class InstancesDaoImpl implements InstancesDao {
         pojo.setInstanceId(row.getUUID(INSTANCES.INSTANCE_ID.getName()));
         pojo.setJson(row.getString(INSTANCES.JSON.getName()));
         pojo.setRequestId(row.getUUID(INSTANCES.REQUEST_ID.getName()));
+        pojo.setId(row.getInteger(INSTANCES.ID.getName()));
         return pojo;
       })
       .collect(Collectors.toList());
