@@ -115,7 +115,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   public static final int POLLING_TIME_INTERVAL = 500;
 
-  public static final int MAX_WAIT_UNTIL_TIMEOUT = 20000;
+  public static final int MAX_WAIT_UNTIL_TIMEOUT = 1000*60*20;
 
   public static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private InstancesService instancesService;
@@ -373,7 +373,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return enrichInstances(jsonInstances, request, context);
       }).onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.error("Cannot save ids: {}", throwable.getMessage(), throwable);
+        logger.error("Cannot get batch of instances ids from database: {}", throwable.getMessage(), throwable);
         promise.fail(throwable);
       });
 
