@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -28,7 +29,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
@@ -112,6 +113,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
   private final Vertx vertx;
 
+  public static final int POLLING_TIME_INTERVAL = 500;
+
+  public static final int MAX_WAIT_UNTIL_TIMEOUT = 1000*60*20;
+
+  public static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private InstancesService instancesService;
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
@@ -226,8 +232,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .collect(toList());
           instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
             .onComplete(r -> oaiPmhResponsePromise.complete(result));
-        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)));
-        srsResponse.onFailure(t -> handleException(oaiPmhResponsePromise, t));
+        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)))
+        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
       });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
@@ -316,6 +322,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (resp.statusCode() != 200) {
         String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryQuery.absoluteURI(), resp.statusMessage());
         resp.bodyHandler(buffer -> logger.error(errorMsg + resp.statusCode() + "body: " + buffer.toString()));
+        inventoryHttpClient.close();
         promise.fail(new IllegalStateException(errorMsg));
       } else {
         resp.bodyHandler(buffer -> logger.info("Response " + buffer));
@@ -353,7 +360,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
 
     final Promise<List<Instances>> listPromise = Promise.promise();
-    context.owner().setPeriodic(500, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer));
+    AtomicInteger retryCount = new AtomicInteger();
+
+    context.owner().setPeriodic(POLLING_TIME_INTERVAL, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer, retryCount));
 
     listPromise.future()
       .compose(instances -> {
@@ -362,20 +371,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .map(JsonObject::new)
           .collect(Collectors.toList());
         return enrichInstances(jsonInstances, request, context);
-      }).onComplete(asyncResult -> {
-        if (asyncResult.succeeded()) {
-          promise.complete(asyncResult.result());
-        } else {
-          logger.error("Cannot save ids: " + asyncResult.cause().getMessage(), asyncResult.cause());
-        promise.fail(asyncResult.cause());
-        }
+      }).onSuccess(promise::complete)
+      .onFailure(throwable -> {
+        logger.error("Cannot get batch of instances ids from database: {}", throwable.getMessage(), throwable);
+        promise.fail(throwable);
       });
 
     return promise;
   }
 
-  private Future<List<Instances>> getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context, Long timerId) {
-    return instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
+  private void getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context,
+                            Long timerId, AtomicInteger retryCount) {
+    if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
+      context.owner().cancelTimer(timerId);
+      listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response"));
+    }
+    instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
         .onComplete(f -> {
@@ -465,7 +476,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       logger.info("Build records response, instances = {0}, instances with srs records = {1}", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-      if (records.isEmpty() && nextInstanceId == null && (firstBatch && batch.isEmpty())) {
+      if (records.isEmpty() && nextInstanceId == null && firstBatch) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));
@@ -663,39 +674,43 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient,
-                                                                  List<JsonObject> batch, boolean deletedRecordSupport) {
+      List<JsonObject> batch, boolean deletedRecordSupport) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.debug("Request to SRS, list id size: {}", listOfIds.size());
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     try {
       final Map<String, JsonObject> result = Maps.newHashMap();
       srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResp -> srsResp.bodyHandler(bh -> {
-          if (srsResp.statusCode() != 200) {
-            String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request().absoluteURI(), srsResp.statusMessage());
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
-          }
-          try {
-            final Object o = bh.toJson();
-            if (o instanceof JsonObject) {
-              JsonObject entries = (JsonObject) o;
-              final JsonArray records = entries.getJsonArray("sourceRecords");
-              records.stream()
-                .filter(Objects::nonNull)
-                .map(JsonObject.class::cast)
-                .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder").getString("instanceId"), jo));
-            } else {
-              logger.debug("Can't process response from SRS: {}", bh.toString());
-            }
-            promise.complete(result);
-          } catch (DecodeException ex) {
-            String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-            handleException(promise, new IllegalStateException(msg, ex));
-          } catch (Exception e) {
-            handleException(promise, e);
-          }
+        if (srsResp.statusCode() != 200) {
+          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResp.request()
+            .absoluteURI(), srsResp.statusMessage());
+          srsClient.close();
+          handleException(promise, new IllegalStateException(errorMsg));
+          return;
         }
-      ));
+        try {
+          final Object o = bh.toJson();
+          if (o instanceof JsonObject) {
+            JsonObject entries = (JsonObject) o;
+            final JsonArray records = entries.getJsonArray("sourceRecords");
+            records.stream()
+              .filter(Objects::nonNull)
+              .map(JsonObject.class::cast)
+              .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
+                .getString(INSTANCE_ID_FIELD_NAME), jo));
+          } else {
+            logger.debug("Can't process response from SRS: {}", bh.toString());
+          }
+          promise.complete(result);
+        } catch (DecodeException ex) {
+          String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+          handleException(promise, new IllegalStateException(msg, ex));
+        } catch (Exception e) {
+          handleException(promise, e);
+        } finally {
+          srsClient.close();
+        }
+      }));
     } catch (Exception e) {
       handleException(promise, e);
     }
