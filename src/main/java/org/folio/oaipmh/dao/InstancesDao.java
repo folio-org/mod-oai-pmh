@@ -52,4 +52,10 @@ public interface InstancesDao {
    * Retrieves instances by limit and request id.
    */
   Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
+
+  /**
+   * Retrieves instances which have PK id value >= id by limit and request id.
+   */
+  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId);
+
 }
