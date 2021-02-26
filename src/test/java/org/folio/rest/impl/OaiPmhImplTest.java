@@ -35,6 +35,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTA
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
@@ -2167,6 +2168,18 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void shouldRerequestSrsWhenItRespondedWith500_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseAndThenSuccessResponseFromSrs() {
+    RequestSpecification listRecordRequest = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_SRS_500_ERROR_RESPONSE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 1);
+  }
+
+  @Test
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
@@ -2294,14 +2307,15 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
+    assertEquals(0, resumptionToken.getCursor().intValue());
     List<HeaderType> records = oaipmh.getListRecords().getRecords().stream()
       .map(RecordType::getHeader)
       .collect(Collectors.toList());
     totalRecords.addAll(records);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 4);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 2);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 2, 8);
 
     assertThat(resumptionToken.getValue(), is(isEmptyString()));
 
@@ -2311,7 +2325,7 @@ class OaiPmhImplTest {
   }
 
   private ResumptionTokenType makeResumptionTokenRequestsAndVerifyCount(List<HeaderType> totalRecords,
-                                                                        ResumptionTokenType resumptionToken, int desiredCount) {
+                                                                        ResumptionTokenType resumptionToken, int desiredCount, int expectedCursor) {
     RequestSpecification request;
     OAIPMH oaipmh;
     List<HeaderType> records;
@@ -2323,6 +2337,7 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, LIST_RECORDS, desiredCount);
     resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(resumptionToken, is(notNullValue()));
+    assertEquals(expectedCursor, resumptionToken.getCursor().intValue());
 
     records = oaipmh.getListRecords().getRecords().stream()
       .map(RecordType::getHeader)

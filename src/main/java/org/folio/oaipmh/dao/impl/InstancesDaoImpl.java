@@ -201,6 +201,7 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .orderBy(INSTANCES.ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));
   }
