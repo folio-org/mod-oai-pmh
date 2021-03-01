@@ -9,6 +9,7 @@ public final class Constants {
   }
 
 
+
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -55,6 +56,7 @@ public final class Constants {
   public static final String OFFSET_PARAM = "offset";
   public static final String TOTAL_RECORDS_PARAM = "totalRecords";
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
+  public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
   public static final String REQUEST_ID_PARAM = "requestId";
   public static final String VERB_PARAM = "verb";
 

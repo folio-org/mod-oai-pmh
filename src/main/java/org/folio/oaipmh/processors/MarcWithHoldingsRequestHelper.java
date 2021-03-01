@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -22,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -61,6 +63,7 @@ import org.springframework.util.ReflectionUtils;
 
 import com.google.common.collect.Maps;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -190,7 +193,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      getNextInstances(request, batchSize, context, requestId).future().onComplete(fut -> {
+      getNextInstances(request, batchSize, context, requestId, firstBatch).future().onComplete(fut -> {
         if (fut.failed()) {
           logger.error("Get instances failed: " + fut.cause());
           oaiPmhResponsePromise.fail(fut.cause());
@@ -226,13 +229,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
         requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport)
           .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
-          firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(result -> {
-          List<String> instanceIds = instancesWithoutLast.stream()
-            .map(e -> e.getString(INSTANCE_ID_FIELD_NAME))
-            .collect(toList());
-          instancesService.deleteInstancesById(instanceIds, requestId, request.getTenant())
-            .onComplete(r -> oaiPmhResponsePromise.complete(result));
-        }).onFailure(e -> handleException(oaiPmhResponsePromise, e)))
+          firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(oaiPmhResponsePromise::complete)
+            .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
         .onFailure(e -> handleException(oaiPmhResponsePromise, e));
       });
     } catch (Exception e) {
@@ -335,9 +333,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         })
           .exceptionHandler(throwable -> {
             logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-            databaseWriteStream.end();
-            inventoryHttpClient.close();
-            promise.fail(throwable);
+              databaseWriteStream.end();
+              inventoryHttpClient.close();
+              promise.fail(throwable);
           });
       }
     });
@@ -355,20 +353,27 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return databaseWriteStream;
   }
 
-  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId) {
+  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId, boolean firstBatch) {
     Promise<List<JsonObject>> promise = Promise.promise();
 
     final Promise<List<Instances>> listPromise = Promise.promise();
     AtomicInteger retryCount = new AtomicInteger();
-    context.owner().setPeriodic(POLLING_TIME_INTERVAL, timer -> getNextBatch(requestId, request, batchSize, listPromise, context, timer, retryCount));
+    context.owner().setPeriodic(POLLING_TIME_INTERVAL, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, timer, retryCount));
 
     listPromise.future()
       .compose(instances -> {
-        List<JsonObject> jsonInstances = instances.stream()
-          .map(Instances::getJson)
-          .map(JsonObject::new)
-          .collect(Collectors.toList());
-        return enrichInstances(jsonInstances, request, context);
+        if (CollectionUtils.isNotEmpty(instances)) {
+          List<JsonObject> jsonInstances = instances.stream()
+            .map(Instances::getJson)
+            .map(JsonObject::new)
+            .collect(Collectors.toList());
+          if (instances.size() > batchSize) {
+            request.setNextInstancePkValue(instances.get(batchSize).getId());
+          }
+          return enrichInstances(jsonInstances, request, context);
+        }
+        logger.debug("Skipping enrich instances call, empty instance ids list returned");
+        return Future.succeededFuture(Collections.emptyList());
       }).onSuccess(promise::complete)
       .onFailure(throwable -> {
         logger.error("Cannot get batch of instances ids from database: {}", throwable.getMessage(), throwable);
@@ -378,7 +383,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private void getNextBatch(String requestId, Request request, int batchSize, Promise<List<Instances>> listPromise, Context context,
+  private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, Context context,
                             Long timerId, AtomicInteger retryCount) {
     if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
       context.owner().cancelTimer(timerId);
@@ -387,17 +392,30 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
-      .compose(streamEnded -> instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
-        .onComplete(f -> {
-          if (f.succeeded()) {
-            if (!listPromise.future().isComplete() && (f.result().size() == batchSize + 1 || streamEnded)) {
-              context.owner().cancelTimer(timerId);
-              listPromise.complete(f.result());
-            }
-          } else {
-            logger.error(f.cause());
-          }
-        }));
+      .compose(streamEnded ->
+      {
+        if (firstBatch) {
+          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
+            .onComplete(handleInstancesDbResponse(listPromise, timerId, streamEnded, batchSize, context));
+        }
+        int autoIncrementedId = request.getNextInstancePkValue();
+        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
+          .onComplete(handleInstancesDbResponse(listPromise, timerId, streamEnded, batchSize, context));
+      });
+  }
+
+  private Handler<AsyncResult<List<Instances>>> handleInstancesDbResponse(Promise<List<Instances>> listPromise, Long timerId, boolean streamEnded,
+                                                                          int batchSize, Context context) {
+    return result -> {
+      if (result.succeeded()) {
+        if (!listPromise.future().isComplete() && (result.result().size() == batchSize + 1 || streamEnded)) {
+          context.owner().cancelTimer(timerId);
+          listPromise.complete(result.result());
+        }
+      } else {
+        logger.error(result.cause());
+      }
+    };
   }
 
   private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
@@ -544,7 +562,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return records;
   }
 
-  private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String id, long returnedCount, String nextInstanceId) {
+  private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String requestId, long returnedCount, String nextInstanceId) {
     long cursor = request.getOffset();
     if (nextInstanceId == null) {
       return new ResumptionTokenType()
@@ -553,10 +571,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     Map<String, String> extraParams = new HashMap<>();
     extraParams.put(OFFSET_PARAM, String.valueOf(cursor + returnedCount));
-    extraParams.put(REQUEST_ID_PARAM, id);
+    extraParams.put(REQUEST_ID_PARAM, requestId);
     extraParams.put(NEXT_RECORD_ID_PARAM, nextInstanceId);
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
+    }
+    int pk = request.getNextInstancePkValue();
+    if (pk > 0) {
+      extraParams.put(NEXT_INSTANCE_PK_VALUE, String.valueOf(pk));
     }
 
     String resumptionToken = request.toResumptionToken(extraParams);
