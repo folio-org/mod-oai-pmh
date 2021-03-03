@@ -2,37 +2,31 @@ package org.folio.oaipmh.client;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.List;
 
 import org.folio.rest.tools.ClientHelpers;
 import org.folio.rest.tools.utils.VertxUtils;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 //TODO Should be replaced with the SourceStorageSourceRecordsClient from mod-source-record-storage-client
 // when it's upgraded to RMD version 32 and Vert.x version 4
 public class SourceStorageSourceRecordsClient {
   private static final String GLOBAL_PATH = "/source-storage/source-records";
-  private String tenantId;
-  private String token;
-  private String okapiUrl;
+  protected String tenantId;
+  protected String token;
+  protected String okapiUrl;
   private HttpClientOptions options;
   private HttpClient httpClient;
+
+  private static final Logger logger = LoggerFactory.getLogger(SourceStorageSourceRecordsClient.class);
 
   public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token, boolean keepAlive, int connTO, int idleTO) {
     this.tenantId = tenantId;
@@ -48,6 +42,10 @@ public class SourceStorageSourceRecordsClient {
 
   public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token) {
     this(okapiUrl, tenantId, token, true, 2000, 5000);
+  }
+
+  public SourceStorageSourceRecordsClient(SourceStorageSourceRecordsClient client) {
+    this(client.okapiUrl, client.tenantId, client.token, true, 2000, 5000);
   }
 
   public void postSourceStorageSourceRecords(String idType, Boolean deleted, List List, Handler<HttpClientResponse> responseHandler) throws UnsupportedEncodingException, Exception {
@@ -69,6 +67,8 @@ public class SourceStorageSourceRecordsClient {
       buffer.appendString(ClientHelpers.pojo2json(List));
     }
 
+    logger.info("SRS CLIENT: step 1");
+
     HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());
     request.handler(responseHandler);
     request.putHeader("Content-type", "application/json");
@@ -86,6 +86,7 @@ public class SourceStorageSourceRecordsClient {
     request.setChunked(true);
     request.write(buffer);
     request.end();
+    logger.info("SRS CLIENT: step 2");
   }
 
   public void close() {
