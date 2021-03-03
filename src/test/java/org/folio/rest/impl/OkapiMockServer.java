@@ -120,6 +120,7 @@ public class OkapiMockServer {
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
+  private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS = "/configurations.entries/config_invalid_setting_value.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
@@ -127,6 +128,7 @@ public class OkapiMockServer {
   private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   public static final String ERROR_TENANT = "error";
+  public static final String INVALID_CONFIG_TENANT = "invalid_config_value_tenant";
 
   private static final String LOCATION_JSON_PATH = "/filtering-conditions/locations.json";
   private static final String ILL_POLICIES_JSON_PATH = "/filtering-conditions/illPolicies.json";
@@ -265,6 +267,9 @@ public class OkapiMockServer {
       break;
     case EXIST_CONFIG_TENANT_2:
       successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      break;
+    case INVALID_CONFIG_TENANT:
+      successResponse(ctx, getJsonObjectFromFile(CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS));
       break;
     case OAI_TEST_TENANT:
       successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));

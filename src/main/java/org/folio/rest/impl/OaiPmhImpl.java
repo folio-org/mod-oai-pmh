@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -29,7 +28,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import javax.ws.rs.core.Response;
 
@@ -91,7 +89,7 @@ public class OaiPmhImpl implements Oai {
                             Map<String, String> okapiHeaders,
                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
-      .thenAccept(v -> {
+      .onSuccess(v -> {
         try {
           Request.Builder requestBuilder = Request.builder()
             .okapiHeaders(okapiHeaders)
@@ -132,7 +130,6 @@ public class OaiPmhImpl implements Oai {
             String targetMetadataPrefix = request.getMetadataPrefix();
 
             if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
-              //in 2020Q3 change it common approach for all helpers
               verbHelper = MarcWithHoldingsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);
@@ -146,16 +143,9 @@ public class OaiPmhImpl implements Oai {
               }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));
           }
         } catch (Exception e) {
-          asyncResultHandler.handle(getFutureWithErrorResponse());
+          asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
         }
-      }).exceptionally(handleError(asyncResultHandler));
-  }
-
-  private Function<Throwable, Void> handleError(Handler<AsyncResult<Response>> asyncResultHandler) {
-    return throwable -> {
-      asyncResultHandler.handle(getFutureWithErrorResponse());
-      return null;
-    };
+      }).onFailure(throwable -> asyncResultHandler.handle(getFutureWithErrorResponse(throwable.getMessage())));
   }
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
@@ -170,8 +160,8 @@ public class OaiPmhImpl implements Oai {
     return succeededFuture(errorResponse);
   }
 
-  private Future<Response> getFutureWithErrorResponse() {
-    Response errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(GENERIC_ERROR_MESSAGE);
+  private Future<Response> getFutureWithErrorResponse(String errorMessage) {
+    Response errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(errorMessage);
     return succeededFuture(errorResponse);
   }
 

@@ -11,7 +11,6 @@ import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
@@ -21,11 +20,14 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.DeletedRecordType;
 
 import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import me.escoffier.vertx.completablefuture.VertxCompletableFuture;
+import io.vertx.ext.web.client.HttpResponse;
 
 public class RepositoryConfigurationUtil {
 
@@ -46,8 +48,8 @@ public class RepositoryConfigurationUtil {
    * @param ctx          the context
    * @return empty CompletableFuture
    */
-  public static CompletableFuture<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
-    CompletableFuture<Void> future = new VertxCompletableFuture<>(ctx);
+  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
+    Promise<Void> promise = Promise.promise();
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
@@ -56,42 +58,45 @@ public class RepositoryConfigurationUtil {
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, response -> response.bodyHandler(body -> {
-
+      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
         try {
-          if (response.statusCode() != 200) {
-            logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
-              response.statusCode(), body);
-            future.complete(null);
-            return;
+          if (result.succeeded()) {
+            HttpResponse<Buffer> response = result.result();
+            JsonObject body = response.bodyAsJsonObject();
+            if (response.statusCode() != 200) {
+              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
+                response.statusCode(), body);
+              promise.complete(null);
+              return;
+            }
+
+            JsonObject config = new JsonObject();
+            body.getJsonArray(CONFIGS)
+              .stream()
+              .map(object -> (JsonObject) object)
+              .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
+              .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
+
+            JsonObject tenantConfig = ctx.config()
+              .getJsonObject(tenant);
+            if (tenantConfig != null) {
+              tenantConfig.mergeIn(config);
+            } else {
+              ctx.config()
+                .put(tenant, config);
+            }
+            promise.complete(null);
           }
-
-          JsonObject config = new JsonObject();
-          body.toJsonObject()
-            .getJsonArray(CONFIGS)
-            .stream()
-            .map(object -> (JsonObject) object)
-            .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
-            .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
-
-          JsonObject tenantConfig = ctx.config().getJsonObject(tenant);
-          if (tenantConfig != null) {
-            tenantConfig.mergeIn(config);
-          } else {
-            ctx.config().put(tenant, config);
-          }
-
-          future.complete(null);
         } catch (Exception e) {
-          logger.error("Error getting configuration for {} tenant", e, tenant);
-          future.completeExceptionally(e);
+          logger.error("Error occurred while processing configuration for {} tenant", e, tenant);
+          promise.fail(e);
         }
-      }));
+      });
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
-      future.completeExceptionally(e);
+      promise.fail(e);
     }
-    return future;
+    return promise.future();
   }
 
   /**
@@ -109,6 +114,8 @@ public class RepositoryConfigurationUtil {
     }
     return defaultValue;
   }
+
+
 
   public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
     String tenant = TenantTool.tenantId(okapiHeaders);
