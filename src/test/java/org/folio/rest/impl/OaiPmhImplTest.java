@@ -19,6 +19,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
@@ -2182,7 +2183,9 @@ class OaiPmhImplTest {
   @Test
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    final String retryAttempts = System.getProperty(REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+    System.setProperty(REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS, "1");
 
     RequestSpecification request = createBaseRequest()
       .with()
@@ -2196,9 +2199,10 @@ class OaiPmhImplTest {
       .statusCode(500)
       .extract()
       .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
+    String expectedMessage = "SRS didn't respond with expected status code after 1 attempts. Canceling further request processing.";
     assertTrue(body.contains(expectedMessage));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    System.setProperty(REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
   }
 
   @Test

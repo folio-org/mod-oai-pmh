@@ -8,8 +8,6 @@ public final class Constants {
     throw new IllegalStateException("This class holds constants only");
   }
 
-
-
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -25,6 +23,7 @@ public final class Constants {
 
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_MAX_RECORDS_PER_RESPONSE = "repository.maxRecordsPerResponse";
+  public static final String REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS = "repository.httpRequestRetryAttempts";
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";

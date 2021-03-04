@@ -2,6 +2,7 @@ package org.folio.oaipmh.mappers;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.folio.oaipmh.Constants;
 
 /**
  * Mapper is used for mapping names of frontend property names to server names.
@@ -23,6 +24,7 @@ public class PropertyNameMapper {
     frontendToBackendMapper.put("maxRecordsPerResponse", "repository.maxRecordsPerResponse");
     frontendToBackendMapper.put("enableValidation", "jaxb.marshaller.enableValidation");
     frontendToBackendMapper.put("formattedOutput", "jaxb.marshaller.formattedOutput");
+    frontendToBackendMapper.put("httpRequestRetryAttempts", "repository.httpRequestRetryAttempts");
     frontendToBackendMapper.forEach((key, value) -> backendToFrontendMapper.put(value, key));
   }
 
