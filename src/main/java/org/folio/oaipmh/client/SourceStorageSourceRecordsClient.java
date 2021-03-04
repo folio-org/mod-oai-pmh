@@ -41,14 +41,14 @@ public class SourceStorageSourceRecordsClient {
   }
 
   public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token) {
-    this(okapiUrl, tenantId, token, true, 2000, 5000);
+    this(okapiUrl, tenantId, token, true, 2000, 20);
   }
 
   public SourceStorageSourceRecordsClient(SourceStorageSourceRecordsClient client) {
-    this(client.okapiUrl, client.tenantId, client.token, true, 2000, 5000);
+    this(client.okapiUrl, client.tenantId, client.token, true, 2000, 20);
   }
 
-  public void postSourceStorageSourceRecords(String idType, Boolean deleted, List List, Handler<HttpClientResponse> responseHandler) throws UnsupportedEncodingException, Exception {
+  public void postSourceStorageSourceRecords(String idType, Boolean deleted, List List, Handler<HttpClientResponse> responseHandler, Handler<Throwable> exceptionHandler ) throws UnsupportedEncodingException, Exception {
     StringBuilder queryParams = new StringBuilder("?");
     if (idType != null) {
       queryParams.append("idType=");
@@ -71,6 +71,11 @@ public class SourceStorageSourceRecordsClient {
 
     HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());
     request.handler(responseHandler);
+    request.exceptionHandler(e-> {
+      logger.error("SRS response error 1234: " + e.getMessage(), e);
+      exceptionHandler.handle(e);
+    });
+    request.setTimeout(10000);
     request.putHeader("Content-type", "application/json");
     request.putHeader("Accept", "application/json,text/plain");
     if (this.tenantId != null) {

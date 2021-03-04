@@ -731,40 +731,48 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       List<String> listOfIds, AtomicInteger attemptsCount, Promise<Map<String, JsonObject>> promise) {
     try {
       logger.info("Step 20");
-      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds,
-          srsResponse -> srsResponse.bodyHandler(buffer -> {
-            logger.info("Step 20.1 srs call handler, status code: " + srsResponse.statusCode());
-            int statusCode = srsResponse.statusCode();
-            String statusMessage = srsResponse.statusMessage();
-
-            if (statusCode >= 400) {
-              String warnMessage = "Got error response form SRS, status code: " + statusCode + ", status message: " + statusMessage;
-              logger.debug(warnMessage);
-              if (attemptsCount.get() <= 0) {
-                String errorMessage = "SRS didn't respond with expected status code after " + REQUEST_ATTEMPTS
-                    + " attempts. Canceling further request processing.";
-                srsClient.close();
-                handleException(promise, new IllegalStateException(errorMessage));
-                return;
-              }
-              logger.debug("Trying to request SRS again, attempts left: " + attemptsCount.decrementAndGet());
-              srsClient.close();
-              vertx.setTimer(REREQUEST_SRS_DELAY,
-                  timer -> doPostRequestToSrs(new SourceStorageSourceRecordsClient(srsClient), vertx, deletedRecordSupport, listOfIds, attemptsCount, promise));
-              return;
-            } if (statusCode != 200) {
-              String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResponse.request()
-                .absoluteURI(), srsResponse.statusMessage());
-              srsClient.close();
-              handleException(promise, new IllegalStateException(errorMsg));
-              return;
-            }
-            logger.info("Step 20.2Before srs body handler");
-            handleSrsResponse(srsClient, promise, buffer);
-          }));
+      srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResponse -> {
+        int statusCode = srsResponse.statusCode();
+        String statusMessage = srsResponse.statusMessage();
+        logger.info("Step 20.1 (srs call handler) status code: " + statusCode + ", status message: " + statusMessage);
+        srsResponse.exceptionHandler(e -> {logger.error("SRS response error: " + e.getMessage(), e);
+            retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, statusCode, statusMessage);
+        });
+        if (statusCode >= 400) {
+          retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, statusCode, statusMessage);
+            return;
+        }
+        if (statusCode != 200) {
+          String errorMsg = getErrorFromStorageMessage("source-record-storage", srsResponse.request()
+            .absoluteURI(), srsResponse.statusMessage());
+          srsClient.close();
+          handleException(promise, new IllegalStateException(errorMsg));
+          return;
+        }
+        logger.info("Step 20.2 Before srs body handler");
+        srsResponse.bodyHandler(buffer -> {
+          logger.info("Step 20.3 inside srs body handler");
+          handleSrsResponse(srsClient, promise, buffer);
+        });
+      }, e->  retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, 400, "Error in SRS response"));
     } catch (Exception e) {
       handleException(promise, e);
     }
+  }
+
+  private void retrySRSRequest(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport, List<String> listOfIds, AtomicInteger attemptsCount, Promise<Map<String, JsonObject>> promise, int statusCode, String statusMessage) {
+    String warnMessage = "Got error response form SRS, status code: " + statusCode + ", status message: " + statusMessage;
+    logger.debug(warnMessage);
+    if (attemptsCount.get() <= 0) {
+      String errorMessage = "SRS didn't respond with expected status code after " + REQUEST_ATTEMPTS
+          + " attempts. Canceling further request processing.";
+      srsClient.close();
+      handleException(promise, new IllegalStateException(errorMessage));
+      return ;
+    }
+    logger.debug("Trying to request SRS again, attempts left: " + attemptsCount.decrementAndGet());
+    srsClient.close();
+    vertx.setTimer(REREQUEST_SRS_DELAY, timer -> doPostRequestToSrs(new SourceStorageSourceRecordsClient(srsClient), vertx, deletedRecordSupport, listOfIds, attemptsCount, promise));
   }
 
   private void handleSrsResponse(SourceStorageSourceRecordsClient srsClient, Promise<Map<String, JsonObject>> promise,
