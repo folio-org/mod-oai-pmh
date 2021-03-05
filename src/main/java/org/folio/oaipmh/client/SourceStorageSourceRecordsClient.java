@@ -67,7 +67,6 @@ public class SourceStorageSourceRecordsClient {
       buffer.appendString(ClientHelpers.pojo2json(List));
     }
 
-    logger.info("SRS CLIENT: step 1");
 
     HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());
     request.handler(responseHandler);
@@ -91,7 +90,6 @@ public class SourceStorageSourceRecordsClient {
     request.setChunked(true);
     request.write(buffer);
     request.end();
-    logger.info("SRS CLIENT: step 2");
   }
 
   public void close() {
