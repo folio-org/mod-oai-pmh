@@ -389,9 +389,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       return;
     }
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
-      .compose(requestMetadata -> {
-        return Future.succeededFuture(requestMetadata.getStreamEnded());
-      })
+      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded ->
       {
         if (firstBatch) {
@@ -723,9 +721,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           handleException(promise, new IllegalStateException(errorMsg));
           return;
         }
-        srsResponse.bodyHandler(buffer -> {
-          handleSrsResponse(srsClient, promise, buffer);
-        });
+        srsResponse.bodyHandler(buffer -> handleSrsResponse(srsClient, promise, buffer));
       }, e->  retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, 400, "Error in SRS response"));
     } catch (Exception e) {
       handleException(promise, e);
