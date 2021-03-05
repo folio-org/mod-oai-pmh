@@ -46,7 +46,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-@Disabled
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class CleanUpJobTest extends AbstractInstancesTest {
