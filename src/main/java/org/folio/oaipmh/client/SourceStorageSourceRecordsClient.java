@@ -19,16 +19,21 @@ import io.vertx.core.logging.LoggerFactory;
 //TODO Should be replaced with the SourceStorageSourceRecordsClient from mod-source-record-storage-client
 // when it's upgraded to RMD version 32 and Vert.x version 4
 public class SourceStorageSourceRecordsClient {
+
+  private static final Logger logger = LoggerFactory.getLogger(SourceStorageSourceRecordsClient.class);
+
   private static final String GLOBAL_PATH = "/source-storage/source-records";
+  private static final int DEFAULT_SRS_TIMEOUT = 10000;
+  private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
+  private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
+
   protected String tenantId;
   protected String token;
   protected String okapiUrl;
   private HttpClientOptions options;
   private HttpClient httpClient;
 
-  private static final Logger logger = LoggerFactory.getLogger(SourceStorageSourceRecordsClient.class);
-
-  public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token, boolean keepAlive, int connTO, int idleTO) {
+  public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token, boolean keepAlive, int connTO, int idleTimeoutSec) {
     this.tenantId = tenantId;
     this.token = token;
     this.okapiUrl = okapiUrl;
@@ -36,16 +41,16 @@ public class SourceStorageSourceRecordsClient {
     this.options.setLogActivity(true);
     this.options.setKeepAlive(keepAlive);
     this.options.setConnectTimeout(connTO);
-    this.options.setIdleTimeout(idleTO);
+    this.options.setIdleTimeout(idleTimeoutSec);
     this.httpClient = VertxUtils.getVertxFromContextOrNew().createHttpClient(this.options);
   }
 
   public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token) {
-    this(okapiUrl, tenantId, token, true, 2000, 20);
+    this(okapiUrl, tenantId, token, true, DEFAULT_CONNECTION_TIMEOUT_MS, DEFAULT_IDLE_TIMEOUT_SEC);
   }
 
   public SourceStorageSourceRecordsClient(SourceStorageSourceRecordsClient client) {
-    this(client.okapiUrl, client.tenantId, client.token, true, 2000, 20);
+    this(client.okapiUrl, client.tenantId, client.token, true, DEFAULT_CONNECTION_TIMEOUT_MS, DEFAULT_IDLE_TIMEOUT_SEC);
   }
 
   public void postSourceStorageSourceRecords(String idType, Boolean deleted, List List, Handler<HttpClientResponse> responseHandler, Handler<Throwable> exceptionHandler ) throws UnsupportedEncodingException, Exception {
@@ -67,14 +72,13 @@ public class SourceStorageSourceRecordsClient {
       buffer.appendString(ClientHelpers.pojo2json(List));
     }
 
-
-    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + "/source-storage/source-records" + queryParams.toString());
+    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + GLOBAL_PATH + queryParams.toString());
     request.handler(responseHandler);
     request.exceptionHandler(e-> {
-      logger.error("SRS response error 1234: " + e.getMessage(), e);
+      logger.error("Error has been occurred while requesting SRS: " + e.getMessage(), e);
       exceptionHandler.handle(e);
     });
-    request.setTimeout(10000);
+    request.setTimeout(DEFAULT_SRS_TIMEOUT);
     request.putHeader("Content-type", "application/json");
     request.putHeader("Accept", "application/json,text/plain");
     if (this.tenantId != null) {

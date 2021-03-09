@@ -11,7 +11,7 @@ import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
@@ -227,7 +227,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
 
-        int retryAttempts = Integer.parseInt(RepositoryConfigurationUtil.getProperty(request.getTenant(), REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS));
+        int retryAttempts = Integer.parseInt(RepositoryConfigurationUtil.getProperty(request.getTenant(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
         requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
           .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res,
           firstBatch, nextInstanceId, deletedRecordSupport).onSuccess(oaiPmhResponsePromise::complete)
@@ -429,7 +429,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
     enrichInventoryClientRequest.end(entries.encode());
 
-
     AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(PostgresClientFactory.getPool(context.owner(), request.getTenant())));
@@ -438,7 +437,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       completePromise.fail(ex);
       return completePromise.future();
     }
-
 
     enrichedInstancesStream.setCapacityChecker(() -> queue.get().size() > 20);
 
@@ -707,8 +705,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       srsClient.postSourceStorageSourceRecords("INSTANCE", deletedRecordSupport, listOfIds, srsResponse -> {
         int statusCode = srsResponse.statusCode();
         String statusMessage = srsResponse.statusMessage();
-        srsResponse.exceptionHandler(e -> {logger.error("SRS response error: " + e.getMessage(), e);
-            retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode, statusMessage);
+        srsResponse.exceptionHandler(e -> {
+          logger.error("Error has been occurred while requesting SRS: " + e.getMessage(), e);
+          retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode, statusMessage);
         });
         if (statusCode >= 400) {
           retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode, statusMessage);
@@ -722,15 +721,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           return;
         }
         srsResponse.bodyHandler(buffer -> handleSrsResponse(srsClient, promise, buffer));
-      }, e->  retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, 400, "Error in SRS response"));
+      }, e->  retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, 0, null));
     } catch (Exception e) {
       handleException(promise, e);
     }
   }
 
   private void retrySRSRequest(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport, List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise, int statusCode, String statusMessage) {
-    String warnMessage = "Got error response form SRS, status code: " + statusCode + ", status message: " + statusMessage;
-    logger.debug(warnMessage);
+    if(statusCode > 0) {
+      logger.debug("Got error response form SRS, status code: " + statusCode + ", status message: " + statusMessage);
+    } else {
+      logger.debug("Error has been occurred while requesting SRS");
+    }
     if (attemptsCount.decrementAndGet() <= 0) {
       String errorMessage = "SRS didn't respond with expected status code after " + retryAttempts
           + " attempts. Canceling further request processing.";

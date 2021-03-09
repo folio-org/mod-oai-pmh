@@ -23,7 +23,7 @@ public final class Constants {
 
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_MAX_RECORDS_PER_RESPONSE = "repository.maxRecordsPerResponse";
-  public static final String REPOSITORY_HTTP_REQUEST_RETRY_ATTEMPTS = "repository.httpRequestRetryAttempts";
+  public static final String REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS = "repository.srsHttpRequestRetryAttempts";
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";
