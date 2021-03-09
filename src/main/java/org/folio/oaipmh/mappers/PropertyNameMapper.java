@@ -24,7 +24,7 @@ public class PropertyNameMapper {
     frontendToBackendMapper.put("maxRecordsPerResponse", "repository.maxRecordsPerResponse");
     frontendToBackendMapper.put("enableValidation", "jaxb.marshaller.enableValidation");
     frontendToBackendMapper.put("formattedOutput", "jaxb.marshaller.formattedOutput");
-    frontendToBackendMapper.put("httpRequestRetryAttempts", "repository.srsHttpRequestRetryAttempts");
+    frontendToBackendMapper.put("srsHttpRequestRetryAttempts", "repository.srsHttpRequestRetryAttempts");
     frontendToBackendMapper.forEach((key, value) -> backendToFrontendMapper.put(value, key));
   }
 
