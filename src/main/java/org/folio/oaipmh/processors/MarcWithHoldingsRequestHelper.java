@@ -175,7 +175,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             blockingFeature -> downloadInstances(request, promise, blockingFeature, downloadContext, requestId),
             asyncResult -> {
               instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
-              logger.info("Downloading instances complete");
+              if (asyncResult.succeeded()) {
+                logger.info("Downloading instances complete");
+              } else {
+                logger.error("Downloading instances was canceled due to the error. ", asyncResult.cause());
+              }
             });
         }
       }).onFailure(th -> handleException(promise, th));
@@ -247,7 +251,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setConnectTimeout(REQUEST_TIMEOUT);
     HttpClient httpClient = vertxContext.owner().createHttpClient(options);
     HttpClientRequest httpClientRequest = buildInventoryQuery(httpClient, request);
-    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, oaiPmhResponsePromise, httpClientRequest, vertxContext);
+    BatchStreamWrapper databaseWriteStream = getBatchHttpStream(httpClient, downloadInstancesPromise, httpClientRequest, vertxContext);
     httpClientRequest.sendHead();
 
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
@@ -334,9 +338,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         })
           .exceptionHandler(throwable -> {
             logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-              databaseWriteStream.end();
-              inventoryHttpClient.close();
-              promise.fail(throwable);
+            databaseWriteStream.end();
+            inventoryHttpClient.close();
+            promise.fail(throwable);
           });
       }
     });
@@ -679,6 +683,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private HttpClientRequest createEnrichInventoryClientRequest(HttpClient httpClient, Request request) {
     final HttpClientRequest httpClientRequest = httpClient
+
       .postAbs(format("%s%s", request.getOkapiUrl(), INVENTORY_INSTANCES_ENDPOINT));
 
     httpClientRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
