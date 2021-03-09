@@ -3,10 +3,10 @@ package org.folio.oaipmh.helpers.streaming;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
-import com.sun.jdi.PrimitiveValue;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -28,7 +28,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private volatile boolean streamEnded = false;
 
   private volatile boolean endedWithError = false;
-  private volatile Throwable cause;
+  private AtomicReference<Throwable> cause;
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
@@ -144,11 +144,11 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   public Throwable getCause() {
-    return cause;
+    return cause.get();
   }
 
   public synchronized void endWithError(Throwable cause) {
-    this.cause = cause;
+    this.cause.set(cause);
     this.endedWithError = true;
     end();
   }
