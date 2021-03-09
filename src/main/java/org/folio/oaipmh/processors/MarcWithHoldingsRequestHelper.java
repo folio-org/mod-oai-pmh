@@ -11,8 +11,8 @@ import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -179,6 +179,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 logger.info("Downloading instances complete");
               } else {
                 logger.error("Downloading instances was canceled due to the error. ", asyncResult.cause());
+                if (!promise.future().isComplete()) {
+                  promise.fail(new IllegalStateException(asyncResult.cause()));
+                }
               }
             });
         }
@@ -275,7 +278,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
 
       if (databaseWriteStream.isTheLastBatch()) {
-        downloadInstancesPromise.complete();
+        if (databaseWriteStream.isEndedWithError()) {
+          downloadInstancesPromise.fail(databaseWriteStream.getCause());
+        } else {
+          downloadInstancesPromise.complete();
+        }
       }
 
       databaseWriteStream.invokeDrainHandler();
@@ -338,9 +345,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         })
           .exceptionHandler(throwable -> {
             logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-            databaseWriteStream.end();
+            databaseWriteStream.endWithError(throwable);
             inventoryHttpClient.close();
-            promise.fail(throwable);
+            if (!promise.future().isComplete()) {
+              promise.fail(throwable);
+            }
           });
       }
     });

@@ -6,6 +6,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
+import com.sun.jdi.PrimitiveValue;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -25,6 +26,9 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private volatile int batchSize;
 
   private volatile boolean streamEnded = false;
+
+  private volatile boolean endedWithError = false;
+  private volatile Throwable cause;
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
@@ -133,6 +137,20 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public boolean isStreamEnded() {
     return streamEnded;
+  }
+
+  public boolean isEndedWithError() {
+    return endedWithError;
+  }
+
+  public Throwable getCause() {
+    return cause;
+  }
+
+  public synchronized void endWithError(Throwable cause) {
+    this.cause = cause;
+    this.endedWithError = true;
+    end();
   }
 
   public Long getReturnedCount() {
