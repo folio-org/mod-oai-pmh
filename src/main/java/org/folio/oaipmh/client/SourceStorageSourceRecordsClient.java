@@ -74,10 +74,7 @@ public class SourceStorageSourceRecordsClient {
 
     HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + GLOBAL_PATH + queryParams.toString());
     request.handler(responseHandler);
-    request.exceptionHandler(e-> {
-      logger.error("Error has been occurred while requesting SRS: " + e.getMessage(), e);
-      exceptionHandler.handle(e);
-    });
+    request.exceptionHandler(exceptionHandler);
     request.setTimeout(DEFAULT_SRS_TIMEOUT);
     request.putHeader("Content-type", "application/json");
     request.putHeader("Accept", "application/json,text/plain");
