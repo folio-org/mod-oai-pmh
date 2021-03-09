@@ -145,12 +145,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
    */
   @Override
   public Future<Response> handle(Request request, Context vertxContext) {
-    Promise<Response> promise = Promise.promise();
+    Promise<Response> oaipmhResponsePromise = Promise.promise();
     try {
       String resumptionToken = request.getResumptionToken();
       List<OAIPMHerrorType> errors = validateListRequest(request);
       if (!errors.isEmpty()) {
-        return buildResponseWithErrors(request, promise, errors);
+        return buildResponseWithErrors(request, oaipmhResponsePromise, errors);
       }
 
       String requestId;
@@ -169,27 +169,27 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null;
-        processBatch(request, vertxContext, promise, requestId, isFirstBatch);
+        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch);
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(
-            blockingFeature -> downloadInstances(request, promise, blockingFeature, downloadContext, requestId),
-            asyncResult -> {
+            downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise, downloadInstancesPromise, downloadContext, requestId),
+            downloadInstancesResult -> {
               instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
-              if (asyncResult.succeeded()) {
+              if (downloadInstancesResult.succeeded()) {
                 logger.info("Downloading instances complete");
               } else {
-                logger.error("Downloading instances was canceled due to the error. ", asyncResult.cause());
-                if (!promise.future().isComplete()) {
-                  promise.fail(new IllegalStateException(asyncResult.cause()));
+                logger.error("Downloading instances was canceled due to the error. ", downloadInstancesResult.cause());
+                if (!oaipmhResponsePromise.future().isComplete()) {
+                  oaipmhResponsePromise.fail(new IllegalStateException(downloadInstancesResult.cause()));
                 }
               }
             });
         }
-      }).onFailure(th -> handleException(promise, th));
+      }).onFailure(th -> handleException(oaipmhResponsePromise, th));
     } catch (Exception e) {
-      handleException(promise, e);
+      handleException(oaipmhResponsePromise, e);
     }
-    return promise.future();
+    return oaipmhResponsePromise.future();
   }
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId, boolean firstBatch) {
