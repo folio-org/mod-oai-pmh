@@ -83,6 +83,7 @@ public class OkapiMockServer {
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
   static final String DATE_SRS_500_ERROR_RESPONSE = "1388-02-02";
+  static final String DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE = "1388-03-03";
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
@@ -98,6 +99,7 @@ public class OkapiMockServer {
   static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID = "7b6d9a58-ab67-414b-a33f-7db11ea16178";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500 = "927ee35f-700c-4fdd-a7e9-b560861d6900";
+  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT = "d93c7b03-6343-4956-bfbc-2981b3741830";
   private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
 
   // Paths to json files
@@ -139,6 +141,7 @@ public class OkapiMockServer {
   private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500_JSON = "instance_id_to_make_srs_fail_with_502.json";
+  private static final String INSTANCE_ID_SRS_TIMEOUT_JSON = "instance_id_to_make_srs_fail_with_timeout.json";
   private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
@@ -218,6 +221,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON);
       } else if (uri.contains(DATE_SRS_500_ERROR_RESPONSE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500_JSON);
+      } else if (uri.contains(DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_ID_SRS_TIMEOUT_JSON);
       }else if (uri.contains(EMPTY_INSTANCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
@@ -309,6 +314,14 @@ public class OkapiMockServer {
       if(attemptsCount > 0) {
         attemptsCount--;
         failureResponse(ctx, 502, "Bad Gateway");
+      } else {
+        attemptsCount = 1;
+        successResponse(ctx, generateSrsPostResponseForInstanceIds(instanceIds));
+      }
+    } else if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT)) {
+      if(attemptsCount > 0) {
+        attemptsCount--;
+        vertx.setTimer(20000, timerId -> successResponse(ctx, ""));
       } else {
         successResponse(ctx, generateSrsPostResponseForInstanceIds(instanceIds));
       }

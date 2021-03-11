@@ -1,5 +1,6 @@
 package org.folio.oaipmh.client;
 
+import static java.lang.String.format;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
 
 import java.io.UnsupportedEncodingException;
@@ -27,10 +28,11 @@ public class SourceStorageSourceRecordsClient {
 
   private static final Logger logger = LoggerFactory.getLogger(SourceStorageSourceRecordsClient.class);
 
-  private static final String GLOBAL_PATH = "/source-storage/source-records";
+  private static final String SOURCE_RECORDS_PATH = "/source-storage/source-records";
   private static final int DEFAULT_SRS_TIMEOUT = 10000;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
   private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
+  private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds";
 
   protected String tenantId;
   protected String token;
@@ -77,7 +79,7 @@ public class SourceStorageSourceRecordsClient {
       buffer.appendString(ClientHelpers.pojo2json(List));
     }
 
-    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + GLOBAL_PATH + queryParams.toString());
+    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + SOURCE_RECORDS_PATH + queryParams.toString());
     request.handler(responseHandler);
     request.exceptionHandler(exceptionHandler);
     request.setTimeout(DEFAULT_SRS_TIMEOUT);
@@ -109,8 +111,11 @@ public class SourceStorageSourceRecordsClient {
       .map(config -> config.getString(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, defaultValue))
       .orElse(defaultValue);
     try {
-      return Integer.parseInt(val);
+      int configValue = Integer.parseInt(val);
+      logger.debug(format("Setup client with idle timeout '%s' seconds", configValue));
+      return configValue;
     } catch (Exception e) {
+      logger.error(GET_IDLE_TIMEOUT_ERROR_MESSAGE, e);
       return DEFAULT_IDLE_TIMEOUT_SEC;
     }
   }
