@@ -1,13 +1,18 @@
 package org.folio.oaipmh.client;
 
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.folio.rest.tools.ClientHelpers;
 import org.folio.rest.tools.utils.VertxUtils;
 
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
@@ -33,7 +38,7 @@ public class SourceStorageSourceRecordsClient {
   private HttpClientOptions options;
   private HttpClient httpClient;
 
-  public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token, boolean keepAlive, int connTO, int idleTimeoutSec) {
+  public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token, boolean keepAlive, int connTO) {
     this.tenantId = tenantId;
     this.token = token;
     this.okapiUrl = okapiUrl;
@@ -41,16 +46,16 @@ public class SourceStorageSourceRecordsClient {
     this.options.setLogActivity(true);
     this.options.setKeepAlive(keepAlive);
     this.options.setConnectTimeout(connTO);
-    this.options.setIdleTimeout(idleTimeoutSec);
+    this.options.setIdleTimeout(getIdleTimeout(tenantId));
     this.httpClient = VertxUtils.getVertxFromContextOrNew().createHttpClient(this.options);
   }
 
   public SourceStorageSourceRecordsClient(String okapiUrl, String tenantId, String token) {
-    this(okapiUrl, tenantId, token, true, DEFAULT_CONNECTION_TIMEOUT_MS, DEFAULT_IDLE_TIMEOUT_SEC);
+    this(okapiUrl, tenantId, token, true, DEFAULT_CONNECTION_TIMEOUT_MS);
   }
 
   public SourceStorageSourceRecordsClient(SourceStorageSourceRecordsClient client) {
-    this(client.okapiUrl, client.tenantId, client.token, true, DEFAULT_CONNECTION_TIMEOUT_MS, DEFAULT_IDLE_TIMEOUT_SEC);
+    this(client.okapiUrl, client.tenantId, client.token, true, DEFAULT_CONNECTION_TIMEOUT_MS);
   }
 
   public void postSourceStorageSourceRecords(String idType, Boolean deleted, List List, Handler<HttpClientResponse> responseHandler, Handler<Throwable> exceptionHandler ) throws UnsupportedEncodingException, Exception {
@@ -96,4 +101,18 @@ public class SourceStorageSourceRecordsClient {
   public void close() {
     httpClient.close();
   }
+
+  private int getIdleTimeout(String tenantId) {
+    String property = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+    final String defaultValue = Objects.nonNull(property) ? property : String.valueOf(DEFAULT_IDLE_TIMEOUT_SEC);
+    String val = Optional.ofNullable(Vertx.currentContext().config().getJsonObject(tenantId))
+      .map(config -> config.getString(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, defaultValue))
+      .orElse(defaultValue);
+    try {
+      return Integer.parseInt(val);
+    } catch (Exception e) {
+      return DEFAULT_IDLE_TIMEOUT_SEC;
+    }
+  }
+
 }

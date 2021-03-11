@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static javax.xml.XMLConstants.W3C_XML_SCHEMA_NS_URI;
+import static org.folio.oaipmh.Constants.JAXB_MARSHALLER_ENABLE_VALIDATION;
+import static org.folio.oaipmh.Constants.JAXB_MARSHALLER_FORMATTED_OUTPUT;
 
 @SuppressWarnings("squid:S1191") //The com.sun.xml.bind.marshaller.NamespacePrefixMapper is part of jaxb logic
 public class ResponseConverter {
@@ -68,7 +70,7 @@ public class ResponseConverter {
   private ResponseConverter() throws JAXBException, SAXException {
     jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class, OaiIdentifier.class, ObjectFactory.class);
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
-    if (Boolean.parseBoolean(System.getProperty("jaxb.marshaller.enableValidation", Boolean.TRUE.toString()))) {
+    if (Boolean.parseBoolean(System.getProperty(JAXB_MARSHALLER_ENABLE_VALIDATION, Boolean.TRUE.toString()))) {
       ClassLoader classLoader = this.getClass().getClassLoader();
       StreamSource[] streamSources = {
         new StreamSource(classLoader.getResourceAsStream(RESPONSE_SCHEMA)),
@@ -105,7 +107,7 @@ public class ResponseConverter {
       jaxbMarshaller.setProperty(Marshaller.JAXB_SCHEMA_LOCATION,
         "http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd");
       // Specifying if output should be formatted
-      jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.parseBoolean(System.getProperty("jaxb.marshaller.formattedOutput")));
+      jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.parseBoolean(System.getProperty(JAXB_MARSHALLER_FORMATTED_OUTPUT)));
       // needed to replace the namespace prefixes with a more readable format.
       jaxbMarshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", namespacePrefixMapper);
       jaxbMarshaller.marshal(response, writer);
