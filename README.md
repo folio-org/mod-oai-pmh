@@ -54,7 +54,8 @@ OAI-PMH | `repository.maxRecordsPerResponse` | `100` | The maximum number of rec
 OAI-PMH | `jaxb.marshaller.enableValidation` | `false` | Boolean value which defines if the response content should be validated against xsd schemas.
 OAI-PMH | `jaxb.marshaller.formattedOutput` | `false` | Boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation.
 OAI-PMH | `repository.errorsProcessing` | `500` | Defines in which way OAI-PMH level errors are going to be processed. `200` -  OAI-PMH level error is associated with HTTP status 200. `500` - OAI-PMH level error may be associated with HTTP error status (4xx or 5xx). 
-OAI-PMH | `repository.enableOaiService` | `true` | Defines whether an OAI-PMH module is accessible in the repository. If `false`, then all other OAI-PMH settings are disabled and repository responds with 503.
+OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50` | Property is used in marc21_withholdings metadata prefix handler. If SRS returns an incorrect response then the same request will be sent again up to 50 times until the expected response will not be received or all 50 attempts will fail which leads to error response.
+OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20` | The idle timeout for requests to SRS.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>
