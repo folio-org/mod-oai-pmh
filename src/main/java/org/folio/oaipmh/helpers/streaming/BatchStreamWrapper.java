@@ -28,7 +28,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private volatile boolean streamEnded = false;
 
   private volatile boolean endedWithError = false;
-  private AtomicReference<Throwable> cause;
+  private AtomicReference<Throwable> cause = new AtomicReference<>();
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
