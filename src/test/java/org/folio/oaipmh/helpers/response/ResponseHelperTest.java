@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers.response;
 
+import static org.folio.oaipmh.Constants.REPOSITORY_ERRORS_PROCESSING;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -183,7 +184,7 @@ class ResponseHelperTest {
   }
 
   private void setupErrorsProcessingSettingWithValue(String value) {
-    System.setProperty("repository.errorsProcessing", value);
+    System.setProperty(REPOSITORY_ERRORS_PROCESSING, value);
   }
 
   private Map<OAIPMHerrorcodeType, OAIPMH> buildOaipmhResponsesWithError() {

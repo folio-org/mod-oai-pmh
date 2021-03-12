@@ -76,12 +76,12 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-sql-client</artifactId>
-        <version>${vertx.version}-FOLIO</version>
+        <version>3.9.4-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-pg-client</artifactId>
-        <version>${vertx.version}-FOLIO</version>
+        <version>3.9.4-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>org.junit</groupId>
@@ -119,7 +119,7 @@
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
     <raml-module-builder.version>31.1.5</raml-module-builder.version>
-    <vertx.version>3.9.4</vertx.version>
+    <vertx.version>3.9.6</vertx.version>
     <vertx-completable-future.version>0.1.2</vertx-completable-future.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
     <apache-commons-lang3.version>3.9</apache-commons-lang3.version>

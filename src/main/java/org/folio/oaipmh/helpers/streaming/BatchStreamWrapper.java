@@ -3,6 +3,7 @@ package org.folio.oaipmh.helpers.streaming;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
@@ -25,6 +26,9 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private volatile int batchSize;
 
   private volatile boolean streamEnded = false;
+
+  private volatile boolean endedWithError = false;
+  private AtomicReference<Throwable> cause = new AtomicReference<>();
 
   private final List<JsonEvent> dataList = new CopyOnWriteArrayList<>();
 
@@ -133,6 +137,20 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public boolean isStreamEnded() {
     return streamEnded;
+  }
+
+  public boolean isEndedWithError() {
+    return endedWithError;
+  }
+
+  public Throwable getCause() {
+    return cause.get();
+  }
+
+  public synchronized void endWithError(Throwable cause) {
+    this.cause.set(cause);
+    this.endedWithError = true;
+    end();
   }
 
   public Long getReturnedCount() {

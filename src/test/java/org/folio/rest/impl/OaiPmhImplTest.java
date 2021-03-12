@@ -19,6 +19,8 @@ import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
@@ -37,6 +39,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
@@ -2180,9 +2183,28 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void shouldRerequestSrs_whenGetOaiRecordsMarc21WithHoldingsWithTimeoutErrorFromSrs() {
+    String idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
+
+    RequestSpecification listRecordRequest = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 1);
+
+    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, idleTimeout);
+  }
+
+  @Test
   void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    final String retryAttempts = System.getProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, "1");
 
     RequestSpecification request = createBaseRequest()
       .with()
@@ -2196,9 +2218,10 @@ class OaiPmhImplTest {
       .statusCode(500)
       .extract()
       .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "source-record-storage");
+    String expectedMessage = "SRS didn't respond with expected status code after 1 attempts. Canceling further request processing.";
     assertTrue(body.contains(expectedMessage));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
   }
 
   @Test

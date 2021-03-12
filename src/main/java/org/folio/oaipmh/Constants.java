@@ -9,7 +9,6 @@ public final class Constants {
   }
 
 
-
   /**
    * Strict ISO Date and Time with UTC offset.
    * Represents {@linkplain org.openarchives.oai._2.GranularityType#YYYY_MM_DD_THH_MM_SS_Z YYYY_MM_DD_THH_MM_SS_Z} granularity
@@ -23,8 +22,12 @@ public final class Constants {
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
   public static final String OKAPI_TOKEN = "X-Okapi-Token";
 
+  public static final String JAXB_MARSHALLER_FORMATTED_OUTPUT = "jaxb.marshaller.formattedOutput";
+  public static final String JAXB_MARSHALLER_ENABLE_VALIDATION = "jaxb.marshaller.enableValidation";
   public static final String REPOSITORY_BASE_URL = "repository.baseURL";
   public static final String REPOSITORY_MAX_RECORDS_PER_RESPONSE = "repository.maxRecordsPerResponse";
+  public static final String REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS = "repository.srsHttpRequestRetryAttempts";
+  public static final String REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC = "repository.srsClientIdleTimeoutSec";
   public static final String REPOSITORY_NAME = "repository.name";
   public static final String REPOSITORY_ADMIN_EMAILS = "repository.adminEmails";
   public static final String REPOSITORY_TIME_GRANULARITY = "repository.timeGranularity";

@@ -2,5 +2,5 @@
   "module" : "OAIPMH",
   "configName" : "technical",
   "enabled" : true,
-  "value" : "{\"maxRecordsPerResponse\":\"100\",\"enableValidation\":false,\"formattedOutput\":false}"
+  "value" : "{\"maxRecordsPerResponse\":\"100\",\"enableValidation\":false,\"formattedOutput\":false,\"srsHttpRequestRetryAttempts\":\"50\",\"srsClientIdleTimeoutSec\":\"20\"}"
 }
