@@ -106,7 +106,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             }
           });
         } else {
-          logger.error(request.getVerb().value() + " response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+          logger.error(request.getVerb().value() + " response from SRS status code: {0}: {1}", response.statusMessage(), response.statusCode());
           throw new IllegalStateException(response.statusMessage());
         }
       } catch (Exception e) {
@@ -121,7 +121,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonArray instances = storageHelper.getItems(instancesResponseBody);
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
 
-    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
+    logger.debug("{0} entries retrieved out of {1}", instances != null ? instances.size() : 0, totalRecords);
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
@@ -176,7 +176,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+              logger.error("Error occurred while converting record to xml representation. {0}", e, e.getMessage());
               logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
               return;
             }
@@ -223,7 +223,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
     if (!records.isEmpty()) {
-      logger.debug("{} records found for the request.", records.size());
+      logger.debug("{0} records found for the request.", records.size());
       oaipmh.withListRecords(new ListRecordsType().withRecords(records));
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());

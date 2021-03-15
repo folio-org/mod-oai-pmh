@@ -137,7 +137,7 @@ public class OaiPmhImpl implements Oai {
             verbHelper
               .handle(request, vertxContext)
               .compose(response -> {
-                logger.debug(verb + " response: {}", response.getEntity());
+                logger.debug(verb + " response: {0}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
               }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));

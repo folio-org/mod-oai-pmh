@@ -64,8 +64,8 @@ public class RepositoryConfigurationUtil {
             HttpResponse<Buffer> response = result.result();
             JsonObject body = response.bodyAsJsonObject();
             if (response.statusCode() != 200) {
-              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
-                response.statusCode(), body);
+              logger.error("Error getting configuration for {0} tenant. Expected status code 200 but was {1}: {2}",
+                tenant, response.statusCode(), body);
               promise.complete(null);
               return;
             }
@@ -88,12 +88,12 @@ public class RepositoryConfigurationUtil {
             promise.complete(null);
           }
         } catch (Exception e) {
-          logger.error("Error occurred while processing configuration for {} tenant", e, tenant);
+          logger.error("Error occurred while processing configuration for {0} tenant", e, tenant);
           promise.fail(e);
         }
       });
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
+      logger.error("Error happened initializing mod-configurations client for {0} tenant", e, tenant);
       promise.fail(e);
     }
     return promise.future();

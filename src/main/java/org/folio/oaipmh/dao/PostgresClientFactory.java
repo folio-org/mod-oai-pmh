@@ -90,14 +90,14 @@ public class PostgresClientFactory {
   private static PgPool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
-      LOG.debug("Using existing database connection pool for tenant {}", tenantId);
+      LOG.debug("Using existing database connection pool for tenant {0}", tenantId);
       return POOL_CACHE.get(tenantId);
     }
     if (shouldResetPool) {
       POOL_CACHE.remove(tenantId);
       shouldResetPool = false;
     }
-    LOG.info("Creating new database connection pool for tenant {}", tenantId);
+    LOG.info("Creating new database connection pool for tenant {0}", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId);
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
     PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);

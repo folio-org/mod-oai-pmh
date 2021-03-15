@@ -19,6 +19,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import joptsimple.internal.Strings;
 
 @Service
 public class InstancesServiceImpl implements InstancesService {
@@ -38,6 +39,7 @@ public class InstancesServiceImpl implements InstancesService {
       .onSuccess(ids -> {
         List<Future> futures = new ArrayList<>();
         if (isNotEmpty(ids)) {
+          logger.debug("Got expired request ids: " + Strings.join(ids, ","));
           ids.forEach(id -> futures.add(instancesDao.deleteRequestMetadataByRequestId(id, tenantId)));
           CompositeFuture.all(futures)
             .onSuccess(v -> promise.complete(ids))

@@ -146,13 +146,16 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<Boolean> deleteRequestMetadataByRequestId(String requestId, String tenantId) {
+    logger.debug("Deleting request metadata with request id - " + requestId);
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .execute(dslContext -> dslContext.deleteFrom(REQUEST_METADATA_LB)
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(res -> {
         if (res == 1) {
+          logger.debug("Request metadata with id '" + requestId + "' has been deleted.");
           return true;
         }
+        logger.error("Cannot delete request metadata with id - " + requestId);
         throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
       }));
   }
@@ -172,10 +175,10 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(res -> {
         String instanceIds = String.join(",", instIds);
         if (res > 0) {
-          logger.debug("Instances with ids [{}] have been removed.", instanceIds);
+          logger.debug("Instances with ids [{0}] have been removed.", instanceIds);
           return true;
         } else {
-          logger.debug("Cannot delete instances: there no any instances with id's - [{}]", instanceIds);
+          logger.debug("Cannot delete instances: there no any instances with id's - [{0}]", instanceIds);
           return false;
         }
       }));

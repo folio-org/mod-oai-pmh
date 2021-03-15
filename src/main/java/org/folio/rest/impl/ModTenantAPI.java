@@ -140,7 +140,7 @@ public class ModTenantAPI extends TenantAPI {
     JsonObject body = response.bodyAsJsonObject();
       JsonArray configs = body.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {} doesn't exist. " + "Posting default configs for {} configuration group",
+        logger.info("Configuration group with configName {0} doesn't exist. Posting default configs for {1} configuration group",
             MODULE_NAME, configName);
         postConfig(client, configName, promise);
       } else {

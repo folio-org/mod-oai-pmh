@@ -344,7 +344,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {0}", throwable, throwable.getMessage());
             databaseWriteStream.endWithError(throwable);
             inventoryHttpClient.close();
             if (!promise.future().isComplete()) {
@@ -388,7 +388,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return Future.succeededFuture(Collections.emptyList());
       }).onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.error("Cannot get batch of instances ids from database: {}", throwable.getMessage(), throwable);
+        logger.error("Cannot get batch of instances ids from database: {0}", throwable, throwable.getMessage());
         promise.fail(throwable);
       });
 
@@ -706,7 +706,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient, Vertx vertx,
       List<JsonObject> batch, boolean deletedRecordSupport, int retryAttempts) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.debug("Request to SRS, list id size: {}", listOfIds.size());
+    logger.debug("Request to SRS, list id size: " + listOfIds.size());
     AtomicInteger attemptsCount = new AtomicInteger(retryAttempts);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise);
@@ -773,7 +773,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
             .getString(INSTANCE_ID_FIELD_NAME), jo));
       } else {
-        logger.debug("Can't process response from SRS: {}", buffer.toString());
+        logger.debug("Can't process response from SRS: " + buffer.toString());
       }
       promise.complete(result);
     } catch (DecodeException ex) {

@@ -37,9 +37,9 @@ import io.vertx.pgclient.PgException;
 public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
-  private static final String MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE = "Error occurred while %s set with id: %s. Message: %s.";
-  private static final String POST_SET_ERROR_MESSAGE = "Error occurred while posting set with body: %s. Message: %s.";
-  private static final String GET_SET_LIST_ERROR_MESSAGE = "Error occurred while getting list of sets with offset: '%s' and limit: '%s'. Message: %s.";
+  private static final String MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE = "Error occurred while {0} set with id: {1}. Message: {2}.";
+  private static final String POST_SET_ERROR_MESSAGE = "Error occurred while posting set with body: {0}. Message: {1}.";
+  private static final String GET_SET_LIST_ERROR_MESSAGE = "Error occurred while getting list of sets with offset: {0} and limit: {1}. Message: {2}.";
 
   @Autowired
   private SetService setService;
@@ -53,14 +53,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info(format("Get set by id with id: '%s'", id));
+        logger.info("Get set by id with id: {0}", id);
         setService.getSetById(id, getTenantId(okapiHeaders))
           .map(OaiPmhSets.GetOaiPmhSetsByIdResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, id, e.getMessage(), e);
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e, "getting", id, e.getMessage());
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -71,7 +71,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info(format("Put set by id with id: '%s' and body: %s", id, entity));
+        logger.info("Put set by id with id: '{0}' and body: {1}", id, entity);
         validateFolioSet(entity, asyncResultHandler);
         setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(updated -> OaiPmhSets.PutOaiPmhSetsByIdResponse.respond204())
@@ -79,7 +79,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(format(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, "putting", id, e.getMessage()), e);
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e,"putting", id, e.getMessage());
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -90,7 +90,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info(format("Post set with body: %s", entity));
+        logger.info("Post set with body: {0}", entity);
         validateFolioSet(entity, asyncResultHandler);
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(set -> OaiPmhSets.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
@@ -98,7 +98,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(format(POST_SET_ERROR_MESSAGE, entity, e.getMessage()), e);
+        logger.error(POST_SET_ERROR_MESSAGE, e, entity, e.getMessage());
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -109,14 +109,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info(format("Delete set by id with id: '%s'", id));
+        logger.info("Delete set by id with id: {0}", id);
         setService.deleteSetById(id, getTenantId(okapiHeaders))
           .map(OaiPmhSets.DeleteOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(format(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, "deleting", id, e.getMessage()), e);
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e,"deleting", id, e.getMessage());
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -127,14 +127,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info(format("Get list of sets, offset: '%s', limit: '%s'", offset, limit));
+        logger.info("Get list of sets, offset: {0}, limit: {1}", offset, limit);
         setService.getSetList(offset, limit, getTenantId(okapiHeaders))
           .map(GetOaiPmhSetsResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(format(GET_SET_LIST_ERROR_MESSAGE, offset, limit, e.getMessage()), e);
+        logger.error(GET_SET_LIST_ERROR_MESSAGE, e, offset, limit, e.getMessage());
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
