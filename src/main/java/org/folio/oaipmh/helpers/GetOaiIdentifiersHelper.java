@@ -88,7 +88,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
       return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
     }
     if (instances != null && !instances.isEmpty()) {
-      logger.debug("{0} entries retrieved out of {1}", instances.size(), totalRecords);
+      logger.debug("{} entries retrieved out of {}", instances.size(), totalRecords);
 
       ListIdentifiersType identifiers = new ListIdentifiersType()
         .withResumptionToken(buildResumptionToken(request, instances, totalRecords));

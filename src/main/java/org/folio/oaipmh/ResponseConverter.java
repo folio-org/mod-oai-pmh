@@ -174,7 +174,7 @@ public class ResponseConverter {
   private void logExecutionTime(final String msg, StopWatch timer) {
     if (timer != null) {
       timer.stop();
-      logger.debug("{0} after {1} ms", msg, timer.getTime());
+      logger.debug("{} after {} ms", msg, timer.getTime());
     }
   }
 }

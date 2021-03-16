@@ -110,7 +110,7 @@ public class ModTenantAPI extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
     Promise<String> promise = Promise.promise();
     try {
-      logger.info(String.format("Getting configurations with configName = '%s'", configName));
+      logger.info("Getting configurations with configName = {}", configName);
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
         if (result.succeeded()) {
           HttpResponse<Buffer> response = result.result();
@@ -140,7 +140,7 @@ public class ModTenantAPI extends TenantAPI {
     JsonObject body = response.bodyAsJsonObject();
       JsonArray configs = body.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {0} doesn't exist. Posting default configs for {1} configuration group",
+        logger.info("Configuration group with configName {} doesn't exist. Posting default configs for {} configuration group",
             MODULE_NAME, configName);
         postConfig(client, configName, promise);
       } else {
@@ -161,8 +161,8 @@ public class ModTenantAPI extends TenantAPI {
         if (result.succeeded()) {
           HttpResponse<Buffer> response = result.result();
           if (response.statusCode() != 201) {
-            logger.error(String.format("Invalid responseonse from mod-configuration. Cannot post config '%s'." + " Response message: : %s:%s",
-                configName, response.statusCode(), response.statusMessage()));
+            logger.error("Invalid responseonse from mod-configuration. Cannot post config '{}'. Response message: {} {}",
+                configName, response.statusCode(), response.statusMessage());
             promise.fail(new IllegalStateException("Cannot post config. " + response.statusMessage()));
           }
           logger.info("Config '" + configName + "' posted successfully");

@@ -344,7 +344,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {0}", throwable, throwable.getMessage());
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable, throwable.getMessage());
             databaseWriteStream.endWithError(throwable);
             inventoryHttpClient.close();
             if (!promise.future().isComplete()) {
@@ -388,7 +388,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return Future.succeededFuture(Collections.emptyList());
       }).onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.error("Cannot get batch of instances ids from database: {0}", throwable, throwable.getMessage());
+        logger.error("Cannot get batch of instances ids from database: {}", throwable, throwable.getMessage());
         promise.fail(throwable);
       });
 
@@ -500,7 +500,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Response> promise = Promise.promise();
     try {
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
-      logger.info("Build records response, instances = {0}, instances with srs records = {1}", batch.size(), records.size());
+      logger.info("Build records response, instances = {}, instances with srs records = {}", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && firstBatch) {

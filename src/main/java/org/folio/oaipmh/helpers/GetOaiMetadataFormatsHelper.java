@@ -81,7 +81,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
                 }
               });
             } else {
-              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {0}: {1}", response.statusMessage(), response.statusCode());
+              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
               throw new IllegalStateException(response.statusMessage());
             }
 
