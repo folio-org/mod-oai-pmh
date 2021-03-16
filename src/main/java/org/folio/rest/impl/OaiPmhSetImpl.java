@@ -5,6 +5,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -71,7 +73,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Put set by id with id: '{}' and body: {}", id, entity);
+        logger.info("Put set by id with id: '{}' and body: {}", id, entityToJsonString(entity));
         validateFolioSet(entity, asyncResultHandler);
         setService.updateSetById(id, entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(updated -> OaiPmhSets.PutOaiPmhSetsByIdResponse.respond204())
@@ -90,7 +92,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Post set with body: {}", entity);
+        logger.info("Post set with body: {}", entityToJsonString(entity));
         validateFolioSet(entity, asyncResultHandler);
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(set -> OaiPmhSets.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
@@ -230,6 +232,16 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
   private String getUserId(Map<String, String> okapiHeaders) {
     return okapiHeaders.get("x-okapi-user-id");
+  }
+
+  private String entityToJsonString(FolioSet folioSet) {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper.writeValueAsString(folioSet);
+    } catch (IOException ex) {
+      logger.warn("Cannot transform dto object to json string for entity logging.");
+      return folioSet.toString();
+    }
   }
 
   private enum ERROR_TYPE {
