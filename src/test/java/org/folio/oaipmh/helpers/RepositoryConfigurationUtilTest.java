@@ -11,6 +11,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.rest.impl.OkapiMockServer.ERROR_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT_2;
+import static org.folio.rest.impl.OkapiMockServer.INVALID_CONFIG_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_JSON_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.NON_EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -22,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import org.folio.oaipmh.Request;
 import org.folio.rest.impl.OkapiMockServer;
@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxException;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -61,65 +62,57 @@ class RepositoryConfigurationUtilTest {
 
   @Test
   void testGetConfigurationForDifferentTenantsIfExist(Vertx vertx, VertxTestContext testContext) {
-
     vertx.runOnContext(event -> {
       Map<String, Map<String, String>> tenantsWithExpectedConfigs = tenantAndExpectedConfigProvider();
-      tenantsWithExpectedConfigs.keySet().forEach(tenant -> {
-        okapiHeaders.put(OKAPI_TENANT, tenant);
-        RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-          testContext.verify(() -> {
-            Map<String, String> expectedConfig = tenantsWithExpectedConfigs.get(tenant);
-            expectedConfig.keySet().forEach(key -> assertThat(RepositoryConfigurationUtil.getProperty(tenant, key),
-              is(equalTo(expectedConfig.get(key)))));
-            testContext.completeNow();
-          })
-        );
-      });
+      tenantsWithExpectedConfigs.keySet()
+        .forEach(tenant -> {
+          okapiHeaders.put(OKAPI_TENANT, tenant);
+          RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext())
+            .onSuccess(v -> {
+              Map<String, String> expectedConfig = tenantsWithExpectedConfigs.get(tenant);
+              expectedConfig.keySet().forEach(key -> assertThat(RepositoryConfigurationUtil.getProperty(tenant, key), is(equalTo(expectedConfig.get(key)))));
+              testContext.completeNow();
+            })
+            .onFailure(testContext::failNow);
+        });
     });
   }
 
   @Test
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, NON_EXIST_CONFIG_TENANT);
-    vertx.runOnContext(event ->
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-        testContext.verify(() -> {
-          assertThat(Vertx.currentContext().config().getJsonObject(NON_EXIST_CONFIG_TENANT), is(emptyIterable()));
-          testContext.completeNow();
-        })
-      )
-    );
+    vertx.runOnContext(event -> RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext())
+      .onSuccess(v -> {
+        assertThat(Vertx.currentContext().config().getJsonObject(NON_EXIST_CONFIG_TENANT), is(emptyIterable()));
+        testContext.completeNow();
+      })
+      .onFailure(testContext::failNow));
   }
 
   @Test
   void testGetConfigurationIfUnexpectedStatusCode(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
 
-    vertx.runOnContext(event ->
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-        testContext.verify(() -> {
-          assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT), is(nullValue()));
-          testContext.completeNow();
-        })
-      ));
+    vertx.runOnContext(event -> RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext())
+      .onComplete(v -> {
+        assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT), is(nullValue()));
+        testContext.completeNow();
+      }));
   }
 
   @Test
-  void testGetConfigurationIfUnexpectedStatusCodeAndConfigAlreadyExist(Vertx vertx,
-                                                                       VertxTestContext testContext) {
+  void shouldReturnDefaultConfigValue_whenErrorResponseReturnedFromModConfig(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
     String configValue = "123";
     vertx.runOnContext(event -> {
       JsonObject config = new JsonObject();
       config.put(REPOSITORY_MAX_RECORDS_PER_RESPONSE, configValue);
       Vertx.currentContext().config().put(ERROR_TENANT, config);
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-        testContext.verify(() -> {
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).onComplete(result -> {
           assertThat(Vertx.currentContext().config().getJsonObject(ERROR_TENANT).getString
             (REPOSITORY_MAX_RECORDS_PER_RESPONSE), equalTo(configValue));
           testContext.completeNow();
-        })
-      );
+        });
     });
   }
 
@@ -128,9 +121,11 @@ class RepositoryConfigurationUtilTest {
     okapiHeaders.remove(OKAPI_URL);
 
     vertx.runOnContext(event -> testContext.verify(() -> {
-        CompletableFuture future = RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext());
-        assertTrue(future.isCompletedExceptionally());
-        testContext.completeNow();
+        RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).onFailure(throwable -> {
+          assertTrue(throwable instanceof VertxException);
+          assertTrue(throwable.getMessage().contains("Invalid url"));
+          testContext.completeNow();
+        }).onSuccess(v -> testContext.failNow(new IllegalStateException("An VertxException was expected to be thrown.")));
       })
     );
   }
@@ -182,19 +177,20 @@ class RepositoryConfigurationUtilTest {
   }
 
   @Test
-  void testDeletedRecordsSettingForTenant(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
+  void shouldReturnDefaultConfig_whenInvalidConfigValueWasReturned(Vertx vertx, VertxTestContext testContext) {
+    okapiHeaders.put(OKAPI_TENANT, INVALID_CONFIG_TENANT);
     vertx.runOnContext(event -> {
-      final String configValue = "true";
-      System.setProperty(REPOSITORY_DELETED_RECORDS, configValue);
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext()).thenAccept(v ->
-        testContext.verify(() -> {
-          final Request request = Request.builder().okapiHeaders(okapiHeaders).build();
+      final String expectedValue = "true";
+      System.setProperty(REPOSITORY_DELETED_RECORDS, expectedValue);
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, Vertx.currentContext())
+        .onSuccess(v -> {
+          final Request request = Request.builder()
+            .okapiHeaders(okapiHeaders)
+            .build();
           final boolean deletedRecordsEnabled = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
           assertThat(deletedRecordsEnabled, is(true));
           testContext.completeNow();
-        })
-      );
+        }).onFailure(testContext::failNow);
     });
   }
 
@@ -202,11 +198,10 @@ class RepositoryConfigurationUtilTest {
   void shouldReturnFailedFuture_whenInvalidJsonReturnedFromModConfig2(Vertx vertx, VertxTestContext testContext) throws Exception {
     okapiHeaders.put(OKAPI_TENANT, INVALID_JSON_TENANT);
     vertx.runOnContext(event -> {
-      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertx.getOrCreateContext()).exceptionally(th -> {
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertx.getOrCreateContext()).onFailure(th -> {
         assertTrue(th instanceof DecodeException);
         testContext.completeNow();
-        return null;
-      });
+      }).onSuccess(v -> testContext.failNow(new IllegalStateException("An DecodeException was expected to be thrown.")));
     });
   }
 }

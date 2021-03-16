@@ -75,6 +75,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       null,
       null,
       request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+      null,
       "MARC",
       //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
       //2. use suppressed from discovery filtering only when deleted record support is enabled
@@ -175,8 +176,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
-              logger.debug("Skipping problematic record due the conversion error. Source record id - " + recordId);
+              logger.error("Error occurred while converting record to xml representation. {}", e, e.getMessage());
+              logger.debug("Skipping problematic record due the conversion error. Source record id - {}.", recordId);
               return;
             }
           } else {

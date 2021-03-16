@@ -35,11 +35,12 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.HttpResponse;
 
 public class ModTenantAPI extends TenantAPI {
   private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
@@ -109,38 +110,44 @@ public class ModTenantAPI extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
     Promise<String> promise = Promise.promise();
     try {
-      logger.info(String.format("Getting configurations with configName = '%s'", configName));
-      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null,
-          response -> handleModConfigurationGetResponse(response, client, configName, promise));
+      logger.info("Getting configurations with configName = {}", configName);
+      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
+        if (result.succeeded()) {
+          HttpResponse<Buffer> response = result.result();
+          handleModConfigurationGetResponse(response, client, configName, promise);
+        } else {
+          String message = "POST request to mod-configuration with config: " + configName + ", has failed.";
+          logger.error(message, result.cause());
+          promise.fail(new IllegalStateException(message, result.cause()));
+        }
+      });
     } catch (Exception e) {
-      logger.error(String.format("Error while processing config with configName '%s'. '%s'", configName, e.getMessage()), e);
-      promise.fail(e.getMessage());
+      String message = String.format("Error while processing config with configName '%s'. '%s'", configName, e.getMessage());
+      logger.error(message, e);
+      promise.fail(new IllegalStateException(message, e));
     }
     return promise.future();
   }
 
-  private void handleModConfigurationGetResponse(HttpClientResponse response, ConfigurationsClient client, String configName,
+  private void handleModConfigurationGetResponse(HttpResponse<Buffer> response, ConfigurationsClient client, String configName,
       Promise<String> promise) {
     if (response.statusCode() != 200) {
-      response.handler(buffer -> {
-        logger.error(buffer.toString());
-        promise.fail(buffer.toString());
-      });
+      Buffer buffer = response.body();
+      logger.error(buffer.toString());
+      promise.fail(new IllegalStateException("Invalid GET request response returned for config with name: " + configName + "; response: " + buffer.toString()));
       return;
     }
-    response.bodyHandler(body -> {
-      JsonObject jsonConfig = body.toJsonObject();
-      JsonArray configs = jsonConfig.getJsonArray(CONFIGS);
+    JsonObject body = response.bodyAsJsonObject();
+      JsonArray configs = body.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {} isn't exist. " + "Posting default configs for {} configuration group",
+        logger.info("Configuration group with configName {} doesn't exist. Posting default configs for {} configuration group",
             MODULE_NAME, configName);
         postConfig(client, configName, promise);
       } else {
         logger.info("Configurations has been got successfully, applying configurations to module system properties");
-        populateSystemPropertiesWithConfig(jsonConfig);
+        populateSystemPropertiesWithConfig(body);
         promise.complete();
       }
-    });
   }
 
   private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
@@ -150,17 +157,22 @@ public class ModTenantAPI extends TenantAPI {
     config.setModule(MODULE_NAME);
     config.setValue(getConfigValue(configName));
     try {
-      client.postConfigurationsEntries(null, config, resp -> {
-        if (resp.statusCode() != 201) {
-          logger
-            .error(String.format("Invalid response from mod-configuration. Cannot post config '%s'." + " Response message: : %s:%s",
-                configName, resp.statusCode(), resp.statusMessage()));
-          promise.fail("Cannot post config. " + resp.statusMessage());
+      client.postConfigurationsEntries(null, config, result -> {
+        if (result.succeeded()) {
+          HttpResponse<Buffer> response = result.result();
+          if (response.statusCode() != 201) {
+            logger.error("Invalid responseonse from mod-configuration. Cannot post config '{}'. Response message: {} {}",
+                configName, response.statusCode(), response.statusMessage());
+            promise.fail(new IllegalStateException("Cannot post config. " + response.statusMessage()));
+          }
+          logger.info("Config '" + configName + "' posted successfully");
+        } else {
+          promise.fail(new IllegalStateException("Error occurred during config posting.", result.cause()));
         }
       });
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
-      promise.fail(e.getMessage());
+      promise.fail(e);
       return;
     }
     promise.complete();
