@@ -1,3 +1,21 @@
+## 3.4.0 (Released) 2021-03-18
+
+This release involves enhancement and corrections related to marc21_withholdings metadata prefix handling.
+
+### Stories
+
+* [MODOAIPMH-291](https://issues.folio.org/browse/MODOAIPMH-291) Revert RMB 32 update.
+* [MODOAIPMH-294](https://issues.folio.org/browse/MODOAIPMH-294) Make resumptiom token reusable.
+
+### Bug fixes
+
+* [MODOAIPMH-300](https://issues.folio.org/browse/MODOAIPMH-300) Not all instances ids are saved for initial harvest.
+* [MODOAIPMH-301](https://issues.folio.org/browse/MODOAIPMH-301) Harvest hangs after a few requests.
+* [MODOAIPMH-292](https://issues.folio.org/browse/MODOAIPMH-292) Incorrect cursor returned within resumption token.
+* [MODOAIPMH-289](https://issues.folio.org/browse/MODOAIPMH-289) HttpClient's aren't being closed properly.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.3.0...v3.4.0)
+
 ## 3.3.0 (Released) 2021-01-28
 
 This release includes the bug fixes and improvements regarding marc21_withholdings metadata prefix processing.
