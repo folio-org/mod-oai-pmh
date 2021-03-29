@@ -18,10 +18,40 @@
     </createTable>
   </changeSet>
 
+  <changeSet id="2020-11-19--18-00-change-json-to-text-column-in-instances-table" author="Illia Daliek">
+    <modifyDataType tableName="instances" columnName="json" newDataType="text" schemaName="${database.defaultSchemaName}"/>
+  </changeSet>
+
+  <changeSet id="2020-11-19--18-00-migrate-json-to-text" author="Illia Daliek">
+    <sql>ALTER TABLE ${database.defaultSchemaName}.instances ALTER COLUMN json TYPE text</sql>
+  </changeSet>
+
+  <changeSet id="2020-11-19--18-00-change-varchar-to-uuid-column-in-instances-table" author="Illia Daliek">
+    <modifyDataType tableName="instances" columnName="request_id" newDataType="uuid"/>
+  </changeSet>
+
+  <changeSet id="2021-01-19--14-00-add-index-to-instances-table-on-instance_id-column" author="Illia Daliek">
+    <createIndex tableName="instances" indexName="instance_id_idx" unique="false">
+      <column name="instance_id"/>
+    </createIndex>
+  </changeSet>
+
+  <changeSet id="2021-02-23--13-00-add-index-to-instances-table-on-request_id-column" author="Illia Daliek">
+    <createIndex tableName="instances" indexName="request_id_idx" unique="false">
+      <column name="request_id"/>
+    </createIndex>
+  </changeSet>
+
   <changeSet id="2021-02-24--12-00-add-autoIncrement-pk" author="Illia Daliek">
     <addColumn tableName="instances">
       <column name="id" type="integer" autoIncrement="true"/>
     </addColumn>
+  </changeSet>
+  
+  <changeSet id="2021-03-29--14-00-add-index-on-id-pk-field" author="Illia Daliek">
+    <createIndex tableName="instances" indexName="instance_id_pk_idx">
+      <column name="id"/>
+    </createIndex>
   </changeSet>
 
 </databaseChangeLog>
