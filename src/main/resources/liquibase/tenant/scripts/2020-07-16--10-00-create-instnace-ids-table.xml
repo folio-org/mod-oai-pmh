@@ -31,12 +31,22 @@
   </changeSet>
 
   <changeSet id="2021-01-19--14-00-add-index-to-instances-table-on-instance_id-column" author="Illia Daliek">
-    <createIndex tableName="instances" indexName="instance_id_idx" unique="false">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <indexExists tableName="instances" indexName="instance_id_idx"/>
+      </not>
+    </preConditions>
+    <createIndex tableName="instances" indexName="instance_id_idx" unique="false" >
       <column name="instance_id"/>
     </createIndex>
   </changeSet>
 
   <changeSet id="2021-02-23--13-00-add-index-to-instances-table-on-request_id-column" author="Illia Daliek">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <indexExists tableName="instances" indexName="request_id_idx"/>
+      </not>
+    </preConditions>
     <createIndex tableName="instances" indexName="request_id_idx" unique="false">
       <column name="request_id"/>
     </createIndex>
@@ -47,7 +57,7 @@
       <column name="id" type="integer" autoIncrement="true"/>
     </addColumn>
   </changeSet>
-  
+
   <changeSet id="2021-03-29--14-00-add-index-on-id-pk-field" author="Illia Daliek">
     <createIndex tableName="instances" indexName="instance_id_pk_idx">
       <column name="id"/>
