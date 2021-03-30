@@ -1,23 +1,21 @@
 package org.folio.oaipmh.mappers;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
+
 import org.apache.commons.lang3.time.StopWatch;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcXmlWriter;
 import org.marc4j.marc.Record;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.UncheckedIOException;
-import java.io.Writer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Converts MarcJson format to MarcXML format.
