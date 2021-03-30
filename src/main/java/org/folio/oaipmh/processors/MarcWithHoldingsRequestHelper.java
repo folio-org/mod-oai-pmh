@@ -174,7 +174,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(
             downloadInstancesPromise -> {
-              setupContextConfig(vertxContext, request.getTenant());
+              setupCurrentContextConfigFromContext(vertxContext, request.getTenant());
               downloadInstances(request, oaipmhResponsePromise, downloadInstancesPromise, downloadContext, requestId);
             },
             downloadInstancesResult -> {
@@ -196,8 +196,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return oaipmhResponsePromise.future();
   }
 
-  private void setupContextConfig(Context global, String tenant) {
-    JsonObject config = global.config().getJsonObject(tenant);
+  private void setupCurrentContextConfigFromContext(Context fromContext, String tenant) {
+    JsonObject config = fromContext.config().getJsonObject(tenant);
     if (nonNull(config)) {
       Vertx.currentContext().config().put(tenant, config);
     }
