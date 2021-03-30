@@ -12,7 +12,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
+import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
@@ -42,7 +45,7 @@ public class MarcXmlMapper implements Mapper {
       MarcReader marcJsonReader = new MarcJsonReader(inputStream);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       Record record = marcJsonReader.next();
-      MarcXmlWriter.writeSingleRecord(record, out);
+      MarcXmlWriter.writeSingleRecord(record, out, false, false);
       return out.toByteArray();
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen

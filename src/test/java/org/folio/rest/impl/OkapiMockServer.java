@@ -90,6 +90,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String DEFAULT_RECORD_DATE = "2020-03-31";
+  static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
 
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
@@ -98,6 +99,7 @@ public class OkapiMockServer {
   private static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
   private static final String INVALID_SRS_RECORD_INSTANCE_ID = "68aaeff5-6c78-4498-9cdc-66cdc0f834b2";
   private static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID = "7b6d9a58-ab67-414b-a33f-7db11ea16178";
+
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL = "12345678-0000-4000-a000-000000000000";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500 = "927ee35f-700c-4fdd-a7e9-b560861d6900";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT = "d93c7b03-6343-4956-bfbc-2981b3741830";
@@ -150,11 +152,14 @@ public class OkapiMockServer {
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
   private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON = "two_records_one_cannot_be_converted_to_xml_instance_ids.json";
+  private static final String TWO_RECORDS_WITH_CYRILLIC_DATA_JSON = "/two_records_with_cyrillic_data.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
   private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
   private static final String SRS_RECORD = "/srs_record.json";
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
+  private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
+  private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
 
   private static int attemptsCount = 1;
 
@@ -237,6 +242,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
       } else if (uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
         inventoryViewSuccessResponse(ctx, INVALID_JSON);
+      } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON);
       } else {
         logger.debug("No mocks for the response, returning the default instance id");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
@@ -338,6 +345,8 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
     } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
       successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
+    } else if (instanceIds.contains(INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA)) {
+      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
@@ -381,6 +390,8 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
       } else if (uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
+      } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
       } else if (uri.contains(SRS_RECORD_WITH_OLD_METADATA_DATE)) {
         String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
         successResponse(ctx, json.replaceAll("REPLACE_ME", OLD_METADATA_DATE_FORMAT));
