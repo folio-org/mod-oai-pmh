@@ -296,10 +296,10 @@ public abstract class AbstractHelper implements VerbHelper {
     String date;
     if (isDateOnlyGranularity(request)) {
       instant = instant.truncatedTo(ChronoUnit.DAYS);
-      LocalDate time = LocalDate.ofInstant(instant, ZoneId.systemDefault());
+      LocalDate time = LocalDate.ofInstant(instant, ZoneId.of("UTC"));
       date = ISO_UTC_DATE_ONLY.format(time);
     } else {
-      LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+      LocalDateTime time = LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
       date = ISO_UTC_DATE_TIME.format(time);
     }
     return headerType.withDatestamp(date);

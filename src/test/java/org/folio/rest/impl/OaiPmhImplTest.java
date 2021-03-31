@@ -40,6 +40,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_R
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE;
+import static org.folio.rest.impl.OkapiMockServer.DEFAULT_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
@@ -115,6 +116,7 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.domain.Verb;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.persist.PostgresClient;
@@ -668,6 +670,43 @@ class OaiPmhImplTest {
       assertTrue(DATE_TIME_PATTERN.matcher(datestamp).matches());
     }
   }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbAndGranularityType")
+  void shouldReturnCorrectHeaderDate_whenGetListRecords(MetadataPrefix metadataPrefix, VerbType verb, GranularityType granularityType) {
+    String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, granularityType.value());
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(FROM_PARAM, DEFAULT_RECORD_DATE)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    String expectedDate = granularityType.equals(GranularityType.YYYY_MM_DD) ? "2021-03-31" : "2021-03-31T07:23:11Z";
+    verifyHeaderDate(expectedDate, oaipmh, verb);
+    System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+  }
+
+  private void verifyHeaderDate(String expectedDate, OAIPMH oaipmh, VerbType verbType) {
+    List<HeaderType> headers;
+    if (verbType.equals(LIST_RECORDS)) {
+      headers = oaipmh.getListRecords()
+        .getRecords()
+        .stream()
+        .map(RecordType::getHeader)
+        .collect(Collectors.toList());
+    } else {
+      headers = oaipmh.getListIdentifiers()
+        .getHeaders();
+    }
+    headers.stream()
+      .map(HeaderType::getDatestamp)
+      .forEach(date -> assertEquals(expectedDate, date));
+  }
+
+  //kek
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProvider")
@@ -1761,6 +1800,17 @@ class OaiPmhImplTest {
         if (!prefix.getName().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName())) {
           builder.add(Arguments.arguments(prefix, verb));
         }
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> metadataPrefixAndVerbAndGranularityType() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (VerbType verb : LIST_VERBS) {
+        for (GranularityType granularityType: GranularityType.values())
+          builder.add(Arguments.arguments(prefix, verb, granularityType));
       }
     }
     return builder.build();
