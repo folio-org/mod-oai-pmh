@@ -706,8 +706,6 @@ class OaiPmhImplTest {
       .forEach(date -> assertEquals(expectedDate, date));
   }
 
-  //kek
-
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProvider")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateAndTimeGranularity(MetadataPrefix prefix, VerbType verb) {
