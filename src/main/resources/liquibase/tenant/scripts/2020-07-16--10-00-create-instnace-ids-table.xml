@@ -59,6 +59,11 @@
   </changeSet>
 
   <changeSet id="2021-03-29--14-00-add-index-on-id-pk-field" author="Illia Daliek">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <indexExists tableName="instances" indexName="instance_id_pk_idx"/>
+      </not>
+    </preConditions>
     <createIndex tableName="instances" indexName="instance_id_pk_idx">
       <column name="id"/>
     </createIndex>
