@@ -1,7 +1,6 @@
 package org.folio.oaipmh.processors;
 
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -174,7 +173,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(
             downloadInstancesPromise -> {
-              setupCurrentContextConfigFromContext(vertxContext, request.getTenant());
               downloadInstances(request, oaipmhResponsePromise, downloadInstancesPromise, downloadContext, requestId);
             },
             downloadInstancesResult -> {
@@ -194,13 +192,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       handleException(oaipmhResponsePromise, e);
     }
     return oaipmhResponsePromise.future();
-  }
-
-  private void setupCurrentContextConfigFromContext(Context fromContext, String tenant) {
-    JsonObject config = fromContext.config().getJsonObject(tenant);
-    if (nonNull(config)) {
-      Vertx.currentContext().config().put(tenant, config);
-    }
   }
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId, boolean firstBatch) {
