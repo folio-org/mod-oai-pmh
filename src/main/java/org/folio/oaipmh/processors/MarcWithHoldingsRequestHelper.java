@@ -539,46 +539,49 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private List<RecordType> buildRecordsList(Request request, List<JsonObject> batch, Map<String, JsonObject> srsResponse,
-                                            boolean deletedRecordSupport) {
+      boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
-      REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+        REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     List<RecordType> records = new ArrayList<>();
     batch.stream()
       .filter(instance -> {
-          final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-          final JsonObject srsInstance = srsResponse.get(instanceId);
-          return Objects.nonNull(srsInstance);
-        }
-      ).forEach(instance -> {
-      final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-      final JsonObject srsInstance = srsResponse.get(instanceId);
-      RecordType record = createRecord(request, instance, instanceId);
+        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+        final JsonObject srsInstance = srsResponse.get(instanceId);
+        return Objects.nonNull(srsInstance);
+      })
+      .forEach(instance -> {
+        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+        final JsonObject srsInstance = srsResponse.get(instanceId);
+        RecordType record = createRecord(request, srsInstance, instanceId);
 
-      JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance, suppressedRecordsProcessing);
-      if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
-        record.getHeader().setStatus(StatusType.DELETED);
-      }
-      String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
-      if (source != null && record.getHeader().getStatus() == null) {
-        if (suppressedRecordsProcessing) {
-          source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
-          source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+        JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance,
+            suppressedRecordsProcessing);
+        if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
+          record.getHeader()
+            .setStatus(StatusType.DELETED);
         }
-        try {
-          record.withMetadata(buildOaiMetadata(request, source));
-        } catch (Exception e) {
-          logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
-          logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
-          return;
+        String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
+        if (source != null && record.getHeader()
+          .getStatus() == null) {
+          if (suppressedRecordsProcessing) {
+            source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
+            source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+          }
+          try {
+            record.withMetadata(buildOaiMetadata(request, source));
+          } catch (Exception e) {
+            logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+            logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
+            return;
+          }
         }
-      }
-      if (filterInstance(request, srsInstance)) {
-        records.add(record);
-      }
-    });
+        if (filterInstance(request, srsInstance)) {
+          records.add(record);
+        }
+      });
     return records;
   }
 
