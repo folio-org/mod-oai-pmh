@@ -46,7 +46,6 @@ public class RepositoryConfigurationUtil {
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
    *
    * @param okapiHeaders
-   * @param ctx          the context
    * @return empty CompletableFuture
    */
   public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders) {
@@ -59,7 +58,7 @@ public class RepositoryConfigurationUtil {
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
+       configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
         try {
           if (result.succeeded()) {
             HttpResponse<Buffer> response = result.result();
