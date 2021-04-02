@@ -11,6 +11,7 @@ import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
@@ -19,10 +20,8 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.DeletedRecordType;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -30,6 +29,8 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpResponse;
 
 public class RepositoryConfigurationUtil {
+
+  private static Map<String, JsonObject> configsMap = new ConcurrentHashMap<>();
 
   private RepositoryConfigurationUtil() {
 
@@ -45,10 +46,9 @@ public class RepositoryConfigurationUtil {
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
    *
    * @param okapiHeaders
-   * @param ctx          the context
    * @return empty CompletableFuture
    */
-  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders, Context ctx) {
+  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders) {
     Promise<Void> promise = Promise.promise();
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
@@ -58,7 +58,7 @@ public class RepositoryConfigurationUtil {
     try {
       ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
 
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
+       configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
         try {
           if (result.succeeded()) {
             HttpResponse<Buffer> response = result.result();
@@ -77,14 +77,7 @@ public class RepositoryConfigurationUtil {
               .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
               .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 
-            JsonObject tenantConfig = ctx.config()
-              .getJsonObject(tenant);
-            if (tenantConfig != null) {
-              tenantConfig.mergeIn(config);
-            } else {
-              ctx.config()
-                .put(tenant, config);
-            }
+            configsMap.put(tenant, config);
             promise.complete(null);
           }
         } catch (Exception e) {
@@ -107,7 +100,7 @@ public class RepositoryConfigurationUtil {
    * @return value of the config either from shared config if present. Or from System properties as fallback.
    */
   public static String getProperty(String tenant, String name) {
-    JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
+    JsonObject configs = getConfig(tenant);
     String defaultValue = System.getProperty(name);
     if (configs != null) {
       return configs.getString(name, defaultValue);
@@ -115,11 +108,9 @@ public class RepositoryConfigurationUtil {
     return defaultValue;
   }
 
-
-
   public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
     String tenant = TenantTool.tenantId(okapiHeaders);
-    JsonObject configs = Vertx.currentContext().config().getJsonObject(tenant);
+    JsonObject configs = getConfig(tenant);
     String defaultValue = System.getProperty(name);
     if (configs != null) {
       return parseBoolean(configs.getString(name, defaultValue));
@@ -137,5 +128,9 @@ public class RepositoryConfigurationUtil {
       String defaultPropertyValue = System.getProperty(REPOSITORY_DELETED_RECORDS);
       return Boolean.parseBoolean(defaultPropertyValue);
     }
+  }
+
+  public static JsonObject getConfig(String tenant) {
+    return configsMap.get(tenant);
   }
 }
