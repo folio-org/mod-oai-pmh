@@ -88,7 +88,7 @@ public class OaiPmhImpl implements Oai {
                             String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders,
                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, vertxContext)
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders)
       .onSuccess(v -> {
         try {
           Request.Builder requestBuilder = Request.builder()

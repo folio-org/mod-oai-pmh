@@ -7,7 +7,7 @@
       "description": "Repository name",
       "default": true,
       "enabled": true,
-      "value": "{\"repositoryName\":\"FOLIO_OAI_Repository_mock\",\"deletedRecordsSupport\":\"invalid_value\",\"baseUrl\":\"http://test.folio.org/oai\",\"administratorEmail\":\"oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org\"}",
+      "value": "{\"suppressedRecordsProcessing\":\"true\",\"repositoryName\":\"FOLIO_OAI_Repository_mock\",\"baseUrl\":\"http://test.folio.org/oai\",\"administratorEmail\":\"oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org\"}",
       "metadata": {
         "createdDate": "2018-11-06T11:17:02.032+0000",
         "createdByUserId": "1ae0ba1b-ebb0-5143-bd0e-0778375534de",

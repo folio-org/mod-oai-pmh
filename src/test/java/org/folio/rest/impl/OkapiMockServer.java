@@ -92,6 +92,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String DEFAULT_RECORD_DATE = "2020-03-31";
   static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
+  static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
 
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
@@ -124,6 +125,7 @@ public class OkapiMockServer {
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
+  private static final String CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS = "/configurations.entries/config_process_suppressed_records.json";
   private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS = "/configurations.entries/config_invalid_setting_value.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
@@ -223,6 +225,14 @@ public class OkapiMockServer {
     String uri = ctx.request()
       .absoluteURI();
     if (Objects.nonNull(uri)) {
+      if (uri.contains(SUPPRESSED_RECORDS_DATE)) {
+        boolean shouldProcessSuppressedRecords = Boolean.parseBoolean(ctx.request().getParam("skipSuppressedFromDiscoveryRecords"));
+        if (shouldProcessSuppressedRecords) {
+          inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
+        } else {
+          inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
+        }
+      }
       if (uri.contains(DATE_INVENTORY_STORAGE_ERROR_RESPONSE)) {
         failureResponse(ctx);
       } else if (uri.contains(DATE_INVENTORY_10_INSTANCE_IDS)) {
@@ -286,7 +296,11 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFile(CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS));
       break;
     case OAI_TEST_TENANT:
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      if (ctx.request().absoluteURI().contains(SUPPRESSED_RECORDS_DATE)) {
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS));
+      } else {
+        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      }
       break;
     case ERROR_TENANT:
       failureResponse(ctx, 500, "Internal Server Error");

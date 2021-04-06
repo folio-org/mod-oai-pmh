@@ -55,6 +55,7 @@ import static org.folio.rest.impl.OkapiMockServer.SRS_RECORDS_WITH_CYRILLIC_DATA
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
+import static org.folio.rest.impl.OkapiMockServer.SUPPRESSED_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -1264,6 +1265,18 @@ class OaiPmhImplTest {
       assertTrue(optioanlSubfieldWithCyrillicData.isPresent());
       optioanlSubfieldWithCyrillicData.ifPresent(subfield -> assertEquals(EXPECTED_SUBFIELD_VALUE, subfield.getValue()));
     });
+  }
+
+  @Test
+  void shouldUseValidConfigValueAndDoNotSkipSuppressedRecords_whenGetListRecordsMarc21WithHoldings() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, SUPPRESSED_RECORDS_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(response, LIST_RECORDS, 10);
   }
 
   @ParameterizedTest
