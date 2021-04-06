@@ -1,13 +1,5 @@
 package org.folio.oaipmh.mappers;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang3.time.StopWatch;
-import org.marc4j.MarcJsonReader;
-import org.marc4j.MarcReader;
-import org.marc4j.MarcXmlWriter;
-import org.marc4j.marc.Record;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,6 +7,15 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.time.StopWatch;
+import org.marc4j.MarcJsonReader;
+import org.marc4j.MarcReader;
+import org.marc4j.MarcXmlWriter;
+import org.marc4j.marc.Record;
+
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * Converts MarcJson format to MarcXML format.
@@ -42,7 +43,7 @@ public class MarcXmlMapper implements Mapper {
       MarcReader marcJsonReader = new MarcJsonReader(inputStream);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       Record record = marcJsonReader.next();
-      MarcXmlWriter.writeSingleRecord(record, out);
+      MarcXmlWriter.writeSingleRecord(record, out, false, false);
       return out.toByteArray();
     } catch (IOException e) {
       throw new UncheckedIOException(e); //should never happen
