@@ -2,7 +2,6 @@ package org.folio.oaipmh.helpers;
 
 import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.GZIP;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
@@ -47,18 +46,17 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
   public Future<Response> handle(Request request, Context ctx) {
     Promise<Response> promise = Promise.promise();
     try {
-      String tenant = request.getOkapiHeaders().get(OKAPI_TENANT);
       OAIPMH oai = getResponseHelper().buildBaseOaipmhResponse(request)
         .withIdentify(new IdentifyType()
-          .withRepositoryName(getRepositoryName(tenant))
+          .withRepositoryName(getRepositoryName(request.getRequestId()))
           .withBaseURL(request.getOaiRequest().getValue())
           .withProtocolVersion(REPOSITORY_PROTOCOL_VERSION_2_0)
           .withEarliestDatestamp(getEarliestDatestamp())
           .withGranularity(GranularityType.fromValue(RepositoryConfigurationUtil.getProperty
-            (tenant, REPOSITORY_TIME_GRANULARITY)))
+            (request.getRequestId(), REPOSITORY_TIME_GRANULARITY)))
           .withDeletedRecord(DeletedRecordType.fromValue(RepositoryConfigurationUtil
-            .getProperty(tenant, REPOSITORY_DELETED_RECORDS)))
-          .withAdminEmails(getEmails(tenant))
+            .getProperty(request.getRequestId(), REPOSITORY_DELETED_RECORDS)))
+          .withAdminEmails(getEmails(request.getRequestId()))
           .withCompressions(GZIP, DEFLATE)
           .withDescriptions(getDescriptions(request)));
 
@@ -85,8 +83,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    *
    * @return repository name
    */
-  private String getRepositoryName(String tenant) {
-    String repoName = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_NAME);
+  private String getRepositoryName(String requestId) {
+    String repoName = RepositoryConfigurationUtil.getProperty(requestId, REPOSITORY_NAME);
     if (repoName == null) {
       throw new IllegalStateException("The required repository config 'repository.name' is missing");
     }
@@ -99,8 +97,8 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
    *
    * @return repository name
    */
-  private String[] getEmails(String tenant) {
-    String emails = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_ADMIN_EMAILS);
+  private String[] getEmails(String requestId) {
+    String emails = RepositoryConfigurationUtil.getProperty(requestId, REPOSITORY_ADMIN_EMAILS);
     if (StringUtils.isBlank(emails)) {
       throw new IllegalStateException("The required repository config 'repository.adminEmails' is missing");
     }

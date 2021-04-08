@@ -195,6 +195,10 @@ public class Request {
     return nextInstancePkValue;
   }
 
+  public void setRequestId(String requestId) {
+    this.requestId = requestId;
+  }
+
   public String getRequestId() {
     return requestId;
   }
