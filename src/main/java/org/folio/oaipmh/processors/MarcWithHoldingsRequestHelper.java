@@ -159,8 +159,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .setLastUpdatedDate(lastUpdateDate);
 
       Future<RequestMetadataLb> updateRequestMetadataFuture;
-      if (resumptionToken == null || request.getRequestId() == null) {
-        requestId = UUID.randomUUID().toString();
+      if (resumptionToken == null) {
+        requestId = request.getRequestId();
         requestMetadata.setRequestId(UUID.fromString(requestId));
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
@@ -194,7 +194,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId, boolean firstBatch) {
     try {
-      boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
@@ -301,7 +301,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     paramMap.put(DELETED_RECORD_SUPPORT_PARAM_NAME,
       String.valueOf(
-        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
+        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId())));
     paramMap.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS,
       String.valueOf(
         isSkipSuppressed(request)));
@@ -531,7 +531,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
-    final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
+    final boolean suppressedRecordsProcessing = getBooleanProperty(request.getRequestId(),
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     List<RecordType> records = new ArrayList<>();
@@ -608,7 +608,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private boolean isSkipSuppressed(Request request) {
-    return !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
   /**

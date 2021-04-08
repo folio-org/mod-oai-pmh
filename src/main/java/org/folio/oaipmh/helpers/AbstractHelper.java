@@ -357,7 +357,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       String nextRecordId;
-      if (isDeletedRecordsEnabled(request)) {
+      if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
       } else {
         nextRecordId = storageHelper.getRecordId(getAndRemoveLastInstance(instances));
@@ -414,11 +414,10 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return true when a record should be present in oai-pmh response
    */
   protected boolean filterInstance(Request request, JsonObject instance) {
-    if (!isDeletedRecordsEnabled(request)) {
+    if (!isDeletedRecordsEnabled(request.getRequestId())) {
       return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
-      Map<String, String> okapiHeaders = request.getOkapiHeaders();
-      boolean shouldProcessSuppressedRecords = getBooleanProperty(okapiHeaders, REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      boolean shouldProcessSuppressedRecords = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
       return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance)
         || storageHelper.isRecordMarkAsDeleted(instance);
     }
@@ -426,7 +425,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected HeaderType addHeader(String identifierPrefix, Request request, JsonObject instance) {
     HeaderType header = populateHeader(identifierPrefix, instance, request);
-    if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
+    if (isDeletedRecordsEnabled(request.getRequestId()) && storageHelper.isRecordMarkAsDeleted(instance)) {
       header.setStatus(StatusType.DELETED);
     }
     return header;
@@ -442,7 +441,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected boolean canResumeRequestSequence(Request request, Integer totalRecords, JsonArray instances) {
     Integer prevTotalRecords = request.getTotalRecords();
-    boolean isDeletedRecords = isDeletedRecordsEnabled(request);
+    boolean isDeletedRecords = isDeletedRecordsEnabled(request.getRequestId());
     int firstPosition = 0;
     return instances != null && instances.size() > 0
       && (totalRecords >= prevTotalRecords || StringUtils.equals(request.getNextRecordId(),

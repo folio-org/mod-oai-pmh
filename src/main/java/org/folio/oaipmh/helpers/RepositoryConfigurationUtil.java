@@ -10,6 +10,7 @@ import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
 import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,7 +31,7 @@ import io.vertx.ext.web.client.HttpResponse;
 
 public class RepositoryConfigurationUtil {
 
-  private static Map<String, JsonObject> configsMap = new ConcurrentHashMap<>();
+  private static Map<String, JsonObject> configsMap = new HashMap<>();
 
   private RepositoryConfigurationUtil() {
 
@@ -48,7 +49,7 @@ public class RepositoryConfigurationUtil {
    * @param okapiHeaders
    * @return empty CompletableFuture
    */
-  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders) {
+  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders, String requestId) {
     Promise<Void> promise = Promise.promise();
 
     String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
@@ -77,7 +78,7 @@ public class RepositoryConfigurationUtil {
               .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
               .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
 
-            configsMap.put(tenant, config);
+            configsMap.put(requestId, config);
             promise.complete(null);
           }
         } catch (Exception e) {
@@ -92,15 +93,19 @@ public class RepositoryConfigurationUtil {
     return promise.future();
   }
 
+  public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId, String existedRequestId) {
+    configsMap.put(existedRequestId, configsMap.remove(generatedRequestId));
+  }
+
   /**
    * Gets value of the config either from shared config or from System properties as a fallback.
    *
-   * @param tenant tenant
-   * @param name   config key
+   * @param requestId requestId
+   * @param name      config key
    * @return value of the config either from shared config if present. Or from System properties as fallback.
    */
-  public static String getProperty(String tenant, String name) {
-    JsonObject configs = getConfig(tenant);
+  public static String getProperty(String requestId, String name) {
+    JsonObject configs = getConfig(requestId);
     String defaultValue = System.getProperty(name);
     if (configs != null) {
       return configs.getString(name, defaultValue);
@@ -108,9 +113,8 @@ public class RepositoryConfigurationUtil {
     return defaultValue;
   }
 
-  public static boolean getBooleanProperty(Map<String, String> okapiHeaders, String name) {
-    String tenant = TenantTool.tenantId(okapiHeaders);
-    JsonObject configs = getConfig(tenant);
+  public static boolean getBooleanProperty(String requestId, String name) {
+    JsonObject configs = getConfig(requestId);
     String defaultValue = System.getProperty(name);
     if (configs != null) {
       return parseBoolean(configs.getString(name, defaultValue));
@@ -118,9 +122,8 @@ public class RepositoryConfigurationUtil {
     return parseBoolean(defaultValue);
   }
 
-  public static boolean isDeletedRecordsEnabled(Request request) {
-    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
-    String propertyName = getProperty(tenant, REPOSITORY_DELETED_RECORDS);
+  public static boolean isDeletedRecordsEnabled(String requestId) {
+    String propertyName = getProperty(requestId, REPOSITORY_DELETED_RECORDS);
     try {
       DeletedRecordType deletedRecordType = DeletedRecordType.fromValue(propertyName);
       return Arrays.asList(PERSISTENT, TRANSIENT).contains(deletedRecordType);
@@ -130,7 +133,11 @@ public class RepositoryConfigurationUtil {
     }
   }
 
-  public static JsonObject getConfig(String tenant) {
-    return configsMap.get(tenant);
+  public static void cleanConfigForRequestId(String requestId) {
+    configsMap.remove(requestId);
+  }
+
+  public static JsonObject getConfig(String requestId) {
+    return configsMap.get(requestId);
   }
 }

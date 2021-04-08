@@ -1267,18 +1267,6 @@ class OaiPmhImplTest {
     });
   }
 
-  @Test
-  void shouldUseValidConfigValueAndDoNotSkipSuppressedRecords_whenGetListRecordsMarc21WithHoldings() {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, SUPPRESSED_RECORDS_DATE)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(response, LIST_RECORDS, 10);
-  }
-
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiIdentifiersWithErrorFromStorage(VerbType verb) {

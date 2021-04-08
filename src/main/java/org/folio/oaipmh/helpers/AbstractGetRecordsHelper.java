@@ -61,8 +61,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
       request.getTenant(), request.getOkapiToken());
 
-    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
-    final boolean suppressedRecordsSupport = getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
@@ -152,7 +152,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * otherwise empty map is returned
    */
   private Map<String, RecordType> buildRecords(Context context, Request request, JsonArray instances) {
-    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getOkapiHeaders(),
+    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     if (instances != null && !instances.isEmpty()) {
@@ -196,7 +196,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     RecordType record = new RecordType()
       .withHeader(createHeader(instance, request)
         .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-    if (isDeletedRecordsEnabled(request) && storageHelper.isRecordMarkAsDeleted(instance)) {
+    if (isDeletedRecordsEnabled(request.getRequestId()) && storageHelper.isRecordMarkAsDeleted(instance)) {
       record.getHeader().setStatus(StatusType.DELETED);
     }
     return record;
