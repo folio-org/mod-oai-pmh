@@ -5,7 +5,6 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
@@ -28,6 +27,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.ws.rs.core.Response;
 
@@ -88,13 +88,14 @@ public class OaiPmhImpl implements Oai {
                             String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders,
                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders)
+    String generatedRequestId = UUID.randomUUID().toString();
+    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
       .onSuccess(v -> {
         try {
           Request.Builder requestBuilder = Request.builder()
             .okapiHeaders(okapiHeaders)
             .verb(getVerb(verb))
-            .baseURL(getProperty(okapiHeaders.get(OKAPI_TENANT), REPOSITORY_BASE_URL))
+            .baseURL(getProperty(generatedRequestId, REPOSITORY_BASE_URL))
             .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
           if (StringUtils.isNotEmpty(identifier)) {
             requestBuilder.identifier(URLDecoder.decode(identifier, "UTF-8"));
@@ -102,7 +103,7 @@ public class OaiPmhImpl implements Oai {
 
           Request request = requestBuilder.build();
 
-          if (!getBooleanProperty(okapiHeaders, REPOSITORY_ENABLE_OAI_SERVICE)) {
+          if (!getBooleanProperty(generatedRequestId, REPOSITORY_ENABLE_OAI_SERVICE)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.SERVICE_UNAVAILABLE, "OAI-PMH service is disabled");
             asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
@@ -118,6 +119,7 @@ public class OaiPmhImpl implements Oai {
           addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
           List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
+          setupRequestIdIfAbsent(request, generatedRequestId);
 
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
@@ -137,6 +139,7 @@ public class OaiPmhImpl implements Oai {
             verbHelper
               .handle(request, vertxContext)
               .compose(response -> {
+                RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
                 logger.debug(verb + " response: {}", response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
@@ -175,6 +178,15 @@ public class OaiPmhImpl implements Oai {
     boolean isVerbNameCorrect = Arrays.stream(VerbType.values())
       .anyMatch(verb -> verb.value().equals(verbName));
     return isVerbNameCorrect ? VerbType.fromValue(verbName) : VerbType.UNKNOWN;
+  }
+
+  private void setupRequestIdIfAbsent(Request request, String generatedRequestId) {
+    if (StringUtils.isEmpty(request.getRequestId())) {
+      request.setRequestId(generatedRequestId);
+    } else {
+      String existedRequestId = request.getRequestId();
+      RepositoryConfigurationUtil.replaceGeneratedConfigKeyWithExisted(generatedRequestId, existedRequestId);
+    }
   }
 
   @Autowired
