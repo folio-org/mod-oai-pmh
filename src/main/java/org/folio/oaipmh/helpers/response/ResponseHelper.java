@@ -23,7 +23,6 @@ import org.apache.http.HttpStatus;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
