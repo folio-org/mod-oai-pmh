@@ -23,7 +23,6 @@ import org.apache.http.HttpStatus;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
@@ -166,8 +165,7 @@ public class ResponseHelper {
    * @return boolean
    */
   private boolean shouldRespondWithStatusOk(Request request) {
-    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
-    String config = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_ERRORS_PROCESSING);
+    String config = RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_ERRORS_PROCESSING);
     return config.equals("200");
   }
 

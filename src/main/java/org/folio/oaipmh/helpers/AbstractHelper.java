@@ -160,7 +160,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   private boolean isDateOnlyGranularity(Request request) {
     String granularity = RepositoryConfigurationUtil.getProperty
-      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_TIME_GRANULARITY);
+      (request.getRequestId(), REPOSITORY_TIME_GRANULARITY);
     return GranularityType.fromValue(granularity) == GranularityType.YYYY_MM_DD;
   }
 

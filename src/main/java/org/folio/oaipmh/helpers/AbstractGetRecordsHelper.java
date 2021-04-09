@@ -68,7 +68,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
 
     int batchSize = Integer.parseInt(
-      RepositoryConfigurationUtil.getProperty(request.getTenant(),
+      RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
     srsClient.getSourceStorageSourceRecords(
