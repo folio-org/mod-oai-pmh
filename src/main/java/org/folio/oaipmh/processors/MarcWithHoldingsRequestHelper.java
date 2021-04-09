@@ -726,8 +726,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         String statusMessage = srsResponse.statusMessage();
         srsResponse.exceptionHandler(e -> {
           logger.error("Error has been occurred while requesting SRS kek1: " + e.getMessage(), e);
-          if (!retryTriggered.get()) {
-            retryTriggered.set(true);
+          if (!retryTriggered.getAndSet(true)) {
             retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode, statusMessage);
           }
         });
@@ -744,8 +743,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
         srsResponse.bodyHandler(buffer -> handleSrsResponse(srsClient, promise, buffer));
       }, e-> {
-        if (!retryTriggered.get()) {
-          retryTriggered.set(true);
+        if (!retryTriggered.getAndSet(true)) {
           retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, 0, null);
         }
       });
