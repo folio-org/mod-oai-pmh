@@ -1,3 +1,13 @@
+## 3.4.2 (Released) 2021-04-09
+
+This bug fix release has corrections regarding marc21_withholdings metadata prefix handling.
+
+### Bug fixes
+
+* [MODOAIPMH-312](https://issues.folio.org/browse/MODOAIPMH-312) Rerequesting of SRS doesn't work properly.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.4.1...v3.4.2)
+
 ## 3.4.1 (Released) 2021-04-07
 
 This release involves bug fixes for marc21_withholdings metadata prefix handling.
