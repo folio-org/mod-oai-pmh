@@ -166,8 +166,7 @@ public class ResponseHelper {
    * @return boolean
    */
   private boolean shouldRespondWithStatusOk(Request request) {
-    String tenant = TenantTool.tenantId(request.getOkapiHeaders());
-    String config = RepositoryConfigurationUtil.getProperty(tenant, REPOSITORY_ERRORS_PROCESSING);
+    String config = RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_ERRORS_PROCESSING);
     return config.equals("200");
   }
 
