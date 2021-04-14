@@ -1,3 +1,20 @@
+## 3.4.1 (Released) 2021-04-07
+
+This release involves bug fixes for marc21_withholdings metadata prefix handling.
+
+### Bug fixes
+
+* [MODOAIPMH-293](https://issues.folio.org/browse/MODOAIPMH-293) Transfer suppressed records with discovery flag is not honored for instances suppressed from discovery.
+* [MODOAIPMH-302](https://issues.folio.org/browse/MODOAIPMH-302) Response encoding does not use UTF-8 represenation of Unicode.
+* [MODOAIPMH-203](https://issues.folio.org/browse/MODOAIPMH-203) Add index to mod-oai-pmh.instances table.
+* [MODOAIPMH-305](https://issues.folio.org/browse/MODOAIPMH-305) <datestamp> element not populated correctly when harvesting with marc21_withholdings prefix.
+
+### Stories
+
+* [MODOAIPMH-310](https://issues.folio.org/browse/MODOAIPMH-310) Stabilize oai-pmh tests for release.
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.4.0...v3.4.1)
+
 ## 3.4.0 (Released) 2021-03-18
 
 This release involves enhancement and corrections related to marc21_withholdings metadata prefix handling.

@@ -159,8 +159,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .setLastUpdatedDate(lastUpdateDate);
 
       Future<RequestMetadataLb> updateRequestMetadataFuture;
-      if (resumptionToken == null || request.getRequestId() == null) {
-        requestId = UUID.randomUUID().toString();
+      if (resumptionToken == null) {
+        requestId = request.getRequestId();
         requestMetadata.setRequestId(UUID.fromString(requestId));
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
@@ -194,7 +194,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId, boolean firstBatch) {
     try {
-      boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request);
+      boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer.parseInt(
         RepositoryConfigurationUtil.getProperty(request.getTenant(),
           REPOSITORY_MAX_RECORDS_PER_RESPONSE));
@@ -229,7 +229,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           return;
         }
 
-        String nextInstanceId = instances.size() < batchSize ? null : instances.get(batchSize).getString(INSTANCE_ID_FIELD_NAME);
+        String nextInstanceId = instances.size() <= batchSize ? null : instances.get(batchSize).getString(INSTANCE_ID_FIELD_NAME);
         List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
         final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
           request.getTenant(), request.getOkapiToken());
@@ -301,7 +301,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     paramMap.put(DELETED_RECORD_SUPPORT_PARAM_NAME,
       String.valueOf(
-        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request)));
+        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId())));
     paramMap.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS,
       String.valueOf(
         isSkipSuppressed(request)));
@@ -528,46 +528,49 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private List<RecordType> buildRecordsList(Request request, List<JsonObject> batch, Map<String, JsonObject> srsResponse,
-                                            boolean deletedRecordSupport) {
+      boolean deletedRecordSupport) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
-    final boolean suppressedRecordsProcessing = getBooleanProperty(request.getOkapiHeaders(),
-      REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    final boolean suppressedRecordsProcessing = getBooleanProperty(request.getRequestId(),
+        REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     List<RecordType> records = new ArrayList<>();
     batch.stream()
       .filter(instance -> {
-          final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-          final JsonObject srsInstance = srsResponse.get(instanceId);
-          return Objects.nonNull(srsInstance);
-        }
-      ).forEach(instance -> {
-      final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-      final JsonObject srsInstance = srsResponse.get(instanceId);
-      RecordType record = createRecord(request, instance, instanceId);
+        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+        final JsonObject srsInstance = srsResponse.get(instanceId);
+        return Objects.nonNull(srsInstance);
+      })
+      .forEach(instance -> {
+        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+        final JsonObject srsInstance = srsResponse.get(instanceId);
+        RecordType record = createRecord(request, srsInstance, instanceId);
 
-      JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance, suppressedRecordsProcessing);
-      if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
-        record.getHeader().setStatus(StatusType.DELETED);
-      }
-      String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
-      if (source != null && record.getHeader().getStatus() == null) {
-        if (suppressedRecordsProcessing) {
-          source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
-          source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+        JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance,
+            suppressedRecordsProcessing);
+        if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
+          record.getHeader()
+            .setStatus(StatusType.DELETED);
         }
-        try {
-          record.withMetadata(buildOaiMetadata(request, source));
-        } catch (Exception e) {
-          logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
-          logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
-          return;
+        String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
+        if (source != null && record.getHeader()
+          .getStatus() == null) {
+          if (suppressedRecordsProcessing) {
+            source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
+            source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+          }
+          try {
+            record.withMetadata(buildOaiMetadata(request, source));
+          } catch (Exception e) {
+            logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
+            logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
+            return;
+          }
         }
-      }
-      if (filterInstance(request, srsInstance)) {
-        records.add(record);
-      }
-    });
+        if (filterInstance(request, srsInstance)) {
+          records.add(record);
+        }
+      });
     return records;
   }
 
@@ -605,7 +608,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private boolean isSkipSuppressed(Request request) {
-    return !getBooleanProperty(request.getOkapiHeaders(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
   /**
