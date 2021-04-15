@@ -55,7 +55,6 @@ import static org.folio.rest.impl.OkapiMockServer.SRS_RECORDS_WITH_CYRILLIC_DATA
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SUPPRESSED_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -120,7 +119,6 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.domain.Verb;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.persist.PostgresClient;
@@ -2272,6 +2270,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 1);
+    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
   }
 
   @Test
@@ -2287,6 +2286,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 1);
+    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
 
     System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, idleTimeout);
   }
