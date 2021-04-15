@@ -37,6 +37,7 @@ import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
+import static org.folio.rest.impl.OkapiMockServer.INVENTORY_60_INSTANCE_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
@@ -55,7 +56,6 @@ import static org.folio.rest.impl.OkapiMockServer.SRS_RECORDS_WITH_CYRILLIC_DATA
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SUPPRESSED_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
@@ -120,7 +120,6 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.domain.Verb;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.persist.PostgresClient;
@@ -2215,6 +2214,22 @@ class OaiPmhImplTest {
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void shouldNotThrowNullPointerException_whenGetListRecordsAndInventoryRespondedBeforeCapacityCheckerWasSet() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "60");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVENTORY_60_INSTANCE_IDS_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 60);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
