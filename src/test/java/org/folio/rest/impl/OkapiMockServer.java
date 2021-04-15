@@ -86,6 +86,7 @@ public class OkapiMockServer {
   static final String DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE = "1388-03-03";
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
+  static final String INVENTORY_60_INSTANCE_IDS_DATE = "2002-02-04";
   static final String INSTANCE_WITHOUT_SRS_RECORD_DATE = "2002-02-03";
   static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
@@ -145,6 +146,7 @@ public class OkapiMockServer {
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
+  private static final String INSTANCE_IDS_60_JSON = "60_instances_ids.json";
   private static final String SRS_RECORD_TEMPLATE_JSON = "/srs_record_template.json";
   private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
@@ -241,6 +243,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
       } else if (uri.contains(INVENTORY_27_INSTANCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, ALL_INSTANCES_IDS_JSON);
+      } else if (uri.contains(INVENTORY_60_INSTANCE_IDS_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_60_JSON);
       } else if (uri.contains(DATE_SRS_ERROR_RESPONSE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON);
       } else if (uri.contains(DATE_SRS_500_ERROR_RESPONSE)) {
