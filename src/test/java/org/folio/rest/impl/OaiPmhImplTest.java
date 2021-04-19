@@ -2287,6 +2287,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 1);
+    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
   }
 
   @Test
@@ -2302,6 +2303,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 1);
+    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
 
     System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, idleTimeout);
   }

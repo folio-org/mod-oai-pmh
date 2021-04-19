@@ -168,7 +168,9 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
 
-  private static int attemptsCount = 1;
+  private static int srsRerequestAttemptsCount = 4;
+  private static int totalSrsRerequestCallsNumber = 0;
+
 
   private final int port;
   private final Vertx vertx;
@@ -348,18 +350,21 @@ public class OkapiMockServer {
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponse(ctx);
     } else if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500)) {
-      if(attemptsCount > 0) {
-        attemptsCount--;
+      totalSrsRerequestCallsNumber++;
+      if (srsRerequestAttemptsCount > 0) {
+        srsRerequestAttemptsCount--;
         failureResponse(ctx, 502, "Bad Gateway");
       } else {
-        attemptsCount = 1;
+        srsRerequestAttemptsCount = 4;
         successResponse(ctx, generateSrsPostResponseForInstanceIds(instanceIds));
       }
     } else if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT)) {
-      if(attemptsCount > 0) {
-        attemptsCount--;
-        vertx.setTimer(20000, timerId -> successResponse(ctx, ""));
+      totalSrsRerequestCallsNumber++;
+      if (srsRerequestAttemptsCount > 0) {
+        srsRerequestAttemptsCount--;
+        vertx.setTimer(3000, timerId -> successResponse(ctx, ""));
       } else {
+        srsRerequestAttemptsCount = 4;
         successResponse(ctx, generateSrsPostResponseForInstanceIds(instanceIds));
       }
     } else if (instanceIds.contains(INVALID_SRS_RECORD_INSTANCE_ID)) {
@@ -565,4 +570,9 @@ public class OkapiMockServer {
       .toString();
   }
 
+  public static int getTotalSrsCallsNumber() {
+    int callsNumber = totalSrsRerequestCallsNumber;
+    totalSrsRerequestCallsNumber = 0;
+    return callsNumber;
+  }
 }
