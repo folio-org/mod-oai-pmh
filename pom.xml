@@ -109,6 +109,9 @@
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <argLine>-Dfile.encoding=UTF-8</argLine>
+
     <sonar.exclusions>**/PropertyNameMapper.java,
       **/ModTenantAPI.java,
       **/SourceStorageSourceRecordsClient.java</sonar.exclusions>
@@ -658,7 +661,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.2</version>
         <configuration>
-          <argLine>-Dfile.encoding=UTF-8</argLine>
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
