@@ -2428,8 +2428,7 @@ class OaiPmhImplTest {
     String maxRecordsPerResponse = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");
 
-    RequestSpecification request = createBaseRequest()
-      .with()
+    RequestSpecification request = createBaseRequest().with()
       .param(VERB_PARAM, verb.value())
       .param(METADATA_PREFIX_PARAM, prefix.getName())
       .param(FROM_PARAM, DATE_FOR_INSTANCES_10_PARTIALLY);
@@ -2447,7 +2446,7 @@ class OaiPmhImplTest {
 
     resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb,2, 8);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
     assertThat(resumptionToken.getValue(), is(isEmptyString()));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecordsPerResponse);
