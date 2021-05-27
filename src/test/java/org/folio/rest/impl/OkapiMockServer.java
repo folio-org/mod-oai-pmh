@@ -1,18 +1,15 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.junit5.VertxTestContext;
+import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.LOCATION_URI;
+import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,15 +23,19 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
-import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
-import static org.folio.oaipmh.Constants.LOCATION_URI;
-import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
-import static org.junit.jupiter.api.Assertions.fail;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.junit5.VertxTestContext;
 
 public class OkapiMockServer {
 
@@ -77,8 +78,8 @@ public class OkapiMockServer {
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
+  static final String DATE_FOR_INSTANCES_10_PARTIALLY = "2002-01-29";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
-  private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00";
   static final String INVENTORY_27_INSTANCES_IDS_DATE = "2020-01-01";
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
@@ -167,6 +168,9 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
+
+  private static final String REPLACE_WITH_RECORDS = "replace_with_records";
+  private static final String REPLACE_TOTAL_COUNT = "replace_total_count";
 
   private static int srsRerequestAttemptsCount = 4;
   private static int totalSrsRerequestCallsNumber = 0;
@@ -411,8 +415,12 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
       } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
-      } else if (uri.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
         successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
+      } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+        int offset = parseInt(ctx.request().getParam("offset"));
+        int limit = parseInt(ctx.request().getParam("limit"));
+        successResponse(ctx, getSrsRecordsPartially(offset, limit));
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
@@ -436,6 +444,22 @@ public class OkapiMockServer {
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  private String getSrsRecordsPartially(int offset, int limit) {
+    String sourceRecordsString = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
+    String srsRecordsResponseTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
+    JsonObject sourceRecordsJson = new JsonObject(sourceRecordsString);
+    JsonArray defaultRecords = sourceRecordsJson.getJsonArray("sourceRecords");
+    JsonArray requiredRecords = new JsonArray();
+    int interval = offset == 8 ? 2 : limit;
+    for (int i = 0; i < interval; i++) {
+        requiredRecords.add(defaultRecords.getJsonObject(offset + i));
+    }
+    String requiredRecordsArray = requiredRecords.encode();
+    requiredRecordsArray = requiredRecordsArray.substring(1, requiredRecordsArray.length()-1);
+    String response = srsRecordsResponseTemplate.replaceAll(REPLACE_WITH_RECORDS, requiredRecordsArray);
+    return response.replaceAll(REPLACE_TOTAL_COUNT, "10");
   }
 
   private void handleInventoryStorageFilteringConditionsResponse(RoutingContext ctx) {
@@ -555,8 +579,8 @@ public class OkapiMockServer {
       .map(Object::toString)
       .forEach(id -> srsRecords.add(transformTemplateToRecord(requireNonNull(srsRecordTemplate), id)));
     String allRecords = String.join(",", srsRecords);
-    return srsRecordsResponseTemplate.replace("replace_with_records", allRecords)
-      .replace("replace_total_count", String.valueOf(srsRecords.size()));
+    return srsRecordsResponseTemplate.replace(REPLACE_WITH_RECORDS, allRecords)
+      .replace(REPLACE_TOTAL_COUNT, String.valueOf(srsRecords.size()));
   }
 
   private String transformTemplateToRecord(String recordTemplate, String instanceId) {

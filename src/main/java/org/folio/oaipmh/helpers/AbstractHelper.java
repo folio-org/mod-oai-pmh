@@ -350,7 +350,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
