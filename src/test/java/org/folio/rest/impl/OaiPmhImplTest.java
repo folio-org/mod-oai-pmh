@@ -2438,8 +2438,8 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-    assertEquals(resumptionToken.getCompleteListSize(), BigInteger.valueOf(10));
-    assertEquals(resumptionToken.getCursor(), BigInteger.valueOf(0));
+    assertEquals(resumptionToken.getCompleteListSize(), BigInteger.TEN);
+    assertEquals(resumptionToken.getCursor(), BigInteger.ZERO);
 
     List<HeaderType> records = getHeadersListDependOnVerbType(verb, oaipmh);
     List<HeaderType> totalRecords = new ArrayList<>(records);
@@ -2447,7 +2447,7 @@ class OaiPmhImplTest {
     resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
     resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
-    assertThat(resumptionToken.getValue(), is(isEmptyString()));
+    assertThat(resumptionToken.getValue(), isEmptyString());
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecordsPerResponse);
   }
@@ -2486,35 +2486,30 @@ class OaiPmhImplTest {
 
   private ResumptionTokenType makeResumptionTokenRequestsAndVerifyCount(List<HeaderType> totalRecords,
       ResumptionTokenType resumptionToken, VerbType verb, int desiredCount, int expectedCursor) {
-    RequestSpecification request;
-    OAIPMH oaipmh;
-    List<HeaderType> records;
-    request = createBaseRequest().with()
+    RequestSpecification request = createBaseRequest().with()
       .param(VERB_PARAM, verb.value())
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
+    OAIPMH oaipmh;
+    List<HeaderType> records;
     oaipmh = verify200WithXml(request, verb);
     verifyListResponse(oaipmh, verb, desiredCount);
     resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertEquals(expectedCursor, resumptionToken.getCursor()
       .intValue());
-
     records = getHeadersListDependOnVerbType(verb, oaipmh);
     totalRecords.addAll(records);
     return resumptionToken;
   }
 
   private List<HeaderType> getHeadersListDependOnVerbType(VerbType verb, OAIPMH oaipmh) {
-    if (verb.equals(LIST_RECORDS)) {
-      return oaipmh.getListRecords()
-        .getRecords()
-        .stream()
-        .map(RecordType::getHeader)
-        .collect(Collectors.toList());
-    } else {
-      return oaipmh.getListIdentifiers()
-        .getHeaders();
-    }
+    return verb.equals(LIST_RECORDS) ? oaipmh.getListRecords()
+      .getRecords()
+      .stream()
+      .map(RecordType::getHeader)
+      .collect(Collectors.toList()) :
+      oaipmh.getListIdentifiers()
+      .getHeaders();
   }
 
   @Autowired
