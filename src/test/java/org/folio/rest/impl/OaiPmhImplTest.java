@@ -2438,8 +2438,8 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-    assertEquals(resumptionToken.getCompleteListSize(), BigInteger.TEN);
-    assertEquals(resumptionToken.getCursor(), BigInteger.ZERO);
+    assertEquals(BigInteger.TEN, resumptionToken.getCompleteListSize());
+    assertEquals(BigInteger.ZERO, resumptionToken.getCursor());
 
     List<HeaderType> records = getHeadersListDependOnVerbType(verb, oaipmh);
     List<HeaderType> totalRecords = new ArrayList<>(records);
