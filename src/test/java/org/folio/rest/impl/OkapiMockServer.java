@@ -1,18 +1,16 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.junit5.VertxTestContext;
+import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.LOCATION_URI;
+import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,15 +24,20 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
-import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
-import static org.folio.oaipmh.Constants.LOCATION_URI;
-import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
-import static org.junit.jupiter.api.Assertions.fail;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.junit5.VertxTestContext;
 
 public class OkapiMockServer {
 
@@ -77,8 +80,8 @@ public class OkapiMockServer {
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
+  static final String DATE_FOR_INSTANCES_10_PARTIALLY = "2002-01-29";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
-  private static final String DATE_FOR_INSTANCES_10_STORAGE = "2001-01-29T00:00:00";
   static final String INVENTORY_27_INSTANCES_IDS_DATE = "2020-01-01";
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
@@ -167,6 +170,11 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
+
+  private static final String JSON_TEMPLATE_KEY_RECORDS = "replace_with_records";
+  private static final String JSON_TEMPLATE_KEY_TOTAL_COUNT = "replace_total_count";
+  private static final int LAST_RECORDS_BATCH_OFFSET_VALUE = 8;
+  private static final int LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON = 2;
 
   private static int srsRerequestAttemptsCount = 4;
   private static int totalSrsRerequestCallsNumber = 0;
@@ -293,19 +301,19 @@ public class OkapiMockServer {
     switch (ctx.request()
       .getHeader(OKAPI_TENANT)) {
     case EXIST_CONFIG_TENANT:
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_TEST));
+      successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_TEST));
       break;
     case EXIST_CONFIG_TENANT_2:
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+      successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_OAI_TENANT));
       break;
     case INVALID_CONFIG_TENANT:
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS));
+      successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS));
       break;
     case OAI_TEST_TENANT:
       if (ctx.request().absoluteURI().contains(SUPPRESSED_RECORDS_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS));
+        successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS));
       } else {
-        successResponse(ctx, getJsonObjectFromFile(CONFIG_OAI_TENANT));
+        successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_OAI_TENANT));
       }
       break;
     case ERROR_TENANT:
@@ -315,13 +323,13 @@ public class OkapiMockServer {
       successResponse(ctx, "&&@^$%^@$^&$");
       break;
     default:
-      successResponse(ctx, getJsonObjectFromFile(CONFIG_EMPTY));
+      successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_EMPTY));
       break;
     }
   }
 
   private void handleSourceRecordStorageResponse(RoutingContext ctx) {
-    String json = getJsonObjectFromFile(String.format("/source-storage/records/%s", String.format("marc-%s.json", JSON_FILE_ID)));
+    String json = getJsonObjectFromFileAsString(String.format("/source-storage/records/%s", String.format("marc-%s.json", JSON_FILE_ID)));
     if (isNotEmpty(json)) {
       final String uri = ctx.request()
         .absoluteURI();
@@ -333,10 +341,10 @@ public class OkapiMockServer {
       } else if (uri.contains(THREE_INSTANCES_DATE)) {
         json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
       } else if (uri.contains(NO_RECORDS_DATE)) {
-        json = getJsonObjectFromFile("/instance-storage.instances" + "/instances_0.json");
+        json = getJsonObjectFromFileAsString("/instance-storage.instances" + "/instances_0.json");
       } else if (ctx.request()
         .method() == HttpMethod.POST) {
-        json = getJsonObjectFromFile("/source-storage/records/srs_instances.json");
+        json = getJsonObjectFromFileAsString("/source-storage/records/srs_instances.json");
       }
       successResponse(ctx, json);
     } else {
@@ -368,15 +376,15 @@ public class OkapiMockServer {
         successResponse(ctx, generateSrsPostResponseForInstanceIds(instanceIds));
       }
     } else if (instanceIds.contains(INVALID_SRS_RECORD_INSTANCE_ID)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
     } else if (instanceIds.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
     } else if (instanceIds.contains(DEFAULT_INSTANCE_ID)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
     } else if (instanceIds.contains(INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
     } else if (instanceIds.contains(INSTANCE_ID_WITHOUT_SRS_RECORD)) {
-      successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
@@ -388,48 +396,52 @@ public class OkapiMockServer {
       .absoluteURI();
     if (uri != null) {
       if (uri.contains(DEFAULT_RECORD_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
       } else if (uri.contains(NO_RECORDS_DATE_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, ERROR_IDENTIFIER))) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (uri.contains(ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (uri.contains(PARTITIONABLE_RECORDS_DATE_TIME_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_11));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_11));
       } else if (uri.contains(DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE) || uri.contains(NOT_FOUND_RECORD_INSTANCE_ID)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_NO_RECORD_SOURCE));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_NO_RECORD_SOURCE));
       } else if (uri.contains(RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE)) {
         failureResponse(ctx, 500, "Internal Server Error");
       } else if (uri.contains(THREE_INSTANCES_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
       } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
       } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
-      } else if (uri.contains(DATE_FOR_INSTANCES_10_STORAGE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
+      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
+      } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+        int offset = parseInt(ctx.request().getParam("offset"));
+        int limit = parseInt(ctx.request().getParam("limit"));
+        successResponse(ctx, getSrsRecordsPartially(ctx.request().params()));
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
-        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
         successResponse(ctx, json);
       } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));
       } else if (uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON));
       } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
       } else if (uri.contains(SRS_RECORD_WITH_OLD_METADATA_DATE)) {
-        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
+        String json = getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
         successResponse(ctx, json.replaceAll("REPLACE_ME", OLD_METADATA_DATE_FORMAT));
       } else if (uri.contains(SRS_RECORD_WITH_NEW_METADATA_DATE)) {
-        String json = getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
+        String json = getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
         successResponse(ctx, json.replaceAll("REPLACE_ME", NEW_METADATA_DATE_FORMAT));
       } else {
-        successResponse(ctx, getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
       logger.info("Mock returns http status code: " + ctx.response()
         .getStatusCode());
@@ -438,19 +450,43 @@ public class OkapiMockServer {
     }
   }
 
+  private String getSrsRecordsPartially(MultiMap params) {
+    try {
+      int offset = parseInt(requireNonNull(params.get("offset")));
+      int limit = parseInt(requireNonNull(params.get("limit")));
+      String sourceRecordsString = requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
+      String srsRecordsResponseTemplate = requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
+      JsonObject sourceRecordsJson = new JsonObject(sourceRecordsString);
+      JsonArray defaultRecords = sourceRecordsJson.getJsonArray("sourceRecords");
+      JsonArray requiredRecords = new JsonArray();
+      int interval = offset == LAST_RECORDS_BATCH_OFFSET_VALUE ? LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON : limit;
+      for (int i = 0; i < interval; i++) {
+        requiredRecords.add(defaultRecords.getJsonObject(offset + i));
+      }
+      String requiredRecordsArray = requiredRecords.encode();
+      requiredRecordsArray = requiredRecordsArray.substring(1, requiredRecordsArray.length() - 1);
+      String response = srsRecordsResponseTemplate.replaceAll(JSON_TEMPLATE_KEY_RECORDS, requiredRecordsArray);
+      return response.replaceAll(JSON_TEMPLATE_KEY_TOTAL_COUNT, "10");
+    } catch (Exception ex) {
+      logger.error("Can't obtain the offset/limit params. " + ex.getMessage());
+      fail(ex);
+    }
+    return EMPTY;
+  }
+
   private void handleInventoryStorageFilteringConditionsResponse(RoutingContext ctx) {
     String uri = ctx.request()
       .absoluteURI();
     if (uri.contains(ILL_POLICIES_URI)) {
-      successResponse(ctx, getJsonObjectFromFile(ILL_POLICIES_JSON_PATH));
+      successResponse(ctx, getJsonObjectFromFileAsString(ILL_POLICIES_JSON_PATH));
     } else if (uri.contains(INSTANCE_FORMATS_URI)) {
-      successResponse(ctx, getJsonObjectFromFile(INSTANCE_FORMATS_JSON_PATH));
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_FORMATS_JSON_PATH));
     } else if (uri.contains(RESOURCE_TYPES_URI)) {
-      successResponse(ctx, getJsonObjectFromFile(INSTANCE_TYPES_JSON_PATH));
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_TYPES_JSON_PATH));
     } else if (uri.contains(LOCATION_URI)) {
-      successResponse(ctx, getJsonObjectFromFile(LOCATION_JSON_PATH));
+      successResponse(ctx, getJsonObjectFromFileAsString(LOCATION_JSON_PATH));
     } else if (uri.contains(MATERIAL_TYPES_URI)) {
-      successResponse(ctx, getJsonObjectFromFile(MATERIAL_TYPES_JSON_PATH));
+      successResponse(ctx, getJsonObjectFromFileAsString(MATERIAL_TYPES_JSON_PATH));
     } else {
       failureResponse(ctx, 400, "there is no mocked handler for request uri '{" + uri + "}'");
     }
@@ -467,7 +503,7 @@ public class OkapiMockServer {
   private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
     String path = INVENTORY_VIEW_PATH + jsonFileName;
     logger.debug("Logger: Path value: " + path);
-    Buffer buffer = Buffer.buffer(getJsonObjectFromFile(path));
+    Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
     logger.debug("Ending response for instance ids with buffer: " + buffer.toString());
     routingContext.response().setStatusCode(200).end(buffer);
   }
@@ -503,7 +539,7 @@ public class OkapiMockServer {
    * @param path path to json file to read
    * @return json as string from the json file
    */
-  private String getJsonObjectFromFile(String path) {
+  private String getJsonObjectFromFileAsString(String path) {
     try {
       logger.debug("Loading file " + path);
       URL resource = OkapiMockServer.class.getResource(path);
@@ -533,7 +569,7 @@ public class OkapiMockServer {
   }
 
   private String generateEnrichedInstancesResponse(JsonArray instancesIds) {
-    String enrichedInstanceTemplate = requireNonNull(getJsonObjectFromFile(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_TEMPLATE_JSON));
+    String enrichedInstanceTemplate = requireNonNull(getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_TEMPLATE_JSON));
     List<String> enrichedInstances = instancesIds.stream()
       .map(Object::toString)
       .map(instanceId ->  enrichedInstanceTemplate.replace("set_instance_id", instanceId)
@@ -547,16 +583,16 @@ public class OkapiMockServer {
   }
 
   private String generateSrsPostResponseForInstanceIds(JsonArray instanceIds) {
-    String srsRecordTemplate = requireNonNull(getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_TEMPLATE_JSON));
+    String srsRecordTemplate = requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_TEMPLATE_JSON));
     String srsRecordsResponseTemplate = requireNonNull(
-      getJsonObjectFromFile(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
+      getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RESPONSE_TEMPLATE_JSON));
     List<String> srsRecords = new ArrayList<>();
     instanceIds.stream()
       .map(Object::toString)
       .forEach(id -> srsRecords.add(transformTemplateToRecord(requireNonNull(srsRecordTemplate), id)));
     String allRecords = String.join(",", srsRecords);
-    return srsRecordsResponseTemplate.replace("replace_with_records", allRecords)
-      .replace("replace_total_count", String.valueOf(srsRecords.size()));
+    return srsRecordsResponseTemplate.replace(JSON_TEMPLATE_KEY_RECORDS, allRecords)
+      .replace(JSON_TEMPLATE_KEY_TOTAL_COUNT, String.valueOf(srsRecords.size()));
   }
 
   private String transformTemplateToRecord(String recordTemplate, String instanceId) {

@@ -36,6 +36,7 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
+import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_60_INSTANCE_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
@@ -2422,12 +2423,40 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  void verifyResumptionTokenFlowForMarc21AndOaiDcMetadataPrefixes(MetadataPrefix prefix, VerbType verb) {
+    String maxRecordsPerResponse = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");
+
+    RequestSpecification request = createBaseRequest().with()
+      .param(VERB_PARAM, verb.value())
+      .param(METADATA_PREFIX_PARAM, prefix.getName())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10_PARTIALLY);
+
+    OAIPMH oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, 4);
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
+    assertThat(resumptionToken, is(notNullValue()));
+    assertThat(resumptionToken.getValue(), is(notNullValue()));
+    assertEquals(BigInteger.TEN, resumptionToken.getCompleteListSize());
+    assertEquals(BigInteger.ZERO, resumptionToken.getCursor());
+
+    List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);
+
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
+
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
+    assertThat(resumptionToken.getValue(), isEmptyString());
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecordsPerResponse);
+  }
+
+  @ParameterizedTest
   @EnumSource(value = VerbType.class, names = {"LIST_RECORDS"})
   void verifyResumptionTokenFlow_whenVerbListRecordsAndMetadataPrefixMarc21WithHoldings(VerbType verb) {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");
 
-    List<HeaderType> totalRecords = new ArrayList<>();
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
@@ -2440,14 +2469,11 @@ class OaiPmhImplTest {
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
     assertEquals(0, resumptionToken.getCursor().intValue());
-    List<HeaderType> records = oaipmh.getListRecords().getRecords().stream()
-      .map(RecordType::getHeader)
-      .collect(Collectors.toList());
-    totalRecords.addAll(records);
+    List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 4, 4);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, 2, 8);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
 
     assertThat(resumptionToken.getValue(), is(isEmptyString()));
 
@@ -2457,25 +2483,32 @@ class OaiPmhImplTest {
   }
 
   private ResumptionTokenType makeResumptionTokenRequestsAndVerifyCount(List<HeaderType> totalRecords,
-                                                                        ResumptionTokenType resumptionToken, int desiredCount, int expectedCursor) {
-    RequestSpecification request;
+      ResumptionTokenType resumptionToken, VerbType verb, int desiredCount, int expectedCursor) {
+    RequestSpecification request = createBaseRequest().with()
+      .param(VERB_PARAM, verb.value())
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
     OAIPMH oaipmh;
     List<HeaderType> records;
-    request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-    oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, desiredCount);
-    resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    oaipmh = verify200WithXml(request, verb);
+    verifyListResponse(oaipmh, verb, desiredCount);
+    resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
-    assertEquals(expectedCursor, resumptionToken.getCursor().intValue());
-
-    records = oaipmh.getListRecords().getRecords().stream()
-      .map(RecordType::getHeader)
-      .collect(Collectors.toList());
+    assertEquals(expectedCursor, resumptionToken.getCursor()
+      .intValue());
+    records = getHeadersListDependOnVerbType(verb, oaipmh);
     totalRecords.addAll(records);
     return resumptionToken;
+  }
+
+  private List<HeaderType> getHeadersListDependOnVerbType(VerbType verb, OAIPMH oaipmh) {
+    return verb.equals(LIST_RECORDS) 
+      ? oaipmh.getListRecords()
+      .getRecords()
+      .stream()
+      .map(RecordType::getHeader)
+      .collect(Collectors.toList()) 
+      : oaipmh.getListIdentifiers()
+      .getHeaders();
   }
 
   @Autowired

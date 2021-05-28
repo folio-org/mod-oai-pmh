@@ -12,7 +12,6 @@ import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
@@ -350,7 +349,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getOkapiHeaders().get(OKAPI_TENANT), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < totalRecords) {
       Map<String, String> extraParams = new HashMap<>();
