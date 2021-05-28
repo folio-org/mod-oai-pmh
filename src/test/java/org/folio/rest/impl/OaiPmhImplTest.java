@@ -2501,12 +2501,13 @@ class OaiPmhImplTest {
   }
 
   private List<HeaderType> getHeadersListDependOnVerbType(VerbType verb, OAIPMH oaipmh) {
-    return verb.equals(LIST_RECORDS) ? oaipmh.getListRecords()
+    return verb.equals(LIST_RECORDS) 
+      ? oaipmh.getListRecords()
       .getRecords()
       .stream()
       .map(RecordType::getHeader)
-      .collect(Collectors.toList()) :
-      oaipmh.getListIdentifiers()
+      .collect(Collectors.toList()) 
+      : oaipmh.getListIdentifiers()
       .getHeaders();
   }
 
