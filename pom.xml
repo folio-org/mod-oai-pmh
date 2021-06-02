@@ -76,12 +76,12 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-sql-client</artifactId>
-        <version>${vertx-folio.version}</version>
+        <version>${vertx.version}-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-pg-client</artifactId>
-        <version>${vertx-folio.version}</version>
+        <version>${vertx.version}-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>org.junit</groupId>
@@ -121,8 +121,8 @@
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
-    <raml-module-builder.version>31.1.5</raml-module-builder.version>
-    <vertx.version>3.9.6</vertx.version>
+    <raml-module-builder.version>33.0.0</raml-module-builder.version>
+    <vertx.version>4.1.0.CR1</vertx.version>
     <vertx-folio.version>3.9.4-FOLIO</vertx-folio.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
     <apache-commons-lang3.version>3.9</apache-commons-lang3.version>
@@ -392,6 +392,7 @@
         <artifactId>aspectj-maven-plugin</artifactId>
         <version>1.12.6</version>
         <configuration>
+          <complianceLevel>11</complianceLevel>
           <verbose>true</verbose>
           <showWeaveInfo>false</showWeaveInfo>
           <source>${maven.compiler.source}</source>
