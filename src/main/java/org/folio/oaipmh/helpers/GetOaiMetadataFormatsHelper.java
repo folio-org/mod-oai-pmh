@@ -22,13 +22,13 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 
 public class GetOaiMetadataFormatsHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -86,12 +86,12 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
             }
 
           } catch (Exception e) {
-            logger.error("Exception getting list of identifiers", e);
+            logger.error("Exception getting list of identifiers.", e);
             promise.fail(e);
           }
         });
     } catch (Exception e) {
-      logger.error("Error happened while processing ListMetadataFormats verb request", e);
+      logger.error("Error happened while processing ListMetadataFormats verb request.", e);
       promise.fail(e);
     }
     return promise.future();

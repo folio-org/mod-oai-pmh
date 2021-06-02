@@ -37,15 +37,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 class RecordMetadataManagerTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
@@ -355,7 +355,7 @@ class RecordMetadataManagerTest {
    */
   private String getJsonObjectFromFile(String path) {
     try {
-      logger.debug("Loading file " + path);
+      logger.debug("Loading file {}.", path);
       URL resource = OkapiMockServer.class.getResource(path);
       if (resource == null) {
         return null;
@@ -364,7 +364,7 @@ class RecordMetadataManagerTest {
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new String(encoded, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      logger.error("Unexpected error", e);
+      logger.error("Unexpected error.", e);
       fail(e.getMessage());
     }
     return null;

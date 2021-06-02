@@ -15,6 +15,7 @@ import javax.ws.rs.core.Response;
 
 import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.SetService;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.Error;
 import org.folio.rest.jaxrs.model.Errors;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -32,13 +33,13 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.pgclient.PgException;
 
 public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
 
-  private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImpl.class);
+  private static final Logger logger = LogManager.getLogger(OaiPmhSetImpl.class);
   private static final String MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE = "Error occurred while {} set with id: {}. Message: {}.";
   private static final String POST_SET_ERROR_MESSAGE = "Error occurred while posting set with body: {}. Message: {}.";
   private static final String GET_SET_LIST_ERROR_MESSAGE = "Error occurred while getting list of sets with offset: {} and limit: {}. Message: {}.";
@@ -55,14 +56,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Get set by id with id: {}", id);
+        logger.info("Get set by id with id: {}.", id);
         setService.getSetById(id, getTenantId(okapiHeaders))
           .map(OaiPmhSets.GetOaiPmhSetsByIdResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e, "getting", id, e.getMessage());
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, "getting", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -81,7 +82,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e,"putting", id, e.getMessage());
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE,"putting", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -92,7 +93,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Post set with body: {}", entityToJsonString(entity));
+        logger.info("Post set with body: {}.", entityToJsonString(entity));
         validateFolioSet(entity, asyncResultHandler);
         setService.saveSet(entity, getTenantId(okapiHeaders), getUserId(okapiHeaders))
           .map(set -> OaiPmhSets.PostOaiPmhSetsResponse.respond201WithApplicationJson(set, PostOaiPmhSetsResponse.headersFor201()))
@@ -100,7 +101,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(POST_SET_ERROR_MESSAGE, e, entity, e.getMessage());
+        logger.error(POST_SET_ERROR_MESSAGE, entity, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -111,14 +112,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Delete set by id with id: {}", id);
+        logger.info("Delete set by id '{}'.", id);
         setService.deleteSetById(id, getTenantId(okapiHeaders))
           .map(OaiPmhSets.DeleteOaiPmhSetsByIdResponse.respond204())
           .map(Response.class::cast)
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, e,"deleting", id, e.getMessage());
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE,"deleting", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -129,14 +130,14 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
       Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
-        logger.info("Get list of sets, offset: {}, limit: {}", offset, limit);
+        logger.info("Get list of sets, offset: {}, limit: {}.", offset, limit);
         setService.getSetList(offset, limit, getTenantId(okapiHeaders))
           .map(GetOaiPmhSetsResponse::respond200WithApplicationJson)
           .map(Response.class::cast)
           .otherwise(ExceptionHelper::mapExceptionToResponse)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(GET_SET_LIST_ERROR_MESSAGE, e, offset, limit, e.getMessage());
+        logger.error(GET_SET_LIST_ERROR_MESSAGE, offset, limit, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
@@ -158,6 +159,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     });
   }
 
+  //TODO move this logic from controller to service
   private void validateFolioSet(FolioSet folioSet, Handler<AsyncResult<Response>> asyncResultHandler) {
     List<Error> errorsList = new ArrayList<>();
     if (isEmpty(folioSet.getName())) {
@@ -175,6 +177,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     }
   }
 
+  //TODO the same here
   private Error createError(String field, String value, String message, ERROR_TYPE errorType) {
     Error error = new Error();
     Parameter p = new Parameter();
@@ -231,7 +234,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   private String getUserId(Map<String, String> okapiHeaders) {
-    return okapiHeaders.get("x-okapi-user-id");
+    return okapiHeaders.get(XOkapiHeaders.USER_ID);
   }
 
   private String entityToJsonString(FolioSet folioSet) {

@@ -1,6 +1,5 @@
 package org.folio.oaipmh.client;
 
-import static java.lang.String.format;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
 
 import java.io.UnsupportedEncodingException;
@@ -19,14 +18,14 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 //TODO Should be replaced with the SourceStorageSourceRecordsClient from mod-source-record-storage-client
 // when it's upgraded to RMD version 32 and Vert.x version 4
 public class SourceStorageSourceRecordsClient {
 
-  private static final Logger logger = LoggerFactory.getLogger(SourceStorageSourceRecordsClient.class);
+  private static final Logger logger = LogManager.getLogger(SourceStorageSourceRecordsClient.class);
 
   private static final String SOURCE_RECORDS_PATH = "/source-storage/source-records";
   private static final int DEFAULT_SRS_TIMEOUT = 10000;
@@ -112,7 +111,7 @@ public class SourceStorageSourceRecordsClient {
       .orElse(defaultValue);
     try {
       int configValue = Integer.parseInt(val);
-      logger.debug(format("Setup client with idle timeout '%s' seconds", configValue));
+      logger.debug("Setup client with idle timeout '{}' seconds", configValue);
       return configValue;
     } catch (Exception e) {
       logger.error(GET_IDLE_TIMEOUT_ERROR_MESSAGE, e);

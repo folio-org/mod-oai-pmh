@@ -8,9 +8,8 @@ import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
@@ -30,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -40,7 +40,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(AbstractGetRecordsHelper.class);
+  private static final Logger logger = LogManager.getLogger(AbstractGetRecordsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -101,16 +101,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               promise.complete(responseCompletableFuture);
             } catch (DecodeException ex) {
               String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-              logger.error(msg, ex, ex.getMessage());
+              logger.error(msg, ex.getMessage(), ex);
               promise.fail(new IllegalStateException(msg, ex));
             }
           });
         } else {
-          logger.error(request.getVerb().value() + " response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
+          logger.error("{} response from SRS status code: {}: {}.", request.getVerb().value(), response.statusMessage(), response.statusCode());
           throw new IllegalStateException(response.statusMessage());
         }
       } catch (Exception e) {
-        logger.error("Exception getting " + request.getVerb().value(), e);
+        logger.error("Exception getting {}.", request.getVerb().value(), e);
         promise.fail(e);
       }
     };
@@ -121,7 +121,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonArray instances = storageHelper.getItems(instancesResponseBody);
     Integer totalRecords = storageHelper.getTotalRecords(instancesResponseBody);
 
-    logger.debug("{} entries retrieved out of {}", instances != null ? instances.size() : 0, totalRecords);
+    logger.debug("{} entries retrieved out of {}.", instances != null ? instances.size() : 0, totalRecords);
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
@@ -162,7 +162,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
         .map(JsonObject.class::cast)
-        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
+        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
         .forEach(instance -> {
           String recordId = storageHelper.getRecordId(instance);
           String identifierId = storageHelper.getIdentifierId(instance);
@@ -176,7 +176,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.error("Error occurred while converting record to xml representation. {}", e, e.getMessage());
+              logger.error("Error occurred while converting record to xml representation. {}.", e.getMessage(), e);
               logger.debug("Skipping problematic record due the conversion error. Source record id - {}.", recordId);
               return;
             }

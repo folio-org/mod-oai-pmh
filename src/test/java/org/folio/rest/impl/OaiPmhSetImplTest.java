@@ -45,15 +45,16 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhSetImplTest extends AbstractSetTest {
-  private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
+
+  private static final Logger logger = LogManager.getLogger(OaiPmhSetImplTest.class);
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -70,7 +71,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
-    logger.info("Test setup starting for " + TestUtil.getModuleId());
+    logger.info("Test setup starting for {}.", TestUtil.getModuleId());
     PostgresClientFactory.setShouldResetPool(true);
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;

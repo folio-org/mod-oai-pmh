@@ -23,13 +23,13 @@ import java.util.stream.Collectors;
 
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
 import org.springframework.stereotype.Service;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -84,13 +84,17 @@ public class SetServiceImpl implements SetService {
     Promise<FilteringConditionValueCollection> promise = Promise.promise();
     HttpClient vertxHttpClient = Vertx.vertx()
       .createHttpClient();
+    List<Future<JsonObject>> futures = new ArrayList<>();
+    List.of(LOCATION_URI, ILL_POLICIES_URI, MATERIAL_TYPES_URI, RESOURCE_TYPES_URI, INSTANCE_FORMATS_URI)
+      .forEach(conditionType -> futures.add(getFilteringConditionValues(conditionType, vertxHttpClient, okapiHeaders)));
+
     Future<JsonObject> locationFuture = getFilteringConditionValues(LOCATION_URI, vertxHttpClient, okapiHeaders);
     Future<JsonObject> illPoliciesFuture = getFilteringConditionValues(ILL_POLICIES_URI, vertxHttpClient, okapiHeaders);
     Future<JsonObject> materialTypesFuture = getFilteringConditionValues(MATERIAL_TYPES_URI, vertxHttpClient, okapiHeaders);
     Future<JsonObject> resourceTypeFuture = getFilteringConditionValues(RESOURCE_TYPES_URI, vertxHttpClient, okapiHeaders);
     Future<JsonObject> instanceFormatsFuture = getFilteringConditionValues(INSTANCE_FORMATS_URI, vertxHttpClient, okapiHeaders);
 
-    CompositeFuture.all(locationFuture, illPoliciesFuture, materialTypesFuture, resourceTypeFuture, instanceFormatsFuture)
+    GenericCompositeFuture.all(futures)
       .onComplete(result -> {
         if (result.failed()) {
           promise.fail(result.cause());

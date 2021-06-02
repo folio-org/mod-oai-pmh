@@ -170,8 +170,8 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.jcip.annotations.NotThreadSafe;
@@ -180,8 +180,6 @@ import net.jcip.annotations.NotThreadSafe;
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhImplTest {
-
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   // API paths
   private static final String ROOT_PATH = "/oai";
@@ -2501,12 +2499,12 @@ class OaiPmhImplTest {
   }
 
   private List<HeaderType> getHeadersListDependOnVerbType(VerbType verb, OAIPMH oaipmh) {
-    return verb.equals(LIST_RECORDS) 
+    return verb.equals(LIST_RECORDS)
       ? oaipmh.getListRecords()
       .getRecords()
       .stream()
       .map(RecordType::getHeader)
-      .collect(Collectors.toList()) 
+      .collect(Collectors.toList())
       : oaipmh.getListIdentifiers()
       .getHeaders();
   }

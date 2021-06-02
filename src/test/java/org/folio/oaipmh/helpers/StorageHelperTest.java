@@ -32,11 +32,11 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 class StorageHelperTest {
-  private static final Logger logger = LoggerFactory.getLogger(StorageHelperTest.class);
+  private static final Logger logger = LogManager.getLogger(StorageHelperTest.class);
 
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
@@ -138,7 +138,7 @@ class StorageHelperTest {
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new JsonObject(new String(encoded, StandardCharsets.UTF_8));
     } catch (IOException e) {
-      logger.error("Unexpected error", e);
+      logger.error("Unexpected error.", e);
       fail(e.getMessage());
     }
     return null;

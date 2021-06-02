@@ -1,8 +1,8 @@
 package org.folio.oaipmh;
 
 import gov.loc.marc21.slim.RecordType;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.apache.commons.lang3.time.StopWatch;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2_0.oai_dc.Dc;
@@ -31,7 +31,9 @@ import static org.folio.oaipmh.Constants.JAXB_MARSHALLER_FORMATTED_OUTPUT;
 
 @SuppressWarnings("squid:S1191") //The com.sun.xml.bind.marshaller.NamespacePrefixMapper is part of jaxb logic
 public class ResponseConverter {
-  private static final Logger logger = LoggerFactory.getLogger(ResponseConverter.class);
+
+  private static final Logger logger = LogManager.getLogger(ResponseConverter.class);
+
   private static final String SCHEMA_PATH = "ramls" + File.separator + "schemas" + File.separator;
   private static final String RESPONSE_SCHEMA = SCHEMA_PATH + "OAI-PMH.xsd";
   private static final String DC_SCHEMA = SCHEMA_PATH + "oai_dc.xsd";
@@ -52,8 +54,8 @@ public class ResponseConverter {
     try {
       ourInstance = new ResponseConverter();
     } catch (JAXBException | SAXException e) {
-      logger.error("The jaxb context could not be initialized");
-      throw new IllegalStateException("Marshaller and unmarshaller are not available", e);
+      logger.error("The jaxb context could not be initialized.");
+      throw new IllegalStateException("Marshaller and unmarshaller are not available.", e);
     }
   }
   private JAXBContext jaxbContext;
@@ -138,7 +140,7 @@ public class ResponseConverter {
       // In case there is an issue to unmarshal response, there is no way to handle it
       throw new IllegalStateException("The string cannot be converted to OAI-PMH response.", e);
     } finally {
-      logExecutionTime("String converted to OAIPMH", timer);
+      logExecutionTime("String converted to OAIPMH.", timer);
     }
   }
 
@@ -174,7 +176,7 @@ public class ResponseConverter {
   private void logExecutionTime(final String msg, StopWatch timer) {
     if (timer != null) {
       timer.stop();
-      logger.debug("{} after {} ms", msg, timer.getTime());
+      logger.debug("{} after {} ms.", msg, timer.getTime());
     }
   }
 }

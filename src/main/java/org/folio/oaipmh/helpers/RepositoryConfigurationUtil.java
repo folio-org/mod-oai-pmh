@@ -22,23 +22,19 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.ext.web.client.HttpResponse;
 
 public class RepositoryConfigurationUtil {
 
-  private static Map<String, JsonObject> configsMap = new HashMap<>();
-
-  private RepositoryConfigurationUtil() {
-
-  }
-
-  private static final Logger logger = LoggerFactory.getLogger(RepositoryConfigurationUtil.class);
+  private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
 
   private static final String QUERY = "module==OAIPMH";
-
+  private static Map<String, JsonObject> configsMap = new HashMap<>();
   private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
+
+  private RepositoryConfigurationUtil() {}
 
   /**
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
@@ -62,7 +58,7 @@ public class RepositoryConfigurationUtil {
             HttpResponse<Buffer> response = result.result();
             JsonObject body = response.bodyAsJsonObject();
             if (response.statusCode() != 200) {
-              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}",
+              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}.",
                 tenant, response.statusCode(), body);
               promise.complete(null);
               return;
@@ -79,12 +75,12 @@ public class RepositoryConfigurationUtil {
             promise.complete(null);
           }
         } catch (Exception e) {
-          logger.error("Error occurred while processing configuration for {} tenant", e, tenant);
+          logger.error("Error occurred while processing configuration for {} tenant.", tenant, e);
           promise.fail(e);
         }
       });
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant", e, tenant);
+      logger.error("Error happened initializing mod-configurations client for {} tenant.", tenant, e);
       promise.fail(e);
     }
     return promise.future();

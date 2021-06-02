@@ -69,18 +69,18 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Abstract helper implementation that provides some common methods.
  */
 public abstract class AbstractHelper implements VerbHelper {
 
-  private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
-  private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
-  protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
+  private static final Logger logger = LogManager.getLogger(AbstractHelper.class);
 
+  private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
+  protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
   private static final String[] dateFormats = {
     org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),

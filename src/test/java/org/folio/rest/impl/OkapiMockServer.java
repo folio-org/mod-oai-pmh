@@ -32,8 +32,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -41,7 +41,7 @@ import io.vertx.junit5.VertxTestContext;
 
 public class OkapiMockServer {
 
-  private static final Logger logger = LoggerFactory.getLogger(OkapiMockServer.class);
+  private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
 
   public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 
@@ -193,7 +193,7 @@ public class OkapiMockServer {
 
     server.requestHandler(defineRoutes())
       .listen(port, context.succeeding(result -> {
-        logger.info("The server has started");
+        logger.info("The server has started.");
         context.completeNow();
       }));
   }
@@ -274,7 +274,7 @@ public class OkapiMockServer {
       } else if (uri.contains(INSTANCE_WITHOUT_SRS_RECORD_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_NO_SRS_RECORD_JSON);
       } else {
-        logger.debug("No mocks for the response, returning the default instance id");
+        logger.debug("No mocks for the response, returning the default instance id.");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
     }
@@ -285,14 +285,14 @@ public class OkapiMockServer {
     JsonArray instanceIds = ctx.getBody()
       .toJsonObject()
       .getJsonArray(INSTANCE_IDS);
-    logger.debug("Before building response for enriched instances, instanceIds: " + String.join(",", instanceIds.getList()));
+    logger.debug("Before building response for enriched instances, instanceIds: {}.", String.join(",", instanceIds.getList()));
     if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
-      logger.debug("Failure EI response");
+      logger.debug("Failure EI response.");
       failureResponse(ctx);
     } else if(instanceIds.isEmpty()) {
       successResponse(ctx, "");
     } else {
-      logger.debug("Success EI response");
+      logger.debug("Success EI response.");
       inventoryViewSuccessResponse(ctx, instanceIds);
     }
   }
@@ -443,7 +443,7 @@ public class OkapiMockServer {
       } else {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
-      logger.info("Mock returns http status code: " + ctx.response()
+      logger.info("Mock returns http status code: {}", ctx.response()
         .getStatusCode());
     } else {
       throw new UnsupportedOperationException();
@@ -468,7 +468,7 @@ public class OkapiMockServer {
       String response = srsRecordsResponseTemplate.replaceAll(JSON_TEMPLATE_KEY_RECORDS, requiredRecordsArray);
       return response.replaceAll(JSON_TEMPLATE_KEY_TOTAL_COUNT, "10");
     } catch (Exception ex) {
-      logger.error("Can't obtain the offset/limit params. " + ex.getMessage());
+      logger.error("Can't obtain the offset/limit params. {}", ex.getMessage());
       fail(ex);
     }
     return EMPTY;
@@ -502,16 +502,16 @@ public class OkapiMockServer {
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName) {
     String path = INVENTORY_VIEW_PATH + jsonFileName;
-    logger.debug("Logger: Path value: " + path);
+    logger.debug("Path value: {}", path);
     Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
-    logger.debug("Ending response for instance ids with buffer: " + buffer.toString());
+    logger.debug("Ending response for instance ids with buffer: {}", buffer.toString());
     routingContext.response().setStatusCode(200).end(buffer);
   }
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, JsonArray instanceIds) {
-    logger.debug("building enriched instances response for instanceIds: " + String.join("," ,instanceIds.getList()));
+    logger.debug("building enriched instances response for instanceIds: {}." + String.join("," ,instanceIds.getList()));
     String response = generateEnrichedInstancesResponse(instanceIds);
-    logger.debug("Built response: " + response);
+    logger.debug("Built response: {}", response);
     Buffer buffer = Buffer.buffer(response);
     routingContext.response()
       .setStatusCode(200)
@@ -541,7 +541,7 @@ public class OkapiMockServer {
    */
   private String getJsonObjectFromFileAsString(String path) {
     try {
-      logger.debug("Loading file " + path);
+      logger.debug("Loading file {}", path);
       URL resource = OkapiMockServer.class.getResource(path);
       if (resource == null) {
         return null;
@@ -550,7 +550,7 @@ public class OkapiMockServer {
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new String(encoded, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      logger.error("Unexpected error", e);
+      logger.error("Unexpected error.", e);
       fail(e.getMessage());
     }
     return null;

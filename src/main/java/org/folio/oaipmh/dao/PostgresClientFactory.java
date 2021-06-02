@@ -5,8 +5,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
@@ -26,7 +26,7 @@ import java.util.Map;
 @Component
 public class PostgresClientFactory {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PostgresClientFactory.class);
+  private static final Logger logger = LogManager.getLogger(PostgresClientFactory.class);
 
   public static final Configuration configuration = new DefaultConfiguration().set(SQLDialect.POSTGRES);
 
@@ -90,14 +90,14 @@ public class PostgresClientFactory {
   private static PgPool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
-      LOG.debug("Using existing database connection pool for tenant {}", tenantId);
+      logger.debug("Using existing database connection pool for tenant {}.", tenantId);
       return POOL_CACHE.get(tenantId);
     }
     if (shouldResetPool) {
       POOL_CACHE.remove(tenantId);
       shouldResetPool = false;
     }
-    LOG.info("Creating new database connection pool for tenant {}", tenantId);
+    logger.info("Creating new database connection pool for tenant {}.", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId);
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
     PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
@@ -117,7 +117,7 @@ public class PostgresClientFactory {
     JsonObject postgreSQLClientConfig = postgresClient.getConnectionConfig();
     postgresClient.closeClient(closed -> {
       if (closed.failed()) {
-        LOG.error("Unable to close PostgresClient", closed.cause());
+        logger.error("Unable to close PostgresClient.", closed.cause());
       }
     });
     return new PgConnectOptions()

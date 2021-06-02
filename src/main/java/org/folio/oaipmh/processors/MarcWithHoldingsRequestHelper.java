@@ -79,8 +79,8 @@ import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
@@ -115,7 +115,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
   private final Vertx vertx;
@@ -177,7 +177,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             downloadInstancesResult -> {
               instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
               if (downloadInstancesResult.succeeded()) {
-                logger.info("Downloading instances complete");
+                logger.info("Downloading instances complete.");
               } else {
                 logger.error("Downloading instances was canceled due to the error. ", downloadInstancesResult.cause());
                 if (!oaipmhResponsePromise.future().isComplete()) {
@@ -202,27 +202,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
       getNextInstances(request, batchSize, context, requestId, firstBatch).future().onComplete(fut -> {
         if (fut.failed()) {
-          logger.error("Get instances failed: " + fut.cause());
+          logger.error("Get instances failed: {}.", fut.cause().getMessage(), fut.cause());
           oaiPmhResponsePromise.fail(fut.cause());
           return;
         }
 
         List<JsonObject> instances = fut.result();
-        logger.info("Processing instances: " + instances.size());
+        logger.info("Processing instances: {}.", instances.size());
         if (CollectionUtils.isEmpty(instances) && !firstBatch) {
           handleException(oaiPmhResponsePromise, new IllegalArgumentException(
-            "Specified resumption token doesn't exists"));
+            "Specified resumption token doesn't exists."));
           return;
         }
 
         if (!firstBatch && (CollectionUtils.isNotEmpty(instances) && !instances.get(0).getString(INSTANCE_ID_FIELD_NAME).equals(request.getNextRecordId()))) {
-          handleException(oaiPmhResponsePromise, new IllegalArgumentException(
-            "Stale resumption token"));
+          handleException(oaiPmhResponsePromise, new IllegalArgumentException("Stale resumption token."));
           return;
         }
 
         if (CollectionUtils.isEmpty(instances)) {
-          logger.debug("Got empty instances");
+          logger.debug("Got empty instances.");
           buildRecordsResponse(request, requestId, instances, new HashMap<>(),
             firstBatch, null, deletedRecordSupport)
             .onSuccess(oaiPmhResponsePromise::complete)
@@ -275,7 +274,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       final Long returnedCount = databaseWriteStream.getReturnedCount();
 
       if (returnedCount % 1000 == 0) {
-        logger.info("Batch saving progress: " + returnedCount + " returned so far, batch size: " + batch.size() + ", http ended: " + databaseWriteStream.isStreamEnded());
+        logger.info("Batch saving progress: {} returned so far, batch size: {}, http ended: {}.", returnedCount, batch.size(), databaseWriteStream.isStreamEnded());
       }
 
       if (databaseWriteStream.isTheLastBatch()) {
@@ -313,7 +312,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
-    logger.info("Sending request to : " + inventoryQuery);
+    logger.info("Sending request to {}", inventoryQuery);
     final HttpClientRequest httpClientRequest = httpClient
       .getAbs(inventoryQuery);
 
@@ -345,7 +344,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           inventoryHttpClient.close();
         })
           .exceptionHandler(throwable -> {
-            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable, throwable.getMessage());
+            logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
             databaseWriteStream.endWithError(throwable);
             inventoryHttpClient.close();
             if (!promise.future().isComplete()) {
@@ -385,11 +384,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
           return enrichInstances(jsonInstances, request, context);
         }
-        logger.debug("Skipping enrich instances call, empty instance ids list returned");
+        logger.debug("Skipping enrich instances call, empty instance ids list returned.");
         return Future.succeededFuture(Collections.emptyList());
       }).onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.error("Cannot get batch of instances ids from database: {}", throwable, throwable.getMessage());
+        logger.error("Cannot get batch of instances ids from database: {}.", throwable.getMessage(), throwable);
         promise.fail(throwable);
       });
 
@@ -399,7 +398,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, Context context,
                             AtomicInteger retryCount) {
     if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
-      listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response"));
+      listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response."));
       return;
     }
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
@@ -467,7 +466,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
                 itemsandholdingsfields);
             } else {
-              logger.info(format("Instance with instanceId %s wasn't in the request", instanceId));
+              logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
             }
           }
         }
@@ -501,7 +500,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Response> promise = Promise.promise();
     try {
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
-      logger.info("Build records response, instances = {}, instances with srs records = {}", batch.size(), records.size());
+      logger.info("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && firstBatch) {
@@ -563,8 +562,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           try {
             record.withMetadata(buildOaiMetadata(request, source));
           } catch (Exception e) {
-            logger.error("Error occurred while converting record to xml representation.", e, e.getMessage());
-            logger.debug("Skipping problematic record due the conversion error. Source record id - " + storageHelper.getRecordId(srsInstance));
+            logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
+            logger.debug("Skipping problematic record due the conversion error. Source record id - {}.", storageHelper.getRecordId(srsInstance));
             return;
           }
         }
@@ -645,7 +644,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, request.getTenant(), requestId, postgresClient).onComplete(res -> {
       if (res.failed()) {
-        logger.error("Cannot saving ids, error from database: " + res.cause().getMessage(), res.cause());
+        logger.error("Cannot save the ids, error from the database: {}.", res.cause().getMessage(), res.cause());
         promise.fail(res.cause());
       } else {
         promise.complete();
@@ -669,7 +668,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId) + ".instances (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
 
       if (e.failed()) {
-        logger.error("Save instance Ids failed: " + e.cause().getMessage());
+        logger.error("Save instance Ids failed: {}.", e.cause().getMessage(), e.cause());
         promise.fail(e.cause());
       } else {
         PgConnection connection = e.result();
@@ -710,7 +709,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient, Vertx vertx,
       List<JsonObject> batch, boolean deletedRecordSupport, int retryAttempts) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.debug("Request to SRS, list id size: " + listOfIds.size());
+    logger.debug("Request to SRS, list id size: {}.", listOfIds.size());
     AtomicInteger attemptsCount = new AtomicInteger(retryAttempts);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
     doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise);
@@ -725,7 +724,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         int statusCode = srsResponse.statusCode();
         String statusMessage = srsResponse.statusMessage();
         srsResponse.exceptionHandler(e -> {
-          logger.error("Error has been occurred while requesting SRS kek1: " + e.getMessage(), e);
+          logger.error("Error has been occurred while requesting the SRS: {}.", e.getMessage(), e);
           if (!retryTriggered.getAndSet(true)) {
             retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode, statusMessage);
           }
@@ -754,9 +753,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void retrySRSRequest(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport, List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise, int statusCode, String statusMessage) {
     if(statusCode > 0) {
-      logger.debug("Got error response form SRS, status code: " + statusCode + ", status message: " + statusMessage);
+      logger.debug("Got error response form SRS, status code: {}, status message: {}.", statusCode, statusMessage);
     } else {
-      logger.debug("Error has been occurred while requesting SRS");
+      logger.debug("Error has been occurred while requesting SRS.");
     }
     if (attemptsCount.decrementAndGet() <= 0) {
       String errorMessage = "SRS didn't respond with expected status code after " + retryAttempts
@@ -765,7 +764,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       handleException(promise, new IllegalStateException(errorMessage));
       return;
     }
-    logger.debug("Trying to request SRS again, attempts left: " + attemptsCount.get());
+    logger.debug("Trying to request SRS again, attempts left: {}.", attemptsCount.get());
     vertx.setTimer(REREQUEST_SRS_DELAY, timer -> doPostRequestToSrs(new SourceStorageSourceRecordsClient(srsClient), vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise));
   }
 
@@ -783,7 +782,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
             .getString(INSTANCE_ID_FIELD_NAME), jo));
       } else {
-        logger.debug("Can't process response from SRS: " + buffer.toString());
+        logger.debug("Can't process SRS response: {}.", buffer.toString());
       }
       promise.complete(result);
     } catch (DecodeException ex) {
