@@ -109,6 +109,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import javax.xml.bind.JAXBElement;
 
 import org.apache.http.HttpStatus;
@@ -174,7 +175,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import net.jcip.annotations.NotThreadSafe;
+//import net.jcip.annotations.NotThreadSafe;
 
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)

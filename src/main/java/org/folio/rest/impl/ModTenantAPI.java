@@ -24,6 +24,7 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -41,8 +42,10 @@ import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
 
 public class ModTenantAPI extends TenantAPI {
+
   private final Logger logger = LogManager.getLogger(ModTenantAPI.class);
 
   private static final String CONFIG_DIR_PATH = "config";
@@ -87,7 +90,8 @@ public class ModTenantAPI extends TenantAPI {
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);
 
-    ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
+    WebClient webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
+    ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token, webClient);
 
     List<Future> futures = new ArrayList<>();
 

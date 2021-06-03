@@ -1,13 +1,16 @@
 package org.folio.oaipmh.helpers;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.folio.oaipmh.Request;
@@ -19,6 +22,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.io.UnsupportedEncodingException;
@@ -36,6 +40,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
+import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
@@ -90,28 +95,32 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       getSrsRecordsBodyHandler(request, ctx, promise));
   }
 
-  private Handler<HttpClientResponse> getSrsRecordsBodyHandler(Request request, Context ctx, Promise<Response> promise) {
-    return response -> {
+  private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsRecordsBodyHandler(Request request, Context ctx,
+      Promise<Response> promise) {
+    return asyncResult -> {
       try {
-        if (org.folio.rest.tools.client.Response.isSuccess(response.statusCode())) {
-          response.bodyHandler(bh -> {
-            try {
-              JsonObject srsRecords = bh.toJsonObject();
-              final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
-              promise.complete(responseCompletableFuture);
-            } catch (DecodeException ex) {
-              String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-              logger.error(msg, ex.getMessage(), ex);
-              promise.fail(new IllegalStateException(msg, ex));
-            }
-          });
+        if (asyncResult.succeeded()) {
+          HttpResponse<Buffer> response = asyncResult.result();
+          if (isSuccess(response.statusCode())) {
+            JsonObject srsRecords = response.bodyAsJsonObject();
+            final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
+            promise.complete(responseCompletableFuture);
+          } else {
+            logger.error("{} response from SRS status code: {}: {}.", request.getVerb().value(), response.statusMessage(), response.statusCode());
+            throw new IllegalStateException(response.statusMessage());
+          }
         } else {
-          logger.error("{} response from SRS status code: {}: {}.", request.getVerb().value(), response.statusMessage(), response.statusCode());
-          throw new IllegalStateException(response.statusMessage());
+          String msg = "Cannot obtain srs records. Got failed async result.";
+          promise.fail(new IllegalStateException(msg, asyncResult.cause()));
         }
-      } catch (Exception e) {
-        logger.error("Exception getting {}.", request.getVerb().value(), e);
-        promise.fail(e);
+      } catch (DecodeException ex) {
+        String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
+        logger.error(msg, ex);
+        promise.fail(new IllegalStateException(msg, ex));
+      } catch (Exception ex) {
+        logger.error("Exception getting {}.", request.getVerb()
+          .value(), ex);
+        promise.fail(ex);
       }
     };
   }

@@ -47,7 +47,9 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang.time.DateUtils;
+//TODO check if the same as lang
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -71,6 +73,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.openarchives.oai._2.VerbType;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -83,7 +86,7 @@ public abstract class AbstractHelper implements VerbHelper {
   protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
   private static final String[] dateFormats = {
-    org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),
+    DateFormatUtils.ISO_8601_EXTENDED_DATE_FORMAT.getPattern(),
     ISO_DATE_TIME_PATTERN
   };
 

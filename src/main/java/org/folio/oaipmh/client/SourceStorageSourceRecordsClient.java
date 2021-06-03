@@ -78,25 +78,25 @@ public class SourceStorageSourceRecordsClient {
       buffer.appendString(ClientHelpers.pojo2json(List));
     }
 
-    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + SOURCE_RECORDS_PATH + queryParams.toString());
-    request.handler(responseHandler);
-    request.exceptionHandler(exceptionHandler);
-    request.setTimeout(DEFAULT_SRS_TIMEOUT);
-    request.putHeader("Content-type", "application/json");
-    request.putHeader("Accept", "application/json,text/plain");
-    if (this.tenantId != null) {
-      request.putHeader("X-Okapi-Token", this.token);
-      request.putHeader("x-okapi-tenant", this.tenantId);
-    }
-
-    if (this.okapiUrl != null) {
-      request.putHeader("X-Okapi-Url", this.okapiUrl);
-    }
-
-    request.putHeader("Content-Length", buffer.length() + "");
-    request.setChunked(true);
-    request.write(buffer);
-    request.end();
+//    HttpClientRequest request = this.httpClient.postAbs(this.okapiUrl + SOURCE_RECORDS_PATH + queryParams.toString());
+//    request.handler(responseHandler);
+//    request.exceptionHandler(exceptionHandler);
+//    request.setTimeout(DEFAULT_SRS_TIMEOUT);
+//    request.putHeader("Content-type", "application/json");
+//    request.putHeader("Accept", "application/json,text/plain");
+//    if (this.tenantId != null) {
+//      request.putHeader("X-Okapi-Token", this.token);
+//      request.putHeader("x-okapi-tenant", this.tenantId);
+//    }
+//
+//    if (this.okapiUrl != null) {
+//      request.putHeader("X-Okapi-Url", this.okapiUrl);
+//    }
+//
+//    request.putHeader("Content-Length", buffer.length() + "");
+//    request.setChunked(true);
+//    request.write(buffer);
+//    request.end();
   }
 
   public void close() {

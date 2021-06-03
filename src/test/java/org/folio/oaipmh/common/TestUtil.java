@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.util.List;
 
 import org.folio.liquibase.SingleConnectionProvider;
+import org.folio.okapi.common.ModuleVersionReporter;
 import org.folio.rest.tools.PomReader;
+import org.folio.rest.tools.utils.ModuleName;
 import org.jooq.Table;
 
 import io.vertx.core.Vertx;
@@ -23,10 +25,7 @@ public class TestUtil {
   }
 
   public static String getModuleId() {
-    String moduleName = PomReader.INSTANCE.getModuleName()
-      .replaceAll("_", "-");
-    String moduleVersion = PomReader.INSTANCE.getVersion();
-    return moduleName + "-" + moduleVersion;
+    return ModuleName.getModuleName();
   }
 
 }

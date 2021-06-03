@@ -16,15 +16,19 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
+import org.folio.rest.tools.utils.VertxUtils;
 import org.openarchives.oai._2.DeletedRecordType;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 
 public class RepositoryConfigurationUtil {
 
@@ -39,7 +43,8 @@ public class RepositoryConfigurationUtil {
   /**
    * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
    *
-   * @param okapiHeaders
+   * @param okapiHeaders - okapi headers
+   * @param requestId - unique identifier for current request
    * @return empty CompletableFuture
    */
   public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders, String requestId) {
@@ -49,17 +54,18 @@ public class RepositoryConfigurationUtil {
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    try {
-      ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, false);
+    WebClientOptions options = new WebClientOptions().setKeepAlive(false);
+    WebClient client = WebClient.create(VertxUtils.getVertxFromContextOrNew(), options);
 
-       configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
+    try {
+      ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, client);
+      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
         try {
           if (result.succeeded()) {
             HttpResponse<Buffer> response = result.result();
             JsonObject body = response.bodyAsJsonObject();
             if (response.statusCode() != 200) {
-              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}.",
-                tenant, response.statusCode(), body);
+              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}.", tenant, response.statusCode(), body);
               promise.complete(null);
               return;
             }
@@ -82,6 +88,8 @@ public class RepositoryConfigurationUtil {
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant.", tenant, e);
       promise.fail(e);
+    } finally {
+      client.close();
     }
     return promise.future();
   }
