@@ -1,28 +1,12 @@
 package org.folio.oaipmh.service.impl;
 
-import static java.lang.String.format;
-import static java.util.Objects.nonNull;
-import static org.folio.oaipmh.Constants.ILL_POLICIES;
-import static org.folio.oaipmh.Constants.INSTANCE_FORMATS;
-import static org.folio.oaipmh.Constants.INSTANCE_TYPES;
-import static org.folio.oaipmh.Constants.LOCATION;
-import static org.folio.oaipmh.Constants.MATERIAL_TYPES;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.SET_LB;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.ws.rs.NotFoundException;
-
-import org.folio.liquibase.LiquibaseUtil;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import io.vertx.pgclient.PgException;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -30,6 +14,7 @@ import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
 import org.folio.oaipmh.service.SetService;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
@@ -42,14 +27,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import javax.ws.rs.NotFoundException;
+import java.util.*;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import io.vertx.pgclient.PgException;
+import static java.lang.String.format;
+import static java.util.Objects.nonNull;
+import static org.folio.oaipmh.Constants.*;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -67,14 +56,12 @@ class SetServiceImplTest extends AbstractSetTest {
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClientFactory.setShouldResetPool(true);
     postgresClientFactory = new PostgresClientFactory(vertx);
-    PostgresClient.getInstance(vertx)
-      .startEmbeddedPostgres();
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     SetDao setDao = new SetDaoImpl(postgresClientFactory);
     setService = new SetServiceImpl(setDao);
-
-    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
+    TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
     new OkapiMockServer(vertx, mockPort).start(testContext);
-    LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
     dropSampleData(testContext);
     testContext.completeNow();
   }
@@ -83,7 +70,6 @@ class SetServiceImplTest extends AbstractSetTest {
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
-      PostgresClient.stopEmbeddedPostgres();
       testContext.completeNow();
     }));
   }
@@ -189,7 +175,8 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedSetSpecValue.setSetSpec(setWithExistedSetSpecValue.getSetSpec().toUpperCase());
         setService.saveSet(setWithExistedSetSpecValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT), throwable.getMessage());
+          String expectedErrorMessage = format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT);
+          assertThat(throwable.getMessage(), containsString(expectedErrorMessage));
           testContext.completeNow();
         });
       });
@@ -206,7 +193,8 @@ class SetServiceImplTest extends AbstractSetTest {
         setWithExistedNameValue.setName(setWithExistedNameValue.getName().toUpperCase());
         setService.saveSet(setWithExistedNameValue, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID).onFailure(throwable -> {
           assertTrue(throwable instanceof PgException);
-          assertEquals(format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT), throwable.getMessage());
+          String expectedErrorMessage = format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT);
+          assertThat(throwable.getMessage(), containsString(expectedErrorMessage));
           testContext.completeNow();
         });
       });

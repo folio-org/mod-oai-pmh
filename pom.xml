@@ -47,6 +47,14 @@
     </repository>
   </repositories>
 
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <distributionManagement>
     <repository>
       <id>folio-nexus</id>
@@ -134,9 +142,9 @@
     <log4j-slf4j.version>2.13.0</log4j-slf4j.version>
     <restassured.version>4.3.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
-    <jooq.version>3.13.2</jooq.version>
-    <vertx-jooq.generator.version>5.1.1</vertx-jooq.generator.version>
-    <vertx-jooq.classic-reactive.version>5.2.1</vertx-jooq.classic-reactive.version>
+    <jooq.version>3.14.11</jooq.version>
+    <vertx-jooq.generator.version>6.3.0</vertx-jooq.generator.version>
+    <vertx-jooq.classic-reactive.version>6.3.0</vertx-jooq.classic-reactive.version>
     <postgres.version>42.2.12</postgres.version>
   </properties>
 
@@ -183,7 +191,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-liquibase-util</artifactId>
-      <version>1.0.0</version>
+      <version>1.2.0</version>
       <type>jar</type>
       <exclusions>
         <exclusion>
@@ -277,6 +285,38 @@
       <version>2.17.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sun.xml.bind</groupId>
+      <artifactId>jaxb-osgi</artifactId>
+      <version>2.3.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>1.15.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>postgres-testing</artifactId>
+      <version>${raml-module-builder.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-model</artifactId>
+      <version>3.3.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.2.20</version>
+    </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.5</version>
+    </dependency>
 
   </dependencies>
 
@@ -334,49 +374,64 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-maven-plugin</artifactId>
+        <version>${raml-module-builder.version}</version>
         <executions>
           <execution>
             <id>generate_interfaces</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>java</goal>
             </goals>
-            <configuration>
-              <mainClass>org.folio.rest.tools.GenerateRunner</mainClass>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-              <systemProperties>
-                <systemProperty>
-                  <key>project.basedir</key>
-                  <value>${basedir}</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>raml_files</key>
-                  <value>${ramlfiles_path}</value>
-                </systemProperty>
-              </systemProperties>
-            </configuration>
-          </execution>
-          <execution>
-            <id>git submodule update</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>git</executable>
-              <arguments>
-                <argument>submodule</argument>
-                <argument>update</argument>
-                <argument>--init</argument>
-                <argument>--recursive</argument>
-              </arguments>
-            </configuration>
           </execution>
         </executions>
       </plugin>
+
+
+      <!--      <plugin>-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>exec-maven-plugin</artifactId>-->
+<!--        <version>1.6.0</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>generate_interfaces</id>-->
+<!--            <phase>generate-sources</phase>-->
+<!--            <goals>-->
+<!--              <goal>java</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <mainClass>org.folio.rest.tools.GenerateRunner</mainClass>-->
+<!--              <cleanupDaemonThreads>false</cleanupDaemonThreads>-->
+<!--              <systemProperties>-->
+<!--                <systemProperty>-->
+<!--                  <key>project.basedir</key>-->
+<!--                  <value>${basedir}</value>-->
+<!--                </systemProperty>-->
+<!--                <systemProperty>-->
+<!--                  <key>raml_files</key>-->
+<!--                  <value>${ramlfiles_path}</value>-->
+<!--                </systemProperty>-->
+<!--              </systemProperties>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--          <execution>-->
+<!--            <id>git submodule update</id>-->
+<!--            <phase>initialize</phase>-->
+<!--            <goals>-->
+<!--              <goal>exec</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <executable>git</executable>-->
+<!--              <arguments>-->
+<!--                <argument>submodule</argument>-->
+<!--                <argument>update</argument>-->
+<!--                <argument>&#45;&#45;init</argument>-->
+<!--                <argument>&#45;&#45;recursive</argument>-->
+<!--              </arguments>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
 
       <plugin>
         <!--

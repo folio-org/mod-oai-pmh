@@ -1,5 +1,6 @@
 package org.folio.oaipmh;
 
+import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
 import gov.loc.marc21.slim.RecordType;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -42,7 +43,7 @@ public class ResponseConverter {
   private static final String OAI_IDENTIFIER_SCHEMA = SCHEMA_PATH + "oai-identifier.xsd";
 
   private static final Map<String, String> NAMESPACE_PREFIX_MAP = new HashMap<>();
-  private final com.sun.xml.bind.marshaller.NamespacePrefixMapper namespacePrefixMapper;
+  private final NamespacePrefixMapper namespacePrefixMapper;
 
   private static ResponseConverter ourInstance;
 

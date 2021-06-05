@@ -24,6 +24,7 @@ import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.SetService;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -77,8 +78,10 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    PostgresClient client = PostgresClient.getInstance(vertx);
-    client.startEmbeddedPostgres();
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient client = PostgresClient.getInstance(vertx, OAI_TEST_TENANT);
+    client.startPostgresTester();
+    TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
 
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
@@ -89,8 +92,6 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         Context context = vertx.getOrCreateContext();
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
-        TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
-        LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
         new OkapiMockServer(vertx, mockPort).start(testContext);
         testContext.completeNow();
       } catch (Exception e) {

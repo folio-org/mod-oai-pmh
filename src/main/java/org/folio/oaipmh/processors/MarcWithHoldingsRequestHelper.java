@@ -39,8 +39,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import javax.sql.PooledConnection;
 import javax.ws.rs.core.Response;
 
+import io.vertx.core.net.impl.pool.PoolWaiter;
+import io.vertx.core.net.impl.pool.SimpleConnectionPool;
+import io.vertx.sqlclient.impl.pool.SqlConnectionPool;
 import org.apache.commons.collections4.CollectionUtils;
 import org.folio.oaipmh.Request;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
@@ -307,17 +311,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool, WebClient webClient) {
 
-    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    AtomicReference<SimpleConnectionPool> connectionPool = new AtomicReference<>();
     try {
-      queue.set(getWaitersQueue(pool));
+      connectionPool.set(getWaitersQueue(pool));
     } catch (IllegalStateException ex) {
       logger.error(ex.getMessage());
       promise.fail(ex);
     }
 
-    databaseWriteStream.setCapacityChecker(() -> queue.get().size() > 20);
+    databaseWriteStream.setCapacityChecker(() -> connectionPool.get().waiters() > 20);
 
     JsonParser jsonParser = JsonParser.newParser().objectValueMode();
+    jsonParser.pipeTo(databaseWriteStream);
     jsonParser.endHandler(e -> {
       databaseWriteStream.end();
       webClient.close();
@@ -329,13 +334,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       promise.fail(throwable);
     });
 
-    var isSet = new AtomicBoolean();
-
-    jsonParser.handler(event -> {
-      if(!isSet.getAndSet(true)) {
-        jsonParser.pipeTo(databaseWriteStream);
-      }
-    });
+//    var isSet = new AtomicBoolean();
+//
+//    jsonParser.handler(event -> {
+//      if(!isSet.getAndSet(true)) {
+//        jsonParser.pipeTo(databaseWriteStream);
+//      }
+//    });
 
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
       .send()
@@ -401,7 +406,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
     AtomicInteger retryCount = new AtomicInteger();
-    getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount);
+    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount));
     listPromise.future()
       .compose(instances -> {
         if (CollectionUtils.isNotEmpty(instances)) {
@@ -478,7 +483,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     BatchStreamWrapper enrichedInstancesStream = new BatchStreamWrapper(context.owner(), DATABASE_FETCHING_CHUNK_SIZE);
 
     //setup pgPool availability checker
-    AtomicReference<ArrayDeque<Promise<Connection>>> queue = new AtomicReference<>();
+    AtomicReference<SimpleConnectionPool<PooledConnection>> queue = new AtomicReference<>();
     try {
       queue.set(getWaitersQueue(PostgresClientFactory.getPool(context.owner(), request.getTenant())));
     } catch (IllegalStateException ex) {
@@ -486,7 +491,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       completePromise.fail(ex);
       return completePromise.future();
     }
-    enrichedInstancesStream.setCapacityChecker(() -> queue.get().size() > 20);
+    enrichedInstancesStream.setCapacityChecker(() -> queue.get().waiters() > 20);
 
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
@@ -699,10 +704,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return ReflectionUtils.getField(field, obj);
   }
 
-  private ArrayDeque<Promise<Connection>> getWaitersQueue(PgPool pgPool) {
+  private SimpleConnectionPool<PooledConnection> getWaitersQueue(PgPool pgPool) {
     if (Objects.nonNull(pgPool)) {
       try {
-        return (ArrayDeque<Promise<Connection>>) getValueFrom(getValueFrom(pgPool, "pool"), "waiters");
+        return (SimpleConnectionPool<PooledConnection>) getValueFrom(getValueFrom(pgPool, "pool"), "pool");
       } catch (NullPointerException ex) {
         throw new IllegalStateException("Cannot get the pool size. Object for retrieving field is null.");
       }

@@ -3,5 +3,6 @@
   "port" : 7777,
   "database" : "postgres",
   "username" : "oaitest_mod_oai_pmh",
-  "password" : "oaiTest"
+  "password" : "oaiTest",
+  "postgres_tester": true
 }

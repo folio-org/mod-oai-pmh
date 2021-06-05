@@ -1,31 +1,61 @@
 package org.folio.oaipmh.common;
 
-import java.sql.Connection;
-import java.util.List;
-
-import org.folio.liquibase.SingleConnectionProvider;
-import org.folio.okapi.common.ModuleVersionReporter;
-import org.folio.rest.tools.PomReader;
-import org.folio.rest.tools.utils.ModuleName;
-import org.jooq.Table;
-
 import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxTestContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.folio.liquibase.LiquibaseUtil;
+import org.folio.liquibase.SingleConnectionProvider;
+import org.folio.rest.persist.PostgresClient;
+
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+
+import static java.lang.String.format;
 
 public class TestUtil {
 
-  public static void prepareDatabase(Vertx vertx, VertxTestContext testContext, String tenantId, List<Table> tables) {
-    try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
-        .execute();
-      connection.setSchema("oaitest_mod_oai_pmh");
-    } catch (Exception ex) {
-      testContext.failNow(ex);
+  private static final Logger logger = LogManager.getLogger(TestUtil.class);
+
+  private static String moduleNameWithVersion;
+
+  static {
+    initTestVariables();
+  }
+
+  private static void initTestVariables() {
+    MavenXpp3Reader reader = new MavenXpp3Reader();
+    Model model;
+    try {
+      model = reader.read(new FileReader("pom.xml"));
+      moduleNameWithVersion = model.getArtifactId() + "-" + model.getVersion();
+    } catch (IOException | XmlPullParserException ex) {
+      String errorMessage = format("Cannot initialize variable \"moduleName\". Reason: %s", ex.getMessage());
+      logger.error(errorMessage, ex);
+      throw new IllegalStateException(errorMessage, ex);
     }
   }
 
+  public static void prepareSchema(Vertx vertx, String tenantId, String schemaName) {
+    try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
+      connection.prepareStatement("create schema if not exists " + schemaName)
+        .execute();
+    } catch (Exception ex) {
+      throw new IllegalStateException(ex);
+    }
+  }
+
+  public static void initializeTestContainerDbSchema(Vertx vertx, String tenantId) {
+    String schemaName = PostgresClient.convertToPsqlStandard(tenantId);
+    prepareSchema(vertx, tenantId, schemaName);
+    LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
+  }
+
   public static String getModuleId() {
-    return ModuleName.getModuleName();
+    return moduleNameWithVersion;
   }
 
 }

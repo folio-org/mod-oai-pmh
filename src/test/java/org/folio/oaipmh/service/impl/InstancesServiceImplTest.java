@@ -1,8 +1,6 @@
 package org.folio.oaipmh.service.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.INSTANCES;
-import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -20,6 +18,7 @@ import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
@@ -36,6 +35,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -60,14 +60,14 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClientFactory.setShouldResetPool(true);
     logger.info("Test setup starting for {}.", TestUtil.getModuleId());
-    PostgresClient.getInstance(vertx)
-      .startEmbeddedPostgres();
-    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
+//    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
     Context context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
     new OkapiMockServer(vertx, mockPort).start(testContext);
-    LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
+    TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
     testContext.completeNow();
   }
 
@@ -75,7 +75,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
-      PostgresClient.stopEmbeddedPostgres();
+      PostgresClient.stopPostgresTester();
       testContext.completeNow();
     }));
   }
