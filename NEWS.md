@@ -1,3 +1,18 @@
+## 3.5.0 (Released) 2021-06-08
+
+This release contains an incrementation of SRS interface versions and bugfix for handling marc21 and oai_dc metadata prefixes.
+
+### Stories
+
+* [MODOAIPMH-331](https://issues.folio.org/browse/MODOAIPMH-331) Update SRS interface versions
+
+### Bug fixes
+
+* [MODOAIPMH-327](https://issues.folio.org/browse/MODOAIPMH-327) Resumption token flow doesn't work as expected for marc21 and oai_dc metadata prefixes.
+* [MODOAIPMH-320](https://issues.folio.org/browse/MODOAIPMH-320) 0% coverage reported by Sonarcloud for mod-oai-pmh
+
+  [Full Changelog](https://github.com/folio-org/mod-data-export/compare/v3.4.2...v3.5.0)
+
 ## 3.4.2 (Released) 2021-04-09
 
 This bug fix release has corrections regarding marc21_withholdings metadata prefix handling.
