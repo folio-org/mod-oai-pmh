@@ -75,7 +75,7 @@ public class SetServiceImpl implements SetService {
   @Override
   public Future<FilteringConditionValueCollection> getFilteringConditions(Map<String, String> okapiHeaders) {
     Promise<FilteringConditionValueCollection> promise = Promise.promise();
-    WebClient webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
+    var webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
     List<Future<JsonObject>> futures = new ArrayList<>();
     List.of(LOCATION_URI, ILL_POLICIES_URI, MATERIAL_TYPES_URI, RESOURCE_TYPES_URI, INSTANCE_FORMATS_URI)
       .forEach(conditionType -> futures.add(getFilteringConditionValues(conditionType, webClient, okapiHeaders)));

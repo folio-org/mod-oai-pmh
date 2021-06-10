@@ -244,7 +244,8 @@ public class InstancesDaoImpl implements InstancesDao {
           .toString();
       })
       .collect(Collectors.toList());
-    logger.debug("Expired request ids result: [{}].", String.join(",", ids));
+    String idList = String.join(",", ids);
+    logger.debug("Expired request ids result: [{}].", idList);
     return ids;
   }
 

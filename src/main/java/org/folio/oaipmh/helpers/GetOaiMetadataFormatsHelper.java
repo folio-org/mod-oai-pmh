@@ -1,31 +1,20 @@
 package org.folio.oaipmh.helpers;
 
-import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
-
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.Constants;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.openarchives.oai._2.ListMetadataFormatsType;
-import org.openarchives.oai._2.MetadataFormatType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.ResumptionTokenType;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.oaipmh.Constants;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.openarchives.oai._2.*;
 
+import java.util.Collections;
+import java.util.List;
+
+import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 
 public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
-  //TODO check if needed
-  private static final Logger logger = LogManager.getLogger(GetOaiMetadataFormatsHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -44,7 +33,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
       return buildIdentifierNotFoundResponse(request);
     }
   }
-  
+
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     if (!validateIdentifier(request)) {

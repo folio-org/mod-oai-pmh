@@ -387,52 +387,6 @@
         </executions>
       </plugin>
 
-
-      <!--      <plugin>-->
-<!--        <groupId>org.codehaus.mojo</groupId>-->
-<!--        <artifactId>exec-maven-plugin</artifactId>-->
-<!--        <version>1.6.0</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>generate_interfaces</id>-->
-<!--            <phase>generate-sources</phase>-->
-<!--            <goals>-->
-<!--              <goal>java</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <mainClass>org.folio.rest.tools.GenerateRunner</mainClass>-->
-<!--              <cleanupDaemonThreads>false</cleanupDaemonThreads>-->
-<!--              <systemProperties>-->
-<!--                <systemProperty>-->
-<!--                  <key>project.basedir</key>-->
-<!--                  <value>${basedir}</value>-->
-<!--                </systemProperty>-->
-<!--                <systemProperty>-->
-<!--                  <key>raml_files</key>-->
-<!--                  <value>${ramlfiles_path}</value>-->
-<!--                </systemProperty>-->
-<!--              </systemProperties>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--          <execution>-->
-<!--            <id>git submodule update</id>-->
-<!--            <phase>initialize</phase>-->
-<!--            <goals>-->
-<!--              <goal>exec</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <executable>git</executable>-->
-<!--              <arguments>-->
-<!--                <argument>submodule</argument>-->
-<!--                <argument>update</argument>-->
-<!--                <argument>&#45;&#45;init</argument>-->
-<!--                <argument>&#45;&#45;recursive</argument>-->
-<!--              </arguments>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
-
       <plugin>
         <!--
           Until version 1.11.1 is released into Maven Central by org.codehaus.mojo use the snapshot build instead:

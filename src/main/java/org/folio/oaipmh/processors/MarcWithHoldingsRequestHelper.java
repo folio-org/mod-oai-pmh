@@ -1,90 +1,12 @@
 package org.folio.oaipmh.processors;
 
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
-import javax.sql.PooledConnection;
-import javax.ws.rs.core.Response;
-
-import io.vertx.core.net.impl.pool.PoolWaiter;
-import io.vertx.core.net.impl.pool.SimpleConnectionPool;
-import io.vertx.sqlclient.impl.pool.SqlConnectionPool;
-import org.apache.commons.collections4.CollectionUtils;
-import org.folio.oaipmh.Request;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.helpers.AbstractHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
-import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.jooq.tables.pojos.Instances;
-import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.folio.rest.persist.PostgresClient;
-import org.folio.rest.tools.utils.TenantTool;
-import org.folio.rest.tools.utils.VertxUtils;
-import org.folio.spring.SpringContextUtil;
-import org.openarchives.oai._2.ListRecordsType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ReflectionUtils;
-
 import com.google.common.collect.Maps;
-
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
+import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.vertx.core.net.impl.pool.SimpleConnectionPool;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
@@ -96,7 +18,48 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Tuple;
-import io.vertx.sqlclient.impl.Connection;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
+import org.folio.oaipmh.service.InstancesService;
+import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.rest.jooq.tables.pojos.Instances;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
+import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.rest.tools.utils.VertxUtils;
+import org.folio.spring.SpringContextUtil;
+import org.openarchives.oai._2.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.ReflectionUtils;
+
+import javax.sql.PooledConnection;
+import javax.ws.rs.core.Response;
+import java.lang.reflect.Field;
+import java.math.BigInteger;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -133,7 +96,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int REREQUEST_SRS_DELAY = 2000;
   private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
-  private static final String SOURCE_RECORDS_PATH = "/source-storage/source-records";
   private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static final int POLLING_TIME_INTERVAL = 500;
@@ -281,12 +243,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private void downloadInstances(Request request,
                                  Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
                                  Context vertxContext, String requestId) {
-    final WebClientOptions options = new WebClientOptions();
+    final var options = new WebClientOptions();
     options.setKeepAliveTimeout(REQUEST_TIMEOUT);
     options.setConnectTimeout(REQUEST_TIMEOUT);
-    WebClient webClient = WebClient.create(vertxContext.owner(), options);
+    var webClient = WebClient.create(vertxContext.owner(), options);
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(webClient, request);
-    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(vertxContext.owner(), DATABASE_FETCHING_CHUNK_SIZE);
+    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
 
     databaseWriteStream.handleBatch(batch -> {
@@ -313,7 +275,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool, WebClient webClient) {
 
-    AtomicReference<SimpleConnectionPool> connectionPool = new AtomicReference<>();
+    AtomicReference<SimpleConnectionPool<PooledConnection>> connectionPool = new AtomicReference<>();
     try {
       connectionPool.set(getWaitersQueue(pool));
     } catch (IllegalStateException ex) {
@@ -322,9 +284,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
     databaseWriteStream.setCapacityChecker(() -> connectionPool.get().waiters() > 20);
 
-    AtomicBoolean responseChecked = new AtomicBoolean();
-    AtomicInteger responseCheckAttempts = new AtomicInteger(30);
-    JsonParser jsonParser = JsonParser.newParser().objectValueMode();
+    var responseChecked = new AtomicBoolean();
+    var responseCheckAttempts = new AtomicInteger(30);
+    var jsonParser = JsonParser.newParser().objectValueMode();
     jsonParser.pipeTo(databaseWriteStream);
     jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
@@ -462,8 +424,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
     Promise<List<JsonObject>> completePromise = Promise.promise();
 
-    WebClient webClient = WebClient.create(context.owner());
-    HttpRequest<Buffer> httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ENRICHED_INSTANCES_ENDPOINT);
+    var webClient = WebClient.create(context.owner());
+    var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ENRICHED_INSTANCES_ENDPOINT);
     if (request.getOkapiUrl().contains("https:")) {
       httpRequest.ssl(true);
     }
@@ -472,7 +434,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
-    BatchStreamWrapper enrichedInstancesStream = new BatchStreamWrapper(context.owner(), DATABASE_FETCHING_CHUNK_SIZE);
+    var enrichedInstancesStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
 
     //setup pgPool availability checker
     AtomicReference<SimpleConnectionPool<PooledConnection>> queue = new AtomicReference<>();
@@ -490,8 +452,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
     //setup json parser and pipe to write stream
-    AtomicBoolean responseChecked = new AtomicBoolean();
-    AtomicInteger responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
+    var responseChecked = new AtomicBoolean();
+    var responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
     jsonParser.pipeTo(enrichedInstancesStream);
@@ -557,8 +519,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, AtomicBoolean responseChecked, AtomicInteger attempts) {
-    Vertx vertx = VertxUtils.getVertxFromContextOrNew();
-    vertx.setTimer(500, id -> {
+    VertxUtils.getVertxFromContextOrNew().setTimer(500, id -> {
       if (responseChecked.get() || attempts.get() == 0) {
         closeStreamRelatedObjects(databaseWriteStream, webClient);
       } else {
@@ -803,7 +764,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             return;
           }
           if (statusCode != 200) {
-            String errorMsg = getErrorFromStorageMessage("source-record-storage", SOURCE_RECORDS_PATH, srsResponse.statusMessage());
+            String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records", srsResponse.statusMessage());
             handleException(promise, new IllegalStateException(errorMsg));
             return;
           }

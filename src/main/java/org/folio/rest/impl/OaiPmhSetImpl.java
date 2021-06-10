@@ -159,7 +159,6 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     });
   }
 
-  //TODO move this logic from controller to service
   private void validateFolioSet(FolioSet folioSet, Handler<AsyncResult<Response>> asyncResultHandler) {
     List<Error> errorsList = new ArrayList<>();
     if (isEmpty(folioSet.getName())) {
@@ -177,7 +176,6 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     }
   }
 
-  //TODO the same here
   private Error createError(String field, String value, String message, ERROR_TYPE errorType) {
     Error error = new Error();
     Parameter p = new Parameter();

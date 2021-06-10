@@ -49,10 +49,10 @@ public class RepositoryConfigurationUtil {
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
     WebClientOptions options = new WebClientOptions().setKeepAlive(false);
-    WebClient client = WebClient.create(VertxUtils.getVertxFromContextOrNew(), options);
+    var client = WebClient.create(VertxUtils.getVertxFromContextOrNew(), options);
 
     try {
-      ConfigurationsClient configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, client);
+      var configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, client);
       configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
         try {
           if (result.succeeded()) {

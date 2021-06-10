@@ -1,43 +1,24 @@
 package org.folio.oaipmh.helpers;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
+import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
-
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.openarchives.oai._2.ListRecordsType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2.*;
 
 import javax.ws.rs.core.Response;
 import java.io.UnsupportedEncodingException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.*;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.folio.rest.tools.client.Response.isSuccess;
@@ -102,15 +83,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
-            JsonObject srsRecords = response.bodyAsJsonObject();
+            var srsRecords = response.bodyAsJsonObject();
             final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
             promise.complete(responseCompletableFuture);
           } else {
-            logger.error("{} response from SRS status code: {}: {}.", request.getVerb().value(), response.statusMessage(), response.statusCode());
+            String verbName = request.getVerb().value();
+            logger.error("{} response from SRS status code: {}: {}.", verbName, response.statusMessage(), response.statusCode());
             throw new IllegalStateException(response.statusMessage());
           }
         } else {
-          String msg = "Cannot obtain srs records. Got failed async result.";
+          var msg = "Cannot obtain srs records. Got failed async result.";
           promise.fail(new IllegalStateException(msg, asyncResult.cause()));
         }
       } catch (DecodeException ex) {

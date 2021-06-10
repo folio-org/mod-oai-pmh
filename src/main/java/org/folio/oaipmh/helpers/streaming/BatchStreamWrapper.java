@@ -1,5 +1,12 @@
 package org.folio.oaipmh.helpers.streaming;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.streams.WriteStream;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -7,20 +14,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.impl.future.SucceededFuture;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.streams.WriteStream;
-
 /**
  * WriteStream wrapper to read from the stream in batches.
  */
 public class BatchStreamWrapper implements WriteStream<JsonEvent> {
-
-  private final Vertx vertx;
 
   private Handler<Void> drainHandler;
   private Handler<Throwable> exceptionHandler;
@@ -40,8 +37,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private Supplier<Boolean> capacityChecker;
 
 
-  public BatchStreamWrapper(Vertx vertx, int batchSize) {
-    this.vertx = vertx;
+  public BatchStreamWrapper(int batchSize) {
     this.batchSize = batchSize;
   }
 
@@ -146,12 +142,6 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public Throwable getCause() {
     return cause.get();
-  }
-
-  public synchronized void endWithError(Throwable cause) {
-    this.cause.set(cause);
-    this.endedWithError = true;
-    end();
   }
 
   public Long getReturnedCount() {
