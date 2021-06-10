@@ -44,7 +44,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
       return buildIdentifierNotFoundResponse(request);
     }
   }
-
+  
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     if (!validateIdentifier(request)) {
