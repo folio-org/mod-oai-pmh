@@ -17,6 +17,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.http.HttpStatus;
@@ -2232,61 +2233,58 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
   }
 
-//  @Test
-//  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
-//    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-//
-//    RequestSpecification request = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-//      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
-//      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-//
-//    String body = request.when()
-//      .get()
-//      .then()
-//      .statusCode(500)
-//      .extract()
-//      .asString();
-//    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
-//    assertTrue(body.contains(expectedMessage));
-//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-//  }
+  @Test
+  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
 
-//  @Test
-//  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
-//    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "8");
-//
-//    RequestSpecification listRecordRequest = createBaseRequest()
-//      .with()
-//      .param(VERB_PARAM, LIST_RECORDS.value())
-//      .param(FROM_PARAM, DATE_INVENTORY_10_INSTANCE_IDS)
-//      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-//
-//    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-//    verifyListResponse(oaipmh, LIST_RECORDS, 8);
-//    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
-//    assertThat(resumptionToken, is(notNullValue()));
-//    assertThat(resumptionToken.getValue(), is(notNullValue()));
-//
-//    String requestId = getRequestId(resumptionToken);
-//    instancesService.deleteInstancesById(getExpectedInstanceIds(), requestId, OAI_TEST_TENANT)
-//      .onFailure(testContext::failNow);
-//
-//    vertx.setTimer(5000, res -> {
-//      RequestSpecification resumptionTokenRequest = createBaseRequest()
-//        .with()
-//        .param(VERB_PARAM, LIST_RECORDS.value())
-//        .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
-//
-//      verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
-//      testContext.completeNow();
-//    });
-//
-//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-//  }
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    String body = request.when()
+      .get()
+      .then()
+      .statusCode(500)
+      .extract()
+      .asString();
+    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
+    assertTrue(body.contains(expectedMessage));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "8");
+
+    RequestSpecification listRecordRequest = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_INVENTORY_10_INSTANCE_IDS)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
+    verifyListResponse(oaipmh, LIST_RECORDS, 8);
+    ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
+    assertThat(resumptionToken, is(notNullValue()));
+    assertThat(resumptionToken.getValue(), is(notNullValue()));
+
+    String requestId = getRequestId(resumptionToken);
+
+    instancesService.deleteInstancesById(getExpectedInstanceIds(), requestId, OAI_TEST_TENANT);
+
+    RequestSpecification resumptionTokenRequest = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
+
+    verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    testContext.completeNow();
+  }
 
   private String getRequestId(ResumptionTokenType resumptionTokenType) {
     String args = new String(Base64.getUrlDecoder().decode(resumptionTokenType.getValue()),

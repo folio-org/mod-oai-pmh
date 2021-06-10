@@ -1,34 +1,28 @@
 package org.folio.oaipmh.helpers;
 
-import static java.lang.Boolean.parseBoolean;
-import static org.folio.oaipmh.Constants.CONFIGS;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
-import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
-import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.tools.utils.VertxUtils;
 import org.openarchives.oai._2.DeletedRecordType;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import static java.lang.Boolean.parseBoolean;
+import static org.folio.oaipmh.Constants.*;
+import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
+import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 public class RepositoryConfigurationUtil {
 
