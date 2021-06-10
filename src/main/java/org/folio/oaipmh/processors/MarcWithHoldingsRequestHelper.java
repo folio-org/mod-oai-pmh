@@ -59,6 +59,7 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -122,6 +123,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
+  public static final int RESPONSE_CHECK_ATTEMPTS = 30;
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
@@ -318,44 +320,34 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       logger.error(ex.getMessage());
       promise.fail(ex);
     }
-
     databaseWriteStream.setCapacityChecker(() -> connectionPool.get().waiters() > 20);
 
+    AtomicBoolean responseChecked = new AtomicBoolean();
+    AtomicInteger responseCheckAttempts = new AtomicInteger(30);
     JsonParser jsonParser = JsonParser.newParser().objectValueMode();
     jsonParser.pipeTo(databaseWriteStream);
-    jsonParser.endHandler(e -> {
-      databaseWriteStream.end();
-      webClient.close();
-    });
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-      databaseWriteStream.end();
-      webClient.close();
+      closeStreamRelatedObjects(databaseWriteStream, webClient);
       promise.fail(throwable);
     });
-
-//    var isSet = new AtomicBoolean();
-//
-//    jsonParser.handler(event -> {
-//      if(!isSet.getAndSet(true)) {
-//        jsonParser.pipeTo(databaseWriteStream);
-//      }
-//    });
 
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
       .send()
       .onSuccess(resp -> {
         if (resp.statusCode() != 200) {
           String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
-          webClient.close();
+          closeStreamRelatedObjects(databaseWriteStream, webClient);
+          responseChecked.set(true);
           promise.fail(new IllegalStateException(errorMsg));
-          return;
         }
+        responseChecked.set(true);
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-        databaseWriteStream.end();
-        webClient.close();
+        closeStreamRelatedObjects(databaseWriteStream, webClient);
+        responseChecked.set(true);
         promise.fail(throwable);
       });
 
@@ -498,13 +490,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
     //setup json parser and pipe to write stream
-    JsonParser jsonParser = JsonParser.newParser()
+    AtomicBoolean responseChecked = new AtomicBoolean();
+    AtomicInteger responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
+    var jsonParser = JsonParser.newParser()
       .objectValueMode();
     jsonParser.pipeTo(enrichedInstancesStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, webClient))
-      .exceptionHandler(throwable -> {
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, webClient, responseChecked, responseCheckAttempts));
+      jsonParser.exceptionHandler(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
-            throwable);
+          throwable);
         closeStreamRelatedObjects(enrichedInstancesStream, webClient);
         completePromise.fail(throwable);
       });
@@ -514,13 +508,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .onSuccess(httpResponse -> {
         if (httpResponse.statusCode() != 200) {
           String errorFromStorageMessage = getErrorFromStorageMessage("inventory-storage", request.getOkapiUrl() + INVENTORY_ENRICHED_INSTANCES_ENDPOINT, httpResponse.statusMessage());
-          String errorMessage = errorFromStorageMessage + httpResponse.statusCode() + "body: {}";
-          logger.error(errorMessage, httpResponse.bodyAsBuffer().toString());
+          String errorMessage = errorFromStorageMessage + httpResponse.statusCode();
+          logger.error(errorMessage);
+          responseChecked.set(true);
           completePromise.fail(new IllegalStateException(errorFromStorageMessage));
         }
+        responseChecked.set(true);
       })
       .onFailure(e -> {
         logger.error(e.getMessage());
+        responseChecked.set(true);
         completePromise.fail(e);
       });
 
@@ -557,6 +554,18 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient) {
     databaseWriteStream.end();
     webClient.close();
+  }
+
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, AtomicBoolean responseChecked, AtomicInteger attempts) {
+    Vertx vertx = VertxUtils.getVertxFromContextOrNew();
+    vertx.setTimer(500, id -> {
+      if (responseChecked.get() || attempts.get() == 0) {
+        closeStreamRelatedObjects(databaseWriteStream, webClient);
+      } else {
+        attempts.decrementAndGet();
+        closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, attempts);
+      }
+    });
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
@@ -838,7 +847,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .forEach(jo -> result.put(jo.getJsonObject("externalIdsHolder")
             .getString(INSTANCE_ID_FIELD_NAME), jo));
       } else {
-        logger.debug("Can't process SRS response: {}.", buffer.toString());
+        logger.debug("Can't process SRS response: {}.", buffer);
       }
       promise.complete(result);
     } catch (DecodeException ex) {
