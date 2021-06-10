@@ -84,7 +84,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
 import static org.openarchives.oai._2.VerbType.*;
 //import net.jcip.annotations.NotThreadSafe;
 
-@Disabled
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
@@ -2233,27 +2232,27 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
   }
 
-  @Test
-  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
-
-    String body = request.when()
-      .get()
-      .then()
-      .statusCode(500)
-      .extract()
-      .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
-    assertTrue(body.contains(expectedMessage));
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
+//  @Test
+//  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
+//    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+//
+//    RequestSpecification request = createBaseRequest()
+//      .with()
+//      .param(VERB_PARAM, LIST_RECORDS.value())
+//      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
+//      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+//
+//    String body = request.when()
+//      .get()
+//      .then()
+//      .statusCode(500)
+//      .extract()
+//      .asString();
+//    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
+//    assertTrue(body.contains(expectedMessage));
+//    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+//  }
 
 //  @Test
 //  void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
