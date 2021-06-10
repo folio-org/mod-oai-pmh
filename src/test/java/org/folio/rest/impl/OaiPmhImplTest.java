@@ -1360,7 +1360,7 @@ class OaiPmhImplTest {
 
   @Test
   void testGetOaiSetsWithResumptionToken(VertxTestContext testContext) {
-    String resumptionToken = "abc";
+    String resumptionToken = "ZnJvbT0xOTk5LTA5LTA5Jm9mZnNldD0w";
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_SETS.value())
