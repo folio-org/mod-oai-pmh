@@ -364,7 +364,7 @@ class RecordMetadataManagerTest {
       byte[] encoded = Files.readAllBytes(Paths.get(file.getPath()));
       return new String(encoded, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      logger.error("Unexpected error.", e);
+      logger.error("Error occurred while reading the file \"{}\".", path, e);
       fail(e.getMessage());
     }
     return null;

@@ -5,6 +5,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.ResponseConverter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,8 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 

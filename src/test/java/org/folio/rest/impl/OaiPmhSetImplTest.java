@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
@@ -18,8 +17,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -29,6 +29,7 @@ import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -46,8 +47,6 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -72,7 +71,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
-    logger.info("Test setup starting for {}.", TestUtil.getModuleId());
+    logger.info("Test setup starting for {}.", ModuleName.getModuleName());
     PostgresClientFactory.setShouldResetPool(true);
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;

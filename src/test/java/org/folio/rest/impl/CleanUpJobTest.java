@@ -1,15 +1,15 @@
 package org.folio.rest.impl;
 
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import static java.util.Objects.nonNull;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -21,6 +21,7 @@ import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -30,15 +31,16 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static java.util.Objects.nonNull;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
@@ -60,7 +62,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
-    logger.info("Test setup starting for {}.", TestUtil.getModuleId());
+    logger.info("Test setup starting for {}.", ModuleName.getModuleName());
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();

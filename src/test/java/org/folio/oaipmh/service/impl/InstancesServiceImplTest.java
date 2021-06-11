@@ -12,8 +12,9 @@ import java.util.UUID;
 
 import javax.ws.rs.NotFoundException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -22,6 +23,7 @@ import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -33,9 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -59,10 +58,9 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @BeforeAll
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClientFactory.setShouldResetPool(true);
-    logger.info("Test setup starting for {}.", TestUtil.getModuleId());
+    logger.info("Test setup starting for {}.", ModuleName.getModuleName());
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
-//    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
     Context context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
