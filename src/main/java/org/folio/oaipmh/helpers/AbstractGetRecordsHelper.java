@@ -88,7 +88,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             promise.complete(responseCompletableFuture);
           } else {
             String verbName = request.getVerb().value();
-            logger.error("{} response from SRS status code: {}: {}.", verbName, response.statusMessage(), response.statusCode());
+            String statusMessage = response.statusMessage();
+            int statusCode = response.statusCode();
+            logger.error("{} response from SRS status code: {}: {}.", verbName, statusMessage, statusCode);
             throw new IllegalStateException(response.statusMessage());
           }
         } else {

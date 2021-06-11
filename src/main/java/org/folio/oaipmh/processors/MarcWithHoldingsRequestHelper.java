@@ -248,7 +248,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     options.setConnectTimeout(REQUEST_TIMEOUT);
     var webClient = WebClient.create(vertxContext.owner(), options);
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(webClient, request);
-    BatchStreamWrapper databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
+    var databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
 
     databaseWriteStream.handleBatch(batch -> {
