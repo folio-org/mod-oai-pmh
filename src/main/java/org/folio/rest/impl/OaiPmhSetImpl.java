@@ -82,7 +82,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
           .otherwise(this::handleException)
           .onComplete(asyncResultHandler);
       } catch (Exception e) {
-        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE,"putting", id, e.getMessage(), e);
+        logger.error(MANAGE_SET_BY_ID_ERROR_MESSAGE_TEMPLATE, "putting", id, e.getMessage(), e);
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
