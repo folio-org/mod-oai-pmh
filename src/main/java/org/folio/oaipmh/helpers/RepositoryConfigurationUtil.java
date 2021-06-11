@@ -82,10 +82,7 @@ public class RepositoryConfigurationUtil {
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant.", tenant, e);
       promise.fail(e);
-    } finally {
-      client.close();
-    }
-    return promise.future();
+    return promise.future().onComplete(notUsed ->  client.close());
   }
 
   public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId, String existedRequestId) {
