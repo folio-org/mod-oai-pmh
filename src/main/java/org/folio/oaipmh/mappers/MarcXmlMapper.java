@@ -14,14 +14,15 @@ import org.marc4j.MarcReader;
 import org.marc4j.MarcXmlWriter;
 import org.marc4j.marc.Record;
 
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Converts MarcJson format to MarcXML format.
  */
 public class MarcXmlMapper implements Mapper {
-  private static final Logger logger = LoggerFactory.getLogger(MarcXmlMapper.class);
+
+  private static final Logger logger = LogManager.getLogger(MarcXmlMapper.class);
 
   private static final Pattern DOUBLE_BACKSLASH_PATTERN = Pattern.compile("\\\\\\\\");
 
@@ -46,11 +47,11 @@ public class MarcXmlMapper implements Mapper {
       MarcXmlWriter.writeSingleRecord(record, out, false, false);
       return out.toByteArray();
     } catch (IOException e) {
-      throw new UncheckedIOException(e); //should never happen
+      throw new UncheckedIOException(e);
     } finally {
       if (timer != null) {
         timer.stop();
-        logger.debug(String.format("Marc-json converted to MarcXml after %d ms", timer.getTime()));
+        logger.debug("Marc-json converted to MarcXml after {} ms.", timer.getTime());
       }
     }
   }

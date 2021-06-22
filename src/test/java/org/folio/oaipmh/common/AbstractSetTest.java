@@ -27,7 +27,7 @@ public abstract class AbstractSetTest {
   protected static final String NONEXISTENT_SET_ID = "a3bd69dd-d50b-4aa6-accb-c1f9abaada55";
 
   protected static final String DUPLICATED_VALUE_USER_ERROR_MSG = "Field '%s' cannot have duplicated values. Value '%s' is already taken. Please, pass another value";
-  protected static final String DUPLICATED_VALUE_DATABASE_ERROR_MSG = "duplicate key value violates unique constraint \"%s\"";
+  protected static final String DUPLICATED_VALUE_DATABASE_ERROR_MSG = "duplicate key value violates unique constraint \\\"%s\\\"";
   protected static final String SET_SPEC_UNIQUE_CONSTRAINT = "set_spec_unique_constraint";
   protected static final String NAME_UNIQUE_CONSTRAINT = "name_unique_constraint";
 

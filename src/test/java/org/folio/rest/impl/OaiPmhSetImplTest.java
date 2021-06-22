@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.SET_LB;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
@@ -18,16 +17,19 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.SetService;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -45,15 +47,14 @@ import io.vertx.core.Context;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class OaiPmhSetImplTest extends AbstractSetTest {
-  private static final Logger logger = LoggerFactory.getLogger(OaiPmhSetImplTest.class);
+
+  private static final Logger logger = LogManager.getLogger(OaiPmhSetImplTest.class);
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -70,14 +71,16 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
-    logger.info("Test setup starting for " + TestUtil.getModuleId());
+    logger.info("Test setup starting for {}.", ModuleName.getModuleName());
     PostgresClientFactory.setShouldResetPool(true);
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-    PostgresClient client = PostgresClient.getInstance(vertx);
-    client.startEmbeddedPostgres();
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient client = PostgresClient.getInstance(vertx, OAI_TEST_TENANT);
+    client.startPostgresTester();
+    TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
 
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
@@ -88,8 +91,6 @@ class OaiPmhSetImplTest extends AbstractSetTest {
         Context context = vertx.getOrCreateContext();
         SpringContextUtil.init(vertx, context, ApplicationConfig.class);
         SpringContextUtil.autowireDependencies(this, context);
-        TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(SET_LB));
-        LiquibaseUtil.initializeSchemaForTenant(vertx, OAI_TEST_TENANT);
         new OkapiMockServer(vertx, mockPort).start(testContext);
         testContext.completeNow();
       } catch (Exception e) {

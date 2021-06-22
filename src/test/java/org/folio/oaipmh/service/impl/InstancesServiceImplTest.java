@@ -1,12 +1,10 @@
 package org.folio.oaipmh.service.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.Tables.INSTANCES;
-import static org.folio.rest.jooq.Tables.REQUEST_METADATA_LB;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,15 +12,18 @@ import java.util.UUID;
 
 import javax.ws.rs.NotFoundException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -34,8 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -43,7 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 class InstancesServiceImplTest extends AbstractInstancesTest {
 
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private final Logger logger = LogManager.getLogger(this.getClass());
 
   private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -59,15 +58,14 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @BeforeAll
   void setUpClass(Vertx vertx, VertxTestContext testContext) throws Exception {
     PostgresClientFactory.setShouldResetPool(true);
-    logger.info("Test setup starting for " + TestUtil.getModuleId());
-    PostgresClient.getInstance(vertx)
-      .startEmbeddedPostgres();
-    TestUtil.prepareDatabase(vertx, testContext, OAI_TEST_TENANT, List.of(INSTANCES, REQUEST_METADATA_LB));
+    logger.info("Test setup starting for {}.", ModuleName.getModuleName());
+    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     Context context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
     new OkapiMockServer(vertx, mockPort).start(testContext);
-    LiquibaseUtil.initializeSchemaForTenant(vertx, TEST_TENANT_ID);
+    TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
     testContext.completeNow();
   }
 
@@ -75,7 +73,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     vertx.close(testContext.succeeding(res -> {
-      PostgresClient.stopEmbeddedPostgres();
+      PostgresClient.stopPostgresTester();
       testContext.completeNow();
     }));
   }

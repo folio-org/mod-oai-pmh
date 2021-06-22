@@ -58,12 +58,12 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 public class OaiPmhImpl implements Oai {
 
-  private final Logger logger = LoggerFactory.getLogger(OaiPmhImpl.class);
+  private final Logger logger = LogManager.getLogger(OaiPmhImpl.class);
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
@@ -140,7 +140,7 @@ public class OaiPmhImpl implements Oai {
               .handle(request, vertxContext)
               .compose(response -> {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
-                logger.debug(verb + " response: {}", response.getEntity());
+                logger.debug("{} response: {}", verb, response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
               }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));

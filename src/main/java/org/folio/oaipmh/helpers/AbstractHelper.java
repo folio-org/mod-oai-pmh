@@ -1,30 +1,24 @@
 package org.folio.oaipmh.helpers;
 
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
-import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.ISO_DATE_TIME_PATTERN;
-import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
-import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
-import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.apache.commons.lang3.time.DateUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.openarchives.oai._2.*;
 
+import javax.ws.rs.core.Response;
 import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -36,54 +30,28 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.ResponseConverter;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.MetadataType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.SetType;
-import org.openarchives.oai._2.StatusType;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
 
 /**
  * Abstract helper implementation that provides some common methods.
  */
 public abstract class AbstractHelper implements VerbHelper {
 
+  private static final Logger logger = LogManager.getLogger(AbstractHelper.class);
+
   private static final String DATE_ONLY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
-  private static final Logger logger = LoggerFactory.getLogger(AbstractHelper.class);
   protected final DateFormat dateFormat = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
-
   private static final String[] dateFormats = {
-    org.apache.commons.lang.time.DateFormatUtils.ISO_DATE_FORMAT.getPattern(),
+    DateFormatUtils.ISO_8601_EXTENDED_DATE_FORMAT.getPattern(),
     ISO_DATE_TIME_PATTERN
   };
 

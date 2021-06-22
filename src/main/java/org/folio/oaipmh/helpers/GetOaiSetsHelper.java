@@ -13,14 +13,15 @@ import org.openarchives.oai._2.OAIPMH;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Helper class that contains business logic for retrieving OAI-PMH set structure of a repository.
  */
 public class GetOaiSetsHelper extends AbstractHelper {
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiSetsHelper.class);
+
+  private static final Logger logger = LogManager.getLogger(GetOaiSetsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -37,7 +38,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
         .withSets(getSupportedSetTypes()));
       promise.complete(responseHelper.buildSuccessResponse(oai));
     } catch (Exception e) {
-      logger.error("Error happened while processing ListSets verb request", e);
+      logger.error("Error happened while processing ListSets verb request.", e);
       promise.fail(e);
     }
     return promise.future();

@@ -1,100 +1,54 @@
 package org.folio.oaipmh.helpers;
 
-import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-
-import java.util.Date;
-
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
-import org.folio.rest.tools.client.Response;
-import org.openarchives.oai._2.ListMetadataFormatsType;
-import org.openarchives.oai._2.MetadataFormatType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.*;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import java.util.Collections;
+import java.util.List;
 
+import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 
-public class GetOaiMetadataFormatsHelper extends AbstractHelper {
-
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiMetadataFormatsHelper.class);
+public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
     if (request.getIdentifier() == null) {
       return Future.succeededFuture(retrieveMetadataFormatsWithNoIdentifier(request));
-    } else if (!validateIdentifier(request)) {
-      return Future.succeededFuture(buildBadArgumentResponse(request));
     }
+    return super.handle(request, ctx);
+  }
 
-    Promise<javax.ws.rs.core.Response> promise = Promise.promise();
-    try {
-      final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
-      final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-
-      final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-        request.getTenant(), request.getOkapiToken());
-
-      final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
-      final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
-
-      int batchSize = Integer.parseInt(
-        RepositoryConfigurationUtil.getProperty(request.getRequestId(),
-          REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
-      srsClient.getSourceStorageSourceRecords(
-       null,
-        null,
-        request.getStorageIdentifier(),
-        null,
-        "MARC_BIB",
-        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-        //2. use suppressed from discovery filtering only when deleted record support is enabled
-        deletedRecordsSupport ? null : suppressedRecordsSupport,
-        deletedRecordsSupport,
-        null,
-        updatedAfter,
-        updatedBefore,
-         null,
-        request.getOffset(),
-        batchSize,
-         response -> {
-          try {
-            if (Response.isSuccess(response.statusCode())) {
-              response.bodyHandler(bh -> {
-                JsonArray instances = storageHelper.getItems(bh.toJsonObject());
-                if (instances != null && !instances.isEmpty()) {
-                  promise.complete(retrieveMetadataFormatsWithNoIdentifier(request));
-                }else{
-                  promise.complete(buildIdentifierNotFoundResponse(request));
-                }
-              });
-            } else {
-              logger.error("GetOaiMetadataFormatsHelper response from SRS status code: {}: {}", response.statusMessage(), response.statusCode());
-              throw new IllegalStateException(response.statusMessage());
-            }
-
-          } catch (Exception e) {
-            logger.error("Exception getting list of identifiers", e);
-            promise.fail(e);
-          }
-        });
-    } catch (Exception e) {
-      logger.error("Error happened while processing ListMetadataFormats verb request", e);
-      promise.fail(e);
+  @Override
+  protected javax.ws.rs.core.Response processRecords(Context ctx, Request request, JsonObject instancesResponseBody) {
+    JsonArray instances = storageHelper.getItems(instancesResponseBody);
+    if (instances != null && !instances.isEmpty()) {
+      return retrieveMetadataFormatsWithNoIdentifier(request);
+    } else {
+      return buildIdentifierNotFoundResponse(request);
     }
-    return promise.future();
+  }
+
+  @Override
+  protected List<OAIPMHerrorType> validateRequest(Request request) {
+    if (!validateIdentifier(request)) {
+      OAIPMHerrorType error = new OAIPMHerrorType().withCode(OAIPMHerrorcodeType.BAD_ARGUMENT)
+        .withValue(INVALID_IDENTIFIER_ERROR_MESSAGE);
+      return List.of(error);
+    }
+    return Collections.emptyList();
+  }
+
+  @Override
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+    if (resumptionToken != null) {
+      throw new UnsupportedOperationException("Control flow is not applicable for ListMetadataFormats verb.");
+    }
   }
 
   /**
@@ -104,16 +58,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractHelper {
   private javax.ws.rs.core.Response retrieveMetadataFormatsWithNoIdentifier(Request request) {
     OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withListMetadataFormats(getMetadataFormatTypes());
     return getResponseHelper().buildSuccessResponse(oaipmh);
-  }
-
-  /**
-   * Builds {@linkplain javax.ws.rs.core.Response Response} with 'badArgument' error because passed identifier is invalid.
-   * @return {@linkplain javax.ws.rs.core.Response Response}  with {@link OAIPMH} response
-   */
-  private javax.ws.rs.core.Response buildBadArgumentResponse(Request request) {
-    ResponseHelper responseHelper = getResponseHelper();
-    OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.BAD_ARGUMENT, INVALID_IDENTIFIER_ERROR_MESSAGE);
-    return responseHelper.buildFailureResponse(oaipmh, request);
   }
 
   /**

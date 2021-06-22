@@ -29,8 +29,8 @@ import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 
 /**
@@ -38,7 +38,7 @@ import io.vertx.core.logging.LoggerFactory;
  */
 public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(GetOaiRepositoryInfoHelper.class);
+  private static final Logger logger = LogManager.getLogger(GetOaiRepositoryInfoHelper.class);
 
   private static final String STORAGE_IDENTIFIER_SAMPLE = "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc";
 
@@ -62,7 +62,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
       promise.complete(getResponseHelper().buildSuccessResponse(oai));
     } catch (Exception e) {
-      logger.error("Error happened while processing Identify verb request", e);
+      logger.error("Error happened while processing Identify verb request.", e);
       promise.fail(e);
     }
     return promise.future();

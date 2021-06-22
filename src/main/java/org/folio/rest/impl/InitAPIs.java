@@ -18,14 +18,14 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * The class initializes system properties and checks if required configs are specified
  */
 public class InitAPIs implements InitAPI {
-  private final Logger logger = LoggerFactory.getLogger(InitAPIs.class);
+  private final Logger logger = LogManager.getLogger(InitAPIs.class);
 
   private static final String CONFIGURATION_PATH = "configuration.path";
   private static final String CONFIGURATION_FILES = "configuration.files";
@@ -61,14 +61,14 @@ public class InitAPIs implements InitAPI {
           Object existing = systemProperties.putIfAbsent(key, value);
           if (logger.isInfoEnabled()) {
             String message = (existing == null) ?
-              String.format("The '%s' property was loaded from config file with its default value '%s'", key, value) :
+              String.format("The '%s' property was loaded from config file with its default value '%s'.", key, value) :
               String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
             logger.info(message);
           }
         });
       });
     } catch (Exception e) {
-      logger.error("Unable to populate system properties", e);
+      logger.error("Unable to populate system properties.", e);
       handler.handle(Future.failedFuture(e));
     }
   }

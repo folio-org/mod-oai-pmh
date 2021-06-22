@@ -9,7 +9,7 @@ import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;

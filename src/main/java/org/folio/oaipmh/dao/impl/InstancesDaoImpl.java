@@ -15,7 +15,9 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
@@ -30,15 +32,13 @@ import org.springframework.stereotype.Repository;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 
 @Repository
 public class InstancesDaoImpl implements InstancesDao {
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   private static final String REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST = "Request metadata with requestId - \"%s\" does not exists";
 
@@ -175,10 +175,10 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(res -> {
         String instanceIds = String.join(",", instIds);
         if (res > 0) {
-          logger.debug("Instances with ids [{0}] have been removed.", instanceIds);
+          logger.debug("Instances with ids [{}] have been removed.", instanceIds);
           return true;
         } else {
-          logger.debug("Cannot delete instances: there no any instances with id's - [{0}]", instanceIds);
+          logger.debug("Cannot delete instances: there no instances with id's - [{}].", instanceIds);
           return false;
         }
       }));
@@ -244,7 +244,8 @@ public class InstancesDaoImpl implements InstancesDao {
           .toString();
       })
       .collect(Collectors.toList());
-    logger.debug("Expired request ids result: " + String.join(",", ids));
+    var idList = String.join(",", ids);
+    logger.debug("Expired request ids result: [{}].", idList);
     return ids;
   }
 
