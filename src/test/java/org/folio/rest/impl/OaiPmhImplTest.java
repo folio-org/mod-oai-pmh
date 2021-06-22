@@ -34,33 +34,7 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
-import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
-import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
-import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
-import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.DEFAULT_RECORD_DATE;
-import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.INSTANCE_WITHOUT_SRS_RECORD_DATE;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
-import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.INVENTORY_60_INSTANCE_IDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORDS_WITH_CYRILLIC_DATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
-import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
-import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
-import static org.folio.rest.impl.OkapiMockServer.TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML;
+import static org.folio.rest.impl.OkapiMockServer.*;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -2390,6 +2364,17 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INVALID_INSTANCE_IDS_JSON_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    verify500(request);
+  }
+
+  @Test
+  void shouldReturn500_whenInvalidJsonRespondedFromEnrichedInstances() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     verify500(request);

@@ -99,6 +99,7 @@ public class OkapiMockServer {
   static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
+  public static final String INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE = "2012-11-22";
 
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
   private static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
@@ -111,6 +112,7 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500 = "927ee35f-700c-4fdd-a7e9-b560861d6900";
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT = "d93c7b03-6343-4956-bfbc-2981b3741830";
   private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
+  private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_JSON = "210f0f47-e0f8-4d01-83f3-2b51cf369699";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instances_0.json";
@@ -167,6 +169,7 @@ public class OkapiMockServer {
   private static final String SRS_RECORD = "/srs_record.json";
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
+  private static final String INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON = "instance_id_invalid_enriched_instance.json";
   private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
   private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
@@ -270,6 +273,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
       } else if (uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
         inventoryViewSuccessResponse(ctx, INVALID_JSON);
+      } else if (uri.contains(INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON);
       } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON);
       } else if (uri.contains(INSTANCE_WITHOUT_SRS_RECORD_DATE)) {
@@ -288,12 +293,12 @@ public class OkapiMockServer {
       .getJsonArray(INSTANCE_IDS);
     logger.debug("Before building response for enriched instances, instanceIds: {}.", String.join(",", instanceIds.getList()));
     if (instanceIds.contains(INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST)) {
-      logger.debug("Failure EI response.");
       failureResponse(ctx);
-    } else if(instanceIds.isEmpty()) {
+    } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_JSON)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INVALID_JSON));
+    } else if (instanceIds.isEmpty()) {
       successResponse(ctx, "");
     } else {
-      logger.debug("Success EI response.");
       inventoryViewSuccessResponse(ctx, instanceIds);
     }
   }

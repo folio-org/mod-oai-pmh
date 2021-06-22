@@ -458,12 +458,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .objectValueMode();
     jsonParser.pipeTo(enrichedInstancesStream);
     jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, webClient, responseChecked, responseCheckAttempts));
-      jsonParser.exceptionHandler(throwable -> {
-        logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
-          throwable);
-        closeStreamRelatedObjects(enrichedInstancesStream, webClient, Optional.of(throwable));
-        completePromise.fail(throwable);
-      });
+    jsonParser.exceptionHandler(throwable -> {
+      logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
+        throwable);
+      closeStreamRelatedObjects(enrichedInstancesStream, webClient, Optional.of(throwable));
+      completePromise.fail(throwable);
+    });
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
       .sendBuffer(entries.toBuffer())
@@ -503,7 +503,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         }
 
         if (enrichedInstancesStream.isTheLastBatch() && !completePromise.future().isComplete()) {
-          completePromise.complete(new ArrayList<>(instances.values()));
+          if (enrichedInstancesStream.isEndedWithError()) {
+            completePromise.fail(enrichedInstancesStream.getCause());
+          } else {
+            completePromise.complete(new ArrayList<>(instances.values()));
+          }
         }
       } catch (Exception e) {
         completePromise.fail(e);
