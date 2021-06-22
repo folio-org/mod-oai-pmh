@@ -101,6 +101,12 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     handler.handle(end());
   }
 
+  public synchronized void endWithError(Throwable cause) {
+    this.cause.set(cause);
+    this.endedWithError = true;
+    end();
+  }
+
   @Override
   public WriteStream<JsonEvent> setWriteQueueMaxSize(int maxSize) {
     batchSize = maxSize;

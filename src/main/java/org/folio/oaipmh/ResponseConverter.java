@@ -98,7 +98,7 @@ public class ResponseConverter {
    * @return marshaled {@link OAIPMH} object as string representation
    */
   public String convertToString(OAIPMH response) {
-    StopWatch timer = StopWatch.createStarted();
+    var timer = StopWatch.createStarted();
 
     try (StringWriter writer = new StringWriter()) {
       // Marshaller is not thread-safe, so we should create every time a new one
@@ -129,7 +129,7 @@ public class ResponseConverter {
    * @return the {@link OAIPMH} object based on passed string
    */
   public OAIPMH stringToOaiPmh(String oaipmhResponse) {
-    StopWatch timer = StopWatch.createStarted();
+    var timer = StopWatch.createStarted();
     try (StringReader reader = new StringReader(oaipmhResponse)) {
       // Unmarshaller is not thread-safe, so we should create every time a new one
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
@@ -151,7 +151,7 @@ public class ResponseConverter {
    * @return the object based on passed byte array
    */
   public Object bytesToObject(byte[] byteSource) {
-    StopWatch timer = StopWatch.createStarted();
+    var timer = StopWatch.createStarted();
     try(ByteArrayInputStream inputStream = new ByteArrayInputStream(byteSource)) {
       // Unmarshaller is not thread-safe, so we should create every time a new one
       Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
