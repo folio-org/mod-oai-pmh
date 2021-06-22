@@ -20,16 +20,17 @@ import org.apache.http.HttpStatus;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -38,12 +39,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
 
 public class ModTenantAPI extends TenantAPI {
-  private final Logger logger = LoggerFactory.getLogger(ModTenantAPI.class);
+
+  private final Logger logger = LogManager.getLogger(ModTenantAPI.class);
 
   private static final String CONFIG_DIR_PATH = "config";
   private static final String QUERY = "module==OAIPMH and configName==%s";
@@ -65,7 +68,7 @@ public class ModTenantAPI extends TenantAPI {
       } else {
         Future<String> loadConfigurationDataFuture = loadConfigurationData(headers);
         Future<String> initDatabaseFuture = initDatabase(headers, context.owner());
-        CompositeFuture.all(loadConfigurationDataFuture, initDatabaseFuture)
+        GenericCompositeFuture.all(List.of(loadConfigurationDataFuture, initDatabaseFuture))
           .onComplete(future -> {
             String message;
             if (future.succeeded()) {
@@ -87,12 +90,13 @@ public class ModTenantAPI extends TenantAPI {
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);
 
-    ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token);
+    WebClient webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
+    ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token, webClient);
 
     List<Future> futures = new ArrayList<>();
 
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, client)));
-    CompositeFuture.all(futures)
+    GenericCompositeFuture.all(futures)
       .onComplete(future -> {
         String message;
         if (future.succeeded()) {
@@ -110,7 +114,7 @@ public class ModTenantAPI extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
     Promise<String> promise = Promise.promise();
     try {
-      logger.info("Getting configurations with configName = {}", configName);
+      logger.info("Getting configurations with configName \"{}\"", configName);
       client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
         if (result.succeeded()) {
           HttpResponse<Buffer> response = result.result();
@@ -140,11 +144,11 @@ public class ModTenantAPI extends TenantAPI {
     JsonObject body = response.bodyAsJsonObject();
       JsonArray configs = body.getJsonArray(CONFIGS);
       if (configs.isEmpty()) {
-        logger.info("Configuration group with configName {} doesn't exist. Posting default configs for {} configuration group",
+        logger.info("Configuration group with configName {} doesn't exist. Posting default configs for {} configuration group.",
             MODULE_NAME, configName);
         postConfig(client, configName, promise);
       } else {
-        logger.info("Configurations has been got successfully, applying configurations to module system properties");
+        logger.info("Configurations has been got successfully, applying configurations to module system properties.");
         populateSystemPropertiesWithConfig(body);
         promise.complete();
       }
@@ -165,7 +169,7 @@ public class ModTenantAPI extends TenantAPI {
                 configName, response.statusCode(), response.statusMessage());
             promise.fail(new IllegalStateException("Cannot post config. " + response.statusMessage()));
           }
-          logger.info("Config '" + configName + "' posted successfully");
+          logger.info("Config {} posted successfully.", configName);
         } else {
           promise.fail(new IllegalStateException("Error occurred during config posting.", result.cause()));
         }

@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Is used for reading json configuration files from resources and mapping them to {@link JsonObject} instances.
@@ -27,7 +27,7 @@ import io.vertx.core.logging.LoggerFactory;
 @Component
 public class ConfigurationHelper {
 
-  private static final Logger logger = LoggerFactory.getLogger(ConfigurationHelper.class);
+  private static final Logger logger = LogManager.getLogger(ConfigurationHelper.class);
 
   private static ConfigurationHelper instance;
 

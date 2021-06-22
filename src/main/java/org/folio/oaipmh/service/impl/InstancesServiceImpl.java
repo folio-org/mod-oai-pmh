@@ -9,22 +9,21 @@ import java.util.List;
 
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import joptsimple.internal.Strings;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 @Service
 public class InstancesServiceImpl implements InstancesService {
 
-  protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   private InstancesDao instancesDao;
 
@@ -39,12 +38,12 @@ public class InstancesServiceImpl implements InstancesService {
       .onSuccess(ids -> {
         List<Future> futures = new ArrayList<>();
         if (isNotEmpty(ids)) {
-          logger.debug("Got expired request ids: " + Strings.join(ids, ","));
+          logger.debug("Got expired request ids: {}.", String.join(",", ids));
           ids.forEach(id -> futures.add(instancesDao.deleteRequestMetadataByRequestId(id, tenantId)));
-          CompositeFuture.all(futures)
+          GenericCompositeFuture.all(futures)
             .onSuccess(v -> promise.complete(ids))
             .onFailure(throwable -> {
-              logger.error("Error occurred during deleting instances by request ids: " + ids, throwable);
+              logger.error("Error occurred during deleting instances by request ids: {}.", ids, throwable);
               promise.fail(throwable);
             });
         } else {

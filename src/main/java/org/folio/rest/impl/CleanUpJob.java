@@ -16,12 +16,12 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class CleanUpJob implements OaiPmhCleanUpInstances {
 
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private final Logger logger = LogManager.getLogger(this.getClass());
 
   private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
@@ -33,7 +33,7 @@ public class CleanUpJob implements OaiPmhCleanUpInstances {
 
   @Override
   public void postOaiPmhCleanUpInstances(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-    logger.debug("Running instances clean up job");
+    logger.debug("Running instances clean up job.");
     vertxContext.runOnContext(v -> instancesService.cleanExpiredInstances(okapiHeaders.get(OKAPI_TENANT), INSTANCES_EXPIRATION_TIME_IN_SECONDS)
       .map(PostOaiPmhCleanUpInstancesResponse.respond204())
       .map(Response.class::cast)

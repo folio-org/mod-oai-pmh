@@ -1,32 +1,28 @@
 package org.folio.oaipmh.common;
 
 import java.sql.Connection;
-import java.util.List;
 
+import org.folio.liquibase.LiquibaseUtil;
 import org.folio.liquibase.SingleConnectionProvider;
-import org.folio.rest.tools.PomReader;
-import org.jooq.Table;
+import org.folio.rest.persist.PostgresClient;
 
 import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxTestContext;
 
 public class TestUtil {
 
-  public static void prepareDatabase(Vertx vertx, VertxTestContext testContext, String tenantId, List<Table> tables) {
+  public static void prepareSchema(Vertx vertx, String tenantId, String schemaName) {
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
-      connection.prepareStatement("create schema if not exists oaitest_mod_oai_pmh")
+      connection.prepareStatement("create schema if not exists " + schemaName)
         .execute();
-      connection.setSchema("oaitest_mod_oai_pmh");
     } catch (Exception ex) {
-      testContext.failNow(ex);
+      throw new IllegalStateException(ex);
     }
   }
 
-  public static String getModuleId() {
-    String moduleName = PomReader.INSTANCE.getModuleName()
-      .replaceAll("_", "-");
-    String moduleVersion = PomReader.INSTANCE.getVersion();
-    return moduleName + "-" + moduleVersion;
+  public static void initializeTestContainerDbSchema(Vertx vertx, String tenantId) {
+    String schemaName = PostgresClient.convertToPsqlStandard(tenantId);
+    prepareSchema(vertx, tenantId, schemaName);
+    LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
   }
 
 }

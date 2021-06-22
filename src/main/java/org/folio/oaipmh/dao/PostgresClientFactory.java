@@ -5,12 +5,11 @@ import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.rest.persist.PostgresClient;
 import org.jooq.Configuration;
@@ -26,7 +25,7 @@ import java.util.Map;
 @Component
 public class PostgresClientFactory {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PostgresClientFactory.class);
+  private static final Logger logger = LogManager.getLogger(PostgresClientFactory.class);
 
   public static final Configuration configuration = new DefaultConfiguration().set(SQLDialect.POSTGRES);
 
@@ -71,17 +70,6 @@ public class PostgresClientFactory {
     return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(this.vertx, tenantId));
   }
 
-  /**
-   * Get {@link ReactiveClassicGenericQueryExecutor}
-   *
-   * @param vertx    current Vertx
-   * @param tenantId tenant id
-   * @return reactive query executor
-   */
-  public static ReactiveClassicGenericQueryExecutor getQueryExecutor(Vertx vertx, String tenantId) {
-    return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(vertx, tenantId));
-  }
-
   public static void closeAll() {
     POOL_CACHE.values().forEach(PostgresClientFactory::close);
     POOL_CACHE.clear();
@@ -90,14 +78,14 @@ public class PostgresClientFactory {
   private static PgPool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
-      LOG.debug("Using existing database connection pool for tenant {}", tenantId);
+      logger.debug("Using existing database connection pool for tenant {}.", tenantId);
       return POOL_CACHE.get(tenantId);
     }
     if (shouldResetPool) {
       POOL_CACHE.remove(tenantId);
       shouldResetPool = false;
     }
-    LOG.info("Creating new database connection pool for tenant {}", tenantId);
+    logger.info("Creating new database connection pool for tenant {}.", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId);
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
     PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
@@ -115,11 +103,7 @@ public class PostgresClientFactory {
   private static PgConnectOptions getConnectOptions(Vertx vertx, String tenantId) {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     JsonObject postgreSQLClientConfig = postgresClient.getConnectionConfig();
-    postgresClient.closeClient(closed -> {
-      if (closed.failed()) {
-        LOG.error("Unable to close PostgresClient", closed.cause());
-      }
-    });
+    postgresClient.closeClient();
     return new PgConnectOptions()
       .setHost(postgreSQLClientConfig.getString(HOST))
       .setPort(postgreSQLClientConfig.getInteger(PORT))

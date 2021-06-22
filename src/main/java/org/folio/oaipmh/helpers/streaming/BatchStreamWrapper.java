@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.streams.WriteStream;
 
@@ -17,8 +17,6 @@ import io.vertx.core.streams.WriteStream;
  * WriteStream wrapper to read from the stream in batches.
  */
 public class BatchStreamWrapper implements WriteStream<JsonEvent> {
-
-  private final Vertx vertx;
 
   private Handler<Void> drainHandler;
   private Handler<Throwable> exceptionHandler;
@@ -38,8 +36,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   private Supplier<Boolean> capacityChecker;
 
 
-  public BatchStreamWrapper(Vertx vertx, int batchSize) {
-    this.vertx = vertx;
+  public BatchStreamWrapper(int batchSize) {
     this.batchSize = batchSize;
   }
 
@@ -50,18 +47,17 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public WriteStream<JsonEvent> write(JsonEvent data) {
-    return write(data, null);
+  public Future<Void> write(JsonEvent data) {
+    write(data, null);
+    return Future.succeededFuture();
   }
 
   @Override
-  public synchronized WriteStream<JsonEvent> write(JsonEvent data,
-                                                   Handler<AsyncResult<Void>> handler) {
+  public synchronized void write(JsonEvent data, Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
     if (dataList.size() >= batchSize) {
       runBatchHandler();
     }
-    return this;
   }
 
   private void runBatchHandler() {
@@ -94,15 +90,21 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
   }
 
   @Override
-  public synchronized void end() {
+  public synchronized Future<Void> end() {
     streamEnded = true;
     runBatchHandler();
+    return Future.succeededFuture();
   }
 
   @Override
   public void end(Handler<AsyncResult<Void>> handler) {
+    handler.handle(end());
+  }
+
+  public synchronized void endWithError(Throwable cause) {
+    this.cause.set(cause);
+    this.endedWithError = true;
     end();
-    handler.handle(null);
   }
 
   @Override
@@ -145,12 +147,6 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
 
   public Throwable getCause() {
     return cause.get();
-  }
-
-  public synchronized void endWithError(Throwable cause) {
-    this.cause.set(cause);
-    this.endedWithError = true;
-    end();
   }
 
   public Long getReturnedCount() {

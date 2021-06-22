@@ -47,6 +47,14 @@
     </repository>
   </repositories>
 
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <distributionManagement>
     <repository>
       <id>folio-nexus</id>
@@ -76,12 +84,12 @@
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-sql-client</artifactId>
-        <version>${vertx-folio.version}</version>
+        <version>${vertx.version}-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-pg-client</artifactId>
-        <version>${vertx-folio.version}</version>
+        <version>${vertx.version}-FOLIO</version>
       </dependency>
       <dependency>
         <groupId>org.junit</groupId>
@@ -121,22 +129,22 @@
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.6</aspectj.version>
-    <raml-module-builder.version>31.1.5</raml-module-builder.version>
-    <vertx.version>3.9.6</vertx.version>
+    <raml-module-builder.version>33.0.2</raml-module-builder.version>
+    <vertx.version>4.1.0</vertx.version>
     <vertx-folio.version>3.9.4-FOLIO</vertx-folio.version>
     <apache-httpclient.version>4.5.11</apache-httpclient.version>
     <apache-commons-lang3.version>3.9</apache-commons-lang3.version>
     <time-adapters.version>1.1.3</time-adapters.version>
     <jaxb2-basics.version>1.11.1</jaxb2-basics.version>
     <marc4j.version>2.9.1</marc4j.version>
-    <mod-configuration-client.version>5.6.0</mod-configuration-client.version>
-    <mod-source-record-storage-client.version>4.1.4</mod-source-record-storage-client.version>
+    <mod-configuration-client.version>5.7.0</mod-configuration-client.version>
+    <mod-source-record-storage-client.version>5.0.0</mod-source-record-storage-client.version>
     <log4j-slf4j.version>2.13.0</log4j-slf4j.version>
     <restassured.version>4.3.0</restassured.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
-    <jooq.version>3.13.2</jooq.version>
-    <vertx-jooq.generator.version>5.1.1</vertx-jooq.generator.version>
-    <vertx-jooq.classic-reactive.version>5.2.1</vertx-jooq.classic-reactive.version>
+    <jooq.version>3.14.11</jooq.version>
+    <vertx-jooq.generator.version>6.3.0</vertx-jooq.generator.version>
+    <vertx-jooq.classic-reactive.version>6.3.0</vertx-jooq.classic-reactive.version>
     <postgres.version>42.2.12</postgres.version>
   </properties>
 
@@ -183,7 +191,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-liquibase-util</artifactId>
-      <version>1.0.0</version>
+      <version>1.2.0</version>
       <type>jar</type>
       <exclusions>
         <exclusion>
@@ -277,6 +285,22 @@
       <version>2.17.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.sun.xml.bind</groupId>
+      <artifactId>jaxb-osgi</artifactId>
+      <version>2.3.0.1</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>postgres-testing</artifactId>
+      <version>${raml-module-builder.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.2.20</version>
+    </dependency>
 
   </dependencies>
 
@@ -334,46 +358,15 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-maven-plugin</artifactId>
+        <version>${raml-module-builder.version}</version>
         <executions>
           <execution>
             <id>generate_interfaces</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>java</goal>
             </goals>
-            <configuration>
-              <mainClass>org.folio.rest.tools.GenerateRunner</mainClass>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-              <systemProperties>
-                <systemProperty>
-                  <key>project.basedir</key>
-                  <value>${basedir}</value>
-                </systemProperty>
-                <systemProperty>
-                  <key>raml_files</key>
-                  <value>${ramlfiles_path}</value>
-                </systemProperty>
-              </systemProperties>
-            </configuration>
-          </execution>
-          <execution>
-            <id>git submodule update</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>git</executable>
-              <arguments>
-                <argument>submodule</argument>
-                <argument>update</argument>
-                <argument>--init</argument>
-                <argument>--recursive</argument>
-              </arguments>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -392,6 +385,7 @@
         <artifactId>aspectj-maven-plugin</artifactId>
         <version>1.12.6</version>
         <configuration>
+          <complianceLevel>11</complianceLevel>
           <verbose>true</verbose>
           <showWeaveInfo>false</showWeaveInfo>
           <source>${maven.compiler.source}</source>

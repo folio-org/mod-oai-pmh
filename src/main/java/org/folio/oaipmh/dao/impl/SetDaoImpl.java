@@ -2,7 +2,7 @@ package org.folio.oaipmh.dao.impl;
 
 import static java.util.Date.from;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.lang.StringUtils.isNotEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET_LB;
 
 import java.time.Instant;
@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
-import org.apache.commons.lang.StringUtils;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.jaxrs.model.FilteringCondition;
@@ -83,7 +82,7 @@ public class SetDaoImpl implements SetDao {
 
   @Override
   public Future<FolioSet> saveSet(FolioSet entry, String tenantId, String userId) {
-    if (StringUtils.isNotEmpty(entry.getId())) {
+    if (isNotEmpty(entry.getId())) {
       return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
         .execute(dslContext -> dslContext.selectFrom(SET_LB)
           .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
