@@ -27,7 +27,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
@@ -144,10 +143,4 @@ class StorageHelperTest {
     return null;
   }
 
-  private String getFormattedCurrentDate(){
-    return dateTimeFormatter.format(LocalDate.parse(LocalDateTime.now(ZoneOffset.UTC)
-      .format(ISO_UTC_DATE_ONLY))
-      .atStartOfDay()
-      .plusDays(1L));
-  }
 }
