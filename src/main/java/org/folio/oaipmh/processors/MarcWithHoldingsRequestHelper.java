@@ -502,9 +502,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
         }
 
-        if (enrichedInstancesStream.isTheLastBatch() && !completePromise.future().isComplete()) {
+        if (enrichedInstancesStream.isTheLastBatch()) {
           if (enrichedInstancesStream.isEndedWithError()) {
-            completePromise.fail(enrichedInstancesStream.getCause());
+            completePromise.tryFail(enrichedInstancesStream.getCause());
           } else {
             completePromise.complete(new ArrayList<>(instances.values()));
           }
