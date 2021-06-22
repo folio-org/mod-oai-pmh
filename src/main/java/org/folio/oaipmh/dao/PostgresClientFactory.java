@@ -70,17 +70,6 @@ public class PostgresClientFactory {
     return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(this.vertx, tenantId));
   }
 
-  /**
-   * Get {@link ReactiveClassicGenericQueryExecutor}
-   *
-   * @param vertx    current Vertx
-   * @param tenantId tenant id
-   * @return reactive query executor
-   */
-  public static ReactiveClassicGenericQueryExecutor getQueryExecutor(Vertx vertx, String tenantId) {
-    return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(vertx, tenantId));
-  }
-
   public static void closeAll() {
     POOL_CACHE.values().forEach(PostgresClientFactory::close);
     POOL_CACHE.clear();
@@ -114,11 +103,7 @@ public class PostgresClientFactory {
   private static PgConnectOptions getConnectOptions(Vertx vertx, String tenantId) {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     JsonObject postgreSQLClientConfig = postgresClient.getConnectionConfig();
-    postgresClient.closeClient(closed -> {
-      if (closed.failed()) {
-        logger.error("Unable to close PostgresClient.", closed.cause());
-      }
-    });
+    postgresClient.closeClient();
     return new PgConnectOptions()
       .setHost(postgreSQLClientConfig.getString(HOST))
       .setPort(postgreSQLClientConfig.getInteger(PORT))
