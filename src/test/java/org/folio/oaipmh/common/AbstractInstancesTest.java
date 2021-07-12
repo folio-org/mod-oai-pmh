@@ -68,15 +68,13 @@ public abstract class AbstractInstancesTest {
 
   @BeforeEach
   void setup(VertxTestContext testContext) {
-    List<Future> saveRequestMetadataFutures = new ArrayList<>();
+    List<Future<RequestMetadataLb>> saveRequestMetadataFutures = new ArrayList<>();
     requestMetadataList
       .forEach(elem -> saveRequestMetadataFutures.add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
 
     GenericCompositeFuture.all(saveRequestMetadataFutures)
-      .onSuccess(v -> getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT)
-        .onSuccess(e -> testContext.completeNow())
-        .onFailure(testContext::failNow))
-      .onFailure(testContext::failNow);
+    .compose(v -> getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT))
+    .onComplete(testContext.succeedingThenComplete());
   }
 
   @AfterEach

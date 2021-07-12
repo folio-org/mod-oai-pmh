@@ -99,15 +99,13 @@ class CleanUpJobTest extends AbstractInstancesTest {
       .post()
       .then()
       .statusCode(204);
-    verifyExpiredInstancesHasBeenCleared(testContext);
-  }
 
-  private void verifyExpiredInstancesHasBeenCleared(VertxTestContext testContext) {
-    instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT).onSuccess(instances -> {
+    instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT)
+    .onComplete(testContext.succeeding(instances -> {
       List<String> instancesIds = instances.stream().map(Instances::getInstanceId).map(UUID::toString).collect(Collectors.toList());
       assertFalse(instancesIds.contains(EXPIRED_INSTANCE_ID));
       testContext.completeNow();
-    }).onFailure(testContext::failNow);
+    }));
   }
 
   @Override

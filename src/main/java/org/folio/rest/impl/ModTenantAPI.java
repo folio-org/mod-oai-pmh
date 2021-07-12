@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
-
 import javax.ws.rs.core.Response;
 
 import org.apache.http.HttpStatus;
@@ -24,8 +23,10 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.tools.client.exceptions.ResponseException;
 import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
+import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -53,6 +54,8 @@ public class ModTenantAPI extends TenantAPI {
   private static final String MODULE_NAME = "OAIPMH";
   private static final int CONFIG_JSON_BODY = 0;
 
+  static final String CONFIG_PATH_KEY = "configPath";
+
   private ConfigurationHelper configurationHelper;
 
   public ModTenantAPI() {
@@ -70,20 +73,20 @@ public class ModTenantAPI extends TenantAPI {
         Future<String> initDatabaseFuture = initDatabase(headers, context.owner());
         GenericCompositeFuture.all(List.of(loadConfigurationDataFuture, initDatabaseFuture))
           .onComplete(future -> {
-            String message;
             if (future.succeeded()) {
-              message = loadConfigurationDataFuture.result() + " " + initDatabaseFuture.result();
+              String message = loadConfigurationDataFuture.result() + " " + initDatabaseFuture.result();
+              handlers.handle(Future.succeededFuture(buildResponse(message)));
             } else {
-              message = getResultErrorMessage(loadConfigurationDataFuture, initDatabaseFuture);
+              String message = future.cause().getMessage();
+              logger.error(message, future.cause());
+              handlers.handle(Future.failedFuture(new ResponseException(buildErrorResponse(message))));
             }
-            handlers.handle(Future.succeededFuture(buildResponse(message)));
           });
       }
     }, context);
   }
 
   private Future<String> loadConfigurationData(Map<String, String> headers) {
-    Promise<String> promise = Promise.promise();
     List<String> configsSet = Arrays.asList("behavior", "general", "technical");
 
     String okapiUrl = headers.get(OKAPI_URL);
@@ -93,22 +96,17 @@ public class ModTenantAPI extends TenantAPI {
     WebClient webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token, webClient);
 
-    List<Future> futures = new ArrayList<>();
+    List<Future<String>> futures = new ArrayList<>();
 
     configsSet.forEach(configName -> futures.add(processConfigurationByConfigName(configName, client)));
-    GenericCompositeFuture.all(futures)
-      .onComplete(future -> {
-        String message;
-        if (future.succeeded()) {
-          message = "Configurations has been set up successfully";
-        } else {
-          message = Optional.ofNullable(future.cause())
-            .map(Throwable::getMessage)
-            .orElse("Error has been occurred while communicating to mod-configuration");
+    return GenericCompositeFuture.all(futures)
+      .map("Configuration has been set up successfully")
+      .recover(e -> {
+        if (e.getMessage() == null) {
+          e = new RuntimeException("Error has been occurred while communicating to mod-configuration", e);
         }
-        promise.complete(message);
+        return Future.failedFuture(e);
       });
-    return promise.future();
   }
 
   private Future<String> processConfigurationByConfigName(String configName, ConfigurationsClient client) {
@@ -155,31 +153,34 @@ public class ModTenantAPI extends TenantAPI {
   }
 
   private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
-    Config config = new Config();
-    config.setConfigName(configName);
-    config.setEnabled(true);
-    config.setModule(MODULE_NAME);
-    config.setValue(getConfigValue(configName));
     try {
+      Config config = new Config();
+      config.setConfigName(configName);
+      config.setEnabled(true);
+      config.setModule(MODULE_NAME);
+      config.setValue(getConfigValue(configName));
       client.postConfigurationsEntries(null, config, result -> {
-        if (result.succeeded()) {
-          HttpResponse<Buffer> response = result.result();
-          if (response.statusCode() != 201) {
-            logger.error("Invalid responseonse from mod-configuration. Cannot post config '{}'. Response message: {} {}",
-                configName, response.statusCode(), response.statusMessage());
-            promise.fail(new IllegalStateException("Cannot post config. " + response.statusMessage()));
-          }
-          logger.info("Config {} posted successfully.", configName);
-        } else {
-          promise.fail(new IllegalStateException("Error occurred during config posting.", result.cause()));
+        if (result.failed()) {
+          Exception e = new IllegalStateException("Error occurred during config posting.", result.cause());
+          logger.error(e.getMessage(), e);
+          promise.fail(e);
+          return;
         }
+        HttpResponse<Buffer> response = result.result();
+        if (response.statusCode() != 201) {
+          logger.error("Invalid responseonse from mod-configuration. Cannot post config '{}'. Response message: {} {}",
+              configName, response.statusCode(), response.statusMessage());
+          promise.fail(new IllegalStateException("Cannot post config. " + response.statusMessage()));
+          return;
+        }
+        logger.info("Config {} posted successfully.", configName);
+        promise.complete();
       });
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
       promise.fail(e);
       return;
     }
-    promise.complete();
   }
 
   private void populateSystemPropertiesWithConfig(JsonObject jsonResponse) {
@@ -199,10 +200,9 @@ public class ModTenantAPI extends TenantAPI {
    */
   private String getConfigValue(String configName) {
     Properties systemProperties = System.getProperties();
-    String configPath = systemProperties.getProperty("configPath", CONFIG_DIR_PATH);
+    String configPath = systemProperties.getProperty(CONFIG_PATH_KEY, CONFIG_DIR_PATH);
     JsonObject jsonConfigEntry = configurationHelper.getJsonConfigFromResources(configPath, configName + ".json");
     Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfigEntry);
-
     JsonObject configEntryValueField = new JsonObject();
     configKeyValueMap.forEach((key, configDefaultValue) -> {
       String possibleJvmSpecifiedValue = systemProperties.getProperty(key);
@@ -230,33 +230,22 @@ public class ModTenantAPI extends TenantAPI {
         String message = Optional.ofNullable(result.cause())
           .map(Throwable::getMessage)
           .orElse("Failed to initialize the database");
-        logger.error(message);
-        promise.fail(message);
+        logger.error(message, result.cause());
+        promise.fail(new RuntimeException(message, result.cause()));
       }
     });
     return promise.future();
-  }
-
-  /**
-   * Returns error message of the first failed future. Since both futures required to be succeeded for enabling module for tenant
-   * then if one of them fails then there are no matter that the second future will be succeeded and therefore we don't need to wait
-   * until it will be completed and thus we should respond with message of the first failed future.
-   *
-   * @param configDataFuture - future of loading configuration data
-   * @param initDbFuture     - future of initializing the module database
-   * @return error message
-   */
-  private String getResultErrorMessage(Future<String> configDataFuture, Future<String> initDbFuture) {
-    if (configDataFuture.failed()) {
-      return configDataFuture.result();
-    }
-    return initDbFuture.result();
   }
 
   private Response buildResponse(String body) {
     Response.ResponseBuilder builder = Response.status(HttpStatus.SC_OK)
       .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
       .entity(body);
+    return builder.build();
+  }
+
+  private Response buildErrorResponse(String info) {
+    Response.ResponseBuilder builder = Response.status(Statuses.from(400, info));
     return builder.build();
   }
 
