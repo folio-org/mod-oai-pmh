@@ -3,6 +3,7 @@ package org.folio.rest.impl;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import java.util.Map;
@@ -36,7 +37,7 @@ class ModTenantAPITest {
     });
   }
 
-  Future<Void> okapiMock(Vertx vertx) {
+  Future<HttpServer> okapiMock(Vertx vertx) {
     return vertx.createHttpServer()
         .requestHandler(httpServerRequest -> {
           switch (httpServerRequest.method().toString()) {
@@ -49,8 +50,7 @@ class ModTenantAPITest {
           }
         })
         .listen(0)
-        .onSuccess(httpServer -> okapiPort = httpServer.actualPort())
-        .mapEmpty();
+        .onSuccess(httpServer -> okapiPort = httpServer.actualPort());
   }
 
   Map<String,String> headers() {
