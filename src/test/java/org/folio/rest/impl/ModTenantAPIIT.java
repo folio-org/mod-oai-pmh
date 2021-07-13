@@ -35,6 +35,7 @@ class ModTenantAPIIT {
   private static final GenericContainer<?> module =
   new GenericContainer<>(new ImageFromDockerfile().withFileFromPath(".", Path.of(".")))
   .withNetwork(network)
+  .withNetworkAliases("module")
   .withExposedPorts(8081)
   .withEnv("DB_HOST", "postgres")
   .withEnv("DB_PORT", "5432")
@@ -61,7 +62,7 @@ class ModTenantAPIIT {
   @BeforeEach
   void beforeEach() {
     module.followOutput(new Slf4jLogConsumer(LOGGER).withSeparateOutputStreams());
-    RestAssured.port = module.getFirstMappedPort();
+    RestAssured.baseURI = "http://" + module.getHost() + ":" + module.getFirstMappedPort();
 
     var mockServerClient = new MockServerClient(okapi.getHost(), okapi.getServerPort());
     mockServerClient.when(request().withMethod("POST"))
