@@ -69,7 +69,7 @@ class ModTenantAPIIntegrationTest {
     mockServerClient.when(request().withMethod("POST"))
       .respond(response().withStatusCode(201));
     mockServerClient.when(request().withMethod("GET"))
-      .respond(response().withBody("{\"configs\":[]}", MediaType.JSON_UTF_8));
+      .respond(response().withStatusCode(200).withBody("{\"configs\":[]}", MediaType.JSON_UTF_8));
 
     RestAssured.requestSpecification = new RequestSpecBuilder()
       .addHeader("x-okapi-tenant", OAI_TEST_TENANT)
