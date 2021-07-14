@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static io.restassured.RestAssured.*;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
@@ -33,7 +34,7 @@ class ModTenantAPIIntegrationTest {
 
   @Container
   private static final GenericContainer<?> module =
-    new GenericContainer<>(new ImageFromDockerfile().withFileFromPath(".", Path.of(".")))
+    new GenericContainer<>(new ImageFromDockerfile("mod-data-export").withFileFromPath(".", Path.of(".")))
       .withNetwork(network)
       .withNetworkAliases("module")
       .withExposedPorts(8081)
@@ -71,7 +72,7 @@ class ModTenantAPIIntegrationTest {
       .respond(response().withBody("{\"configs\":[]}", MediaType.JSON_UTF_8));
 
     RestAssured.requestSpecification = new RequestSpecBuilder()
-      .addHeader("x-okapi-tenant", "ten")
+      .addHeader("x-okapi-tenant", OAI_TEST_TENANT)
       .addHeader("x-okapi-url", "http://okapi:1080")
       .setContentType(ContentType.JSON)
       .build();
