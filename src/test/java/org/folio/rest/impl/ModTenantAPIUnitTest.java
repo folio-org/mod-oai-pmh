@@ -15,9 +15,7 @@ import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.spring.SpringContextUtil;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,20 +45,9 @@ class ModTenantAPIUnitTest {
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     vertx.runOnContext(v -> {
-      modTenantAPI = new ModTenantAPI());
+      modTenantAPI = new ModTenantAPI();
       startOkapiMockServer(vertx)
       .onComplete(vtc.succeedingThenComplete());
-    });
-  }
-
-  @AfterAll
-  void tearDown(Vertx vertx, VertxTestContext vtc) {
-    vertx.close(res -> {
-      if(res.succeeded()) {
-        vtc.completeNow();
-      } else {
-        vtc.failNow(res.cause());
-      }
     });
   }
 
@@ -81,7 +68,6 @@ class ModTenantAPIUnitTest {
       .listen(0)
       .onSuccess(httpServer -> {
         okapiPort = httpServer.actualPort();
-        testContext.completeNow();
       });
   }
 

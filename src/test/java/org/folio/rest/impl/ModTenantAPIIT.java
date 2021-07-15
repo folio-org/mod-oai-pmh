@@ -1,16 +1,14 @@
 package org.folio.rest.impl;
 
-import static io.restassured.RestAssured.*;
+import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.when;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
-import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.http.ContentType;
 import java.nio.file.Path;
+
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.model.MediaType;
@@ -26,11 +24,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@Disabled
-@Testcontainers
-class ModTenantAPIIntegrationTest {
+import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.http.ContentType;
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ModTenantAPIIntegrationTest.class);
+@Testcontainers
+class ModTenantAPIIT {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ModTenantAPIIT.class);
 
   private static final Network network = Network.newNetwork();
 
