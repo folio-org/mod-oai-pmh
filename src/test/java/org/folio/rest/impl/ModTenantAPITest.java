@@ -29,7 +29,7 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ModTenantAPIUnitTest {
+class ModTenantAPITest {
 
   private static final String TABLES_QUERY = "select * from pg_tables where schemaname='" + PostgresClient.convertToPsqlStandard(OAI_TEST_TENANT) + "'";
   private static final List<String> EXPECTED_TABLES = List.of("set_lb", "instances", "request_metadata_lb", "databasechangelog", "databasechangeloglock");
