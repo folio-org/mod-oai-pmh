@@ -10,9 +10,9 @@ import io.vertx.core.Vertx;
 
 public class TestUtil {
 
-  public static void prepareSchema(Vertx vertx, String tenantId, String schemaName) {
+  public static void prepareSchema(Vertx vertx, String tenantId) {
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
-      connection.prepareStatement("create schema if not exists " + schemaName)
+      connection.prepareStatement("create schema if not exists " + PostgresClient.convertToPsqlStandard(tenantId))
         .execute();
     } catch (Exception ex) {
       throw new IllegalStateException(ex);
@@ -20,8 +20,7 @@ public class TestUtil {
   }
 
   public static void initializeTestContainerDbSchema(Vertx vertx, String tenantId) {
-    String schemaName = PostgresClient.convertToPsqlStandard(tenantId);
-    prepareSchema(vertx, tenantId, schemaName);
+    prepareSchema(vertx, tenantId);
     LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
   }
 
