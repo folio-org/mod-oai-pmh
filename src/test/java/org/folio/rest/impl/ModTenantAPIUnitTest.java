@@ -64,7 +64,7 @@ class ModTenantAPIUnitTest {
     });
   }
 
-  private Future<HttpServer> startOkapiMockServer(Vertx vertx, VertxTestContext testContext) {
+  private Future<HttpServer> startOkapiMockServer(Vertx vertx) {
     return vertx.createHttpServer()
       .requestHandler(httpServerRequest -> {
         // mock mod-configuration responses
