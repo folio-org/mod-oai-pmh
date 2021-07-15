@@ -97,11 +97,10 @@ class ModTenantAPIUnitTest {
     modTenantAPI.postTenant(tenantAttributes, headers(), vtc.succeedingThenComplete(), vertx.getOrCreateContext());
   }
 
-  @Disabled
   @Test
-  void postTenantShouldFail_whenNoTenantId(Vertx vertx, VertxTestContext vtc) {
+  void postTenantShouldFail_whenNoOkapiUrl(Vertx vertx, VertxTestContext vtc) {
     var headers = headers();
-    headers.remove("x-okapi-tenant");
+    headers.remove("x-okapi-url");
     modTenantAPI.postTenant(tenantAttributes, headers, vtc.failingThenComplete(), vertx.getOrCreateContext());
   }
 
