@@ -44,10 +44,13 @@ class ModTenantAPIUnitTest {
   void beforeAll(Vertx vertx, VertxTestContext vtc) {
     var context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-    vertx.runOnContext(v -> modTenantAPI = new ModTenantAPI());
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
-    startOkapiMockServer(vertx, vtc);
+    vertx.runOnContext(v -> {
+      modTenantAPI = new ModTenantAPI());
+      startOkapiMockServer(vertx)
+      .onComplete(vtc.succeedingThenComplete());
+    });
   }
 
   @AfterAll
