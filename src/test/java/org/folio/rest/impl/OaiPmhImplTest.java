@@ -92,6 +92,7 @@ import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
@@ -217,6 +218,7 @@ class OaiPmhImplTest {
     logger.info(format("mod-oai-pmh test: Deploying %s with %s", RestVerticle.class.getName(), Json.encode(conf)));
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
+    WebClientProvider.createWebClient(vertx);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
       Context context = vertx.getOrCreateContext();
       SpringContextUtil.init(vertx, context, ApplicationConfig.class);
@@ -233,6 +235,7 @@ class OaiPmhImplTest {
   void cleanUpAfterAll(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     PostgresClient.stopPostgresTester();
+    WebClientProvider.getWebClient().close();
     vertx.close(res -> {
       if(res.succeeded()) {
         testContext.completeNow();

@@ -19,6 +19,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -26,7 +27,6 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.tools.client.exceptions.ResponseException;
-import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,7 +98,7 @@ public class ModTenantAPI extends TenantAPI {
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);
 
-    WebClient webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
+    WebClient webClient = WebClientProvider.getWebClient();
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token, webClient);
 
     List<Future<String>> futures = new ArrayList<>();

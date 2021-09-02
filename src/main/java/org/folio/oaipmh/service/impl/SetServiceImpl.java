@@ -6,6 +6,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -13,7 +14,6 @@ import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
 import org.folio.rest.jaxrs.model.SetsFilteringCondition;
-import org.folio.rest.tools.utils.VertxUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -75,7 +75,7 @@ public class SetServiceImpl implements SetService {
   @Override
   public Future<FilteringConditionValueCollection> getFilteringConditions(Map<String, String> okapiHeaders) {
     Promise<FilteringConditionValueCollection> promise = Promise.promise();
-    var webClient = WebClient.create(VertxUtils.getVertxFromContextOrNew());
+    var webClient = WebClientProvider.getWebClient();
     List<Future<JsonObject>> futures = new ArrayList<>();
     List.of(LOCATION_URI, ILL_POLICIES_URI, MATERIAL_TYPES_URI, RESOURCE_TYPES_URI, INSTANCE_FORMATS_URI)
       .forEach(conditionType -> futures.add(getFilteringConditionValues(conditionType, webClient, okapiHeaders)));

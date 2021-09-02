@@ -10,11 +10,14 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.folio.config.ApplicationConfig;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
+import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -44,11 +47,18 @@ class ModTenantAPITest {
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
+    WebClientProvider.createWebClient(vertx);
     vertx.runOnContext(v -> {
       modTenantAPI = new ModTenantAPI();
       startOkapiMockServer(vertx)
       .onComplete(vtc.succeedingThenComplete());
     });
+  }
+
+  @AfterAll
+  void afterAll() {
+    WebClientProvider.getWebClient().close();
+    PostgresClientFactory.closeAll();
   }
 
   private Future<HttpServer> startOkapiMockServer(Vertx vertx) {

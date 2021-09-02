@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -73,7 +74,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
-
+    WebClientProvider.createWebClient(vertx);
     vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
       try {
         Context context = vertx.getOrCreateContext();
@@ -89,6 +90,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
 
   @AfterAll
   void afterAll() {
+    WebClientProvider.getWebClient().close();
     PostgresClientFactory.closeAll();
   }
 

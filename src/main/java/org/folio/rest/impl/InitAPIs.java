@@ -7,6 +7,7 @@ import java.util.Properties;
 
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.resource.interfaces.InitAPI;
 import org.folio.spring.SpringContextUtil;
@@ -43,6 +44,7 @@ public class InitAPIs implements InitAPI {
       OaiPmhImpl.init();
       verifyJaxbInitialized();
       resultHandler.handle(Future.succeededFuture(true));
+      WebClientProvider.createWebClient(vertx);
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
     }
