@@ -7,7 +7,7 @@ public class WebClientProvider {
 
   private static WebClient webClient;
 
-  private WebClientProvider() {};
+  private WebClientProvider() {}
 
   public static void createWebClient(Vertx vertx) {
     webClient = WebClient.create(vertx);
