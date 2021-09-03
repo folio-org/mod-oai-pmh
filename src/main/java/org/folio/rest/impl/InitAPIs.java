@@ -44,7 +44,7 @@ public class InitAPIs implements InitAPI {
       OaiPmhImpl.init();
       verifyJaxbInitialized();
       resultHandler.handle(Future.succeededFuture(true));
-      WebClientProvider.createWebClient(vertx);
+      WebClientProvider.init(vertx);
     } catch (Exception e) {
       resultHandler.handle(Future.failedFuture(e));
     }

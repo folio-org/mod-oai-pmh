@@ -53,7 +53,7 @@ class RepositoryConfigurationUtilTest {
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
 
     vertx.runOnContext(event -> testContext.verify(() -> okapiMockServer.start(testContext)));
-    WebClientProvider.createWebClient(vertx);
+    WebClientProvider.init(vertx);
   }
 
   @BeforeEach
@@ -63,7 +63,7 @@ class RepositoryConfigurationUtilTest {
 
   @AfterAll
   static void afterAll() {
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
   }
 
   @Test

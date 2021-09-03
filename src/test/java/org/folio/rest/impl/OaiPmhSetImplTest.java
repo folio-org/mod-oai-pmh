@@ -86,7 +86,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     JsonObject dpConfig = new JsonObject();
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
-    WebClientProvider.createWebClient(vertx);
+    WebClientProvider.init(vertx);
     vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
       try {
         Context context = vertx.getOrCreateContext();
@@ -102,7 +102,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   @AfterAll
   void afterAll() {
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
     PostgresClientFactory.closeAll();
   }
 

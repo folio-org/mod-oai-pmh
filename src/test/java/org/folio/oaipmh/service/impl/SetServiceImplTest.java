@@ -65,13 +65,13 @@ class SetServiceImplTest extends AbstractSetTest {
     new OkapiMockServer(vertx, mockPort).start(testContext);
     dropSampleData(testContext);
     testContext.completeNow();
-    WebClientProvider.createWebClient(vertx);
+    WebClientProvider.init(vertx);
   }
 
   @AfterAll
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
     vertx.close(testContext.succeeding(res -> {
       testContext.completeNow();
     }));

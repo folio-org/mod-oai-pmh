@@ -47,7 +47,7 @@ class ModTenantAPITest {
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
-    WebClientProvider.createWebClient(vertx);
+    WebClientProvider.init(vertx);
     vertx.runOnContext(v -> {
       modTenantAPI = new ModTenantAPI();
       startOkapiMockServer(vertx)
@@ -57,7 +57,7 @@ class ModTenantAPITest {
 
   @AfterAll
   void afterAll() {
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
     PostgresClientFactory.closeAll();
   }
 

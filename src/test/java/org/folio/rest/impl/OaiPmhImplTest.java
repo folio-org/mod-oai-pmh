@@ -193,7 +193,7 @@ class OaiPmhImplTest {
 
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
-
+  private String idleTimeout ;
   @Spy
   private InstancesService instancesService;
 
@@ -218,7 +218,9 @@ class OaiPmhImplTest {
     logger.info(format("mod-oai-pmh test: Deploying %s with %s", RestVerticle.class.getName(), Json.encode(conf)));
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    WebClientProvider.createWebClient(vertx);
+    idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
+    WebClientProvider.init(vertx);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
       Context context = vertx.getOrCreateContext();
       SpringContextUtil.init(vertx, context, ApplicationConfig.class);
@@ -233,9 +235,10 @@ class OaiPmhImplTest {
 
   @AfterAll
   void cleanUpAfterAll(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, idleTimeout);
     PostgresClientFactory.closeAll();
     PostgresClient.stopPostgresTester();
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
     vertx.close(res -> {
       if(res.succeeded()) {
         testContext.completeNow();
@@ -2257,9 +2260,6 @@ class OaiPmhImplTest {
 
   @Test
   void shouldRerequestSrs_whenGetOaiRecordsMarc21WithHoldingsWithTimeoutErrorFromSrs() {
-    String idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
-
     RequestSpecification listRecordRequest = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -2269,8 +2269,6 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
     verifyListResponse(oaipmh, LIST_RECORDS, 1);
     assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
-
-    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, idleTimeout);
   }
 
   @Test

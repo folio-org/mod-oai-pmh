@@ -22,6 +22,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
@@ -94,9 +95,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final Vertx vertx;
 
   private static final int REREQUEST_SRS_DELAY = 2000;
-  private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
-  private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
-  private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000*60*20;
@@ -222,22 +220,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private SourceStorageSourceRecordsClient createAndSetupSrsClient(Request request) {
-    String property = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-    final String defaultValue = Objects.nonNull(property) ? property : String.valueOf(DEFAULT_IDLE_TIMEOUT_SEC);
-    String val = Optional.ofNullable(Vertx.currentContext()
-      .config()
-      .getJsonObject(request.getTenant()))
-      .map(config -> config.getString(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, defaultValue))
-      .orElse(defaultValue);
-    int idleTimeout = DEFAULT_IDLE_TIMEOUT_SEC;
-    try {
-      idleTimeout = Integer.parseInt(val);
-      logger.debug("Setup client with idle timeout '{}' seconds", idleTimeout);
-    } catch (Exception e) {
-      logger.error(GET_IDLE_TIMEOUT_ERROR_MESSAGE, e);
-    }
-    return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(), true,
-      DEFAULT_CONNECTION_TIMEOUT_MS, idleTimeout);
+    return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
+      WebClientProvider.getWebClientForSRS(request.getTenant()));
   }
 
   private void downloadInstances(Request request,
@@ -424,7 +408,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
     Promise<List<JsonObject>> completePromise = Promise.promise();
 
-    var webClient = WebClient.create(context.owner());
+    var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ENRICHED_INSTANCES_ENDPOINT);
     if (request.getOkapiUrl().contains("https:")) {
       httpRequest.ssl(true);

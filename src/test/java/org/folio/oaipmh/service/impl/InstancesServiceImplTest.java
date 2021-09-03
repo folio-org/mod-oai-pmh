@@ -66,7 +66,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
     new OkapiMockServer(vertx, mockPort).start(testContext);
-    WebClientProvider.createWebClient(vertx);
+    WebClientProvider.init(vertx);
     TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
     testContext.completeNow();
   }
@@ -74,7 +74,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @AfterAll
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    WebClientProvider.getWebClient().close();
+    WebClientProvider.closeAll();
     vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopPostgresTester();
       testContext.completeNow();
