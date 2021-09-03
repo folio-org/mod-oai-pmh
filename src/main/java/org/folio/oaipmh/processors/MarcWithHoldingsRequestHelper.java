@@ -254,10 +254,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       databaseWriteStream.invokeDrainHandler();
     });
     setupBatchHttpStream(databaseWriteStream, oaiPmhResponsePromise, httpRequest,
-      (PgPool) getValueFrom(postgresClient, "client"), webClient);
+      (PgPool) getValueFrom(postgresClient, "client"));
   }
 
-  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool, WebClient webClient) {
+  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool) {
 
     AtomicReference<SimpleConnectionPool<PooledConnection>> connectionPool = new AtomicReference<>();
     try {
@@ -272,10 +272,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var responseCheckAttempts = new AtomicInteger(30);
     var jsonParser = JsonParser.newParser().objectValueMode();
     jsonParser.pipeTo(databaseWriteStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, responseCheckAttempts));
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-      closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.of(throwable));
+      closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
       promise.fail(throwable);
     });
 
@@ -284,7 +284,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .onSuccess(resp -> {
         if (resp.statusCode() != 200) {
           String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
-          closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.empty());
+          closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
           responseChecked.set(true);
           promise.fail(new IllegalStateException(errorMsg));
         }
@@ -292,7 +292,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-        closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.of(throwable));
+        closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
         responseChecked.set(true);
         promise.fail(throwable);
       });
@@ -344,7 +344,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
     AtomicInteger retryCount = new AtomicInteger();
-    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount));
+    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
       .compose(instances -> {
         if (CollectionUtils.isNotEmpty(instances)) {
@@ -368,7 +368,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, Context context,
+  private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise,
                             AtomicInteger retryCount) {
     if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
       listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response."));
@@ -380,11 +380,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       {
         if (firstBatch) {
           return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
-            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount)));
+            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
         }
         int autoIncrementedId = request.getNextInstancePkValue();
         return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
-          .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount)));
+          .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
       });
   }
 
@@ -441,11 +441,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
     jsonParser.pipeTo(enrichedInstancesStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, webClient, responseChecked, responseCheckAttempts));
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
         throwable);
-      closeStreamRelatedObjects(enrichedInstancesStream, webClient, Optional.of(throwable));
+      closeStreamRelatedObjects(enrichedInstancesStream, Optional.of(throwable));
       completePromise.fail(throwable);
     });
 
@@ -501,22 +501,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completePromise.future();
   }
 
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, Optional<Throwable> optional) {
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, Optional<Throwable> optional) {
     if (optional.isPresent()) {
       databaseWriteStream.endWithError(optional.get());
     } else {
       databaseWriteStream.end();
     }
-    webClient.close();
   }
 
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, AtomicBoolean responseChecked, AtomicInteger attempts) {
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, AtomicBoolean responseChecked, AtomicInteger attempts) {
     VertxUtils.getVertxFromContextOrNew().setTimer(500, id -> {
       if (responseChecked.get() || attempts.get() == 0) {
-        closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.empty());
+        closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
       } else {
         attempts.decrementAndGet();
-        closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, attempts);
+        closeStreamRelatedObjects(databaseWriteStream, responseChecked, attempts);
       }
     });
   }
