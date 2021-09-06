@@ -17,12 +17,14 @@ public class WebClientProvider {
 
   private static final Logger logger = LogManager.getLogger(WebClientProvider.class);
 
+  private static final int REQUEST_TIMEOUT = 604800000;
   private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
   private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static Vertx vertx;
   private static WebClient webClient;
+  private static WebClient webClientToDownloadInstances;
   private static final Map<String, WebClient> webClientForSRSPerTenant = new ConcurrentHashMap<>();
 
   private WebClientProvider() {}
@@ -30,18 +32,27 @@ public class WebClientProvider {
   public static void init(Vertx v) {
     vertx = v;
     webClient = WebClient.create(vertx);
+    WebClientOptions options = new WebClientOptions()
+      .setKeepAliveTimeout(REQUEST_TIMEOUT)
+      .setConnectTimeout(REQUEST_TIMEOUT);
+    webClientToDownloadInstances = WebClient.create(vertx, options);
   }
 
   public static WebClient getWebClient() {
     return webClient;
   }
 
-  public static WebClient getWebClientForSRS(String tenant) {
+  public static WebClient getWebClientToDownloadInstances() {
+    return webClientToDownloadInstances;
+  }
+
+  public static WebClient getWebClientForSRSByTenant(String tenant) {
     return webClientForSRSPerTenant.computeIfAbsent(tenant, WebClientProvider::createWebClientWithSRSConfiguredOptions);
   }
 
   public static void closeAll() {
     webClient.close();
+    webClientToDownloadInstances.close();
     webClientForSRSPerTenant.values().forEach(WebClient::close);
   }
 

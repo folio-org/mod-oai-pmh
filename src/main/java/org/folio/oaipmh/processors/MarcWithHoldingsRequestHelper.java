@@ -11,8 +11,6 @@ import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
@@ -85,7 +83,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
-  private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   public static final int RESPONSE_CHECK_ATTEMPTS = 30;
 
@@ -221,17 +218,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private SourceStorageSourceRecordsClient createAndSetupSrsClient(Request request) {
     return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
-      WebClientProvider.getWebClientForSRS(request.getTenant()));
+      WebClientProvider.getWebClientForSRSByTenant(request.getTenant()));
   }
 
   private void downloadInstances(Request request,
                                  Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
                                  Context vertxContext, String requestId) {
-    final var options = new WebClientOptions();
-    options.setKeepAliveTimeout(REQUEST_TIMEOUT);
-    options.setConnectTimeout(REQUEST_TIMEOUT);
-    var webClient = WebClient.create(vertxContext.owner(), options);
-    HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(webClient, request);
+
+    HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     var databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
 
@@ -304,7 +298,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
   }
 
-  private HttpRequest<Buffer> buildInventoryQuery(WebClient webClient, Request request) {
+  private HttpRequest<Buffer> buildInventoryQuery(Request request) {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
@@ -328,12 +322,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
     logger.info("Sending request to {}", inventoryQuery);
-    final HttpRequest<Buffer> httpRequest = webClient.getAbs(inventoryQuery);
-
+    final HttpRequest<Buffer> httpRequest = WebClientProvider.getWebClientToDownloadInstances().getAbs(inventoryQuery);
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.timeout(REQUEST_TIMEOUT);
     if (request.getOkapiUrl().contains("https")) {
       httpRequest.ssl(true);
     }
