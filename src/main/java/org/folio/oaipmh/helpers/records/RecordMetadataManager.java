@@ -42,13 +42,7 @@ public class RecordMetadataManager {
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
-
-  private static final String ITEMS = "items";
-  private static final String ELECTRONIC_ACCESS = "electronicAccess";
-
   private static final String LOCATION = "location";
-  private static final String CALL_NUMBER = "callNumber";
-  private static final String NAME = "name";
 
   private StorageHelper storageHelper = StorageHelper.getInstance();
   private final Map<String, String> indicatorsMap;
@@ -58,6 +52,10 @@ public class RecordMetadataManager {
 
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
   public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
+  public static final String ITEMS = "items";
+  public static final String CALL_NUMBER = "callNumber";
+  public static final String ELECTRONIC_ACCESS = "electronicAccess";
+  public static final String NAME = "name";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();

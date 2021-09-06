@@ -1,28 +1,6 @@
 {
-  "instanceId": "set_instance_id",
-  "items": [
-    {
-      "id": "set_instance_item_id",
-      "volume": null,
-      "location": {
-        "location": {
-          "campusId": "set_instance_item_campusId_id",
-          "libraryId": "set_instance_item__libraryId_id",
-          "campusName": "City Campus",
-          "libraryName": "Datalogisk Institut",
-          "institutionId": "set_instance_item_id_institutionId",
-          "institutionName": "Københavns Universitet"
-        }
-      },
-      "callNumber": {
-        "callNumber": "some-callnumber"
-      },
-      "enumeration": null,
-      "materialType": "book",
-      "electronicAccess": null,
-      "holdingsRecordId": "3a7a47ac-597d-4abe-916d-e35c72340000"
-    }
-  ],
+  "instanceId": "3a6a47ac-597d-4abe-916d-e35c72340000",
+  "items": [],
   "holdings": [
     {
       "id": "3a7a47ac-597d-4abe-916d-e35c72340000",
@@ -65,5 +43,5 @@
       ]
     }
   ],
-  "instanceId": "set_instance_id"
+  "instanceId": "3a6a47ac-597d-4abe-916d-e35c72340000"
 }

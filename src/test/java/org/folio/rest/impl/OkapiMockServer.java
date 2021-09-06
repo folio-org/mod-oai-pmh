@@ -98,6 +98,7 @@ public class OkapiMockServer {
   static final String DEFAULT_RECORD_DATE = "2020-03-31";
   static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
+  static final String NO_ITEMS_DATE = "2020-01-29";
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
   public static final String INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE = "2012-11-22";
 
@@ -113,6 +114,7 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT = "d93c7b03-6343-4956-bfbc-2981b3741830";
   private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
   private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_JSON = "210f0f47-e0f8-4d01-83f3-2b51cf369699";
+  private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS = "3a6a47ac-597d-4abe-916d-e35c72340000";
 
   // Paths to json files
   private static final String INSTANCES_0 = "/instances_0.json";
@@ -137,7 +139,7 @@ public class OkapiMockServer {
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
-  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/oai-pmh-view/enrichedInstances";
+  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
   private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   public static final String ERROR_TENANT = "error";
@@ -162,6 +164,7 @@ public class OkapiMockServer {
   private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
+  private static final String ENRICHED_INSTANCE_NO_ITEMS_JSON = "enriched_instance_no_items.json";
   private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON = "two_records_one_cannot_be_converted_to_xml_instance_ids.json";
   private static final String TWO_RECORDS_WITH_CYRILLIC_DATA_JSON = "/two_records_with_cyrillic_data.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
@@ -279,6 +282,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON);
       } else if (uri.contains(INSTANCE_WITHOUT_SRS_RECORD_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_NO_SRS_RECORD_JSON);
+      } else if (uri.contains(NO_ITEMS_DATE)) {
+        inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCE_NO_ITEMS_JSON);
       } else {
         logger.debug("No mocks for the response, returning the default instance id.");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
@@ -298,6 +303,8 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INVALID_JSON));
     } else if (instanceIds.isEmpty()) {
       successResponse(ctx, "");
+    } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS)) {
+      inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCE_NO_ITEMS_JSON);
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
     }
@@ -516,7 +523,7 @@ public class OkapiMockServer {
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, JsonArray instanceIds) {
     logger.debug("building enriched instances response for instanceIds: {}." + String.join("," ,instanceIds.getList()));
-    String response = generateEnrichedInstancesResponse(instanceIds);
+    String response = generateEnrichedInstancesResponse(instanceIds, ENRICHED_INSTANCE_TEMPLATE_JSON);
     logger.debug("Built response: {}", response);
     Buffer buffer = Buffer.buffer(response);
     routingContext.response()
@@ -574,8 +581,8 @@ public class OkapiMockServer {
     return json.replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
   }
 
-  private String generateEnrichedInstancesResponse(JsonArray instancesIds) {
-    String enrichedInstanceTemplate = requireNonNull(getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_TEMPLATE_JSON));
+  private String generateEnrichedInstancesResponse(JsonArray instancesIds, String jsonFileName) {
+    String enrichedInstanceTemplate = requireNonNull(getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + jsonFileName));
     List<String> enrichedInstances = instancesIds.stream()
       .map(Object::toString)
       .map(instanceId ->  enrichedInstanceTemplate.replace("set_instance_id", instanceId)

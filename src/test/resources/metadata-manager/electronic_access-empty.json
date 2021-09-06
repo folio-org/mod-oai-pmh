@@ -1,5 +1,5 @@
 {
-  "instanceid": "54cc0262-76df-4cac-acca-b10e9bc5c79a",
+  "instanceId": "54cc0262-76df-4cac-acca-b10e9bc5c79a",
   "updateddate": "2020-06-01T10:56:10.118Z",
   "deleted": "false",
   "itemsandholdingsfields": {
@@ -8,8 +8,8 @@
         "id": "13807cda-b618-4c37-8fe0-df03eed83b4f",
         "volume": "Volume 1_2_1",
         "location": {
+          "name" : "testName",
           "location": {
-            "name" : "testName",
             "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
             "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
             "campusName": "City Campus",
