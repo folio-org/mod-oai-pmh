@@ -44,7 +44,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future();
   }
 
-  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) throws UnsupportedEncodingException {
+  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) {
     final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
       request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
 
