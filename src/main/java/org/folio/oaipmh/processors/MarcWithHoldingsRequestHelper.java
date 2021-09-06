@@ -451,7 +451,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
-    var enrichedInstancesStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
+    var itemsAndHoldingsStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
 
     //setup pgPool availability checker
     AtomicReference<SimpleConnectionPool<PooledConnection>> queue = new AtomicReference<>();
@@ -462,7 +462,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       completePromise.fail(ex);
       return completePromise.future();
     }
-    enrichedInstancesStream.setCapacityChecker(() -> queue.get().waiters() > 20);
+    itemsAndHoldingsStream.setCapacityChecker(() -> queue.get().waiters() > 20);
 
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
@@ -473,12 +473,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
-    jsonParser.pipeTo(enrichedInstancesStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(enrichedInstancesStream, webClient, responseChecked, responseCheckAttempts));
+    jsonParser.pipeTo(itemsAndHoldingsStream);
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(itemsAndHoldingsStream, webClient, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
         throwable);
-      closeStreamRelatedObjects(enrichedInstancesStream, webClient, Optional.of(throwable));
+      closeStreamRelatedObjects(itemsAndHoldingsStream, webClient, Optional.of(throwable));
       completePromise.fail(throwable);
     });
 
@@ -502,33 +502,30 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       });
 
     //set batch handler
-    enrichedInstancesStream.handleBatch(batch -> {
+    itemsAndHoldingsStream.handleBatch(batch -> {
       try {
         for (JsonEvent jsonEvent : batch) {
-          JsonObject value = jsonEvent.objectValue();
-          String instanceId = value.getString(INSTANCE_ID_FIELD_NAME);
-          Object itemsandholdingsfields = value;
-          if (itemsandholdingsfields instanceof JsonObject) {
-            JsonObject instance = instances.get(instanceId);
-            if (instance != null) {
-              enrichDiscoverySuppressed((JsonObject) itemsandholdingsfields, instance);
-              instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
-                itemsandholdingsfields);
-              //case when no items
-              if (((JsonObject) itemsandholdingsfields).getJsonArray(ITEMS).isEmpty()) {
-                enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
-              } else {
-                adjustItems(instance);
-              }
+          JsonObject itemsandholdingsfields = jsonEvent.objectValue();
+          String instanceId = itemsandholdingsfields.getString(INSTANCE_ID_FIELD_NAME);
+          JsonObject instance = instances.get(instanceId);
+          if (instance != null) {
+            enrichDiscoverySuppressed(itemsandholdingsfields, instance);
+            instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS,
+              itemsandholdingsfields);
+            //case when no items
+            if (itemsandholdingsfields.getJsonArray(ITEMS).isEmpty()) {
+              enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
             } else {
-              logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
+              adjustItems(instance);
             }
+          } else {
+            logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
           }
         }
 
-        if (enrichedInstancesStream.isTheLastBatch()) {
-          if (enrichedInstancesStream.isEndedWithError()) {
-            completePromise.tryFail(enrichedInstancesStream.getCause());
+        if (itemsAndHoldingsStream.isTheLastBatch()) {
+          if (itemsAndHoldingsStream.isEndedWithError()) {
+            completePromise.tryFail(itemsAndHoldingsStream.getCause());
           } else {
             completePromise.complete(new ArrayList<>(instances.values()));
           }
