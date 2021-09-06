@@ -2160,6 +2160,31 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiRecordsMarc21WithHoldingsWhenNoItems() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, NO_ITEMS_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(response.getErrors(), is(empty()));
+    response.getListRecords().getRecords().forEach(r -> {
+      Optional<SubfieldatafieldType> optInstitutionName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "a");
+      Optional<SubfieldatafieldType> optCampusName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "b");
+      Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
+      Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
+      Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      assertTrue(optInstitutionName.isPresent());
+      assertTrue(optCampusName.isPresent());
+      assertTrue(optLibraryName.isPresent());
+      assertTrue(optLocationName.isPresent());
+      assertTrue(optCallNumber.isPresent());
+    });
+  }
+
+  @Test
   void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
