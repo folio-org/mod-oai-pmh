@@ -18,7 +18,29 @@
       },
       "enumeration": null,
       "materialType": "book",
-      "electronicAccess": null
+      "electronicAccess": [
+        {
+          "uri": "https://search.proquest.com/publication/1396348",
+          "name": "Resource",
+          "publicNote": "via ProQuest, the last 12 months are not available due to an embargo",
+          "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+          "materialsSpecification": "1.2012 -"
+        },
+        {
+          "uri": "https://www.emeraldinsight.com/journal/jepp",
+          "name": "Resource",
+          "publicNote": "via Emerald, national license",
+          "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+          "materialsSpecification": "1.2012 - 5.2016"
+        },
+        {
+          "uri": "https://www.emeraldinsight.com/loi/jepp",
+          "name": "Resource",
+          "publicNote": "via Emerald",
+          "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+          "materialsSpecification": "1.2012 -"
+        }
+      ]
     }
   ],
   "instanceId": "3a6a47ac-597d-4abe-916d-e35c72340000"
