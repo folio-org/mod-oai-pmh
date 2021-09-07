@@ -58,13 +58,7 @@ public class WebClientProvider {
   }
 
   private static WebClient createWebClientWithSRSConfiguredOptions(String tenant) {
-    String property = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-    final String defaultValue = Objects.nonNull(property) ? property : String.valueOf(DEFAULT_IDLE_TIMEOUT_SEC);
-    String val = Optional.ofNullable(vertx.getOrCreateContext()
-      .config()
-      .getJsonObject(tenant))
-      .map(config -> config.getString(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, defaultValue))
-      .orElse(defaultValue);
+    String val = RepositoryConfigurationUtil.getProperty(requestId, REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
     int idleTimeout = DEFAULT_IDLE_TIMEOUT_SEC;
     try {
       idleTimeout = Integer.parseInt(val);
