@@ -47,8 +47,8 @@ public class WebClientProvider {
     return webClientToDownloadInstances;
   }
 
-  public static WebClient getWebClientForSRSByTenant(String tenant) {
-    return webClientForSRSPerTenant.computeIfAbsent(tenant, WebClientProvider::createWebClientWithSRSConfiguredOptions);
+  public static WebClient getWebClientForSRSByTenant(String tenant, String requestId) {
+    return webClientForSRSPerTenant.computeIfAbsent(tenant, tenantId -> WebClientProvider.createWebClientWithSRSConfiguredOptions(tenantId, requestId));
   }
 
   public static void closeAll() {
