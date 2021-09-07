@@ -8,8 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
