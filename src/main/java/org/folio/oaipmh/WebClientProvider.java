@@ -17,9 +17,10 @@ public class WebClientProvider {
 
   private static final Logger logger = LogManager.getLogger(WebClientProvider.class);
 
-  private static final int REQUEST_TIMEOUT = 604800000;
   private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
+  private static final int DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS = 2400000;
+  private static final int KEEP_ALIVE_SEC = 1200;
   private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static Vertx vertx;
@@ -33,8 +34,8 @@ public class WebClientProvider {
     vertx = v;
     webClient = WebClient.create(vertx);
     WebClientOptions options = new WebClientOptions()
-      .setKeepAliveTimeout(REQUEST_TIMEOUT)
-      .setConnectTimeout(REQUEST_TIMEOUT);
+      .setKeepAliveTimeout(KEEP_ALIVE_SEC)
+      .setConnectTimeout(DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS);
     webClientToDownloadInstances = WebClient.create(vertx, options);
   }
 
