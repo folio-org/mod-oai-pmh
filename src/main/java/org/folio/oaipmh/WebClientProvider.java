@@ -5,6 +5,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import java.util.Map;
 import java.util.Objects;
