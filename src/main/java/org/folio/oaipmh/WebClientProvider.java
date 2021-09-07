@@ -49,7 +49,7 @@ public class WebClientProvider {
   }
 
   public static WebClient getWebClientForSRSByTenant(String tenant, String requestId) {
-    return webClientForSRSPerTenant.computeIfAbsent(tenant, tenantId -> WebClientProvider.createWebClientWithSRSConfiguredOptions(tenantId, requestId));
+    return webClientForSRSPerTenant.computeIfAbsent(tenant, t -> WebClientProvider.createWebClientWithSRSConfiguredOptions(requestId));
   }
 
   public static void closeAll() {
@@ -58,7 +58,7 @@ public class WebClientProvider {
     webClientForSRSPerTenant.values().forEach(WebClient::close);
   }
 
-  private static WebClient createWebClientWithSRSConfiguredOptions(String tenant, String requestId) {
+  private static WebClient createWebClientWithSRSConfiguredOptions(String requestId) {
     String val = RepositoryConfigurationUtil.getProperty(requestId, REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
     int idleTimeout = DEFAULT_IDLE_TIMEOUT_SEC;
     try {
