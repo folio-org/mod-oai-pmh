@@ -15,7 +15,6 @@ import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.openarchives.oai._2.*;
 
 import javax.ws.rs.core.Response;
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
