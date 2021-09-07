@@ -235,7 +235,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private SourceStorageSourceRecordsClient createAndSetupSrsClient(Request request) {
     return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
-      WebClientProvider.getWebClientForSRSByTenant(request.getTenant()));
+      WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
   private void downloadInstances(Request request,
