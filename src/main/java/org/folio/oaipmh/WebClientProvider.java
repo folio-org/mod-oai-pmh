@@ -58,7 +58,7 @@ public class WebClientProvider {
     webClientForSRSPerTenant.values().forEach(WebClient::close);
   }
 
-  private static WebClient createWebClientWithSRSConfiguredOptions(String tenant) {
+  private static WebClient createWebClientWithSRSConfiguredOptions(String tenant, String requestId) {
     String val = RepositoryConfigurationUtil.getProperty(requestId, REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
     int idleTimeout = DEFAULT_IDLE_TIMEOUT_SEC;
     try {
