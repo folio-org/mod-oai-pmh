@@ -193,7 +193,7 @@ class OaiPmhImplTest {
 
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
-  private String idleTimeout ;
+  private String idleTimeout;
   @Spy
   private InstancesService instancesService;
 
