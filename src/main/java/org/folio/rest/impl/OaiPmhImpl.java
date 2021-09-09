@@ -91,6 +91,7 @@ public class OaiPmhImpl implements Oai {
     String generatedRequestId = UUID.randomUUID().toString();
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
       .onSuccess(v -> {
+        String requestId = generatedRequestId;
         try {
           Request.Builder requestBuilder = Request.builder()
             .okapiHeaders(okapiHeaders)
@@ -119,8 +120,7 @@ public class OaiPmhImpl implements Oai {
           addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
           List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
-          setupRequestIdIfAbsent(request, generatedRequestId);
-
+          requestId = setupRequestIdIfAbsent(request, generatedRequestId);
           if (isNotEmpty(errors)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
@@ -143,9 +143,13 @@ public class OaiPmhImpl implements Oai {
                 logger.debug("{} response: {}", verb, response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
-              }).onFailure(t-> asyncResultHandler.handle(getFutureWithErrorResponse(t, request)));
+              }).onFailure(t-> {
+                RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
+                asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
+               });
           }
         } catch (Exception e) {
+          RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
           asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
         }
       }).onFailure(throwable -> asyncResultHandler.handle(getFutureWithErrorResponse(throwable.getMessage())));
@@ -180,13 +184,14 @@ public class OaiPmhImpl implements Oai {
     return isVerbNameCorrect ? VerbType.fromValue(verbName) : VerbType.UNKNOWN;
   }
 
-  private void setupRequestIdIfAbsent(Request request, String generatedRequestId) {
+  private String setupRequestIdIfAbsent(Request request, String generatedRequestId) {
     if (StringUtils.isEmpty(request.getRequestId())) {
       request.setRequestId(generatedRequestId);
     } else {
       String existedRequestId = request.getRequestId();
       RepositoryConfigurationUtil.replaceGeneratedConfigKeyWithExisted(generatedRequestId, existedRequestId);
     }
+    return request.getRequestId();
   }
 
   @Autowired

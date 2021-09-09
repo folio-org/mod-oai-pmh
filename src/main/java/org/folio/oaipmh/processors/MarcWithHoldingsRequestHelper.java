@@ -11,8 +11,6 @@ import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
@@ -22,6 +20,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
@@ -101,7 +100,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
-  private static final int REQUEST_TIMEOUT = 604800000;
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   public static final int RESPONSE_CHECK_ATTEMPTS = 30;
 
@@ -111,9 +109,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final Vertx vertx;
 
   private static final int REREQUEST_SRS_DELAY = 2000;
-  private static final int DEFAULT_IDLE_TIMEOUT_SEC = 20;
-  private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
-  private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000*60*20;
@@ -239,32 +234,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private SourceStorageSourceRecordsClient createAndSetupSrsClient(Request request) {
-    String property = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-    final String defaultValue = Objects.nonNull(property) ? property : String.valueOf(DEFAULT_IDLE_TIMEOUT_SEC);
-    String val = Optional.ofNullable(Vertx.currentContext()
-      .config()
-      .getJsonObject(request.getTenant()))
-      .map(config -> config.getString(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, defaultValue))
-      .orElse(defaultValue);
-    int idleTimeout = DEFAULT_IDLE_TIMEOUT_SEC;
-    try {
-      idleTimeout = Integer.parseInt(val);
-      logger.debug("Setup client with idle timeout '{}' seconds", idleTimeout);
-    } catch (Exception e) {
-      logger.error(GET_IDLE_TIMEOUT_ERROR_MESSAGE, e);
-    }
-    return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(), true,
-      DEFAULT_CONNECTION_TIMEOUT_MS, idleTimeout);
+    return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
+      WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
   private void downloadInstances(Request request,
                                  Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
                                  Context vertxContext, String requestId) {
-    final var options = new WebClientOptions();
-    options.setKeepAliveTimeout(REQUEST_TIMEOUT);
-    options.setConnectTimeout(REQUEST_TIMEOUT);
-    var webClient = WebClient.create(vertxContext.owner(), options);
-    HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(webClient, request);
+
+    HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     var databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
 
@@ -287,10 +265,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       databaseWriteStream.invokeDrainHandler();
     });
     setupBatchHttpStream(databaseWriteStream, oaiPmhResponsePromise, httpRequest,
-      (PgPool) getValueFrom(postgresClient, "client"), webClient);
+      (PgPool) getValueFrom(postgresClient, "client"));
   }
 
-  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool, WebClient webClient) {
+  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool) {
 
     AtomicReference<SimpleConnectionPool<PooledConnection>> connectionPool = new AtomicReference<>();
     try {
@@ -305,10 +283,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var responseCheckAttempts = new AtomicInteger(30);
     var jsonParser = JsonParser.newParser().objectValueMode();
     jsonParser.pipeTo(databaseWriteStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, responseCheckAttempts));
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-      closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.of(throwable));
+      closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
       promise.fail(throwable);
     });
 
@@ -317,7 +295,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .onSuccess(resp -> {
         if (resp.statusCode() != 200) {
           String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
-          closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.empty());
+          closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
           responseChecked.set(true);
           promise.fail(new IllegalStateException(errorMsg));
         }
@@ -325,7 +303,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(), throwable);
-        closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.of(throwable));
+        closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
         responseChecked.set(true);
         promise.fail(throwable);
       });
@@ -337,7 +315,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
   }
 
-  private HttpRequest<Buffer> buildInventoryQuery(WebClient webClient, Request request) {
+  private HttpRequest<Buffer> buildInventoryQuery(Request request) {
     Map<String, String> paramMap = new HashMap<>();
     Date date = convertStringToDate(request.getFrom(), false, false);
     if (date != null) {
@@ -361,12 +339,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
     logger.info("Sending request to {}", inventoryQuery);
-    final HttpRequest<Buffer> httpRequest = webClient.getAbs(inventoryQuery);
-
+    final HttpRequest<Buffer> httpRequest = WebClientProvider.getWebClientToDownloadInstances().getAbs(inventoryQuery);
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.timeout(REQUEST_TIMEOUT);
     if (request.getOkapiUrl().contains("https")) {
       httpRequest.ssl(true);
     }
@@ -377,7 +353,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
     AtomicInteger retryCount = new AtomicInteger();
-    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount));
+    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
       .compose(instances -> {
         if (CollectionUtils.isNotEmpty(instances)) {
@@ -401,7 +377,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise;
   }
 
-  private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, Context context,
+  private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise,
                             AtomicInteger retryCount) {
     if (retryCount.incrementAndGet() > MAX_POLLING_ATTEMPTS) {
       listPromise.fail(new IllegalStateException("The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response."));
@@ -413,11 +389,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       {
         if (firstBatch) {
           return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
-            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount)));
+            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
         }
         int autoIncrementedId = request.getNextInstancePkValue();
         return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
-          .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, context, retryCount)));
+          .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize, timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
       });
   }
 
@@ -440,8 +416,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Map<String, JsonObject> instances = result.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
     Promise<List<JsonObject>> completePromise = Promise.promise();
-
-    var webClient = WebClient.create(context.owner());
+    var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
     if (request.getOkapiUrl().contains("https:")) {
       httpRequest.ssl(true);
@@ -474,11 +449,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
     jsonParser.pipeTo(itemsAndHoldingsStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(itemsAndHoldingsStream, webClient, responseChecked, responseCheckAttempts));
+    jsonParser.endHandler(e -> closeStreamRelatedObjects(itemsAndHoldingsStream, responseChecked, responseCheckAttempts));
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
         throwable);
-      closeStreamRelatedObjects(itemsAndHoldingsStream, webClient, Optional.of(throwable));
+      closeStreamRelatedObjects(itemsAndHoldingsStream, Optional.of(throwable));
       completePromise.fail(throwable);
     });
 
@@ -538,22 +513,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completePromise.future();
   }
 
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, Optional<Throwable> optional) {
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, Optional<Throwable> optional) {
     if (optional.isPresent()) {
       databaseWriteStream.endWithError(optional.get());
     } else {
       databaseWriteStream.end();
     }
-    webClient.close();
   }
 
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, WebClient webClient, AtomicBoolean responseChecked, AtomicInteger attempts) {
+  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, AtomicBoolean responseChecked, AtomicInteger attempts) {
     VertxUtils.getVertxFromContextOrNew().setTimer(500, id -> {
       if (responseChecked.get() || attempts.get() == 0) {
-        closeStreamRelatedObjects(databaseWriteStream, webClient, Optional.empty());
+        closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
       } else {
         attempts.decrementAndGet();
-        closeStreamRelatedObjects(databaseWriteStream, webClient, responseChecked, attempts);
+        closeStreamRelatedObjects(databaseWriteStream, responseChecked, attempts);
       }
     });
   }

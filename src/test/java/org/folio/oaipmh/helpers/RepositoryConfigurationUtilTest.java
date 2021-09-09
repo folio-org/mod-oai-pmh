@@ -24,8 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,11 +53,17 @@ class RepositoryConfigurationUtilTest {
     OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
 
     vertx.runOnContext(event -> testContext.verify(() -> okapiMockServer.start(testContext)));
+    WebClientProvider.init(vertx);
   }
 
   @BeforeEach
   void init() {
     okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
+  }
+
+  @AfterAll
+  static void afterAll() {
+    WebClientProvider.closeAll();
   }
 
   @Test

@@ -9,12 +9,12 @@ import io.vertx.ext.web.client.HttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.openarchives.oai._2.*;
 
 import javax.ws.rs.core.Response;
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -43,9 +43,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future();
   }
 
-  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) throws UnsupportedEncodingException {
+  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) {
     final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
-      request.getTenant(), request.getOkapiToken());
+      request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
 
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -56,11 +56,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
-    srsClient.getSourceStorageSourceRecords(
+     srsClient.getSourceStorageSourceRecords(
+      null,
+      null,
       null,
       null,
       request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+      null,
+      null,
       null,
       "MARC_BIB",
       //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED

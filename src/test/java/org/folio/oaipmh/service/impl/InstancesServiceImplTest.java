@@ -15,6 +15,7 @@ import javax.ws.rs.NotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
@@ -65,6 +66,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
     new OkapiMockServer(vertx, mockPort).start(testContext);
+    WebClientProvider.init(vertx);
     TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
     testContext.completeNow();
   }
@@ -72,6 +74,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @AfterAll
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
+    WebClientProvider.closeAll();
     vertx.close(testContext.succeeding(res -> {
       PostgresClient.stopPostgresTester();
       testContext.completeNow();

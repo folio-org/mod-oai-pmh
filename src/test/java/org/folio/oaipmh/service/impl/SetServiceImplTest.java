@@ -7,6 +7,7 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgException;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.AbstractSetTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -64,11 +65,13 @@ class SetServiceImplTest extends AbstractSetTest {
     new OkapiMockServer(vertx, mockPort).start(testContext);
     dropSampleData(testContext);
     testContext.completeNow();
+    WebClientProvider.init(vertx);
   }
 
   @AfterAll
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
+    WebClientProvider.closeAll();
     vertx.close(testContext.succeeding(res -> {
       testContext.completeNow();
     }));

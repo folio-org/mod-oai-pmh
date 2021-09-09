@@ -5,14 +5,12 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.tools.utils.VertxUtils;
 import org.openarchives.oai._2.DeletedRecordType;
 
 import java.util.Arrays;
@@ -48,8 +46,7 @@ public class RepositoryConfigurationUtil {
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    WebClientOptions options = new WebClientOptions().setKeepAlive(false);
-    var client = WebClient.create(VertxUtils.getVertxFromContextOrNew(), options);
+    var client = WebClientProvider.getWebClient();
 
     try {
       var configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, client);
@@ -82,7 +79,7 @@ public class RepositoryConfigurationUtil {
     } catch (Exception e) {
       logger.error("Error happened initializing mod-configurations client for {} tenant.", tenant, e);
       promise.fail(e);
-      return promise.future().onComplete(notUsed -> client.close());
+      return promise.future();
     }
     return promise.future();
   }
