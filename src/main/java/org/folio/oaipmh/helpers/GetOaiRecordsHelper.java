@@ -1,16 +1,13 @@
 package org.folio.oaipmh.helpers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.openarchives.oai._2.*;
+
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import org.folio.oaipmh.Request;
-import org.openarchives.oai._2.ListRecordsType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
 
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
@@ -35,7 +32,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     if (oaipmh.getListRecords() != null) {
       oaipmh.getListRecords()
-            .withResumptionToken(resumptionToken);
+            .withResumptionToken(resumptionToken.withExpirationDate(Instant.now().plusSeconds(60)));
     }
   }
 }

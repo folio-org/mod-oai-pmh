@@ -43,6 +43,7 @@ import javax.sql.PooledConnection;
 import javax.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -59,11 +60,7 @@ import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.*;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ELECTRONIC_ACCESS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS;
+import static org.folio.oaipmh.helpers.records.RecordMetadataManager.*;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -680,6 +677,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     extraParams.put(OFFSET_PARAM, String.valueOf(cursor + returnedCount));
     extraParams.put(REQUEST_ID_PARAM, requestId);
     extraParams.put(NEXT_RECORD_ID_PARAM, nextInstanceId);
+    extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN, String.valueOf(Instant.now().plusSeconds(60)));
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
     }
@@ -692,6 +690,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     return new ResumptionTokenType()
       .withValue(resumptionToken)
+      .withExpirationDate(Instant.now().plusSeconds(60))
       .withCursor(BigInteger.valueOf(cursor));
   }
 

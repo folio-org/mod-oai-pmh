@@ -1,33 +1,23 @@
 package org.folio.oaipmh;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Objects;
-
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.RequestType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
+import java.util.Objects;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
+import static org.folio.oaipmh.Constants.*;
 
 /**
  * Class that represents OAI-PMH request and holds http query arguments.
@@ -260,6 +250,11 @@ public class Request {
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
+      Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN));
+      Instant currentDate = Instant.now();
+      if (expirationDate.isAfter(currentDate)) {
+        return false;
+      }
     } catch (Exception e) {
       return false;
     }
@@ -287,6 +282,7 @@ public class Request {
     appendParam(builder, FROM_PARAM, getFrom());
     appendParam(builder, UNTIL_PARAM, getUntil());
     appendParam(builder, SET_PARAM, getSet());
+    appendParam(builder, EXPIRATION_DATE_RESUMPTION_TOKEN, extraParams.get(EXPIRATION_DATE_RESUMPTION_TOKEN));
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())

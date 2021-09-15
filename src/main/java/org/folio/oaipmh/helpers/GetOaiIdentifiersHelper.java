@@ -16,6 +16,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
 import javax.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.List;
 
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
@@ -117,7 +118,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     if (oaipmh.getListRecords() != null) {
       oaipmh.getListIdentifiers()
-        .withResumptionToken(resumptionToken);
+        .withResumptionToken(resumptionToken.withExpirationDate(Instant.now().plusSeconds(60)));
     }
   }
 

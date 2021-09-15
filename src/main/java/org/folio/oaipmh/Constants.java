@@ -50,6 +50,7 @@ public final class Constants {
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";
 
+  public static final String EXPIRATION_DATE_RESUMPTION_TOKEN = "expirationDate";
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";
   public static final String METADATA_PREFIX_PARAM = "metadataPrefix";
