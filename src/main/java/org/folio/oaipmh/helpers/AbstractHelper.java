@@ -323,7 +323,7 @@ public abstract class AbstractHelper implements VerbHelper {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
-      extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN, String.valueOf(Instant.now().plusSeconds(60)));
+      extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN, String.valueOf(Instant.now().plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
@@ -341,7 +341,7 @@ public abstract class AbstractHelper implements VerbHelper {
     if (resumptionToken != null) {
       return new ResumptionTokenType()
         .withValue(resumptionToken)
-        .withExpirationDate(Instant.now().plusSeconds(60))
+        .withExpirationDate(Instant.now().plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
         .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
     }

@@ -1,21 +1,29 @@
 package org.folio.oaipmh.processors;
 
-import com.google.common.collect.Maps;
-import io.vertx.core.*;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.impl.pool.SimpleConnectionPool;
-import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.impl.HttpRequestImpl;
-import io.vertx.ext.web.codec.BodyCodec;
-import io.vertx.pgclient.PgConnection;
-import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.Tuple;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.records.RecordMetadataManager.*;
+
+import java.lang.reflect.Field;
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import javax.sql.PooledConnection;
+import javax.ws.rs.core.Response;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,28 +47,23 @@ import org.openarchives.oai._2.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ReflectionUtils;
 
-import javax.sql.PooledConnection;
-import javax.ws.rs.core.Response;
-import java.lang.reflect.Field;
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
+import com.google.common.collect.Maps;
 
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.*;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.*;
+import io.vertx.core.*;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.impl.pool.SimpleConnectionPool;
+import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.impl.HttpRequestImpl;
+import io.vertx.ext.web.codec.BodyCodec;
+import io.vertx.pgclient.PgConnection;
+import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Tuple;
 
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
@@ -677,7 +680,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     extraParams.put(OFFSET_PARAM, String.valueOf(cursor + returnedCount));
     extraParams.put(REQUEST_ID_PARAM, requestId);
     extraParams.put(NEXT_RECORD_ID_PARAM, nextInstanceId);
-    extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN, String.valueOf(Instant.now().plusSeconds(60)));
+    extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN, String.valueOf(Instant.now().plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
     }
@@ -690,7 +693,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     return new ResumptionTokenType()
       .withValue(resumptionToken)
-      .withExpirationDate(Instant.now().plusSeconds(60))
+      .withExpirationDate(Instant.now().plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
   }
 

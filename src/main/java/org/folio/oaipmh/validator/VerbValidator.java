@@ -1,26 +1,18 @@
 package org.folio.oaipmh.validator;
 
-import static java.lang.String.format;
-import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.domain.Verb;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.springframework.stereotype.Component;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
 
 @Component
 public class VerbValidator {
