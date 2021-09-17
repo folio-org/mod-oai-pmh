@@ -61,7 +61,6 @@ import static org.folio.oaipmh.Constants.*;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ELECTRONIC_ACCESS;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS;
 
@@ -81,8 +80,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final String START_DATE_PARAM_NAME = "startDate";
 
   private static final String END_DATE_PARAM_NAME = "endDate";
-
-  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
 
   private static final String ID = "id";
 
@@ -568,8 +565,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private void adjustItems(JsonObject instance) {
     JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(ITEMS);
-    JsonArray holdingsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(HOLDINGS);
     for (Object item: itemsJson) {
       JsonObject itemJson = (JsonObject) item;
       itemJson.getJsonObject(LOCATION).put(NAME, itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).getString(NAME));
@@ -577,13 +572,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(CODE);
       itemJson.getJsonObject(LOCATION).remove(TEMPORARY_LOCATION);
       itemJson.getJsonObject(LOCATION).remove(PERMANENT_LOCATION);
-      //add electronic access from holdings
-      for (Object holding: holdingsJson) {
-        JsonObject holdingJson = (JsonObject) holding;
-        if (holdingJson.getString(ID).equals(itemJson.getString(HOLDINGS_RECORD_ID))) {
-          itemJson.put(ELECTRONIC_ACCESS, holdingJson.getJsonArray(ELECTRONIC_ACCESS));
-        }
-      }
     }
   }
 
@@ -641,8 +629,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final JsonObject srsInstance = srsResponse.get(instanceId);
         RecordType record = createRecord(request, srsInstance, instanceId);
 
-        JsonObject updatedSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, instance,
+        JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsInstance, instance,
             suppressedRecordsProcessing);
+        JsonObject updatedSrsInstance = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
+          suppressedRecordsProcessing);
         if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
           record.getHeader()
             .setStatus(StatusType.DELETED);
