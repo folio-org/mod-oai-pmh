@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.openarchives.oai._2.*;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -32,7 +31,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     if (oaipmh.getListRecords() != null) {
       oaipmh.getListRecords()
-            .withResumptionToken(resumptionToken.withExpirationDate(Instant.now().plusSeconds(60)));
+            .withResumptionToken(resumptionToken);
     }
   }
 }

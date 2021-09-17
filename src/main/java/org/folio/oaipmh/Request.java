@@ -4,6 +4,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
@@ -45,6 +46,7 @@ public class Request {
   private String requestId;
   /** The PK id of the first record in the next set of results used for partitioning. */
   private int nextInstancePkValue;
+  private ResumptionTokenType resumptionTokenType;
 
   /**
    * Builder used to build the request.
@@ -250,9 +252,25 @@ public class Request {
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
-      Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN));
+    } catch (Exception e) {
+      return false;
+    }
+    return true;
+  }
+
+  public boolean isResumptionTokenTimeExpired() {
+    try {
+      String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
+        StandardCharsets.UTF_8);
+
+      Map<String, String> params;
+      params = URLEncodedUtils
+        .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+
+      Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM));
       Instant currentDate = Instant.now();
-      if (expirationDate.isAfter(currentDate)) {
+      if (expirationDate.isBefore(currentDate)) {
         return false;
       }
     } catch (Exception e) {
@@ -282,7 +300,6 @@ public class Request {
     appendParam(builder, FROM_PARAM, getFrom());
     appendParam(builder, UNTIL_PARAM, getUntil());
     appendParam(builder, SET_PARAM, getSet());
-    appendParam(builder, EXPIRATION_DATE_RESUMPTION_TOKEN, extraParams.get(EXPIRATION_DATE_RESUMPTION_TOKEN));
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())

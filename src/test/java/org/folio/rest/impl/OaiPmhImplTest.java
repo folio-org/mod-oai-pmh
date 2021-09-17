@@ -1,133 +1,5 @@
 package org.folio.rest.impl;
 
-import static io.restassured.RestAssured.given;
-import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.DEFLATE;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.GZIP;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
-import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
-import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
-import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
-import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.folio.rest.impl.OkapiMockServer.*;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.isEmptyString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
-import static org.openarchives.oai._2.VerbType.GET_RECORD;
-import static org.openarchives.oai._2.VerbType.IDENTIFY;
-import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
-import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
-import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
-import static org.openarchives.oai._2.VerbType.LIST_SETS;
-import static org.openarchives.oai._2.VerbType.UNKNOWN;
-
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.annotation.concurrent.NotThreadSafe;
-import javax.xml.bind.JAXBElement;
-
-import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.config.ApplicationConfig;
-import org.folio.oaipmh.Constants;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.ResponseConverter;
-import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.common.TestUtil;
-import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.service.InstancesService;
-import org.folio.postgres.testing.PostgresTesterContainer;
-import org.folio.rest.RestVerticle;
-import org.folio.rest.persist.PostgresClient;
-import org.folio.rest.tools.utils.ModuleName;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.folio.spring.SpringContextUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Spy;
-import org.openarchives.oai._2.GranularityType;
-import org.openarchives.oai._2.HeaderType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.OAIPMHerrorcodeType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-import org.openarchives.oai._2.VerbType;
-import org.openarchives.oai._2_0.oai_dc.Dc;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
-import org.purl.dc.elements._1.ElementType;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import gov.loc.marc21.slim.DataFieldType;
 import gov.loc.marc21.slim.SubfieldatafieldType;
 import io.restassured.RestAssured;
@@ -147,6 +19,71 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.config.ApplicationConfig;
+import org.folio.oaipmh.Constants;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.common.TestUtil;
+import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.service.InstancesService;
+import org.folio.postgres.testing.PostgresTesterContainer;
+import org.folio.rest.RestVerticle;
+import org.folio.rest.persist.PostgresClient;
+import org.folio.rest.tools.utils.ModuleName;
+import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Spy;
+import org.openarchives.oai._2.*;
+import org.openarchives.oai._2_0.oai_dc.Dc;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+import org.purl.dc.elements._1.ElementType;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.annotation.concurrent.NotThreadSafe;
+import javax.xml.bind.JAXBElement;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static io.restassured.RestAssured.given;
+import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.*;
+import static org.folio.rest.impl.OkapiMockServer.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
+import static org.openarchives.oai._2.VerbType.*;
 
 @NotThreadSafe
 @ExtendWith(VertxExtension.class)
@@ -218,10 +155,10 @@ class OaiPmhImplTest {
     logger.info(format("mod-oai-pmh test: Deploying %s with %s", RestVerticle.class.getName(), Json.encode(conf)));
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
-    idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-    System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
     WebClientProvider.init(vertx);
     vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
+      idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+      System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
       Context context = vertx.getOrCreateContext();
       SpringContextUtil.init(vertx, context, ApplicationConfig.class);
       SpringContextUtil.autowireDependencies(this, context);
@@ -551,7 +488,7 @@ class OaiPmhImplTest {
     String resumptionTokenValue =
       new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(7)));
+    assertThat(params, is(hasSize(8)));
 
     assertThat(getParamValue(params, METADATA_PREFIX_PARAM), is(equalTo(metadataPrefix.getName())));
     assertThat(getParamValue(params, FROM_PARAM), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
@@ -701,7 +638,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(7)));
+    assertThat(params, is(hasSize(8)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
@@ -728,7 +665,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(7)));
+    assertThat(params, is(hasSize(8)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
@@ -754,7 +691,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(6)));
+    assertThat(params, is(hasSize(7)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
@@ -781,7 +718,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(7)));
+    assertThat(params, is(hasSize(8)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
@@ -812,7 +749,7 @@ class OaiPmhImplTest {
     assertThat(actualValue, equalTo(expectedValue));
     assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
-    assertThat(actualResumptionToken.getExpirationDate(), is(nullValue()));
+    assertThat(actualResumptionToken.getExpirationDate(), is(notNullValue()));
   }
 
   @ParameterizedTest

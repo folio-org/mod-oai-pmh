@@ -5,9 +5,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.openarchives.oai._2.ListIdentifiersType;
@@ -16,7 +16,6 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
 import javax.ws.rs.core.Response;
-import java.time.Instant;
 import java.util.List;
 
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
@@ -118,7 +117,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     if (oaipmh.getListRecords() != null) {
       oaipmh.getListIdentifiers()
-        .withResumptionToken(resumptionToken.withExpirationDate(Instant.now().plusSeconds(60)));
+        .withResumptionToken(resumptionToken);
     }
   }
 
