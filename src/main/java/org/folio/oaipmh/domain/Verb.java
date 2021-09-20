@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.collect.ImmutableSet.of;
 import static java.util.Collections.EMPTY_SET;
+import static java.util.Set.of;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
 import static org.folio.oaipmh.Constants.*;
