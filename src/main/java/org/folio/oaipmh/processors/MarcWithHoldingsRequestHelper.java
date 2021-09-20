@@ -81,8 +81,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String END_DATE_PARAM_NAME = "endDate";
 
-  private static final String ID = "id";
-
   private static final String TEMPORARY_LOCATION = "temporaryLocation";
 
   private static final String PERMANENT_LOCATION = "permanentLocation";

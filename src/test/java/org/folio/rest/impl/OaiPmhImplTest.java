@@ -2182,13 +2182,17 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
       Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
-      Optional<SubfieldatafieldType> optHoldingsUriField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
+      Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
+      Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
+      Optional<SubfieldatafieldType> optHoldingsUrlNote = findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
       assertTrue(optInstitutionName.isPresent());
       assertTrue(optCampusName.isPresent());
       assertTrue(optLibraryName.isPresent());
       assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
-      assertTrue( optHoldingsUriField.isPresent());
+      assertTrue(optHoldingsUrlField.isPresent());
+      assertTrue(optHoldingsType.isPresent());
+      assertTrue(optHoldingsUrlNote.isPresent());
     });
   }
 

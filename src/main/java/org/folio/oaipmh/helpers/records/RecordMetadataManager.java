@@ -141,9 +141,9 @@ public class RecordMetadataManager {
 
     if (Objects.nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      holdings.forEach(holding -> {
-        updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing);
-      });
+      holdings.forEach(holding ->
+        updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing)
+      );
     }
     return srsInstance;
   }
