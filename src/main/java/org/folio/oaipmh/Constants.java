@@ -95,5 +95,5 @@ public final class Constants {
   public static final String INSTANCE_TYPES = "resourceType";
   public static final String INSTANCE_FORMATS = "format";
 
-  public static final Integer RESUMPTION_TOKEN_TIMEOUT = 60;
+  public static final Integer RESUMPTION_TOKEN_TIMEOUT = 600;
 }

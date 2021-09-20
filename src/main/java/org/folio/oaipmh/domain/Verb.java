@@ -14,7 +14,7 @@ import static org.folio.oaipmh.Constants.*;
  * Enum that represents OAI-PMH verbs with associated http parameters and validation logic.
  */
 public enum Verb {
-  GET_RECORD("GetRecord", of(IDENTIFIER_PARAM, METADATA_PREFIX_PARAM), of(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM), null),
+  GET_RECORD("GetRecord", of(IDENTIFIER_PARAM, METADATA_PREFIX_PARAM), EMPTY_SET, null),
   IDENTIFY("Identify", EMPTY_SET, EMPTY_SET, null),
   LIST_IDENTIFIERS("ListIdentifiers", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM, EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM), RESUMPTION_TOKEN_PARAM),
   LIST_METADATA_FORMATS("ListMetadataFormats", EMPTY_SET, of(IDENTIFIER_PARAM), null),

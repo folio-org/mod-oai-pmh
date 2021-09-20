@@ -728,9 +728,7 @@ class OaiPmhImplTest {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
     // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46
-    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAwMy" +
-      "0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4OWEwMS1mM2N" +
-      "kLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDY";
+    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4OWEwMS1mM2NkLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDYmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
@@ -749,7 +747,7 @@ class OaiPmhImplTest {
     assertThat(actualValue, equalTo(expectedValue));
     assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
-    assertThat(actualResumptionToken.getExpirationDate(), is(notNullValue()));
+    assertThat(actualResumptionToken.getExpirationDate(), is(nullValue()));
   }
 
   @ParameterizedTest
