@@ -727,7 +727,7 @@ class OaiPmhImplTest {
   void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
-    // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46
+    // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46&expirationDate=2030-10-01T00:00:00Z
     String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4OWEwMS1mM2NkLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDYmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     RequestSpecification request = createBaseRequest()
       .with()
@@ -875,6 +875,25 @@ class OaiPmhImplTest {
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+    assertThat(oaipmh.getErrors(), is(hasSize(1)));
+    assertThat(oaipmh.getErrors().get(0).getCode(), is(equalTo(BAD_RESUMPTION_TOKEN)));
+    assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  void getOaiListVerbWithBadResumptionTokenExpiredDate(VerbType verb) {
+    // base64 encoded string:
+    // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z
+    // &set=all&offset=0&totalRecords=101&nextRecordId=6506b79b-7702-48b2-9774-a1c538fdd34e&expirationDate=2003-10-01T00:00:00Z
+    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAxJm5leHRSZWNvcmRJZD02NTA2Yjc5Yi03NzAyLTQ4YjItOTc3NC1hMWM1MzhmZGQzNGUmZXhwaXJhdGlvbkRhdGU9MjAwMy0xMC0wMVQwMDowMDowMFo=";
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, verb.value())
+      .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, verb, 400, 1);
+
     assertThat(oaipmh.getErrors(), is(hasSize(1)));
     assertThat(oaipmh.getErrors().get(0).getCode(), is(equalTo(BAD_RESUMPTION_TOKEN)));
     assertThat(oaipmh.getRequest().getResumptionToken(), equalTo(resumptionToken));

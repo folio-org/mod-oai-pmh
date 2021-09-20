@@ -4,7 +4,6 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.RequestType;
-import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
@@ -46,7 +45,6 @@ public class Request {
   private String requestId;
   /** The PK id of the first record in the next set of results used for partitioning. */
   private int nextInstancePkValue;
-  private ResumptionTokenType resumptionTokenType;
 
   /**
    * Builder used to build the request.
