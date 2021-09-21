@@ -17,7 +17,19 @@ import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
-import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
 /**
  * Class that represents OAI-PMH request and holds http query arguments.
@@ -269,12 +281,12 @@ public class Request {
       Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM));
       Instant currentDate = Instant.now();
       if (expirationDate.isBefore(currentDate)) {
-        return false;
+        return true;
       }
     } catch (Exception e) {
-      return false;
+      return true;
     }
-    return true;
+    return false;
   }
 
   /**

@@ -3,7 +3,11 @@ package org.folio.oaipmh.helpers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
-import org.openarchives.oai._2.*;
+import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 import java.util.Collection;
 import java.util.List;

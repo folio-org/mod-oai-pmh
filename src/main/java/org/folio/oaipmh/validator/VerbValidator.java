@@ -6,12 +6,21 @@ import org.folio.oaipmh.domain.Verb;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.folio.oaipmh.Constants.*;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.*;
+import static org.folio.oaipmh.Constants.EXPIRED_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
 @Component
 public class VerbValidator {
@@ -75,7 +84,7 @@ public class VerbValidator {
         errors.add(error);
         return;
       }
-      if (!request.isResumptionTokenTimeExpired()) {
+      if (request.isResumptionTokenTimeExpired()) {
         OAIPMHerrorType errorByExpiredTime = new OAIPMHerrorType()
           .withCode(BAD_RESUMPTION_TOKEN)
           .withValue(EXPIRED_RESUMPTION_TOKEN);

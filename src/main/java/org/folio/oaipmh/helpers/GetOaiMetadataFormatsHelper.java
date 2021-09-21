@@ -7,7 +7,12 @@ import io.vertx.core.json.JsonObject;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.openarchives.oai._2.*;
+import org.openarchives.oai._2.ListMetadataFormatsType;
+import org.openarchives.oai._2.MetadataFormatType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.OAIPMHerrorcodeType;
+import org.openarchives.oai._2.ResumptionTokenType;
 
 import java.util.Collections;
 import java.util.List;
