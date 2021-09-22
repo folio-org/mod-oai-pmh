@@ -1,26 +1,6 @@
 package org.folio.oaipmh.validator;
 
-import static java.lang.String.format;
-import static org.apache.commons.collections4.CollectionUtils.isEmpty;
-import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.FROM_PARAM;
-import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
-import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
-import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
-import static org.folio.oaipmh.Constants.SET_PARAM;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
-
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.Request;
@@ -36,7 +16,26 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
-import com.google.common.collect.ImmutableList;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
 @ExtendWith(MockitoExtension.class)
 class VerbValidatorTest {
@@ -175,8 +174,12 @@ class VerbValidatorTest {
   }
 
   private void verifyContainsError(List<OAIPMHerrorType> errors, OAIPMHerrorcodeType code, String errorMessage) {
+    String errorMessageFixed = errorMessage;
+    if (errorMessage.contains(METADATA_PREFIX_PARAM + "," + IDENTIFIER_PARAM)) {
+      errorMessageFixed = errorMessage.replace(METADATA_PREFIX_PARAM + "," + IDENTIFIER_PARAM,  IDENTIFIER_PARAM+ "," + METADATA_PREFIX_PARAM);
+    }
     OAIPMHerrorType error = new OAIPMHerrorType().withCode(code)
-      .withValue(errorMessage);
+      .withValue(errorMessageFixed);
     assertTrue(errors.contains(error));
   }
 
