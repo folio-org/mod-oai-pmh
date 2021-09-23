@@ -94,6 +94,9 @@ public final class Constants {
   public static final String MATERIAL_TYPES = "materialType";
   public static final String INSTANCE_TYPES = "resourceType";
   public static final String INSTANCE_FORMATS = "format";
+  public static final String RETRY_ATTEMPTS = "retryAttempts";
+  public static final String STATUS_CODE = "statusCode";
+  public static final String STATUS_MESSAGE = "statusMessage";
 
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 600;
 }

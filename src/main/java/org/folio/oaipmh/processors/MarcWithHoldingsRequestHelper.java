@@ -91,6 +91,9 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEM
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
+import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.STATUS_CODE;
+import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
@@ -871,13 +874,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise) {
     try {
       srsClient.postSourceStorageSourceRecords("INSTANCE", null, deletedRecordSupport, listOfIds, asyncResult -> {
+        Map <String, String> retrySRSRequestParams = new HashMap<>();
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> srsResponse = asyncResult.result();
           int statusCode = srsResponse.statusCode();
           String statusMessage = srsResponse.statusMessage();
           if (statusCode >= 400) {
-            retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, statusCode,
-                statusMessage);
+            retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
+            retrySRSRequestParams.put(STATUS_CODE, String.valueOf(statusCode));
+            retrySRSRequestParams.put(STATUS_MESSAGE, statusMessage);
+            retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams);
             return;
           }
           if (statusCode != 200) {
@@ -890,7 +896,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         } else {
           logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
             .getMessage(), asyncResult.cause());
-          retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise, -1, "");
+          retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
+          retrySRSRequestParams.put(STATUS_CODE, String.valueOf(-1));
+          retrySRSRequestParams.put(STATUS_MESSAGE, "");
+          retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams);
         }
       });
     } catch (Exception e) {
@@ -899,22 +908,23 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void retrySRSRequest(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport,
-      List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise,
-      int statusCode, String statusMessage) {
-    if (statusCode > 0) {
-      logger.debug("Got error response form SRS, status code: {}, status message: {}.", statusCode, statusMessage);
+      List<String> listOfIds, AtomicInteger attemptsCount, Promise<Map<String, JsonObject>> promise, Map <String, String> retrySRSRequestParams) {
+    if (Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)) > 0) {
+      logger.debug("Got error response form SRS, status code: {}, status message: {}.",
+        Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)), retrySRSRequestParams.get(STATUS_MESSAGE));
     } else {
       logger.debug("Error has been occurred while requesting SRS.");
     }
     if (attemptsCount.decrementAndGet() <= 0) {
-      String errorMessage = "SRS didn't respond with expected status code after " + retryAttempts
+      String errorMessage = "SRS didn't respond with expected status code after " + Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS))
           + " attempts. Canceling further request processing.";
       handleException(promise, new IllegalStateException(errorMessage));
       return;
     }
     logger.debug("Trying to request SRS again, attempts left: {}.", attemptsCount.get());
     vertx.setTimer(REREQUEST_SRS_DELAY,
-        timer -> doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise));
+        timer -> doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount,
+          Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise));
   }
 
   private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer) {
