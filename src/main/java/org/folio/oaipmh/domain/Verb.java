@@ -1,9 +1,14 @@
 package org.folio.oaipmh.domain;
 
-import static com.google.common.collect.ImmutableSet.of;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import static java.util.Collections.EMPTY_SET;
+import static java.util.Set.of;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
+import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
@@ -11,19 +16,15 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 /**
  * Enum that represents OAI-PMH verbs with associated http parameters and validation logic.
  */
 public enum Verb {
   GET_RECORD("GetRecord", of(IDENTIFIER_PARAM, METADATA_PREFIX_PARAM), EMPTY_SET, null),
   IDENTIFY("Identify", EMPTY_SET, EMPTY_SET, null),
-  LIST_IDENTIFIERS("ListIdentifiers", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM), RESUMPTION_TOKEN_PARAM),
+  LIST_IDENTIFIERS("ListIdentifiers", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM, EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM), RESUMPTION_TOKEN_PARAM),
   LIST_METADATA_FORMATS("ListMetadataFormats", EMPTY_SET, of(IDENTIFIER_PARAM), null),
-  LIST_RECORDS("ListRecords", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM), RESUMPTION_TOKEN_PARAM),
+  LIST_RECORDS("ListRecords", of(METADATA_PREFIX_PARAM), of(FROM_PARAM, UNTIL_PARAM, SET_PARAM, EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM), RESUMPTION_TOKEN_PARAM),
   LIST_SETS("ListSets", EMPTY_SET, EMPTY_SET, RESUMPTION_TOKEN_PARAM);
 
   private static final String VERB_PARAM = "verb";
