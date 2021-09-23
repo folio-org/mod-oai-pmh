@@ -98,5 +98,5 @@ public final class Constants {
   public static final String STATUS_CODE = "statusCode";
   public static final String STATUS_MESSAGE = "statusMessage";
 
-  public static final Integer RESUMPTION_TOKEN_TIMEOUT = 600;
+  public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
 }

@@ -104,7 +104,7 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-    private static final int DATABASE_FETCHING_CHUNK_SIZE = 50;
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 50;
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 

@@ -244,8 +244,7 @@ public class Request {
     String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
       StandardCharsets.UTF_8);
 
-    Map<String, String> params;
-      params = URLEncodedUtils
+    Map<String, String> params = URLEncodedUtils
         .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
         .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
@@ -273,20 +272,16 @@ public class Request {
       String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
         StandardCharsets.UTF_8);
 
-      Map<String, String> params;
-      params = URLEncodedUtils
+      Map<String, String> params = URLEncodedUtils
         .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
         .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
       Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM));
       Instant currentDate = Instant.now();
-      if (expirationDate.isBefore(currentDate)) {
-        return true;
-      }
+        return expirationDate.isBefore(currentDate);
     } catch (Exception e) {
       return true;
     }
-    return false;
   }
 
   /**
