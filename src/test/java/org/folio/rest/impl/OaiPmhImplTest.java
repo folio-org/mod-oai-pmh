@@ -572,7 +572,7 @@ class OaiPmhImplTest {
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(resumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
-    assertThat(resumptionToken.getExpirationDate(), is(nullValue()));
+    assertThat(resumptionToken.getExpirationDate(), is(notNullValue()));
 
     String resumptionTokenValue =
       new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
@@ -838,7 +838,7 @@ class OaiPmhImplTest {
     assertThat(actualValue, equalTo(expectedValue));
     assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
-    assertThat(actualResumptionToken.getExpirationDate(), is(nullValue()));
+    assertThat(actualResumptionToken.getExpirationDate(), is(notNullValue()));
   }
 
   @ParameterizedTest

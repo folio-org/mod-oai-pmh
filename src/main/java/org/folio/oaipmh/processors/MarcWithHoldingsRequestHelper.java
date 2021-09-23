@@ -762,6 +762,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     return new ResumptionTokenType()
       .withValue(resumptionToken)
+      .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
   }
 
