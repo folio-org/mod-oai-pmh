@@ -195,21 +195,23 @@ public class RecordMetadataManager {
     JsonArray electronicAccessArray = jsonData.getJsonArray(ELECTRONIC_ACCESS);
     if (Objects.nonNull(electronicAccessArray)) {
       electronicAccessArray.forEach(electronicAccess -> {
-        Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
-        FieldBuilder fieldBuilder = new FieldBuilder();
-        List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
-        if (suppressedRecordsProcessing) {
-          int subFieldValue = BooleanUtils.isFalse(jsonData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
-          electronicAccessSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
-        }
-        if (CollectionUtils.isNotEmpty(indicators)) {
-          Map<String, Object> electronicAccessField = fieldBuilder
-            .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
-            .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
-            .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
-            .withSubFields(electronicAccessSubFields)
-            .build();
-          marcRecordFields.add(electronicAccessField);
+        if (electronicAccess instanceof JsonObject) {
+          Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
+          FieldBuilder fieldBuilder = new FieldBuilder();
+          List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
+          if (suppressedRecordsProcessing) {
+            int subFieldValue = BooleanUtils.isFalse(jsonData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+            electronicAccessSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
+          }
+          if (CollectionUtils.isNotEmpty(indicators)) {
+            Map<String, Object> electronicAccessField = fieldBuilder
+              .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
+              .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
+              .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
+              .withSubFields(electronicAccessSubFields)
+              .build();
+            marcRecordFields.add(electronicAccessField);
+          }
         }
       });
     }
