@@ -1,12 +1,10 @@
 package org.folio.oaipmh.validator;
 
-import static java.lang.String.format;
-import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
-import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
-import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
+import org.apache.commons.lang3.StringUtils;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.domain.Verb;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,11 +14,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.domain.Verb;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.springframework.stereotype.Component;
+import static java.lang.String.format;
+import static org.folio.oaipmh.Constants.EXPIRED_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.INVALID_RESUMPTION_TOKEN;
+import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_VERB;
 
 @Component
 public class VerbValidator {
@@ -33,7 +33,7 @@ public class VerbValidator {
   /**
    * Validates request parameters except 'from' and 'until' against particular verb.
    *
-   * @param object - name of verb against witch parameters are validated
+   * @param object        - name of verb against witch parameters are validated
    * @param requestParams - map with request parameters
    * @return list of errors.
    */
@@ -56,18 +56,20 @@ public class VerbValidator {
    * In case of resumption token param presence verifies if there any other parameters were specified too. If they were then error
    * will be added to error list.
    *
-   * @param verb   - verb
-   * @param requestParams    - request parameters
-   * @param request - oai-pmh request
-   * @param errors - list of errors
+   * @param verb          - verb
+   * @param requestParams - request parameters
+   * @param request       - oai-pmh request
+   * @param errors        - list of errors
    */
   private void validateExclusiveParam(Verb verb, Map<String, String> requestParams, Request request, List<OAIPMHerrorType> errors) {
     String resumptionToken = requestParams.get(verb.getExclusiveParam());
     if (verb.getExclusiveParam() != null && resumptionToken != null) {
       requestParams.keySet()
         .stream()
-        .filter(p -> !verb.getExcludedParams().contains(p))
-        .filter(p -> !verb.getExclusiveParam().equals(p))
+        .filter(p -> !verb.getExcludedParams()
+          .contains(p))
+        .filter(p -> !verb.getExclusiveParam()
+          .equals(p))
         .findAny()
         .ifPresent(param -> {
           if (!param.equals(VERB_PARAM)) {
@@ -80,6 +82,13 @@ public class VerbValidator {
           .withCode(BAD_RESUMPTION_TOKEN)
           .withValue(format(INVALID_RESUMPTION_TOKEN, verb.name()));
         errors.add(error);
+        return;
+      }
+      if (request.isResumptionTokenTimeExpired()) {
+        OAIPMHerrorType errorByExpiredTime = new OAIPMHerrorType()
+          .withCode(BAD_RESUMPTION_TOKEN)
+          .withValue(EXPIRED_RESUMPTION_TOKEN);
+        errors.add(errorByExpiredTime);
       }
     }
   }
@@ -88,8 +97,8 @@ public class VerbValidator {
    * Verifies that any of the required parameters is not missing.
    *
    * @param requestParams - vertx context
-   * @param verb    - request verb
-   * @param errors  - errors list
+   * @param verb          - request verb
+   * @param errors        - errors list
    */
   private void validateRequiredParams(Map<String, String> requestParams, Verb verb, List<OAIPMHerrorType> errors) {
     Set<String> params = new HashSet<>();

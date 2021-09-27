@@ -1,7 +1,23 @@
 package org.folio.oaipmh;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
+import java.util.Objects;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
+import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
@@ -14,20 +30,6 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Objects;
-
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.RequestType;
-import org.openarchives.oai._2.VerbType;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 
 /**
  * Class that represents OAI-PMH request and holds http query arguments.
@@ -242,8 +244,7 @@ public class Request {
     String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
       StandardCharsets.UTF_8);
 
-    Map<String, String> params;
-      params = URLEncodedUtils
+    Map<String, String> params = URLEncodedUtils
         .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
         .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
@@ -264,6 +265,23 @@ public class Request {
       return false;
     }
     return true;
+  }
+
+  public boolean isResumptionTokenTimeExpired() {
+    try {
+      String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
+        StandardCharsets.UTF_8);
+
+      Map<String, String> params = URLEncodedUtils
+        .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+
+      Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM));
+      Instant currentDate = Instant.now();
+        return expirationDate.isBefore(currentDate);
+    } catch (Exception e) {
+      return true;
+    }
   }
 
   /**

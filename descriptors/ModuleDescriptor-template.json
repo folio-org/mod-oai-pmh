@@ -20,7 +20,8 @@
             "inventory-storage.oai-pmh-view.instances.collection.get",
             "inventory-storage.oai-pmh-view.updatedinstanceids.collection.get",
             "inventory-storage.oai-pmh-view.enrichedinstances.collection.post",
-            "inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get"
+            "inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get",
+            "inventory-storage.inventory-hierarchy.items-and-holdings.collection.post"
           ]
         },
         {

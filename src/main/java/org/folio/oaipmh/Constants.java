@@ -50,6 +50,7 @@ public final class Constants {
   public static final String CONFIGS = "configs";
   public static final String VALUE = "value";
 
+  public static final String EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM = "expirationDate";
   public static final String FROM_PARAM = "from";
   public static final String IDENTIFIER_PARAM = "identifier";
   public static final String METADATA_PREFIX_PARAM = "metadataPrefix";
@@ -78,6 +79,7 @@ public final class Constants {
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
+  public static final String EXPIRED_RESUMPTION_TOKEN = "The value of the resumptionToken argument is expired";
 
   public static final String SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be empty or null";
 
@@ -92,4 +94,9 @@ public final class Constants {
   public static final String MATERIAL_TYPES = "materialType";
   public static final String INSTANCE_TYPES = "resourceType";
   public static final String INSTANCE_FORMATS = "format";
+  public static final String RETRY_ATTEMPTS = "retryAttempts";
+  public static final String STATUS_CODE = "statusCode";
+  public static final String STATUS_MESSAGE = "statusMessage";
+
+  public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
 }
