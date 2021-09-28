@@ -53,6 +53,7 @@ public class RecordMetadataManager {
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
   public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
   public static final String ITEMS = "items";
+  public static final String HOLDINGS = "holdings";
   public static final String CALL_NUMBER = "callNumber";
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
@@ -102,30 +103,57 @@ public class RecordMetadataManager {
    * @param srsInstance       - record from SRS
    * @param inventoryInstance - instance form inventory storage
    */
-  @SuppressWarnings("unchecked")
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
                                                   JsonObject inventoryInstance,
                                                   boolean suppressedRecordsProcessing) {
-    JsonObject itemsAndHoldings;
-    JsonArray items = null;
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
       return srsInstance;
     }
-    itemsAndHoldings = (JsonObject) value;
-    items = itemsAndHoldings.getJsonArray(ITEMS);
+    JsonObject itemsAndHoldings = (JsonObject) value;
+    JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
 
     if (Objects.nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
-      JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
-      JsonObject content = parsedRecord.getJsonObject(CONTENT);
-      JsonArray fields = content.getJsonArray(FIELDS);
-      List<Object> fieldsList = fields.getList();
+      List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       items.forEach(item -> {
         updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
-        updateFieldsWithItemElectronicAccessField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
+        updateFieldsWithElectronicAccessField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
       });
     }
     return srsInstance;
+  }
+
+  /**
+   * Updates metadata of retrieved from SRS record with related to it inventory holdings data.
+   *
+   * @param srsInstance       - record from SRS
+   * @param inventoryInstance - instance form inventory storage
+   */
+  public JsonObject populateMetadataWithHoldingsData(JsonObject srsInstance,
+                                                  JsonObject inventoryInstance,
+                                                  boolean suppressedRecordsProcessing) {
+    Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
+    if (!(value instanceof JsonObject)) {
+      return srsInstance;
+    }
+    JsonObject itemsAndHoldings = (JsonObject) value;
+    JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
+
+    if (Objects.nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
+      List<Object> fieldsList = getFieldsForUpdate(srsInstance);
+      holdings.forEach(holding ->
+        updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing)
+      );
+    }
+    return srsInstance;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Object> getFieldsForUpdate(JsonObject srsInstance) {
+    JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
+    JsonObject content = parsedRecord.getJsonObject(CONTENT);
+    JsonArray fields = content.getJsonArray(FIELDS);
+    return fields.getList();
   }
 
   /**
@@ -157,31 +185,33 @@ public class RecordMetadataManager {
    * Constructs field with subfields which is build from item electronic access data. Constructed field has tag number = 856 and
    * both indicators depends on 'name' field of electronic access json (see {@link RecordMetadataManager#resolveIndicatorsValue}).
    *
-   * @param itemData                    - json of single item which contains array of electronic accesses
+   * @param jsonData                    - json of single item or holding which contains array of electronic accesses
    * @param marcRecordFields            - fields list to be updated with new one
    * @param suppressedRecordsProcessing - include suppressed flag in 856 field?
    */
-  private void updateFieldsWithItemElectronicAccessField(JsonObject itemData,
-                                                         List<Object> marcRecordFields,
-                                                         boolean suppressedRecordsProcessing) {
-    JsonArray electronicAccessArray = itemData.getJsonArray(ELECTRONIC_ACCESS);
+  private void updateFieldsWithElectronicAccessField(JsonObject jsonData,
+                                                     List<Object> marcRecordFields,
+                                                     boolean suppressedRecordsProcessing) {
+    JsonArray electronicAccessArray = jsonData.getJsonArray(ELECTRONIC_ACCESS);
     if (Objects.nonNull(electronicAccessArray)) {
       electronicAccessArray.forEach(electronicAccess -> {
-        Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
-        FieldBuilder fieldBuilder = new FieldBuilder();
-        List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
-        if (suppressedRecordsProcessing) {
-          int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
-          electronicAccessSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
-        }
-        if (CollectionUtils.isNotEmpty(indicators)) {
-          Map<String, Object> electronicAccessField = fieldBuilder
-            .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
-            .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
-            .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
-            .withSubFields(electronicAccessSubFields)
-            .build();
-          marcRecordFields.add(electronicAccessField);
+        if (electronicAccess instanceof JsonObject) {
+          Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
+          FieldBuilder fieldBuilder = new FieldBuilder();
+          List<String> indicators = resolveIndicatorsValue((JsonObject) electronicAccess);
+          if (suppressedRecordsProcessing) {
+            int subFieldValue = BooleanUtils.isFalse(jsonData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+            electronicAccessSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
+          }
+          if (CollectionUtils.isNotEmpty(indicators)) {
+            Map<String, Object> electronicAccessField = fieldBuilder
+              .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
+              .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
+              .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
+              .withSubFields(electronicAccessSubFields)
+              .build();
+            marcRecordFields.add(electronicAccessField);
+          }
         }
       });
     }
