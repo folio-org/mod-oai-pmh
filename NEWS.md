@@ -1,3 +1,23 @@
+## 3.7.0 - Unreleased
+
+## 3.6.0 (Released)
+
+This release contains memory usage, database population, handling marc21_withholding, resumption token improvements and bug fixes.
+
+### Stories
+
+* [MODOAIPMH-339](https://issues.folio.org/browse/MODOAIPMH-339) Address memory leaks
+* [MODOAIPMH-337](https://issues.folio.org/browse/MODOAIPMH-337) The mod-oai-pmh schema is not populated correctly after RMB 32 update
+* [MODOAIPMH-328](https://issues.folio.org/browse/MODOAIPMH-328) align dependency versions affected by Inventory's Optimistic Locking
+* [MODOAIPMH-283](https://issues.folio.org/browse/MODOAIPMH-283) Provide effective location and effective call number data when item record is not present
+* [MODOAIPMH-164](https://issues.folio.org/browse/MODOAIPMH-164) Add expiration date attribute to resumption token
+
+### Bug fixes
+
+* [MODOAIPMH-317](https://issues.folio.org/browse/MODOAIPMH-317) Holdings data not discoverable when item record is suppressed
+
+  [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.5.0...v3.6.0)
+
 ## 3.5.0 (Released) 2021-06-08
 
 This release contains an incrementation of SRS interface versions and bugfix for handling marc21 and oai_dc metadata prefixes.
