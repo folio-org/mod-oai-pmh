@@ -9,12 +9,14 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.impl.Http1xServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.impl.pool.SimpleConnectionPool;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.streams.WriteStream;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
@@ -476,35 +478,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
-    var itemsAndHoldingsStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
-
-    // setup pgPool availability checker
-    AtomicReference<SimpleConnectionPool<PooledConnection>> queue = new AtomicReference<>();
-    try {
-      queue.set(getWaitersQueue(PostgresClientFactory.getPool(context.owner(), request.getTenant())));
-    } catch (IllegalStateException ex) {
-      logger.error(ex.getMessage());
-      completePromise.fail(ex);
-      return completePromise.future();
-    }
-    itemsAndHoldingsStream.setCapacityChecker(() -> queue.get()
-      .waiters() > 20);
-
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    // setup json parser and pipe to write stream
-    var responseChecked = new AtomicBoolean();
-    var responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
-    jsonParser.pipeTo(itemsAndHoldingsStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(itemsAndHoldingsStream, responseChecked, responseCheckAttempts));
+    jsonParser.handler(event -> {
+      JsonObject itemsAndHoldingsFields = event.objectValue();
+      String instanceId = itemsAndHoldingsFields.getString(INSTANCE_ID_FIELD_NAME);
+      JsonObject instance = instances.get(instanceId);
+      if (instance != null) {
+        enrichDiscoverySuppressed(itemsAndHoldingsFields, instance);
+        instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsAndHoldingsFields);
+        // case when no items
+        if (itemsAndHoldingsFields.getJsonArray(ITEMS)
+          .isEmpty()) {
+          enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
+        } else {
+          adjustItems(instance);
+        }
+      } else {
+        logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
+      }
+    });
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
           throwable);
-      closeStreamRelatedObjects(itemsAndHoldingsStream, Optional.of(throwable));
       completePromise.fail(throwable);
     });
 
@@ -516,51 +516,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, httpResponse.statusMessage());
           String errorMessage = errorFromStorageMessage + httpResponse.statusCode();
           logger.error(errorMessage);
-          responseChecked.set(true);
           completePromise.fail(new IllegalStateException(errorFromStorageMessage));
         }
-        responseChecked.set(true);
+        completePromise.complete(new ArrayList<>(instances.values()));
       })
       .onFailure(e -> {
         logger.error(e.getMessage());
-        responseChecked.set(true);
         completePromise.fail(e);
       });
-
-    // set batch handler
-    itemsAndHoldingsStream.handleBatch(batch -> {
-      try {
-        for (JsonEvent jsonEvent : batch) {
-          JsonObject itemsandholdingsfields = jsonEvent.objectValue();
-          String instanceId = itemsandholdingsfields.getString(INSTANCE_ID_FIELD_NAME);
-          JsonObject instance = instances.get(instanceId);
-          if (instance != null) {
-            enrichDiscoverySuppressed(itemsandholdingsfields, instance);
-            instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsandholdingsfields);
-            // case when no items
-            if (itemsandholdingsfields.getJsonArray(ITEMS)
-              .isEmpty()) {
-              enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
-            } else {
-              adjustItems(instance);
-            }
-          } else {
-            logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
-          }
-        }
-
-        if (itemsAndHoldingsStream.isTheLastBatch()) {
-          if (itemsAndHoldingsStream.isEndedWithError()) {
-            completePromise.tryFail(itemsAndHoldingsStream.getCause());
-          } else {
-            completePromise.complete(new ArrayList<>(instances.values()));
-          }
-        }
-      } catch (Exception e) {
-        completePromise.fail(e);
-      }
-    });
-
     return completePromise.future();
   }
 
