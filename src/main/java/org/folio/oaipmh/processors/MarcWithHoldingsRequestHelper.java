@@ -9,14 +9,12 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.impl.Http1xServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.impl.pool.SimpleConnectionPool;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.streams.WriteStream;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
@@ -29,7 +27,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
@@ -408,7 +405,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             request.setNextInstancePkValue(instances.get(batchSize)
               .getId());
           }
-          return enrichInstances(jsonInstances, request, context);
+          return enrichInstances(jsonInstances, request);
         }
         logger.debug("Skipping enrich instances call, empty instance ids list returned.");
         return Future.succeededFuture(Collections.emptyList());
@@ -463,7 +460,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     };
   }
 
-  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
+  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request) {
     Map<String, JsonObject> instances = result.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
     Promise<List<JsonObject>> completePromise = Promise.promise();
