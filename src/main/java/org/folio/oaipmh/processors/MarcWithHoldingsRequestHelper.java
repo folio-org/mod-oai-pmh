@@ -217,7 +217,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       int batchSize = Integer
         .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      getNextInstances(request, batchSize, context, requestId, firstBatch).future()
+      getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
             logger.error("Get instances failed: {}.", fut.cause()
@@ -359,7 +359,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpRequest;
   }
 
-  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId,
+  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, String requestId,
       boolean firstBatch) {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
