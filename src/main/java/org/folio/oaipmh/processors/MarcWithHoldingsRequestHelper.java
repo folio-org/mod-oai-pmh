@@ -288,17 +288,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        var copy = new ArrayList<>(batch);
         jsonParser.pause();
-        saveInstancesIds(copy, tenant, requestId,  postgresClient, jsonParser);
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
         batch.clear();
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        var copy = new ArrayList<>(batch);
         jsonParser.pause();
-        saveInstancesIds(copy, tenant, requestId,  postgresClient, jsonParser);
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
         batch.clear();
       }
       downloadInstancesPromise.complete();
