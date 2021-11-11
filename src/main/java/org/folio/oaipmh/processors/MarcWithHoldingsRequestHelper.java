@@ -27,7 +27,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
@@ -70,7 +69,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -103,7 +101,7 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 50;
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 100;
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
@@ -219,7 +217,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       int batchSize = Integer
         .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
-      getNextInstances(request, batchSize, context, requestId, firstBatch).future()
+      getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
             logger.error("Get instances failed: {}.", fut.cause()
@@ -275,57 +273,38 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-      Context vertxContext, String requestId) {
+                                 Context vertxContext, String requestId) {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
-    var databaseWriteStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
-
-    databaseWriteStream.handleBatch(batch -> {
-      saveInstancesIds(batch, request, requestId, databaseWriteStream, postgresClient);
-      final Long returnedCount = databaseWriteStream.getReturnedCount();
-
-      if (returnedCount % 1000 == 0) {
-        logger.info("Batch saving progress: {} returned so far, batch size: {}, http ended: {}.", returnedCount, batch.size(),
-            databaseWriteStream.isStreamEnded());
-      }
-
-      if (databaseWriteStream.isTheLastBatch()) {
-        if (databaseWriteStream.isEndedWithError()) {
-          downloadInstancesPromise.fail(databaseWriteStream.getCause());
-        } else {
-          downloadInstancesPromise.complete();
-        }
-      }
-
-      databaseWriteStream.invokeDrainHandler();
-    });
-    setupBatchHttpStream(databaseWriteStream, oaiPmhResponsePromise, httpRequest, (PgPool) getValueFrom(postgresClient, "client"));
+    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request.getTenant(), requestId, postgresClient, downloadInstancesPromise);
   }
 
-  private void setupBatchHttpStream(BatchStreamWrapper databaseWriteStream, Promise<?> promise,
-      HttpRequestImpl<Buffer> inventoryHttpRequest, PgPool pool) {
-
-    AtomicReference<SimpleConnectionPool<PooledConnection>> connectionPool = new AtomicReference<>();
-    try {
-      connectionPool.set(getWaitersQueue(pool));
-    } catch (IllegalStateException ex) {
-      logger.error(ex.getMessage());
-      promise.fail(ex);
-    }
-    databaseWriteStream.setCapacityChecker(() -> connectionPool.get()
-      .waiters() > 20);
-
-    var responseChecked = new AtomicBoolean();
-    var responseCheckAttempts = new AtomicInteger(30);
+  private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
+                                    String tenant, String requestId, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise ) {
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
-    jsonParser.pipeTo(databaseWriteStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(databaseWriteStream, responseChecked, responseCheckAttempts));
+    var batch = new ArrayList<JsonEvent>();
+    jsonParser.handler(event -> {
+      batch.add(event);
+      if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
+        jsonParser.pause();
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
+        batch.clear();
+      }
+    });
+    jsonParser.endHandler(e -> {
+      if (!batch.isEmpty()) {
+        jsonParser.pause();
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
+        batch.clear();
+      }
+      downloadInstancesPromise.complete();
+    });
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
-      closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
+      downloadInstancesPromise.complete(throwable);
       promise.fail(throwable);
     });
 
@@ -334,25 +313,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .onSuccess(resp -> {
         if (resp.statusCode() != 200) {
           String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
-          closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
-          responseChecked.set(true);
           promise.fail(new IllegalStateException(errorMsg));
         }
-        responseChecked.set(true);
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
-            throwable);
-        closeStreamRelatedObjects(databaseWriteStream, Optional.of(throwable));
-        responseChecked.set(true);
+          throwable);
         promise.fail(throwable);
       });
-
-    databaseWriteStream.exceptionHandler(e -> {
-      if (e != null) {
-        handleException(promise, e);
-      }
-    });
   }
 
   private HttpRequest<Buffer> buildInventoryQuery(Request request) {
@@ -389,7 +357,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return httpRequest;
   }
 
-  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, Context context, String requestId,
+  private Promise<List<JsonObject>> getNextInstances(Request request, int batchSize, String requestId,
       boolean firstBatch) {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
@@ -406,7 +374,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             request.setNextInstancePkValue(instances.get(batchSize)
               .getId());
           }
-          return enrichInstances(jsonInstances, request, context);
+          return enrichInstances(jsonInstances, request);
         }
         logger.debug("Skipping enrich instances call, empty instance ids list returned.");
         return Future.succeededFuture(Collections.emptyList());
@@ -461,7 +429,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     };
   }
 
-  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request, Context context) {
+  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request) {
     Map<String, JsonObject> instances = result.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
     Promise<List<JsonObject>> completePromise = Promise.promise();
@@ -476,35 +444,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
-    var itemsAndHoldingsStream = new BatchStreamWrapper(DATABASE_FETCHING_CHUNK_SIZE);
-
-    // setup pgPool availability checker
-    AtomicReference<SimpleConnectionPool<PooledConnection>> queue = new AtomicReference<>();
-    try {
-      queue.set(getWaitersQueue(PostgresClientFactory.getPool(context.owner(), request.getTenant())));
-    } catch (IllegalStateException ex) {
-      logger.error(ex.getMessage());
-      completePromise.fail(ex);
-      return completePromise.future();
-    }
-    itemsAndHoldingsStream.setCapacityChecker(() -> queue.get()
-      .waiters() > 20);
-
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    // setup json parser and pipe to write stream
-    var responseChecked = new AtomicBoolean();
-    var responseCheckAttempts = new AtomicInteger(RESPONSE_CHECK_ATTEMPTS);
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
-    jsonParser.pipeTo(itemsAndHoldingsStream);
-    jsonParser.endHandler(e -> closeStreamRelatedObjects(itemsAndHoldingsStream, responseChecked, responseCheckAttempts));
+    jsonParser.handler(event -> {
+      JsonObject itemsAndHoldingsFields = event.objectValue();
+      String instanceId = itemsAndHoldingsFields.getString(INSTANCE_ID_FIELD_NAME);
+      JsonObject instance = instances.get(instanceId);
+      if (instance != null) {
+        enrichDiscoverySuppressed(itemsAndHoldingsFields, instance);
+        instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsAndHoldingsFields);
+        // case when no items
+        if (itemsAndHoldingsFields.getJsonArray(ITEMS)
+          .isEmpty()) {
+          enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
+        } else {
+          adjustItems(instance);
+        }
+      } else {
+        logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
+      }
+    });
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
           throwable);
-      closeStreamRelatedObjects(itemsAndHoldingsStream, Optional.of(throwable));
       completePromise.fail(throwable);
     });
 
@@ -516,51 +482,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, httpResponse.statusMessage());
           String errorMessage = errorFromStorageMessage + httpResponse.statusCode();
           logger.error(errorMessage);
-          responseChecked.set(true);
           completePromise.fail(new IllegalStateException(errorFromStorageMessage));
         }
-        responseChecked.set(true);
+        completePromise.complete(new ArrayList<>(instances.values()));
       })
       .onFailure(e -> {
         logger.error(e.getMessage());
-        responseChecked.set(true);
         completePromise.fail(e);
       });
-
-    // set batch handler
-    itemsAndHoldingsStream.handleBatch(batch -> {
-      try {
-        for (JsonEvent jsonEvent : batch) {
-          JsonObject itemsandholdingsfields = jsonEvent.objectValue();
-          String instanceId = itemsandholdingsfields.getString(INSTANCE_ID_FIELD_NAME);
-          JsonObject instance = instances.get(instanceId);
-          if (instance != null) {
-            enrichDiscoverySuppressed(itemsandholdingsfields, instance);
-            instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsandholdingsfields);
-            // case when no items
-            if (itemsandholdingsfields.getJsonArray(ITEMS)
-              .isEmpty()) {
-              enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
-            } else {
-              adjustItems(instance);
-            }
-          } else {
-            logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
-          }
-        }
-
-        if (itemsAndHoldingsStream.isTheLastBatch()) {
-          if (itemsAndHoldingsStream.isEndedWithError()) {
-            completePromise.tryFail(itemsAndHoldingsStream.getCause());
-          } else {
-            completePromise.complete(new ArrayList<>(instances.values()));
-          }
-        }
-      } catch (Exception e) {
-        completePromise.fail(e);
-      }
-    });
-
     return completePromise.future();
   }
 
@@ -779,18 +708,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, Request request, String requestId,
-      BatchStreamWrapper databaseWriteStream, PostgresClient postgresClient) {
+  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
+                                         PostgresClient postgresClient, JsonParser jsonParser) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
-    saveInstances(instancesList, request.getTenant(), requestId, postgresClient).onComplete(res -> {
+    saveInstances(instancesList, tenant, requestId, postgresClient).onComplete(res -> {
       if (res.failed()) {
         logger.error("Cannot save the ids, error from the database: {}.", res.cause()
           .getMessage(), res.cause());
         promise.fail(res.cause());
+        instances.clear();
       } else {
         promise.complete();
-        databaseWriteStream.invokeDrainHandler();
+        instances.clear();
+        jsonParser.resume();
       }
     });
     return promise;
