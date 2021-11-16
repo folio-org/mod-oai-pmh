@@ -227,7 +227,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
 
           List<JsonObject> instances = fut.result();
-          logger.info("Processing instances: {}.", instances.size());
+          logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
@@ -344,7 +344,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     String inventoryQuery = format("%s%s?%s", request.getOkapiUrl(), INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
 
-    logger.info("Sending request to {}", inventoryQuery);
+    logger.debug("Sending request to {}", inventoryQuery);
     final HttpRequest<Buffer> httpRequest = WebClientProvider.getWebClientToDownloadInstances()
       .getAbs(inventoryQuery);
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
@@ -566,7 +566,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Response> promise = Promise.promise();
     try {
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
-      logger.info("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
+      logger.debug("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && firstBatch) {
