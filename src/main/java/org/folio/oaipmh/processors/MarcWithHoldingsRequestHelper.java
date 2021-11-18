@@ -101,7 +101,7 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 100;
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 10000;
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
@@ -713,15 +713,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, tenant, requestId, postgresClient).onComplete(res -> {
+      jsonParser.resume();
+      instances.clear();
       if (res.failed()) {
         logger.error("Cannot save the ids, error from the database: {}.", res.cause()
           .getMessage(), res.cause());
         promise.fail(res.cause());
-        instances.clear();
       } else {
         promise.complete();
-        instances.clear();
-        jsonParser.resume();
       }
     });
     return promise;
