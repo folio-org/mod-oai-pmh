@@ -298,6 +298,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
         batch.clear();
+        downloadInstancesPromise.complete();
       }
     });
     jsonParser.exceptionHandler(throwable -> {
@@ -314,7 +315,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
           promise.fail(new IllegalStateException(errorMsg));
         }
-        downloadInstancesPromise.complete();
+        downloadInstancesPromise.tryComplete();
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
