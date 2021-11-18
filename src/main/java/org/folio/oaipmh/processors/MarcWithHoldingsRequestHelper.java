@@ -298,8 +298,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
         batch.clear();
-        downloadInstancesPromise.complete();
       }
+      downloadInstancesPromise.complete();
     });
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
