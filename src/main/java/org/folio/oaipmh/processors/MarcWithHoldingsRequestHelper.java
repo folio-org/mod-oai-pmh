@@ -101,7 +101,7 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 10000;
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 5000;
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
 
@@ -304,8 +304,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
-      downloadInstancesPromise.complete(throwable);
-      promise.fail(throwable);
     });
 
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
@@ -321,6 +319,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
         promise.fail(throwable);
+        downloadInstancesPromise.complete(throwable);
       });
   }
 

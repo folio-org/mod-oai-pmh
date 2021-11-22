@@ -34,7 +34,8 @@ public class WebClientProvider {
     webClient = WebClient.create(vertx);
     WebClientOptions options = new WebClientOptions()
       .setKeepAliveTimeout(KEEP_ALIVE_SEC)
-      .setConnectTimeout(DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS);
+      .setConnectTimeout(DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS)
+      .setMaxChunkSize(256).setReceiveBufferSize(10 * 1024);
     webClientToDownloadInstances = WebClient.create(vertx, options);
   }
 
