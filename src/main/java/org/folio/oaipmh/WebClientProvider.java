@@ -20,6 +20,8 @@ public class WebClientProvider {
   private static final int DEFAULT_CONNECTION_TIMEOUT_MS = 2000;
   private static final int DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS = 604800000;
   private static final int KEEP_ALIVE_SEC = 1200;
+  private static final int MAX_CHUNK_SIZE = 256;
+  private static final int RECEIVE_BUFFER_SIZE = 10*1024;
   private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static Vertx vertx;
@@ -34,7 +36,8 @@ public class WebClientProvider {
     webClient = WebClient.create(vertx);
     WebClientOptions options = new WebClientOptions()
       .setKeepAliveTimeout(KEEP_ALIVE_SEC)
-      .setConnectTimeout(DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS);
+      .setConnectTimeout(DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS)
+      .setMaxChunkSize(MAX_CHUNK_SIZE).setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
     webClientToDownloadInstances = WebClient.create(vertx, options);
   }
 
