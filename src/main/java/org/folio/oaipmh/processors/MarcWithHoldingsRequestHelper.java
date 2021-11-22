@@ -304,6 +304,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.exceptionHandler(throwable -> {
       logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
+      downloadInstancesPromise.complete(throwable);
+      promise.fail(throwable);
     });
 
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
@@ -319,7 +321,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
         promise.fail(throwable);
-        downloadInstancesPromise.complete(throwable);
       });
   }
 
