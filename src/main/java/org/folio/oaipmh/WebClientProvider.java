@@ -21,7 +21,7 @@ public class WebClientProvider {
   private static final int DOWNLOAD_INSTANCE_CONNECTION_TIMEOUT_MS = 604800000;
   private static final int KEEP_ALIVE_SEC = 1200;
   private static final int MAX_CHUNK_SIZE = 256;
-  private static final int RECEIVE_BUFFER_SIZE = 10*1024;
+  private static final int RECEIVE_BUFFER_SIZE = 2 * 1024;
   private static final String GET_IDLE_TIMEOUT_ERROR_MESSAGE = "Error occurred during resolving the idle timeout setting value. Setup client with default idle timeout " + DEFAULT_IDLE_TIMEOUT_SEC + " seconds.";
 
   private static Vertx vertx;
