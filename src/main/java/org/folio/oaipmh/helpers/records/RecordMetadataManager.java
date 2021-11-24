@@ -36,6 +36,8 @@ public class RecordMetadataManager {
   private static final String ELECTRONIC_ACCESS_FIELD_TAG_NUMBER = "856";
   private static final String EFFECTIVE_LOCATION_FIELD_TAG_NUMBER = "952";
 
+  private static final String HOLDINGS_RECORD_FIELD_TAG_NUMBER = "998";
+
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
   private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
@@ -57,6 +59,8 @@ public class RecordMetadataManager {
   public static final String CALL_NUMBER = "callNumber";
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
+  public static final String PERMANENT_LOCATION = "permanentLocation";
+  public static final String HOLDINGS_STATEMENTS = "holdingsStatements";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
@@ -141,9 +145,10 @@ public class RecordMetadataManager {
 
     if (Objects.nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      holdings.forEach(holding ->
-        updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing)
-      );
+      holdings.forEach(holding -> {
+        updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing);
+        updateFieldsWithHoldingsRecordField((JsonObject) holding, fieldsList, suppressedRecordsProcessing);
+      });
     }
     return srsInstance;
   }
@@ -217,6 +222,31 @@ public class RecordMetadataManager {
     }
   }
 
+  /**
+   * Constructs field with subfields which is build from holdings record data. Constructed field has tag number = 999 and both
+   * indicators has ' ' value.
+   *
+   * @param jsonData                    - json of single item or holding
+   * @param marcRecordFields            - fields list to be updated with new one
+   * @param suppressedRecordsProcessing - include suppressed flag in 999 field?
+   */
+  private void updateFieldsWithHoldingsRecordField(JsonObject jsonData,
+                                                   List<Object> marcRecordFields,
+                                                   boolean suppressedRecordsProcessing) {
+    Map<String, Object> holdingsRecordSubFields = constructHoldingsRecordSubFieldsMap(jsonData);
+    if (suppressedRecordsProcessing) {
+      int subFieldValue = BooleanUtils.isFalse(jsonData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+      holdingsRecordSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
+    }
+    FieldBuilder fieldBuilder = new FieldBuilder();
+    Map<String, Object> holdingsRecordField = fieldBuilder.withFieldTagNumber(HOLDINGS_RECORD_FIELD_TAG_NUMBER)
+      .withFirstIndicator(INDICATOR_VALUE)
+      .withSecondIndicator(INDICATOR_VALUE)
+      .withSubFields(holdingsRecordSubFields)
+      .build();
+    marcRecordFields.add(holdingsRecordField);
+  }
+
   private List<String> resolveIndicatorsValue(JsonObject electronicAccess) {
     String name = electronicAccess.getString(NAME);
     String key = StringUtils.isNotEmpty(name) ? name : EMPTY;
@@ -256,6 +286,37 @@ public class RecordMetadataManager {
           effectiveLocationSubFields.put(subFieldCode, subFieldValue);
         }
       });
+    }
+  }
+
+  private Map<String, Object> constructHoldingsRecordSubFieldsMap(JsonObject holdingsData) {
+    Map<String, Object> holdingsRecordSubFields = new HashMap<>();
+    JsonObject locationGroup = null;
+    if (Objects.nonNull(holdingsData.getJsonObject(LOCATION))) {
+      locationGroup = holdingsData.getJsonObject(LOCATION)
+        .getJsonObject(PERMANENT_LOCATION);
+    }
+    JsonObject callNumberGroup = holdingsData.getJsonObject(CALL_NUMBER);
+    JsonArray holdingsStatementsGroup = holdingsData.getJsonArray(HOLDINGS_STATEMENTS);
+
+    addSubFieldGroup(holdingsRecordSubFields, locationGroup, HoldingsRecordSubFields.PERMANENT_LOCATION_NAME);
+    addSubFieldGroup(holdingsRecordSubFields, callNumberGroup, HoldingsRecordSubFields.CALL_NUMBER);
+
+    holdingsStatementsGroup.forEach(statementData -> {
+      addSubFieldGroup(holdingsRecordSubFields, (JsonObject) statementData, HoldingsRecordSubFields.STATEMENT);
+    });
+
+    return holdingsRecordSubFields;
+  }
+
+  private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject holdingsData,
+                                HoldingsRecordSubFields subFieldGroupProperty) {
+    if(Objects.nonNull(holdingsData)) {
+      String subFieldCode = subFieldGroupProperty.getSubFieldCode();
+      String subFieldValue = holdingsData.getString(subFieldGroupProperty.getJsonPropertyPath());
+      if (isNotEmpty(subFieldValue)) {
+        effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+      }
     }
   }
 
@@ -400,6 +461,28 @@ public class RecordMetadataManager {
     private String jsonPropertyPath;
 
     ElectronicAccessSubFields(String subFieldCode, String jsonPropertyPath) {
+      this.subFieldCode = subFieldCode;
+      this.jsonPropertyPath = jsonPropertyPath;
+    }
+
+    public String getSubFieldCode() {
+      return subFieldCode;
+    }
+
+    public String getJsonPropertyPath() {
+      return jsonPropertyPath;
+    }
+  }
+
+  private enum HoldingsRecordSubFields {
+    CALL_NUMBER("a", "callNumber"),
+    PERMANENT_LOCATION_NAME("l", "name"),
+    STATEMENT("s", "statement");
+
+    private String subFieldCode;
+    private String jsonPropertyPath;
+
+    HoldingsRecordSubFields(String subFieldCode, String jsonPropertyPath) {
       this.subFieldCode = subFieldCode;
       this.jsonPropertyPath = jsonPropertyPath;
     }
