@@ -303,9 +303,9 @@ public class RecordMetadataManager {
     addSubFieldGroup(holdingsRecordSubFields, callNumberGroup, HoldingsRecordSubFields.CALL_NUMBER);
 
     if (Objects.nonNull(holdingsStatementsGroup)) {
-      holdingsStatementsGroup.forEach(statementData -> {
-        addSubFieldGroup(holdingsRecordSubFields, (JsonObject) statementData, HoldingsRecordSubFields.STATEMENT);
-      });
+      holdingsStatementsGroup.forEach(statementData ->
+        addSubFieldGroup(holdingsRecordSubFields, (JsonObject) statementData, HoldingsRecordSubFields.STATEMENT)
+      );
     }
 
     return holdingsRecordSubFields;
