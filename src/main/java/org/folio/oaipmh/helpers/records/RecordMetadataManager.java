@@ -33,8 +33,8 @@ import io.vertx.core.json.JsonObject;
 public class RecordMetadataManager {
 
   private static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
-  private static final String ELECTRONIC_ACCESS_FILED_TAG_NUMBER = "856";
-  private static final String EFFECTIVE_LOCATION_FILED_TAG_NUMBER = "952";
+  private static final String ELECTRONIC_ACCESS_FIELD_TAG_NUMBER = "856";
+  private static final String EFFECTIVE_LOCATION_FIELD_TAG_NUMBER = "952";
 
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
@@ -79,8 +79,8 @@ public class RecordMetadataManager {
     };
 
     electronicAccessPredicate = jsonObject -> {
-      if (jsonObject.containsKey(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)) {
-        JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
+      if (jsonObject.containsKey(ELECTRONIC_ACCESS_FIELD_TAG_NUMBER)) {
+        JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FIELD_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
         return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotBlank(secondIndicator);
@@ -173,7 +173,7 @@ public class RecordMetadataManager {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
     FieldBuilder fieldBuilder = new FieldBuilder();
-    Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
+    Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FIELD_TAG_NUMBER)
       .withFirstIndicator(INDICATOR_VALUE)
       .withSecondIndicator(INDICATOR_VALUE)
       .withSubFields(effectiveLocationSubFields)
@@ -205,7 +205,7 @@ public class RecordMetadataManager {
           }
           if (CollectionUtils.isNotEmpty(indicators)) {
             Map<String, Object> electronicAccessField = fieldBuilder
-              .withFieldTagNumber(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)
+              .withFieldTagNumber(ELECTRONIC_ACCESS_FIELD_TAG_NUMBER)
               .withFirstIndicator(indicators.get(FIRST_INDICATOR_INDEX))
               .withSecondIndicator(indicators.get(SECOND_INDICATOR_INDEX))
               .withSubFields(electronicAccessSubFields)
@@ -304,7 +304,7 @@ public class RecordMetadataManager {
     JsonArray fields = content.getJsonArray(FIELDS);
     Optional<JsonObject> electronicAccessField = getElectronicAccessField(fields);
     electronicAccessField.ifPresent(jsonObject ->
-      updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, ELECTRONIC_ACCESS_FILED_TAG_NUMBER));
+      updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, ELECTRONIC_ACCESS_FIELD_TAG_NUMBER));
     return content.encode();
   }
 
