@@ -302,9 +302,11 @@ public class RecordMetadataManager {
     addSubFieldGroup(holdingsRecordSubFields, locationGroup, HoldingsRecordSubFields.PERMANENT_LOCATION_NAME);
     addSubFieldGroup(holdingsRecordSubFields, callNumberGroup, HoldingsRecordSubFields.CALL_NUMBER);
 
-    holdingsStatementsGroup.forEach(statementData -> {
-      addSubFieldGroup(holdingsRecordSubFields, (JsonObject) statementData, HoldingsRecordSubFields.STATEMENT);
-    });
+    if (Objects.nonNull(holdingsStatementsGroup)) {
+      holdingsStatementsGroup.forEach(statementData -> {
+        addSubFieldGroup(holdingsRecordSubFields, (JsonObject) statementData, HoldingsRecordSubFields.STATEMENT);
+      });
+    }
 
     return holdingsRecordSubFields;
   }
