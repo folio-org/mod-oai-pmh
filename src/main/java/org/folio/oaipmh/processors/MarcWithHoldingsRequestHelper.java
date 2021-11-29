@@ -288,15 +288,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        jsonParser.pause();
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient);
         batch.clear();
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        jsonParser.pause();
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient, jsonParser);
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
         batch.clear();
       }
       downloadInstancesPromise.complete();
@@ -710,11 +708,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
-                                         PostgresClient postgresClient, JsonParser jsonParser) {
+                                         PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, tenant, requestId, postgresClient).onComplete(res -> {
-      jsonParser.resume();
       instances.clear();
       if (res.failed()) {
         logger.error("Cannot save the ids, error from the database: {}.", res.cause()
