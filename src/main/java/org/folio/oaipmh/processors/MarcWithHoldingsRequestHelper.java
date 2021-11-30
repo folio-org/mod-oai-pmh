@@ -712,7 +712,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, tenant, requestId, postgresClient).onComplete(res -> {
-      instances.clear();
       if (res.failed()) {
         logger.error("Cannot save the ids, error from the database: {}.", res.cause()
           .getMessage(), res.cause());
