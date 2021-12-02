@@ -1,5 +1,15 @@
 ## 3.7.0 - Unreleased
 
+## 3.6.1 (Released)
+
+This release contains memory usage improvements.
+
+### Bug fixes
+
+* [MODOAIPMH-374](https://issues.folio.org/browse/MODOAIPMH-374) Fix memory issues for mod-oai-pmh module
+
+  [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.6.0...v3.6.1)
+
 ## 3.6.0 (Released)
 
 This release contains memory usage, database population, handling marc21_withholding, resumption token improvements and bug fixes.
