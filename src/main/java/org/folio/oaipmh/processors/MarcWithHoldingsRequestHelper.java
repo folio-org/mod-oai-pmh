@@ -761,7 +761,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return jsonEventInstances.stream()
       .map(JsonEvent::objectValue)
       .map(inst -> new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
-        .setJson("{}")
+        .setJson(inst.toString())
         .setRequestId(requestId))
       .collect(Collectors.toList());
   }

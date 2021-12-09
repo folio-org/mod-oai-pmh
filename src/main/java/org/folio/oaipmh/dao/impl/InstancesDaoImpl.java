@@ -25,8 +25,14 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
+import org.jooq.FieldLike;
 import org.jooq.InsertValuesStep3;
+import org.jooq.Query;
 import org.jooq.Record;
+import org.jooq.TableRecord;
+import org.jooq.UpdateConditionStep;
+import org.jooq.impl.TableRecordImpl;
+import org.jooq.impl.UpdatableRecordImpl;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
@@ -193,7 +199,7 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
       InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
           INSTANCES.JSON, INSTANCES.REQUEST_ID);
-      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), "{}", instance.getRequestId()));
+      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
       return insertValues;
     })
       .map(rows -> null));
