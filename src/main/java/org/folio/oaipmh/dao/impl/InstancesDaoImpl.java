@@ -193,7 +193,7 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
       InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
           INSTANCES.JSON, INSTANCES.REQUEST_ID);
-      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
+      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), "{}", instance.getRequestId()));
       return insertValues;
     })
       .map(rows -> null));

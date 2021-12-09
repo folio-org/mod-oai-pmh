@@ -103,7 +103,7 @@ public class PostgresClientFactory {
   private static PgConnectOptions getConnectOptions(Vertx vertx, String tenantId) {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     JsonObject postgreSQLClientConfig = postgresClient.getConnectionConfig();
-    postgresClient.closeClient();
+//    postgresClient.closeClient();
     return new PgConnectOptions()
       .setHost(postgreSQLClientConfig.getString(HOST))
       .setPort(postgreSQLClientConfig.getInteger(PORT))
