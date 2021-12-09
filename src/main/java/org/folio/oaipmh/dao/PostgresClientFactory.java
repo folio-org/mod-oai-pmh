@@ -110,7 +110,7 @@ public class PostgresClientFactory {
       .setDatabase(postgreSQLClientConfig.getString(DATABASE))
       .setUser(postgreSQLClientConfig.getString(USERNAME))
       .setPassword(postgreSQLClientConfig.getString(PASSWORD))
-      .setConnectTimeout(600000)
+      .setConnectTimeout(6000000)
       // using RMB convention driven tenant to schema name
       .addProperty(DEFAULT_SCHEMA_PROPERTY, PostgresClient.convertToPsqlStandard(tenantId));
   }
