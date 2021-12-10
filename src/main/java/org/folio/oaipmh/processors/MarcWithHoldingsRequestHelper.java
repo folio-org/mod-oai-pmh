@@ -12,7 +12,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.impl.pool.SimpleConnectionPool;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
@@ -20,7 +19,6 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
-import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -31,14 +29,12 @@ import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -47,11 +43,8 @@ import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ReflectionUtils;
 
-import javax.sql.PooledConnection;
 import javax.ws.rs.core.Response;
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -65,14 +58,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -300,7 +290,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       downloadInstancesPromise.complete();
     });
     jsonParser.exceptionHandler(throwable -> {
-      logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
+      logger.error("Error has been occurred at JsonParser while reading data from response while setting up batch http stream. Message: {}", throwable.getMessage(),
           throwable);
       downloadInstancesPromise.complete(throwable);
       promise.fail(throwable);
@@ -316,7 +306,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         downloadInstancesPromise.tryComplete();
       })
       .onFailure(throwable -> {
-        logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
+        logger.error("Error has been occurred on failure of inventory http request. Message: {}", throwable.getMessage(),
           throwable);
         promise.fail(throwable);
       });
@@ -468,7 +458,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       }
     });
     jsonParser.exceptionHandler(throwable -> {
-      logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
+      logger.error("Error has been occurred at JsonParser while reading data from response while enriching instances. Message:{}", throwable.getMessage(),
           throwable);
       completePromise.fail(throwable);
     });
@@ -476,6 +466,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
       .sendBuffer(entries.toBuffer())
       .onSuccess(httpResponse -> {
+        logger.info("Response for items and holdings {}: {}", httpResponse.statusCode(), httpResponse.statusMessage());
         if (httpResponse.statusCode() != 200) {
           String errorFromStorageMessage = getErrorFromStorageMessage("inventory-storage",
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, httpResponse.statusMessage());
@@ -490,27 +481,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         completePromise.fail(e);
       });
     return completePromise.future();
-  }
-
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, Optional<Throwable> optional) {
-    if (optional.isPresent()) {
-      databaseWriteStream.endWithError(optional.get());
-    } else {
-      databaseWriteStream.end();
-    }
-  }
-
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, AtomicBoolean responseChecked,
-      AtomicInteger attempts) {
-    VertxUtils.getVertxFromContextOrNew()
-      .setTimer(500, id -> {
-        if (responseChecked.get() || attempts.get() == 0) {
-          closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
-        } else {
-          attempts.decrementAndGet();
-          closeStreamRelatedObjects(databaseWriteStream, responseChecked, attempts);
-        }
-      });
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
@@ -679,32 +649,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private boolean isSkipSuppressed(Request request) {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-  }
-
-  /**
-   * Here the reflection is used by the reason that we need to have an access to vert.x "waiters" objects which are accumulated when
-   * batches are saved to database, the handling batches from inventory view is performed match faster versus saving to database. By
-   * this reason in some time we got a lot of waiters objects which holds many of others as well and this leads to OutOfMemory. In
-   * solution we just don't allow to request new batches while we have 20 waiters objects which perform saving instances to DB. In
-   * future we can consider using static AtomicInteger to count the number of current db requests. It will be more readable in code,
-   * but less reliable because wouldn't take into account other requests.
-   */
-  private Object getValueFrom(Object obj, String fieldName) {
-    Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
-    ReflectionUtils.makeAccessible(field);
-    return ReflectionUtils.getField(field, obj);
-  }
-
-  private SimpleConnectionPool<PooledConnection> getWaitersQueue(PgPool pgPool) {
-    if (Objects.nonNull(pgPool)) {
-      try {
-        return (SimpleConnectionPool<PooledConnection>) getValueFrom(getValueFrom(pgPool, "pool"), "pool");
-      } catch (NullPointerException ex) {
-        throw new IllegalStateException("Cannot get the pool size. Object for retrieving field is null.");
-      }
-    } else {
-      throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
-    }
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
