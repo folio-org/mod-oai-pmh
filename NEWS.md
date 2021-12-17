@@ -1,3 +1,13 @@
+## 3.5.1 (Released)
+
+This release contains fix for log4j vulnerability
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.5.0...v3.5.1)
+
+### Bug fixes
+
+* [MODOAIPMH-380](https://issues.folio.org/browse/MODOAIPMH-380) - Kiwi R3 2021 - Log4j vulnerability verification and correction
+
 ## 3.5.0 (Released) 2021-06-08
 
 This release contains an incrementation of SRS interface versions and bugfix for handling marc21 and oai_dc metadata prefixes.
