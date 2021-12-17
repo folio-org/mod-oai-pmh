@@ -1,5 +1,15 @@
 ## 3.7.0 - Unreleased
 
+## 3.6.2 (Released)
+
+This release contains fix for log4j vulnerability
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.6.1...v3.6.2)
+
+### Bug fixes
+
+* [MODOAIPMH-380](https://issues.folio.org/browse/MODOAIPMH-380) - Kiwi R3 2021 - Log4j vulnerability verification and correction
+
 ## 3.6.1 (Released)
 
 This release contains memory usage improvements.
