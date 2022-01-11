@@ -23,8 +23,6 @@ public abstract class AbstractInstancesTest {
 
   protected static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
 
-  protected static final String COMMON_JSON = "{\"instanceId\": \"00000000-0000-4000-a000-000000000000\", \"source\": \"FOLIO\", \"updatedDate\": \"2020-06-15T11:07:48.563Z\",  \"deleted\": \"false\",  \"suppressFromDiscovery\": \"false\"}";
-
   protected static final String EXPIRED_REQUEST_ID = UUID.randomUUID()
     .toString();
   protected static final String REQUEST_ID = UUID.randomUUID()
@@ -57,8 +55,10 @@ public abstract class AbstractInstancesTest {
     .setLastUpdatedDate(notExpiredDate);
 
   protected static final Instances instance_1 = new Instances().setInstanceId(UUID.fromString(EXPIRED_INSTANCE_ID))
+    .setSuppressFromDiscovery(false)
     .setRequestId(UUID.fromString(EXPIRED_REQUEST_ID));
   protected static final Instances instance_2 = new Instances().setInstanceId(UUID.fromString(INSTANCE_ID))
+    .setSuppressFromDiscovery(false)
     .setRequestId(UUID.fromString(REQUEST_ID));
 
   protected static final List<Instances> instancesList = List.of(instance_1, instance_2);
