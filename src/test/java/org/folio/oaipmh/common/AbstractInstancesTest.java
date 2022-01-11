@@ -57,10 +57,8 @@ public abstract class AbstractInstancesTest {
     .setLastUpdatedDate(notExpiredDate);
 
   protected static final Instances instance_1 = new Instances().setInstanceId(UUID.fromString(EXPIRED_INSTANCE_ID))
-    .setJson(COMMON_JSON)
     .setRequestId(UUID.fromString(EXPIRED_REQUEST_ID));
   protected static final Instances instance_2 = new Instances().setInstanceId(UUID.fromString(INSTANCE_ID))
-    .setJson(COMMON_JSON)
     .setRequestId(UUID.fromString(REQUEST_ID));
 
   protected static final List<Instances> instancesList = List.of(instance_1, instance_2);
