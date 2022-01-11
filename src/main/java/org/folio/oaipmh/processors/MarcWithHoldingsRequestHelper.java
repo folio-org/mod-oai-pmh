@@ -43,10 +43,8 @@ import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.ReflectionUtils;
 
 import javax.ws.rs.core.Response;
-import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -65,7 +63,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -651,20 +648,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private boolean isSkipSuppressed(Request request) {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-  }
-
-  /**
-   * Here the reflection is used by the reason that we need to have an access to vert.x "waiters" objects which are accumulated when
-   * batches are saved to database, the handling batches from inventory view is performed match faster versus saving to database. By
-   * this reason in some time we got a lot of waiters objects which holds many of others as well and this leads to OutOfMemory. In
-   * solution we just don't allow to request new batches while we have 20 waiters objects which perform saving instances to DB. In
-   * future we can consider using static AtomicInteger to count the number of current db requests. It will be more readable in code,
-   * but less reliable because wouldn't take into account other requests.
-   */
-  private Object getValueFrom(Object obj, String fieldName) {
-    Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
-    ReflectionUtils.makeAccessible(field);
-    return ReflectionUtils.getField(field, obj);
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
