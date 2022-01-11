@@ -364,7 +364,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
       .compose(instances -> {
-        //ToDo
         if (CollectionUtils.isNotEmpty(instances)) {
           List<JsonObject> jsonInstances = instances.stream()
             .map(instance -> "{\"" + INSTANCE_ID_FIELD_NAME + "\":\"" + instance.getInstanceId().toString() +  "\"}")
@@ -445,7 +444,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
     JsonObject entries = new JsonObject();
-    //ToDo
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
@@ -734,7 +732,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Void> promise = Promise.promise();
     postgresClient.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
-      // ToDo
       instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId))));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
           + ".instances (instance_id, request_id) VALUES ($1, $2) RETURNING instance_id";

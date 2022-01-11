@@ -26,7 +26,6 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.jooq.InsertValuesStep2;
-import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
 
