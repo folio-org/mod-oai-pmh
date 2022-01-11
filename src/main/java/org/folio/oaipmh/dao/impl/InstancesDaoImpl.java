@@ -25,6 +25,7 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
+import org.jooq.InsertValuesStep2;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
@@ -191,9 +192,9 @@ public class InstancesDaoImpl implements InstancesDao {
       return Future.succeededFuture();
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
-      InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
-          INSTANCES.JSON, INSTANCES.REQUEST_ID);
-      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
+      InsertValuesStep2<InstancesRecord, UUID, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
+        INSTANCES.REQUEST_ID);
+      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getRequestId()));
       return insertValues;
     })
       .map(rows -> null));
@@ -227,7 +228,6 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(row -> {
         Instances pojo = new Instances();
         pojo.setInstanceId(row.getUUID(INSTANCES.INSTANCE_ID.getName()));
-        pojo.setJson(row.getString(INSTANCES.JSON.getName()));
         pojo.setRequestId(row.getUUID(INSTANCES.REQUEST_ID.getName()));
         pojo.setId(row.getInteger(INSTANCES.ID.getName()));
         return pojo;

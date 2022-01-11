@@ -364,9 +364,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
       .compose(instances -> {
+        //ToDo
         if (CollectionUtils.isNotEmpty(instances)) {
           List<JsonObject> jsonInstances = instances.stream()
-            .map(Instances::getJson)
+            .map(instance -> "{\"" + INSTANCE_ID_FIELD_NAME + "\":\"" + instance.getInstanceId().toString() +  "\"}")
             .map(JsonObject::new)
             .collect(Collectors.toList());
           if (instances.size() > batchSize) {
@@ -444,6 +445,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
     JsonObject entries = new JsonObject();
+    //ToDo
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
@@ -732,10 +734,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Void> promise = Promise.promise();
     postgresClient.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
-      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId), inst.getJson())));
-
+      // ToDo
+      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId))));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
-          + ".instances (instance_id, request_id, json) VALUES ($1, $2, $3) RETURNING instance_id";
+          + ".instances (instance_id, request_id) VALUES ($1, $2) RETURNING instance_id";
 
       if (e.failed()) {
         logger.error("Save instance Ids failed: {}.", e.cause()
@@ -761,7 +763,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return jsonEventInstances.stream()
       .map(JsonEvent::objectValue)
       .map(inst -> new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
-        .setJson(inst.toString())
         .setRequestId(requestId))
       .collect(Collectors.toList());
   }
