@@ -97,6 +97,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
 
+  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
+
   private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
@@ -356,8 +358,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .compose(instances -> {
         if (CollectionUtils.isNotEmpty(instances)) {
           List<JsonObject> jsonInstances = instances.stream()
-            .map(instance -> "{\"" + INSTANCE_ID_FIELD_NAME + "\":\"" + instance.getInstanceId().toString() +  "\"}")
-            .map(JsonObject::new)
+            .map(this::getInstanceAsJsonObject)
             .collect(Collectors.toList());
           if (instances.size() > batchSize) {
             request.setNextInstancePkValue(instances.get(batchSize)
@@ -375,6 +376,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       });
 
     return promise;
+  }
+
+  private JsonObject getInstanceAsJsonObject(Instances instance) {
+    var jsonObject = new JsonObject();
+    jsonObject.put(INSTANCE_ID_FIELD_NAME, instance.getInstanceId().toString());
+    jsonObject.put(SUPPRESS_FROM_DISCOVERY, instance.getSuppressFromDiscovery());
+    return jsonObject;
   }
 
   private void getNextBatch(String requestId, Request request, boolean firstBatch, int batchSize,
@@ -483,7 +491,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
+    if (Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY)))
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
@@ -675,9 +683,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<Void> promise = Promise.promise();
     postgresClient.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
-      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId))));
+      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId), inst.getSuppressFromDiscovery())));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
-          + ".instances (instance_id, request_id) VALUES ($1, $2) RETURNING instance_id";
+          + ".instances (instance_id, request_id, suppress_from_discovery) VALUES ($1, $2, $3) RETURNING instance_id";
 
       if (e.failed()) {
         logger.error("Save instance Ids failed: {}.", e.cause()
@@ -703,6 +711,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return jsonEventInstances.stream()
       .map(JsonEvent::objectValue)
       .map(inst -> new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
+        .setSuppressFromDiscovery(Boolean.parseBoolean(inst.getString(SUPPRESS_FROM_DISCOVERY)))
         .setRequestId(requestId))
       .collect(Collectors.toList());
   }
