@@ -12,7 +12,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.impl.pool.SimpleConnectionPool;
 import io.vertx.core.parsetools.JsonEvent;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
@@ -20,7 +19,6 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
-import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -31,7 +29,6 @@ import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
@@ -39,7 +36,6 @@ import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
-import org.folio.rest.tools.utils.VertxUtils;
 import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -50,7 +46,6 @@ import org.openarchives.oai._2.StatusType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ReflectionUtils;
 
-import javax.sql.PooledConnection;
 import javax.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -66,9 +61,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -500,27 +493,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return completePromise.future();
   }
 
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, Optional<Throwable> optional) {
-    if (optional.isPresent()) {
-      databaseWriteStream.endWithError(optional.get());
-    } else {
-      databaseWriteStream.end();
-    }
-  }
-
-  private void closeStreamRelatedObjects(BatchStreamWrapper databaseWriteStream, AtomicBoolean responseChecked,
-      AtomicInteger attempts) {
-    VertxUtils.getVertxFromContextOrNew()
-      .setTimer(500, id -> {
-        if (responseChecked.get() || attempts.get() == 0) {
-          closeStreamRelatedObjects(databaseWriteStream, Optional.empty());
-        } else {
-          attempts.decrementAndGet();
-          closeStreamRelatedObjects(databaseWriteStream, responseChecked, attempts);
-        }
-      });
-  }
-
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
     if (Boolean.parseBoolean(instance.getString("suppressFromDiscovery")))
       for (Object item : itemsandholdingsfields.getJsonArray("items")) {
@@ -701,18 +673,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Field field = requireNonNull(ReflectionUtils.findField(requireNonNull(obj.getClass()), fieldName));
     ReflectionUtils.makeAccessible(field);
     return ReflectionUtils.getField(field, obj);
-  }
-
-  private SimpleConnectionPool<PooledConnection> getWaitersQueue(PgPool pgPool) {
-    if (Objects.nonNull(pgPool)) {
-      try {
-        return (SimpleConnectionPool<PooledConnection>) getValueFrom(getValueFrom(pgPool, "pool"), "pool");
-      } catch (NullPointerException ex) {
-        throw new IllegalStateException("Cannot get the pool size. Object for retrieving field is null.");
-      }
-    } else {
-      throw new IllegalStateException("Cannot obtain the pool. Pool is null.");
-    }
   }
 
   private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
