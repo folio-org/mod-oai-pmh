@@ -69,4 +69,14 @@
     </createIndex>
   </changeSet>
 
+  <changeSet id="2022-01-10--14-00-drop-json-column"  author="Aliaksei Harbuz">
+    <dropColumn tableName="instances" columnName="json" schemaName="${database.defaultSchemaName}" />
+  </changeSet>
+
+  <changeSet id="2022-01-11--14-00-add-suppress-from-discovery-column"  author="Aliaksei Harbuz">
+    <addColumn tableName="instances"  schemaName="${database.defaultSchemaName}">
+      <column name="suppress_from_discovery" type="boolean" />
+    </addColumn>
+  </changeSet>
+
 </databaseChangeLog>

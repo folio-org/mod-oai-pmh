@@ -191,9 +191,9 @@ public class InstancesDaoImpl implements InstancesDao {
       return Future.succeededFuture();
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
-      InsertValuesStep3<InstancesRecord, UUID, String, UUID> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
-          INSTANCES.JSON, INSTANCES.REQUEST_ID);
-      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getJson(), instance.getRequestId()));
+      InsertValuesStep3<InstancesRecord, UUID, UUID, Boolean> insertValues = dslContext.insertInto(INSTANCES, INSTANCES.INSTANCE_ID,
+        INSTANCES.REQUEST_ID, INSTANCES.SUPPRESS_FROM_DISCOVERY);
+      instances.forEach(instance -> insertValues.values(instance.getInstanceId(), instance.getRequestId(), instance.getSuppressFromDiscovery()));
       return insertValues;
     })
       .map(rows -> null));
@@ -227,8 +227,8 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(row -> {
         Instances pojo = new Instances();
         pojo.setInstanceId(row.getUUID(INSTANCES.INSTANCE_ID.getName()));
-        pojo.setJson(row.getString(INSTANCES.JSON.getName()));
         pojo.setRequestId(row.getUUID(INSTANCES.REQUEST_ID.getName()));
+        pojo.setSuppressFromDiscovery(row.getBoolean(INSTANCES.SUPPRESS_FROM_DISCOVERY.getName()));
         pojo.setId(row.getInteger(INSTANCES.ID.getName()));
         return pojo;
       })
