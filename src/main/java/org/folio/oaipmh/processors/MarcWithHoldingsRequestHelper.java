@@ -33,7 +33,8 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.streaming.BatchStreamWrapper;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.service.MetricsCollectingService;
+import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
@@ -98,6 +99,8 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
@@ -143,6 +146,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
   private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
 
+  private  MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
@@ -164,6 +168,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   @Override
   public Future<Response> handle(Request request, Context vertxContext) {
     Promise<Response> oaipmhResponsePromise = Promise.promise();
+    metricsCollectingService.startMetric(request.getRequestId(), SEND_REQUEST);
     try {
       String resumptionToken = request.getResumptionToken();
       List<OAIPMHerrorType> errors = validateListRequest(request);
@@ -207,7 +212,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     } catch (Exception e) {
       handleException(oaipmhResponsePromise, e);
     }
-    return oaipmhResponsePromise.future();
+    return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
@@ -252,10 +257,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               : instances.get(batchSize)
                 .getString(INSTANCE_ID_FIELD_NAME);
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
-          final SourceStorageSourceRecordsClient srsClient = createAndSetupSrsClient(request);
+          final SourceStorageSourceRecordsClientWrapper srsClient = createAndSetupSrsClient(request);
 
           int retryAttempts = Integer
             .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
+
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
                 deletedRecordSupport).onSuccess(oaiPmhResponsePromise::complete)
@@ -267,8 +273,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private SourceStorageSourceRecordsClient createAndSetupSrsClient(Request request) {
-    return new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
+  private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
+    return new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
         WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
@@ -373,7 +379,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             request.setNextInstancePkValue(instances.get(batchSize)
               .getId());
           }
-          return enrichInstances(jsonInstances, request);
+          metricsCollectingService.startMetric(requestId, INSTANCES_PROCESSING);
+          return enrichInstances(jsonInstances, request)
+                  .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INSTANCES_PROCESSING));
         }
         logger.debug("Skipping enrich instances call, empty instance ids list returned.");
         return Future.succeededFuture(Collections.emptyList());
@@ -766,7 +774,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(Collectors.toList());
   }
 
-  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClient srsClient, Vertx vertx,
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx,
       List<JsonObject> batch, boolean deletedRecordSupport, int retryAttempts) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.debug("Request to SRS, list id size: {}.", listOfIds.size());
@@ -776,7 +784,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private void doPostRequestToSrs(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport,
+  private void doPostRequestToSrs(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx, boolean deletedRecordSupport,
       List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise) {
     try {
       srsClient.postSourceStorageSourceRecords("INSTANCE", null, deletedRecordSupport, listOfIds, asyncResult -> {
@@ -813,7 +821,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private void retrySRSRequest(SourceStorageSourceRecordsClient srsClient, Vertx vertx, boolean deletedRecordSupport,
+  private void retrySRSRequest(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx, boolean deletedRecordSupport,
       List<String> listOfIds, AtomicInteger attemptsCount, Promise<Map<String, JsonObject>> promise, Map <String, String> retrySRSRequestParams) {
     if (Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)) > 0) {
       logger.debug("Got error response form SRS, status code: {}, status message: {}.",

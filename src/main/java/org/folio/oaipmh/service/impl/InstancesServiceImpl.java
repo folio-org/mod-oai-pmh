@@ -1,6 +1,7 @@
 package org.folio.oaipmh.service.impl;
 
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INVENTORY_STORAGE_RESPONSE;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.service.InstancesService;
+import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
@@ -26,6 +28,8 @@ public class InstancesServiceImpl implements InstancesService {
   protected final Logger logger = LogManager.getLogger(getClass());
 
   private InstancesDao instancesDao;
+
+  private MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
 
   public InstancesServiceImpl(InstancesDao instancesDao) {
     this.instancesDao = instancesDao;
@@ -94,7 +98,9 @@ public class InstancesServiceImpl implements InstancesService {
 
   @Override
   public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
-    return instancesDao.getInstancesList(limit, requestId, tenantId);
+    metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
+    return instancesDao.getInstancesList(limit, requestId, tenantId)
+            .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
   }
 
   @Override
