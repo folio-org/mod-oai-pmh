@@ -79,12 +79,16 @@ public class MetricsCollectingService {
   }
 
   public void startMetric(String requestId, MetricOperation operation) {
-    hits.put(buildKey(requestId, operation), new Hit().withStart(currentTimeMillis()));
+    if (log.isDebugEnabled()) {
+      hits.put(buildKey(requestId, operation), new Hit().withStart(currentTimeMillis()));
+    }
   }
 
   public void endMetric(String requestId, MetricOperation operation) {
-    var key = buildKey(requestId, operation);
-    hits.replace(key, hits.get(key).withEnd(currentTimeMillis()));
+    if (log.isDebugEnabled()) {
+      var key = buildKey(requestId, operation);
+      hits.replace(key, hits.get(key).withEnd(currentTimeMillis()));
+    }
   }
 
   public void reset() {
