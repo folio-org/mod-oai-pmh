@@ -293,7 +293,6 @@ public class OkapiMockServer {
       } else if (uri.contains(GET_INSTANCES_FORBIDDEN_RESPONSE_DATE)) {
         failureResponseWithForbidden(ctx);
       } else if (uri.contains(ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE)) {
-        logger.info("kek return mock response instance ids");
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON);
       } else {
         logger.debug("No mocks for the response, returning the default instance id.");
@@ -317,7 +316,6 @@ public class OkapiMockServer {
     } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS)) {
       inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCE_NO_ITEMS_JSON);
     } else if (instanceIds.contains(INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE)) {
-      logger.info("FORBIDDEN RESPONSE KEK");
       failureResponseWithForbidden(ctx);
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
