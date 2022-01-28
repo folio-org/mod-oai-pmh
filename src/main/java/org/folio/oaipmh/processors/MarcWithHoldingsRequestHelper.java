@@ -269,11 +269,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
-    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request.getTenant(), requestId, postgresClient, downloadInstancesPromise);
+    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise);
   }
 
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
-                                    String tenant, String requestId, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise) {
+                                    Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise) {
+    String tenant = request.getTenant();
+    String requestId = request.getRequestId();
+
     Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
@@ -287,7 +290,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        logger.info("kek2 saving instance ids with request id {}, batch: {}", requestId, batch.size() > 1 ? batch.get(0) : "null");
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
         batch.clear();
       }
@@ -307,13 +309,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
       .send()
       .onSuccess(resp -> {
-        logger.info("kek3 response body {}", resp.bodyAsJsonObject());
         switch (resp.statusCode()) {
           case 200:
             responseChecked.complete(false);
             break;
           case 403: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
+            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
             logger.error(errorMsg);
             promise.fail(new IllegalStateException(errorMsg));
             responseChecked.complete(true);
@@ -325,7 +326,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             responseChecked.complete(true);
           }
         }
-//        downloadInstancesPromise.tryComplete();
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
