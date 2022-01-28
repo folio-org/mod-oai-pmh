@@ -180,7 +180,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch);
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
-              downloadInstancesPromise, downloadContext, requestId), downloadInstancesResult -> {
+              downloadInstancesPromise, downloadContext), downloadInstancesResult -> {
                 instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
@@ -265,7 +265,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-                                 Context vertxContext, String requestId) {
+                                 Context vertxContext) {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());

@@ -101,6 +101,8 @@ public class OkapiMockServer {
   static final String NO_ITEMS_DATE = "2020-01-29";
   static final String GET_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-10";
   static final String ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-11";
+  static final String GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE = "2020-01-12";
+  static final String GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE = "2020-01-12";
 
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
   public static final String INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE = "2012-11-22";
@@ -178,16 +180,20 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON = "instance_id_invalid_enriched_instance.json";
   private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON = "inventory_instance_mock_forbidden_response.json";
+  private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON = "inventory_instance_mock_500_response.json";
+
   private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE = "8f33cdf4-6a85-4877-8b99-7d5e3be910f1";
+  private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE = "12d31a35-e6cf-4840-bd85-4ae51e02a741";
 
 
   private static final String JSON_TEMPLATE_KEY_RECORDS = "replace_with_records";
   private static final String JSON_TEMPLATE_KEY_TOTAL_COUNT = "replace_total_count";
   private static final int LAST_RECORDS_BATCH_OFFSET_VALUE = 8;
   private static final int LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON = 2;
+  private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
 
   private static int srsRerequestAttemptsCount = 4;
   private static int totalSrsRerequestCallsNumber = 0;
@@ -292,6 +298,10 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCE_NO_ITEMS_JSON);
       } else if (uri.contains(GET_INSTANCES_FORBIDDEN_RESPONSE_DATE)) {
         failureResponseWithForbidden(ctx);
+      } else if (uri.contains(GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE)) {
+        failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
+      } else if (uri.contains(GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON);
       } else if (uri.contains(ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON);
       } else {
@@ -317,6 +327,8 @@ public class OkapiMockServer {
       inventoryViewSuccessResponse(ctx, ENRICHED_INSTANCE_NO_ITEMS_JSON);
     } else if (instanceIds.contains(INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE)) {
       failureResponseWithForbidden(ctx);
+    } else if (instanceIds.contains(INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE)) {
+      failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
     }

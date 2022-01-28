@@ -128,7 +128,9 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_IDLE_TIMEOUT_ERROR_RE
 import static org.folio.rest.impl.OkapiMockServer.DEFAULT_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE;
+import static org.folio.rest.impl.OkapiMockServer.GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE;
 import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_FORBIDDEN_RESPONSE_DATE;
+import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_WITHOUT_SRS_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
@@ -2454,7 +2456,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingInstances(String encoding) {
+  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingInstancesIds(String encoding) {
     String metadataPrefix = MetadataPrefix.MARC21WITHHOLDINGS.getName();
     String set = "all";
 
@@ -2468,6 +2470,24 @@ class OaiPmhImplTest {
     addAcceptEncodingHeader(request, encoding);
 
     verify500WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
+  void shouldReturn500_whenGetInstancesIdsReturnedInternalServerError(String encoding) {
+    String metadataPrefix = MetadataPrefix.MARC21WITHHOLDINGS.getName();
+    String set = "all";
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE)
+      .param(SET_PARAM, set)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix);
+
+    addAcceptEncodingHeader(request, encoding);
+
+    verify500(request);
   }
 
   @Test
@@ -2497,6 +2517,24 @@ class OaiPmhImplTest {
     addAcceptEncodingHeader(request, encoding);
 
     verify500WithErrorMessage(request, CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
+  void shouldReturn500_whenGetEnrichedInstancesReturnedInternalServerError(String encoding) {
+    String metadataPrefix = MetadataPrefix.MARC21WITHHOLDINGS.getName();
+    String set = "all";
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE)
+      .param(SET_PARAM, set)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix);
+
+    addAcceptEncodingHeader(request, encoding);
+
+    verify500(request);
   }
 
   @Test
