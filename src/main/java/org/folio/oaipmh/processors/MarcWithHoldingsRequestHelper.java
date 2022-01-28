@@ -94,26 +94,20 @@ import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.
 
 public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 5000;
+  protected final Logger logger = LogManager.getLogger(getClass());
 
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
-
-  private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
-
-  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
-
   private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
 
+  private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
+  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
 
   private static final String START_DATE_PARAM_NAME = "startDate";
-
   private static final String END_DATE_PARAM_NAME = "endDate";
 
   private static final String TEMPORARY_LOCATION = "temporaryLocation";
-
   private static final String PERMANENT_LOCATION = "permanentLocation";
-
   private static final String EFFECTIVE_LOCATION = "effectiveLocation";
 
   private static final String CODE = "code";
@@ -121,27 +115,27 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final String HOLDINGS = "holdings";
 
   private static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
-
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
-  public static final int RESPONSE_CHECK_ATTEMPTS = 30;
+  private static final String DOWNLOAD_INSTANCES_MISSED_PERMISSION = "Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
+  private static final String INVENTORY_STORAGE = "inventory-storage";
 
-  protected final Logger logger = LogManager.getLogger(getClass());
-
-  public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
-  private final Vertx vertx;
-
+  private static final int DATABASE_FETCHING_CHUNK_SIZE = 5000;
   private static final int REREQUEST_SRS_DELAY = 2000;
-
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
   private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
 
-  private  MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
-  private InstancesService instancesService;
+  public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
+
+  private final Vertx vertx;
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
+
+  private MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+  private InstancesService instancesService;
 
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
@@ -279,39 +273,59 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
-                                    String tenant, String requestId, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise ) {
+                                    String tenant, String requestId, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise) {
+    Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId,  postgresClient);
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
         batch.clear();
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
+        logger.info("kek2 saving instance ids with request id {}, batch: {}", requestId, batch.size() > 1 ? batch.get(0) : "null");
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
         batch.clear();
       }
       downloadInstancesPromise.complete();
     });
-    jsonParser.exceptionHandler(throwable -> {
-      logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
+    jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
+        if (invalidResponseReceivedAndProcessed) {
+          return;
+        }
+        logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
           throwable);
-      downloadInstancesPromise.complete(throwable);
-      promise.fail(throwable);
-    });
+        downloadInstancesPromise.complete(throwable);
+        promise.fail(throwable);
+      })
+    );
 
     inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
       .send()
       .onSuccess(resp -> {
-        if (resp.statusCode() != 200) {
-          String errorMsg = getErrorFromStorageMessage("inventory-storage", inventoryHttpRequest.uri(), resp.statusMessage());
-          promise.fail(new IllegalStateException(errorMsg));
+        logger.info("kek3 response body {}", resp.bodyAsJsonObject());
+        switch (resp.statusCode()) {
+          case 200:
+            responseChecked.complete(false);
+            break;
+          case 403: {
+            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
+            logger.error(errorMsg);
+            promise.fail(new IllegalStateException(errorMsg));
+            responseChecked.complete(true);
+            break;
+          }
+          default: {
+            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
+            promise.fail(new IllegalStateException(errorMsg));
+            responseChecked.complete(true);
+          }
         }
-        downloadInstancesPromise.tryComplete();
+//        downloadInstancesPromise.tryComplete();
       })
       .onFailure(throwable -> {
         logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
@@ -437,7 +451,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request) {
     Map<String, JsonObject> instances = result.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
-    Promise<List<JsonObject>> completePromise = Promise.promise();
+    Promise<List<JsonObject>> promise = Promise.promise();
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
     if (request.getOkapiUrl()
@@ -453,6 +467,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
+    Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = JsonParser.newParser()
       .objectValueMode();
     jsonParser.handler(event -> {
@@ -473,29 +488,46 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
       }
     });
-    jsonParser.exceptionHandler(throwable -> {
-      logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
+    jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
+        if (invalidResponseReceivedAndProcessed) {
+          return;
+        }
+        logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
           throwable);
-      completePromise.fail(throwable);
-    });
+        promise.fail(throwable);
+      })
+    );
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
       .sendBuffer(entries.toBuffer())
-      .onSuccess(httpResponse -> {
-        if (httpResponse.statusCode() != 200) {
-          String errorFromStorageMessage = getErrorFromStorageMessage("inventory-storage",
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, httpResponse.statusMessage());
-          String errorMessage = errorFromStorageMessage + httpResponse.statusCode();
-          logger.error(errorMessage);
-          completePromise.fail(new IllegalStateException(errorFromStorageMessage));
+      .onSuccess(response -> {
+        switch (response.statusCode()) {
+          case 200:
+            responseChecked.complete(false);
+            break;
+          case 403: {
+            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, ENRICH_INSTANCES_MISSED_PERMISSION);
+            logger.error(errorMsg);
+            promise.fail(new IllegalStateException(errorMsg));
+            responseChecked.complete(true);
+            break;
+          }
+          default: {
+            String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
+              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
+            String errorMessage = errorFromStorageMessage + response.statusCode();
+            logger.error(errorMessage);
+            promise.fail(new IllegalStateException(errorFromStorageMessage));
+            responseChecked.complete(true);
+          }
         }
-        completePromise.complete(new ArrayList<>(instances.values()));
+        promise.complete(new ArrayList<>(instances.values()));
       })
       .onFailure(e -> {
         logger.error(e.getMessage());
-        completePromise.fail(e);
+        promise.fail(e);
       });
-    return completePromise.future();
+    return promise.future();
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
