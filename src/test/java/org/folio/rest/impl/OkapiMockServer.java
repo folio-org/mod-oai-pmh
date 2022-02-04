@@ -10,6 +10,7 @@ import static org.folio.oaipmh.Constants.LOCATION_URI;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
@@ -257,7 +258,7 @@ public class OkapiMockServer {
       .absoluteURI();
     if (Objects.nonNull(uri)) {
       if (uri.contains(SUPPRESSED_RECORDS_DATE)) {
-        boolean shouldProcessSuppressedRecords = Boolean.parseBoolean(ctx.request().getParam("skipSuppressedFromDiscoveryRecords"));
+        boolean shouldProcessSuppressedRecords = Boolean.parseBoolean(ctx.request().getParam(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS));
         if (shouldProcessSuppressedRecords) {
           inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
         } else {

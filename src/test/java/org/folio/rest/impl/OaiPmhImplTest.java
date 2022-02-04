@@ -1599,7 +1599,7 @@ class OaiPmhImplTest {
       .asString();
 
     assertThat(response, is(notNullValue()));
-    assertEquals(response, message);
+    assertThat(response, equalTo(message));
   }
 
   private void verifyRepositoryInfoResponse(OAIPMH oaipmhFromString) {
@@ -2460,6 +2460,9 @@ class OaiPmhImplTest {
     String metadataPrefix = MetadataPrefix.MARC21WITHHOLDINGS.getName();
     String set = "all";
 
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -2470,6 +2473,7 @@ class OaiPmhImplTest {
     addAcceptEncodingHeader(request, encoding);
 
     verify500WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
   }
 
   @ParameterizedTest
