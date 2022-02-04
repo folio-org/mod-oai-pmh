@@ -210,7 +210,7 @@ class OaiPmhImplTest {
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
-  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
@@ -283,6 +283,7 @@ class OaiPmhImplTest {
   @BeforeEach
   void setUpBeforeEach() {
     // Set default decoderConfig
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
   }
@@ -1599,7 +1600,7 @@ class OaiPmhImplTest {
       .asString();
 
     assertThat(response, is(notNullValue()));
-    assertThat(response, containsString(message));
+    assertThat(response, equalTo(message));
   }
 
   private void verifyRepositoryInfoResponse(OAIPMH oaipmhFromString) {
@@ -2460,6 +2461,9 @@ class OaiPmhImplTest {
     String metadataPrefix = MetadataPrefix.MARC21WITHHOLDINGS.getName();
     String set = "all";
 
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -2470,6 +2474,7 @@ class OaiPmhImplTest {
     addAcceptEncodingHeader(request, encoding);
 
     verify500WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
   }
 
   @ParameterizedTest
