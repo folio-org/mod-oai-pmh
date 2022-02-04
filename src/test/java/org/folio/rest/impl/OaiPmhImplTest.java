@@ -284,7 +284,6 @@ class OaiPmhImplTest {
   void setUpBeforeEach() {
     // Set default decoderConfig
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "10");
     RestAssured.config().decoderConfig(DecoderConfig.decoderConfig());
   }
 
