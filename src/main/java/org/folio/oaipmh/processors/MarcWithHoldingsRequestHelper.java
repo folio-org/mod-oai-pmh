@@ -99,7 +99,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
   private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
 
-  private static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
+  public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
   private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
 
