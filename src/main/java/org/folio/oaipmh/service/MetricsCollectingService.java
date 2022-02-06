@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -25,6 +26,7 @@ import lombok.extern.log4j.Log4j2;
 
 @EnableScheduling
 @Log4j2
+@Configuration
 public class MetricsCollectingService {
 
   private static final int METRICS_COLLECTION_DELAY_IN_MS = 60 * 1000;
