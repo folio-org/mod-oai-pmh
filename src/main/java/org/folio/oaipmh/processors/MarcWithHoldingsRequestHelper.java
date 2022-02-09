@@ -13,7 +13,6 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpRequestImpl;
@@ -278,7 +277,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String requestId = request.getRequestId();
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = JsonParser.newParser()
+    var jsonParser = new OaiPmhJsonParser()
       .objectValueMode();
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
@@ -299,7 +298,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (invalidResponseReceivedAndProcessed) {
           return;
         }
-        logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
+        logger.error("Error has been occurred at JsonParser while saving instances. Message: {}", throwable.getMessage(),
           throwable);
         downloadInstancesPromise.complete(throwable);
         promise.fail(throwable);
@@ -468,7 +467,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = JsonParser.newParser()
+    var jsonParser = new OaiPmhJsonParser()
       .objectValueMode();
     jsonParser.handler(event -> {
       JsonObject itemsAndHoldingsFields = event.objectValue();
@@ -492,7 +491,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (invalidResponseReceivedAndProcessed) {
           return;
         }
-        logger.error("Error has been occurred at JsonParser while reading data from response. Message:{}", throwable.getMessage(),
+        logger.error("Error has been occurred at JsonParser while reading data from items-and-holdings response. Message:{}", throwable.getMessage(),
           throwable);
         promise.fail(throwable);
       })
