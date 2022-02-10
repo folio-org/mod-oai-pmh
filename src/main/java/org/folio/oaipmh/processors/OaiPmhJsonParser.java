@@ -12,7 +12,7 @@ public class OaiPmhJsonParser extends JsonParserImpl {
 
   private final Logger logger = LogManager.getLogger(OaiPmhJsonParser.class);
 
-  private Handler<Throwable> oaiExceptionalHandler;
+  private Handler<Throwable> oaiPmhExceptionalHandler;
 
   public OaiPmhJsonParser() {
     super(null);
@@ -20,22 +20,22 @@ public class OaiPmhJsonParser extends JsonParserImpl {
 
   @Override
   public JsonParser exceptionHandler(Handler<Throwable> handler) {
-    this.oaiExceptionalHandler = handler;
+    this.oaiPmhExceptionalHandler = handler;
     return this;
   }
 
   @Override
   public void handle(Buffer data) {
-    var normalized =  data.toString().replaceAll("([\\r\\n])", "");;
+    var normalized =  data.toString().replaceAll("([\\r\\n])", "");
     try {
       super.handle(Buffer.buffer(normalized));
     } catch (DecodeException e) {
       var errorResolver = new JsonParserErrorResolver(normalized, e.getLocalizedMessage());
       logger.error(e.getLocalizedMessage());
-      logger.error("Error position is {}", errorResolver.getErrorPosition());
+      logger.error("Error position at error part of json is {}", errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
-      if (oaiExceptionalHandler != null) {
-        oaiExceptionalHandler.handle(e);
+      if (oaiPmhExceptionalHandler != null) {
+        oaiPmhExceptionalHandler.handle(e);
         return;
       }
       throw e;
@@ -47,8 +47,8 @@ public class OaiPmhJsonParser extends JsonParserImpl {
     try {
       super.end();
     } catch (DecodeException e) {
-      if (oaiExceptionalHandler != null) {
-        oaiExceptionalHandler.handle(e);
+      if (oaiPmhExceptionalHandler != null) {
+        oaiPmhExceptionalHandler.handle(e);
         return;
       }
       throw e;

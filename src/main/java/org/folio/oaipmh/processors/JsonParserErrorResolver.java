@@ -17,7 +17,7 @@ public class JsonParserErrorResolver {
   public JsonParserErrorResolver(String data, String localizedMessage) {
     this.data = data;
     this.localizedMessage = localizedMessage;
-    initialized();
+    initialize();
   }
 
   public String getErrorPart() {
@@ -28,7 +28,7 @@ public class JsonParserErrorResolver {
     return errorPosition;
   }
 
-  private void initialized() {
+  private void initialize() {
     int positionFromErrorMessage = getLocalizedMessageErrorPosition();
     int end = Math.min(positionFromErrorMessage + ERROR_VALUE_RANGE, data.length());
     var substring = data.substring(0, end);
