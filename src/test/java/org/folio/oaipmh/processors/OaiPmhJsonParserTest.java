@@ -8,7 +8,7 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OaiPmhJsonParserTest {
+class OaiPmhJsonParserTest {
 
   @Test
  void testParserHandleValidData() {
@@ -30,7 +30,7 @@ public class OaiPmhJsonParserTest {
 
   @Test
   void testParserHandleNotValidData() {
-    var instances = "{  \"instanceId\": \"e6bc03c6-c137-4221-b679-a7c5c31f986c\" , \"source\": \"FOLIO\", " +
+    var json = "{  \"instanceId\": \"e6bc03c6-c137-4221-b679-a7c5c31f986c\" , \"source\": \"FOLIO\", " +
       "\"updatedDate\": \"2020-06-15T11:07:48.563Z\",  \"deleted\": \"false\",  \"suppressFromDiscovery\": \"false\"}" +
       "\n\r { \"instanceId\"  \"a7bc91c6-c137-4221-b679-a7c5c31f986c\", \"source\": \"FOLIO\"," +
       " \"updatedDate\": \"2020-06-15T11:07:48.732Z\",  \"deleted\": \"false\" : \"suppressFromDiscovery\": \"false\"}";
@@ -41,7 +41,7 @@ public class OaiPmhJsonParserTest {
       .objectValueMode()
       .handler(events::add)
       .exceptionHandler(errors::add);
-    jsonParser.write(Buffer.buffer(instances)).end();
+    jsonParser.write(Buffer.buffer(json)).end();
     assertEquals(2, errors.size());
     assertEquals(0, events.size());
   }

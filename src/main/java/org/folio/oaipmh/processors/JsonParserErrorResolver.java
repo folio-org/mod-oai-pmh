@@ -34,10 +34,10 @@ public class JsonParserErrorResolver {
     var substring = data.substring(0, end);
     int lastIndexOfInstanceId = substring.lastIndexOf(INSTANCE_ID_FIELD);
     int start = lastIndexOfInstanceId - ERROR_VALUE_RANGE;
-    if (start < 0) start = lastIndexOfInstanceId;
+    if (start < 0) start = 0;
 
     errorPart = substring.substring(start);
-    errorPosition = positionFromErrorMessage - lastIndexOfInstanceId + ERROR_VALUE_RANGE;
+    errorPosition = positionFromErrorMessage - start;
   }
 
   private int getLocalizedMessageErrorPosition() {
