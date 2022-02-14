@@ -1,7 +1,8 @@
 package org.folio.oaipmh.processors;
 
 import io.vertx.core.buffer.Buffer;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 
@@ -9,9 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonParserErrorResolverTest {
 
-  @Test
-  void testGetErrorPartAndErrorPosition() {
-    var json = "{\"instanceId\":\"e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6\",\"source\":\"FOLIO\"," +
+  @ParameterizedTest
+  @ValueSource(strings = {"instanceId", "some_field"})
+  void testGetErrorPartAndErrorPosition(String instanceIdField) {
+    var json = "{\"" + instanceIdField + "\":\"e54b1f4d-7d05-4b1a-9368-3c36b75d8ac6\",\"source\":\"FOLIO\"," +
       "\"holdings\":[{\"id\":\"e9285a1c-1dfc-4380-868c-e74073003f43\",\"notes\":[]," +
       "\"location\":{\"effectiveLocation\":{\"code\" \"KU/CC/DI/M\",\"name\":\"Main Library\"," +
       "\"campusName\":\"City Campus\"},\"permanentLocation\":{\"code\":\"KU/CC/DI/M\",\"name\":\"Main Library\"," +
@@ -30,7 +32,7 @@ class JsonParserErrorResolverTest {
 
     var expected = json.substring(errorPositionByParser, errorPositionByParser + 20);
     int errorPositionByParserErrorResolver = jsonParserErrorResolver.getErrorPosition();
-    var actual = jsonParserErrorResolver.getErrorPart().substring(errorPositionByParserErrorResolver, errorPositionByParserErrorResolver  + 20);
+    var actual = jsonParserErrorResolver.getErrorPart().substring(errorPositionByParserErrorResolver, errorPositionByParserErrorResolver + 20);
 
     assertEquals(expected, actual);
   }
