@@ -1,4 +1,21 @@
-## 3.7.0 - Unreleased
+## 3.8.0 - Unreleased
+
+## 3.7.0 (Released)
+
+This release contains database load and some minor improvements, error fixes and handlers
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.6.2...v3.7.0)
+
+### Bug fixes
+
+* [MODOAIPMH-392](https://issues.folio.org/browse/MODOAIPMH-392) - mod-oai-pmh master-branch build failure
+* [MODOAIPMH-379](https://issues.folio.org/browse/MODOAIPMH-379) - Unhandled json parse exception when user does not have adequate permissions
+
+### Stories
+
+* [MODOAIPMH-391](https://issues.folio.org/browse/MODOAIPMH-391) - Unexpected character error
+* [MODOAIPMH-378](https://issues.folio.org/browse/MODOAIPMH-378) - Change the way of saving instances ids for reducing the database load
+* [MODOAIPMH-377](https://issues.folio.org/browse/MODOAIPMH-377) - Implement metrics for mod-oai-pmh
 
 ## 3.6.2 (Released)
 

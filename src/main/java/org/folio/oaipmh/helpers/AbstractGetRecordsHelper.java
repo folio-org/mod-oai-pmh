@@ -15,7 +15,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.rest.client.SourceStorageSourceRecordsClient;
+import org.folio.oaipmh.service.MetricsCollectingService;
+import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
@@ -38,15 +39,19 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
+  private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+
   private static final Logger logger = LogManager.getLogger(AbstractGetRecordsHelper.class);
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
+    metricsCollectingService.startMetric(request.getRequestId(), SEND_REQUEST);
     Promise<Response> promise = Promise.promise();
     try {
       List<OAIPMHerrorType> errors = validateRequest(request);
@@ -57,11 +62,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } catch (Exception e) {
       handleException(promise, e);
     }
-    return promise.future();
+    return promise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
   protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) {
-    final SourceStorageSourceRecordsClient srsClient = new SourceStorageSourceRecordsClient(request.getOkapiUrl(),
+    final var srsClient = new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(),
       request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
 
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
