@@ -147,24 +147,29 @@
       ]
     },
     {
+      "permissionName": "oai-pmh.sets.item.collection.get",
+      "displayName": "OAI-PMH Set - get items",
+      "description": "Manage oai-pmh get items"
+    },
+    {
       "permissionName": "oai-pmh.sets.item.get",
       "displayName": "OAI-PMH Set - get item",
-      "description": "Manage oai-pmh set items"
+      "description": "Manage oai-pmh get item"
     },
     {
       "permissionName": "oai-pmh.sets.item.post",
       "displayName": "OAI-PMH Set - post item",
-      "description": "Manage oai-pmh set items"
+      "description": "Manage oai-pmh set item"
     },
     {
       "permissionName": "oai-pmh.sets.item.put",
       "displayName": "OAI-PMH Set - put item",
-      "description": "Manage oai-pmh set items"
+      "description": "Manage oai-pmh set item"
     },
     {
       "permissionName": "oai-pmh.sets.item.delete",
       "displayName": "OAI-PMH Set - delete item",
-      "description": "Manage oai-pmh set items"
+      "description": "Manage oai-pmh set item"
     },
     {
       "permissionName": "oai-pmh.filtering-conditions.get",
