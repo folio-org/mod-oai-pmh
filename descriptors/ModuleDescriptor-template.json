@@ -164,12 +164,12 @@
     {
       "permissionName": "oai-pmh.sets.item.put",
       "displayName": "OAI-PMH Set - put item",
-      "description": "Manage oai-pmh set item"
+      "description": "Manage oai-pmh update item"
     },
     {
       "permissionName": "oai-pmh.sets.item.delete",
       "displayName": "OAI-PMH Set - delete item",
-      "description": "Manage oai-pmh set item"
+      "description": "Manage oai-pmh delete item"
     },
     {
       "permissionName": "oai-pmh.filtering-conditions.get",
