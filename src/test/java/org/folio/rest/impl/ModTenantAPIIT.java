@@ -7,8 +7,7 @@ import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
 import java.nio.file.Path;
-
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.model.MediaType;
@@ -48,7 +47,7 @@ class ModTenantAPIIT {
       .withEnv("DB_DATABASE", "postgres");
 
   @Container
-  private final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:12-alpine")
+  private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:12-alpine")
     .withNetwork(network)
     .withNetworkAliases("postgres")
     .withExposedPorts(5432)
@@ -57,14 +56,14 @@ class ModTenantAPIIT {
     .withDatabaseName("postgres");
 
   @Container
-  private final MockServerContainer okapi =
+  private static final MockServerContainer okapi =
     new MockServerContainer(DockerImageName.parse("mockserver/mockserver:mockserver-5.11.2"))
       .withNetwork(network)
       .withNetworkAliases("okapi")
       .withExposedPorts(1080);
 
-  @BeforeEach
-  void beforeEach() {
+  @BeforeAll
+  static void beforeAll() {
     module.followOutput(new Slf4jLogConsumer(LOGGER).withSeparateOutputStreams());
     RestAssured.baseURI = "http://" + module.getHost() + ":" + module.getFirstMappedPort();
 
@@ -82,17 +81,25 @@ class ModTenantAPIIT {
   }
 
   @Test
+  void healthTest() {
+    when().
+      get("/admin/health").
+    then().
+      statusCode(200);
+  }
+
+  @Test
   void tenantApiShouldReturn200AndDatabaseShouldBePopulated() {
     given().
       body("{ \"module_to\": \"99.99.99\" }").
-      when().
+    when().
       post("/_/tenant").
-      then().
+    then().
       statusCode(200);
 
     when().
       post("/oai-pmh/clean-up-instances").
-      then().
+    then().
       statusCode(204);
   }
 
