@@ -1,4 +1,18 @@
-## 3.7.0 - Unreleased
+## 3.8.0 - Unreleased
+
+## 3.7.1 (Released)
+
+This release contains upgrade version of RMB to 33.0.2, Vert.x to 4.1.0, improvement of permissions usage
+
+### Technical tasks
+* [MODOAIPMH-393](https://issues.folio.org/browse/MODOAIPMH-393) Move health test from Jenkins file to integration test
+
+### Bug fixes
+
+* [MODOAIPMH-399](https://issues.folio.org/browse/MODOAIPMH-399) Update to log4j, RMB, Vert.x, postgresql
+* [MODOAIPMH-398](https://issues.folio.org/browse/MODOAIPMH-398) Undefined permission 'oai-pmh.sets.item.collection.get'
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.7.0...v3.7.1)
 
 ## 3.6.0 (Released)
 
