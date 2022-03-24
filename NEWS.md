@@ -4,6 +4,8 @@
 
 This release contains upgrade version of RMB to 33.0.2, Vert.x to 4.1.0, improvement of permissions usage
 
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.7.0...v3.7.1)
+
 ### Technical tasks
 * [MODOAIPMH-393](https://issues.folio.org/browse/MODOAIPMH-393) Move health test from Jenkins file to integration test
 
@@ -12,7 +14,22 @@ This release contains upgrade version of RMB to 33.0.2, Vert.x to 4.1.0, improve
 * [MODOAIPMH-399](https://issues.folio.org/browse/MODOAIPMH-399) Update to log4j, RMB, Vert.x, postgresql
 * [MODOAIPMH-398](https://issues.folio.org/browse/MODOAIPMH-398) Undefined permission 'oai-pmh.sets.item.collection.get'
 
-[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.7.0...v3.7.1)
+## 3.7.0 (Released)
+
+This release contains database load and some minor improvements, error fixes and handlers
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.6.2...v3.7.0)
+
+### Bug fixes
+
+* [MODOAIPMH-392](https://issues.folio.org/browse/MODOAIPMH-392) - mod-oai-pmh master-branch build failure
+* [MODOAIPMH-379](https://issues.folio.org/browse/MODOAIPMH-379) - Unhandled json parse exception when user does not have adequate permissions
+
+### Stories
+
+* [MODOAIPMH-391](https://issues.folio.org/browse/MODOAIPMH-391) - Unexpected character error
+* [MODOAIPMH-378](https://issues.folio.org/browse/MODOAIPMH-378) - Change the way of saving instances ids for reducing the database load
+* [MODOAIPMH-377](https://issues.folio.org/browse/MODOAIPMH-377) - Implement metrics for mod-oai-pmh
 
 ## 3.6.0 (Released)
 
