@@ -214,7 +214,7 @@
       { "name": "DB_DATABASE", "value": "okapi_modules" },
       { "name": "DB_QUERYTIMEOUT", "value": "604800000" },
       { "name": "DB_CHARSET", "value": "UTF-8" },
-      { "name": "DB_MAXPOOLSIZE", "value": "20" }
+      { "name": "DB_MAXPOOLSIZE", "value": "50" }
     ]
   }
 }
