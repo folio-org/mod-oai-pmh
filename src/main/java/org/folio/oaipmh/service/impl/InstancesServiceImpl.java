@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.folio.oaipmh.dao.InstancesDao;
+import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -72,8 +73,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate, String tenantId) {
-    return instancesDao.updateRequestUpdatedDate(requestId, lastUpdatedDate, tenantId);
+  public Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder, String tenantId) {
+    return instancesDao.updateRequestUpdatedDateAndStatistics(requestId, lastUpdatedDate, holder, tenantId);
   }
 
   @Override
