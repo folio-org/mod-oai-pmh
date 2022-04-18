@@ -3,6 +3,7 @@ package org.folio.oaipmh.service;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ public interface InstancesService {
   /**
    * Updates request metadata updated date column by request id.
    */
-  Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate, String tenantId);
+  Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder, String tenantId);
 
   /**
    * Updates request metadata stream ended column by request id.

@@ -20,6 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
@@ -97,7 +98,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate,
+  public Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder,
       String tenantId) {
     RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
     requestMetadataLb.setRequestId(UUID.fromString(requestId))
@@ -106,6 +107,11 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
         .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
+        .set(REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER, REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER.plus(holder.getReturnedInstancesCounter().get()))
+        .set(REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER.plus(holder.getSkippedInstancesCounter().get()))
+        .set(REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER, REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER.plus(holder.getFailedInstancesCounter().get()))
+        .set(REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER.plus(holder.getSupressedFromDiscoveryCounter().get()))
+
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
         .returning())
       .map(this::toOptionalRequestMetadata)
