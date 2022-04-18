@@ -35,6 +35,7 @@ The following schemas used:
  + MARC 21 XML Schema: [MARC21slim.xsd](http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd) (please refer to [MARC 21 XML Schema](http://www.loc.gov/standards/marcxml/) for more details)
 ### Deployment requirements
 OAI-PMH is heavily loaded module and for correct work with big data set(approximately 4-5 millions records) it requires to have as least 400 Mb of java heap and 1Gb for docker container memory.
+It is required to set environment variables according to ModuleDescriptor: DB_QUERYTIMEOUT = 2700000, DB_MAXPOOLSIZE = 35.
 ### Configuration
 Configuration properties are intended to be retrieved from [mod-configuration](https://github.com/folio-org/mod-configuration/blob/master/README.md) module. System property values are used as a fallback.
 Configurations can be managed from the UI through the mod-configuration via folio settings.
