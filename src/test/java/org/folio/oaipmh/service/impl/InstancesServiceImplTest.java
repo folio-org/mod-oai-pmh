@@ -20,6 +20,7 @@ import org.folio.oaipmh.common.AbstractInstancesTest;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
@@ -125,7 +126,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.verify(() -> {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
-      instancesService.updateRequestUpdatedDate(requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+      instancesService.updateRequestUpdatedDateAndStatistics(requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(), new StatisticsHolder(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
         assertNotNull(res);
         testContext.completeNow();
       }));
@@ -135,7 +136,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnFailedFuture_whenUpdateRequestMetadataUpdatedDateWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
     testContext.verify(() ->
-      instancesService.updateRequestUpdatedDate(nonExistentRequestMetadata.getRequestId().toString(),nonExistentRequestMetadata.getLastUpdatedDate(), OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+      instancesService.updateRequestUpdatedDateAndStatistics(nonExistentRequestMetadata.getRequestId().toString(),nonExistentRequestMetadata.getLastUpdatedDate(), new StatisticsHolder(), OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof NotFoundException);
         testContext.completeNow();
       }))

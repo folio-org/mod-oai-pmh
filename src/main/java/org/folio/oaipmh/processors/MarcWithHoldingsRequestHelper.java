@@ -24,6 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
@@ -161,22 +162,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         return buildResponseWithErrors(request, oaipmhResponsePromise, errors);
       }
 
-      String requestId;
+      var requestId = request.getRequestId();
       OffsetDateTime lastUpdateDate = OffsetDateTime.now(ZoneId.systemDefault());
       RequestMetadataLb requestMetadata = new RequestMetadataLb().setLastUpdatedDate(lastUpdateDate);
 
       Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null) {
-        requestId = request.getRequestId();
         requestMetadata.setRequestId(UUID.fromString(requestId));
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
-        requestId = request.getRequestId();
-        updateRequestMetadataFuture = instancesService.updateRequestUpdatedDate(requestId, lastUpdateDate, request.getTenant());
+        updateRequestMetadataFuture = Future.succeededFuture();
       }
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null;
-        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch);
+        var statistics = new StatisticsHolder();
+        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, statistics)
+          .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()));
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
               downloadInstancesPromise, downloadContext), downloadInstancesResult -> {
@@ -200,8 +201,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
-  private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
-      boolean firstBatch) {
+  private Future<StatisticsHolder> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
+      boolean firstBatch, StatisticsHolder holder) {
+    Promise<StatisticsHolder> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
@@ -232,7 +234,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           if (CollectionUtils.isEmpty(instances)) {
             logger.debug("Got empty instances.");
-            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport)
+            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, holder)
               .onSuccess(oaiPmhResponsePromise::complete)
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
@@ -249,13 +251,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
-                deletedRecordSupport).onSuccess(oaiPmhResponsePromise::complete)
-                  .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
+              deletedRecordSupport, holder)
+              .onSuccess(oaiPmhResponsePromise::complete)
+              .onSuccess(p -> promise.complete(holder))
+              .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
+    return promise.future();
   }
 
   private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
@@ -576,11 +581,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch,
-      Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport) {
+      Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder holder) {
 
     Promise<Response> promise = Promise.promise();
     try {
-      List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport);
+      List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport, holder);
       logger.debug("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
@@ -610,18 +615,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private List<RecordType> buildRecordsList(Request request, List<JsonObject> batch, Map<String, JsonObject> srsResponse,
-      boolean deletedRecordSupport) {
+      boolean deletedRecordSupport, StatisticsHolder holder) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
 
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getRequestId(),
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-
     List<RecordType> records = new ArrayList<>();
     batch.stream()
       .filter(instance -> {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
         final JsonObject srsInstance = srsResponse.get(instanceId);
-        return Objects.nonNull(srsInstance);
+        if (Objects.isNull(srsInstance)) {
+          holder.getSkippedInstancesCounter().incrementAndGet();
+          return false;
+        }
+        return true;
       })
       .forEach(instance -> {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
@@ -646,6 +654,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           try {
             record.withMetadata(buildOaiMetadata(request, source));
           } catch (Exception e) {
+            holder.getFailedInstancesCounter().incrementAndGet();
             logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
             logger.debug("Skipping problematic record due the conversion error. Source record id - {}.",
                 storageHelper.getRecordId(srsInstance));
@@ -653,7 +662,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
         }
         if (filterInstance(request, srsInstance)) {
+          holder.getReturnedInstancesCounter().incrementAndGet();
           records.add(record);
+        } else {
+          holder.getSupressedFromDiscoveryCounter().incrementAndGet();
         }
       });
     return records;
