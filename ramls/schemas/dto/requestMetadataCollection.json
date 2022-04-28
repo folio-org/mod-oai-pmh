@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Request metadata collection",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "requestMetadataCollection" : {
+      "description": "list of request metadata",
+      "type": "array",
+      "id": "requestMetadataCollection",
+      "items": {
+        "javaType" : "org.folio.rest.jaxrs.model.RequestMetadata",
+        "type": "object",
+        "$ref": "requestMetadata.json"
+      }
+    },
+    "totalRecords": {
+      "type": "integer",
+      "description": "Total number of records"
+    }
+  },
+  "required": [
+    "requestMetadataCollection",
+    "totalRecords"
+  ]
+}

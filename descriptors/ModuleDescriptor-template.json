@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "oai-pmh",
-      "version": "3.0",
+      "version": "3.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -57,6 +57,11 @@
             "inventory-storage.instance-types.collection.get",
             "inventory-storage.instance-formats.collection.get"
           ]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata",
+          "permissionsRequired": ["oai-pmh.request-metadata.collection.get"]
         },
         {
           "methods": [
@@ -133,6 +138,11 @@
       "description": "Get records from repository"
     },
     {
+      "permissionName": "oai-pmh.request-metadata.collection.get",
+      "displayName": "OAI-PMH Request metadata - get collection",
+      "description": "Retrieves request metadata collection"
+    },
+    {
       "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
@@ -143,7 +153,8 @@
         "oai-pmh.sets.item.put",
         "oai-pmh.sets.item.delete",
         "oai-pmh.sets.item.collection.get",
-        "oai-pmh.filtering-conditions.get"
+        "oai-pmh.filtering-conditions.get",
+        "oai-pmh.request-metadata.collection.get"
       ]
     },
     {

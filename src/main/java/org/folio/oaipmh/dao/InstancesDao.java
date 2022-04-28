@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.folio.oaipmh.domain.StatisticsHolder;
+import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 
@@ -17,6 +18,11 @@ public interface InstancesDao {
   Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
+
+  /**
+   * Returns request metadata collection
+   */
+  Future<RequestMetadataCollection> getRequestMetadataCollection(int offset, int limit, String tenantId);
 
   /**
    * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.
