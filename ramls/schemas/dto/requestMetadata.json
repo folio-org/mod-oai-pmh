@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Request Metadata DTO Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "javaType" : "org.folio.rest.jaxrs.model.RequestMetadata",
+  "properties": {
+    "requestId": {
+      "description": "UUID",
+      "$ref": "../common/uuid.json"
+    },
+    "lastUpdatedDate": {
+      "description": "last updated date-time",
+      "type": "string",
+      "format": "date-time"
+    },
+    "streamEnded": {
+      "description": "stream ended",
+      "type": "boolean"
+    },
+    "returnedInstancesCounter": {
+      "description": "returned instances counter",
+      "type": "integer"
+    },
+    "skippedInstancesCounter": {
+      "description": "skipped instances counter",
+      "type": "integer"
+    },
+    "failedInstancesCounter": {
+      "description": "failed instances counter",
+      "type": "integer"
+    },
+    "supressedInstancesCounter": {
+      "description": "supressed instances counter",
+      "type": "integer"
+    }
+  }
+}

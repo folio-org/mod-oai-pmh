@@ -20,7 +20,6 @@ public interface InstancesService {
   Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
-
   /**
    * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.
    */
