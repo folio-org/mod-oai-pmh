@@ -34,6 +34,7 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
@@ -188,6 +189,7 @@ class OaiPmhImplTest {
   // API paths
   private static final String ROOT_PATH = "/oai";
   private static final String RECORDS_PATH = ROOT_PATH + "/records";
+  private static final String REQUEST_METADATA_PATH = ROOT_PATH + "/request-metadata";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -1251,6 +1253,10 @@ class OaiPmhImplTest {
       .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
 
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+
+    if (metadataPrefix == MetadataPrefix.MARC21WITHHOLDINGS) {
+      verifyRequestMetadataStatistics(getRequestMetadataCollection(), 1, 1, 0, 0);
+    }
     verifyListResponse(response, LIST_RECORDS, 1);
   }
 
@@ -1265,6 +1271,9 @@ class OaiPmhImplTest {
     OAIPMHerrorType error = oaipmh.getErrors()
       .get(0);
     assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 0, 0, 1, 0);
+
   }
 
   @ParameterizedTest
@@ -2266,6 +2275,8 @@ class OaiPmhImplTest {
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 0, 0, 0);
+
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
@@ -2639,6 +2650,37 @@ class OaiPmhImplTest {
       .collect(Collectors.toList())
       : oaipmh.getListIdentifiers()
       .getHeaders();
+  }
+
+  private RequestMetadataCollection getRequestMetadataCollection() {
+    return RestAssured.given()
+      .header(okapiUrlHeader)
+      .header(tokenHeader)
+      .header(tenantHeader)
+      .basePath(REQUEST_METADATA_PATH)
+      .when()
+      .get()
+      .then()
+      .contentType(ContentType.JSON)
+      .statusCode(200)
+      .extract()
+      .as(RequestMetadataCollection.class);
+  }
+
+  private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int returnedInstancesCounter,
+                                               int failedInstancesCounter, int skippedInstancesCounter, int supressedInstancesCounter) {
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getReturnedInstancesCounter(), is(returnedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getFailedInstancesCounter(), is(failedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getSkippedInstancesCounter(), is(skippedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getSupressedInstancesCounter(), is(supressedInstancesCounter));
   }
 
   @Autowired

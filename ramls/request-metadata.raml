@@ -1,0 +1,34 @@
+#%RAML 1.0
+title: "Request Metadata"
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v1.0
+
+documentation:
+  - title: Request Metadata API
+    content: |
+      API for retrieving MARC21_WITHHOLDINGS harvesting request metadata.
+types:
+  request_metadata: !include schemas/dto/requestMetadata.json
+  request_metadata_collection: !include schemas/dto/requestMetadataCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  pageable:  !include raml-util/traits/pageable.raml
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+resourceTypes:
+  collection-get: !include raml-util/rtypes/collection-get.raml
+
+/oai/request-metadata:
+  type:
+    collection-get:
+      exampleCollection: !include examples/requestMetadata.sample
+      exampleItem: !include examples/requestMetadataCollection.sample
+      schemaCollection: request_metadata_collection
+      schemaItem: request_metadata
+  is: [validate]
+  get:
+    description: Get list of request metadata
+    is: [pageable]
+

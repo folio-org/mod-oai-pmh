@@ -1,5 +1,7 @@
 package org.folio.oaipmh.dao.impl;
 
+import static java.util.Optional.of;
+import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
 
@@ -7,6 +9,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +24,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.domain.StatisticsHolder;
+import org.folio.rest.jaxrs.model.RequestMetadata;
+import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
@@ -80,7 +85,18 @@ public class InstancesDaoImpl implements InstancesDao {
     if (Objects.nonNull(row)) {
       requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
     }
-    return Objects.nonNull(requestMetadataLb) ? Optional.of(requestMetadataLb) : Optional.empty();
+    return Objects.nonNull(requestMetadataLb) ? of(requestMetadataLb) : Optional.empty();
+  }
+
+  @Override
+  public Future<RequestMetadataCollection> getRequestMetadataCollection(int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(REQUEST_METADATA_LB))).compose(recordsCount ->
+      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(REQUEST_METADATA_LB)
+          .orderBy(REQUEST_METADATA_LB.LAST_UPDATED_DATE.desc())
+          .offset(offset)
+          .limit(limit))
+        .map(collection -> queryResultToRequestMetadataCollection(collection, recordsCount.get(0, int.class))))
+    );
   }
 
   @Override
@@ -145,7 +161,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .next();
       RequestMetadataLb requestMetadataLb = RowMappers.getRequestMetadataLbMapper()
         .apply(row);
-      return Optional.of(requestMetadataLb);
+      return of(requestMetadataLb);
     }
     return Optional.empty();
   }
@@ -238,7 +254,7 @@ public class InstancesDaoImpl implements InstancesDao {
         pojo.setId(row.getInteger(INSTANCES.ID.getName()));
         return pojo;
       })
-      .collect(Collectors.toList());
+      .collect(toList());
   }
 
   private List<String> mapRequestIdsResultToList(QueryResult requestIds) {
@@ -257,6 +273,31 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
     return postgresClientFactory.getQueryExecutor(tenantId);
+  }
+
+  private RequestMetadataCollection queryResultToRequestMetadataCollection(QueryResult queryResult, int totalRecordsCount) {
+    List<RequestMetadata> list = queryResult.stream()
+      .map(row -> rowToRequestMetadata(row.unwrap()))
+      .collect(toList());
+    return new RequestMetadataCollection().withRequestMetadataCollection(list)
+      .withTotalRecords(totalRecordsCount);
+  }
+
+  private RequestMetadata rowToRequestMetadata(Row row) {
+    var pojo = RowMappers.getRequestMetadataLbMapper()
+      .apply(row);
+    var requestMetadata = new RequestMetadata();
+
+    of(pojo.getRequestId()).ifPresent(uuid -> requestMetadata.withRequestId(uuid.toString()));
+    of(pojo.getLastUpdatedDate())
+      .ifPresent(offsetDateTime -> requestMetadata.withLastUpdatedDate(Date.from(offsetDateTime.toInstant())));
+    of(pojo.getStreamEnded()).ifPresent(requestMetadata::withStreamEnded);
+    of(pojo.getReturnedInstancesCounter()).ifPresent(requestMetadata::withReturnedInstancesCounter);
+    of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
+    of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
+    of(pojo.getSupressedInstancesCounter()).ifPresent(requestMetadata::withSupressedInstancesCounter);
+
+    return requestMetadata;
   }
 
 }
