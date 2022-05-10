@@ -102,6 +102,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
   private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
+  private static final String ONLY_INSTANCE_UPDATE_DATE = "onlyInstanceUpdateDate";
 
   private static final String START_DATE_PARAM_NAME = "startDate";
   private static final String END_DATE_PARAM_NAME = "endDate";
@@ -351,6 +352,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     paramMap.put(DELETED_RECORD_SUPPORT_PARAM_NAME,
         String.valueOf(RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId())));
     paramMap.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, String.valueOf(isSkipSuppressed(request)));
+    paramMap.put(ONLY_INSTANCE_UPDATE_DATE, "false");
 
     final String params = paramMap.entrySet()
       .stream()
