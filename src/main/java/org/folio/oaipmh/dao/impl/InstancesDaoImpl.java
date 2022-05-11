@@ -139,6 +139,10 @@ public class InstancesDaoImpl implements InstancesDao {
       }));
   }
 
+  /**
+   * @deprecated due to issue with VertX re-usage issue
+   */
+  @Deprecated(since = "3.7.2", forRemoval = true)
   @Override
   public Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor

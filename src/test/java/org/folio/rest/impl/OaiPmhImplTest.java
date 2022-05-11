@@ -2670,6 +2670,9 @@ class OaiPmhImplTest {
   private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int returnedInstancesCounter,
                                                int failedInstancesCounter, int skippedInstancesCounter, int supressedInstancesCounter) {
     assertThat(requestMetadata.getRequestMetadataCollection()
+       .get(0)
+       .getStreamEnded(), is(true));
+    assertThat(requestMetadata.getRequestMetadataCollection()
       .get(0)
       .getReturnedInstancesCounter(), is(returnedInstancesCounter));
     assertThat(requestMetadata.getRequestMetadataCollection()

@@ -77,6 +77,11 @@ public class InstancesServiceImpl implements InstancesService {
     return instancesDao.updateRequestUpdatedDateAndStatistics(requestId, lastUpdatedDate, holder, tenantId);
   }
 
+
+  /**
+   * @deprecated due to issue with VertX re-usage issue
+   */
+  @Deprecated(since = "3.7.2", forRemoval = true)
   @Override
   public Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
     return instancesDao.updateRequestStreamEnded(requestId, isStreamEnded, tenantId);

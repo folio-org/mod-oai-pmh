@@ -35,8 +35,9 @@ public interface InstancesDao {
   Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder, String tenantId);
 
   /**
-   * Updates request metadata stream ended column by request id.
+   * @deprecated due to issue with VertX re-usage issue
    */
+  @Deprecated(since = "3.7.2", forRemoval = true)
   Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId);
 
   /**

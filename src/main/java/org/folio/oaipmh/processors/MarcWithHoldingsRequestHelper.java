@@ -181,14 +181,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()));
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
-              downloadInstancesPromise, downloadContext), downloadInstancesResult -> {
-                instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
+            downloadInstancesPromise), downloadInstancesResult -> {
+            updateRequestStreamEnded(requestId, true, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
                 } else {
                   logger.error("Downloading instances was canceled due to the error. ", downloadInstancesResult.cause());
-                  if (!oaipmhResponsePromise.future()
-                    .isComplete()) {
+                  if (!oaipmhResponsePromise.future().isComplete()) {
                     oaipmhResponsePromise.fail(new IllegalStateException(downloadInstancesResult.cause()));
                   }
                 }
@@ -200,6 +199,32 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       handleException(oaipmhResponsePromise, e);
     }
     return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
+  }
+
+
+  private void updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
+    Promise<Void> promise = Promise.promise();
+    PostgresClient.getInstance(downloadContext.owner(), tenantId).getConnection(e -> {
+      Tuple params = Tuple.of(isStreamEnded, UUID.fromString(requestId));
+      String sql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
+        + ".request_metadata_lb SET stream_ended = $1 WHERE request_id = $2";
+
+      if (e.failed()) {
+        logger.error("Update stream ended failed: {}.", e.cause().getMessage(), e.cause());
+        promise.fail(e.cause());
+      } else {
+        PgConnection connection = e.result();
+        connection.preparedQuery(sql)
+          .execute(params, queryRes -> {
+            connection.close();
+            if (queryRes.failed()) {
+              promise.fail(queryRes.cause());
+            } else {
+              promise.complete();
+            }
+          });
+      }
+    });
   }
 
   private Future<StatisticsHolder> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
@@ -269,11 +294,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
-  private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-                                 Context vertxContext) {
+  private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise) {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
-    PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
+    PostgresClient postgresClient = PostgresClient.getInstance(downloadContext.owner(), request.getTenant());
     setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise);
   }
 
@@ -379,7 +403,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
     AtomicInteger retryCount = new AtomicInteger();
-    vertx.setTimer(200, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
+    vertx.setTimer(retryCount.get() == 0 ? 50 : 2000, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
       .compose(instances -> {
         if (CollectionUtils.isNotEmpty(instances)) {
