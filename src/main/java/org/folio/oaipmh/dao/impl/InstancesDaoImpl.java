@@ -123,6 +123,7 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
         .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
+        .set(REQUEST_METADATA_LB.SAVED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SAVED_INSTANCES_COUNTER.plus(holder.getSavedInstancesCounter().get()))
         .set(REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER, REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER.plus(holder.getReturnedInstancesCounter().get()))
         .set(REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER.plus(holder.getSkippedInstancesCounter().get()))
         .set(REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER, REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER.plus(holder.getFailedInstancesCounter().get()))
@@ -292,6 +293,7 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getLastUpdatedDate())
       .ifPresent(offsetDateTime -> requestMetadata.withLastUpdatedDate(Date.from(offsetDateTime.toInstant())));
     of(pojo.getStreamEnded()).ifPresent(requestMetadata::withStreamEnded);
+    of(pojo.getSavedInstancesCounter()).ifPresent(requestMetadata::withSavedInstancesCounter);
     of(pojo.getReturnedInstancesCounter()).ifPresent(requestMetadata::withReturnedInstancesCounter);
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);

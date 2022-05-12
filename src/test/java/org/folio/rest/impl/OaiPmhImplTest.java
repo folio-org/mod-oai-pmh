@@ -1255,7 +1255,7 @@ class OaiPmhImplTest {
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
 
     if (metadataPrefix == MetadataPrefix.MARC21WITHHOLDINGS) {
-      verifyRequestMetadataStatistics(getRequestMetadataCollection(), 1, 1, 0, 0);
+      verifyRequestMetadataStatistics(getRequestMetadataCollection(), 2, 1, 1, 0, 0);
     }
     verifyListResponse(response, LIST_RECORDS, 1);
   }
@@ -1272,7 +1272,7 @@ class OaiPmhImplTest {
       .get(0);
     assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 0, 0, 1, 0);
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 1, 0, 0, 1, 0);
 
   }
 
@@ -2275,7 +2275,7 @@ class OaiPmhImplTest {
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 0, 0, 0);
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 27, 0, 0, 0);
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
@@ -2667,8 +2667,11 @@ class OaiPmhImplTest {
       .as(RequestMetadataCollection.class);
   }
 
-  private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int returnedInstancesCounter,
+  private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int savedInstancesCounter, int returnedInstancesCounter,
                                                int failedInstancesCounter, int skippedInstancesCounter, int supressedInstancesCounter) {
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getSavedInstancesCounter(), is(savedInstancesCounter));
     assertThat(requestMetadata.getRequestMetadataCollection()
       .get(0)
       .getReturnedInstancesCounter(), is(returnedInstancesCounter));
