@@ -445,18 +445,34 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       return;
     }
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
-      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
-      .compose(streamEnded -> {
+      .compose(requestMetadata -> {
+        Boolean streamEnded = requestMetadata.getStreamEnded();
         if (firstBatch) {
           return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
                 timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
         }
         int autoIncrementedId = request.getNextInstancePkValue();
+        Future<List<Instances>> future;
+        if (!streamEnded && System.currentTimeMillis() - requestMetadata.getLastUpdatedDate()
+          .toInstant().toEpochMilli() < 1000) {
+          Promise<List<Instances>> promise = Promise.promise();
+          vertx.setTimer(POLLING_TIME_INTERVAL * 2, (timer) -> {
+            getNextBatchFuture(requestId, request, firstBatch, batchSize, listPromise, retryCount, streamEnded, autoIncrementedId)
+              .onComplete((l) -> promise.complete(l.result()));
+          });
+          future = promise.future();
+        } else {
+          future = getNextBatchFuture(requestId, request, firstBatch, batchSize, listPromise, retryCount, streamEnded, autoIncrementedId);
+        }
+        return future;
+      });
+  }
+
+  private Future<List<Instances>> getNextBatchFuture(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, AtomicInteger retryCount, Boolean streamEnded, int autoIncrementedId) {
         return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
           .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
               timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
-      });
   }
 
   private Handler<AsyncResult<List<Instances>>> handleInstancesDbResponse(Promise<List<Instances>> listPromise, boolean streamEnded,
