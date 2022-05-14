@@ -313,14 +313,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
-        batch.clear();
+        logger.info("Start processing batch");
+        jsonParser.pause();
+        saveInstancesIds(batch, tenant, requestId, postgresClient)
+         .onComplete(res -> {
+           batch.clear();
+           jsonParser.resume();
+           logger.info("Finishing processing batch");
+         });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
-        batch.clear();
+        saveInstancesIds(batch, tenant, requestId, postgresClient)
+         .onComplete(res -> batch.clear());
       }
       downloadInstancesPromise.complete();
     });
@@ -453,26 +459,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                 timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
         }
         int autoIncrementedId = request.getNextInstancePkValue();
-        Future<List<Instances>> future;
-        if (!streamEnded && System.currentTimeMillis() - requestMetadata.getLastUpdatedDate()
-          .toInstant().toEpochMilli() < 1000) {
-          Promise<List<Instances>> promise = Promise.promise();
-          vertx.setTimer(POLLING_TIME_INTERVAL * 2, (timer) -> {
-            getNextBatchFuture(requestId, request, firstBatch, batchSize, listPromise, retryCount, streamEnded, autoIncrementedId)
-              .onComplete((l) -> promise.complete(l.result()));
-          });
-          future = promise.future();
-        } else {
-          future = getNextBatchFuture(requestId, request, firstBatch, batchSize, listPromise, retryCount, streamEnded, autoIncrementedId);
-        }
-        return future;
-      });
-  }
-
-  private Future<List<Instances>> getNextBatchFuture(String requestId, Request request, boolean firstBatch, int batchSize, Promise<List<Instances>> listPromise, AtomicInteger retryCount, Boolean streamEnded, int autoIncrementedId) {
         return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
           .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
               timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
+      });
   }
 
   private Handler<AsyncResult<List<Instances>>> handleInstancesDbResponse(Promise<List<Instances>> listPromise, boolean streamEnded,
@@ -751,7 +741,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
-  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
+  private Future<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
                                          PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
@@ -764,7 +754,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         promise.complete();
       }
     });
-    return promise;
+    return promise.future();
   }
 
   private Future<Void> saveInstances(List<Instances> instances, String tenantId, String requestId, PostgresClient postgresClient) {
