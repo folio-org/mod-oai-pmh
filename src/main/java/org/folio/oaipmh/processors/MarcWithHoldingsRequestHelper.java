@@ -313,13 +313,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        logger.info("Start processing batch");
         jsonParser.pause();
         saveInstancesIds(batch, tenant, requestId, postgresClient)
          .onComplete(res -> {
            batch.clear();
            jsonParser.resume();
-           logger.info("Finishing processing batch");
          });
       }
     });
