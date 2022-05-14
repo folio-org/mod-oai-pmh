@@ -451,8 +451,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       return;
     }
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
-      .compose(requestMetadata -> {
-        Boolean streamEnded = requestMetadata.getStreamEnded();
+      .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
+      .compose(streamEnded -> {
         if (firstBatch) {
           return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
