@@ -182,7 +182,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
               downloadInstancesPromise, downloadContext, statistics), downloadInstancesResult -> {
-                instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
+                updateRequestStreamEnded(requestId, true, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
                 } else {
