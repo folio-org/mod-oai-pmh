@@ -183,8 +183,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           var downloadInstancesStatistics = new StatisticsHolder();
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
               downloadInstancesPromise, downloadContext, downloadInstancesStatistics), downloadInstancesResult -> {
-              instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, downloadInstancesStatistics, request.getTenant());
-              updateRequestStreamEnded(requestId, request.getTenant());
+              updateRequestStreamEnded(requestId, request.getTenant(), downloadInstancesStatistics);
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
                 } else {
@@ -204,12 +203,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void updateRequestStreamEnded(String requestId, String tenantId) {
+  private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder holder) {
     Promise<Void> promise = Promise.promise();
     PostgresClient.getInstance(downloadContext.owner(), tenantId).getConnection(e -> {
-      Tuple params = Tuple.of(true, UUID.fromString(requestId));
+      Tuple params = Tuple.of(true, UUID.fromString(requestId), holder.getDownloadedAndSavedInstancesCounter(), holder.getFailedToSaveInstancesCounter());
       String sql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
-        + ".request_metadata_lb SET stream_ended = $1 WHERE request_id = $2";
+        + ".request_metadata_lb SET stream_ended = $1, downloaded_and_saved_instances_counter = $3, failed_to_save_instances_counter = $4 WHERE request_id = $2";
 
       if (e.failed()) {
         logger.error("Update stream ended failed: {}.", e.cause().getMessage(), e.cause());
@@ -338,9 +337,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
           batch.clear();
           jsonParser.resume();
-        });
+        }).onComplete(vVoid -> downloadInstancesPromise.complete());
       }
-      downloadInstancesPromise.complete();
     });
     jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
         if (invalidResponseReceivedAndProcessed) {
