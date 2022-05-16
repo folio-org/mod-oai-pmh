@@ -304,7 +304,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder statistics) {
-    String tenant = "fs00001006";
+    String tenant = request.getTenant();
     String requestId = request.getRequestId();
 
     Promise<Boolean> responseChecked = Promise.promise();
