@@ -328,7 +328,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
@@ -338,6 +337,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           batch.clear();
           jsonParser.resume();
         }).onComplete(vVoid -> downloadInstancesPromise.complete());
+      } else {
+        downloadInstancesPromise.complete();
       }
     });
     jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
