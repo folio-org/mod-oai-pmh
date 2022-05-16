@@ -308,30 +308,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     String requestId = request.getRequestId();
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser()
-      .objectValueMode();
+    var jsonParser = new OaiPmhJsonParser().objectValueMode();
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
+        jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
           } else {
             statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
+          jsonParser.resume();
           batch.clear();
         });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
+        jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
           } else {
             statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
+          jsonParser.resume();
           batch.clear();
         });
       }
