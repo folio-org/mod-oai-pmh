@@ -181,7 +181,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()));
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
-              downloadInstancesPromise, downloadContext), downloadInstancesResult -> {
+              downloadInstancesPromise, downloadContext, statistics), downloadInstancesResult -> {
                 instancesService.updateRequestStreamEnded(requestId, true, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
@@ -203,7 +203,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<StatisticsHolder> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
-      boolean firstBatch, StatisticsHolder holder) {
+      boolean firstBatch, StatisticsHolder statistics) {
     Promise<StatisticsHolder> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
@@ -235,7 +235,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           if (CollectionUtils.isEmpty(instances)) {
             logger.debug("Got empty instances.");
-            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, holder)
+            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
@@ -252,9 +252,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
-              deletedRecordSupport, holder)
+              deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onSuccess(p -> promise.complete(holder))
+              .onSuccess(p -> promise.complete(statistics))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
@@ -270,15 +270,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-                                 Context vertxContext) {
+                                 Context vertxContext, StatisticsHolder statistics) {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
-    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise);
+    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, statistics);
   }
 
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
-                                    Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise) {
+                                    Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder statistics) {
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
 
@@ -289,14 +289,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
-        batch.clear();
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
+          if (result.succeeded()) {
+            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+          } else {
+            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+          }
+          batch.clear();
+        });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient);
-        batch.clear();
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
+          if (result.succeeded()) {
+            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+          } else {
+            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+          }
+          batch.clear();
+        });
       }
       downloadInstancesPromise.complete();
     });
@@ -711,7 +723,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
-  private Promise<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
+  private Future<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
                                          PostgresClient postgresClient) {
     Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
@@ -724,7 +736,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         promise.complete();
       }
     });
-    return promise;
+    return promise.future();
   }
 
   private Future<Void> saveInstances(List<Instances> instances, String tenantId, String requestId, PostgresClient postgresClient) {
