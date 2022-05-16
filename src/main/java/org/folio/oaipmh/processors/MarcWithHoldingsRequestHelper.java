@@ -182,7 +182,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         if (isFirstBatch) {
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
               downloadInstancesPromise, downloadContext, statistics), downloadInstancesResult -> {
-                updateRequestStreamEnded(requestId, true, request.getTenant());
+                updateRequestStreamEnded(requestId, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
                 } else {
@@ -202,10 +202,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId) {
+  private void updateRequestStreamEnded(String requestId, String tenantId) {
     Promise<Void> promise = Promise.promise();
     PostgresClient.getInstance(downloadContext.owner(), tenantId).getConnection(e -> {
-      Tuple params = Tuple.of(isStreamEnded, UUID.fromString(requestId));
+      Tuple params = Tuple.of(true, UUID.fromString(requestId));
       String sql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".request_metadata_lb SET stream_ended = $1 WHERE request_id = $2";
 
