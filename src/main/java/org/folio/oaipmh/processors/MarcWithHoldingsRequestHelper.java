@@ -174,15 +174,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       } else {
         updateRequestMetadataFuture = Future.succeededFuture();
       }
-      var statistics = StatisticsHolder.getInstance();
+      var batchInstancesStatistics = new StatisticsHolder();
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null;
-        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, statistics)
-          .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()));
+        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, batchInstancesStatistics)
+          .onComplete(vVoid -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchInstancesStatistics, request.getTenant()));
         if (isFirstBatch) {
+          var downloadInstancesStatistics = new StatisticsHolder();
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
-              downloadInstancesPromise, downloadContext, statistics), downloadInstancesResult -> {
-                updateRequestStreamEnded(requestId, request.getTenant());
+              downloadInstancesPromise, downloadContext, downloadInstancesStatistics), downloadInstancesResult -> {
+              instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, downloadInstancesStatistics, request.getTenant());
+              updateRequestStreamEnded(requestId, request.getTenant());
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("Downloading instances complete.");
                 } else {
@@ -227,9 +229,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
   }
 
-  private Future<StatisticsHolder> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
+  private Future<Void> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
       boolean firstBatch, StatisticsHolder statistics) {
-    Promise<StatisticsHolder> promise = Promise.promise();
+    Promise<Void> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
@@ -279,7 +281,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
               deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onSuccess(p -> promise.complete(statistics))
+              .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
@@ -295,15 +297,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
-                                 Context vertxContext, StatisticsHolder statistics) {
+                                 Context vertxContext, StatisticsHolder downloadInstancesStatistics) {
 
     HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
-    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, statistics);
+    setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, downloadInstancesStatistics);
   }
 
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
-                                    Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder statistics) {
+                                    Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
 
@@ -316,9 +318,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
-            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
           } else {
-            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
           batch.clear();
           jsonParser.resume();
@@ -330,9 +332,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
-            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
           } else {
-            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
           batch.clear();
           jsonParser.resume();

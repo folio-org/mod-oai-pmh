@@ -18,11 +18,4 @@ public class StatisticsHolder {
     final AtomicInteger failedInstancesCounter = new AtomicInteger();
     final AtomicInteger supressedFromDiscoveryCounter = new AtomicInteger();
 
-    private static class Holder {
-        private static StatisticsHolder holder = new StatisticsHolder();
-    }
-
-    public static StatisticsHolder getInstance() {
-        return Holder.holder;
-    }
 }
