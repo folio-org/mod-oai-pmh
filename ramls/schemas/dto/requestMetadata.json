@@ -18,8 +18,12 @@
       "description": "stream ended",
       "type": "boolean"
     },
-    "savedInstancesCounter": {
+    "downloadedAndSavedInstancesCounter": {
       "description": "saved instances counter",
+      "type": "integer"
+    },
+    "failedToSaveInstancesCounter": {
+      "description": "failed to save instances counter",
       "type": "integer"
     },
     "returnedInstancesCounter": {

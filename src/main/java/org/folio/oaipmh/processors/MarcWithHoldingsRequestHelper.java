@@ -291,7 +291,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
-            statistics.getSavedInstancesCounter().addAndGet(result.result());
+            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+          } else {
+            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
           batch.clear();
         });
@@ -301,7 +303,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (!batch.isEmpty()) {
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
-            statistics.getSavedInstancesCounter().addAndGet(result.result());
+            statistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+          } else {
+            statistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
           }
           batch.clear();
         });
@@ -719,9 +723,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
-  private Future<Integer> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
+  private Future<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
                                          PostgresClient postgresClient) {
-    Promise<Integer> promise = Promise.promise();
+    Promise<Void> promise = Promise.promise();
     List<Instances> instancesList = toInstancesList(instances, UUID.fromString(requestId));
     saveInstances(instancesList, tenant, requestId, postgresClient).onComplete(res -> {
       if (res.failed()) {
@@ -729,7 +733,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           .getMessage(), res.cause());
         promise.fail(res.cause());
       } else {
-        promise.complete(instancesList.size());
+        promise.complete();
       }
     });
     return promise.future();
