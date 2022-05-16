@@ -123,12 +123,12 @@ public class InstancesDaoImpl implements InstancesDao {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
         .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
-        .set(REQUEST_METADATA_LB.DOWNLOADED_AND_SAVED_INSTANCES_COUNTER, REQUEST_METADATA_LB.DOWNLOADED_AND_SAVED_INSTANCES_COUNTER.plus(holder.getDownloadedAndSavedInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.FAILED_TO_SAVE_INSTANCES_COUNTER, REQUEST_METADATA_LB.FAILED_TO_SAVE_INSTANCES_COUNTER.plus(holder.getFailedToSaveInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER, REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER.plus(holder.getReturnedInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER.plus(holder.getSkippedInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER, REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER.plus(holder.getFailedInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER.plus(holder.getSupressedFromDiscoveryCounter().get()))
+        .set(REQUEST_METADATA_LB.DOWNLOADED_AND_SAVED_INSTANCES_COUNTER, holder.getDownloadedAndSavedInstancesCounter().get())
+        .set(REQUEST_METADATA_LB.FAILED_TO_SAVE_INSTANCES_COUNTER, holder.getFailedToSaveInstancesCounter().get())
+        .set(REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER, holder.getReturnedInstancesCounter().get())
+        .set(REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER, holder.getSkippedInstancesCounter().get())
+        .set(REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER, holder.getFailedInstancesCounter().get())
+        .set(REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER, holder.getSupressedFromDiscoveryCounter().get())
 
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
         .returning())
