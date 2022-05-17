@@ -241,7 +241,7 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
-    updateSubfieldsMapWithItemLoanTypeField(effectiveLocationSubFields, itemData);
+    updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     //Map location name, which changed paths in json, to 952$d
     Optional.ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
@@ -250,7 +250,7 @@ public class RecordMetadataManager {
     return effectiveLocationSubFields;
   }
 
-  private void updateSubfieldsMapWithItemLoanTypeField(Map<String, Object> subFields, JsonObject itemData) {
+  private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {
     String permanentLoanType = itemData.getString(PERMANENT_LOAN_TYPE);
     String temporaryLoanType = itemData.getString(TEMPORARY_LOAN_TYPE);
     if (isNotEmpty(temporaryLoanType)) {
