@@ -63,6 +63,10 @@ class RecordMetadataManagerTest {
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE = "/metadata-manager/electronic_access-resource.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_resource.json";
 
+  private static final String ITEM_BOTH_LOAN_TYPES = "/metadata-manager/item_both_loan_types.json";
+  private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE = "/metadata-manager/item_only_permanent_loan_type.json";
+  private static final String ITEM_EMPTY_LOAN_TYPE = "/metadata-manager/item_empty_loan_type.json";
+
   private static final String ELECTRONIC_ACCESS_FILED = "856";
   private static final String GENERAL_INFO_FIELD = "999";
   private static final String EFFECTIVE_LOCATION_FILED = "952";
@@ -131,6 +135,23 @@ class RecordMetadataManagerTest {
     String secondIndicator = fieldContent.getString("ind2");
     assertEquals(expectedIndicators.get(FIRST_INDICATOR_INDEX), firstIndicator);
     assertEquals(expectedIndicators.get(SECOND_INDICATOR_INDEX), secondIndicator);
+  }
+
+  @SuppressWarnings("unchecked")
+  @ParameterizedTest
+  @MethodSource(value = "itemsWithDifferentLoanTypesAndExpectedSubfieldValues")
+  void shouldCorrectlySetLoanType(String jsonFilePath, String expectedValues, boolean subfieldShouldExist) {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance,
+      true);
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    JsonObject effectiveLocation = getFieldFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    Map<String, Object> fieldMap = effectiveLocation.getMap();
+    Map<String, Object> effectiveLocationField = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
+    List<Map<String, Object>> subfieldsList = (List<Map<String, Object>>) effectiveLocationField.get(SUBFIELDS);
+    assertTrue(verifySubFieldValuePresence(subfieldsList, "p", expectedValues, subfieldShouldExist));
   }
 
   @Test
@@ -218,6 +239,14 @@ class RecordMetadataManagerTest {
     return builder.build();
   }
 
+  private static Stream<Arguments> itemsWithDifferentLoanTypesAndExpectedSubfieldValues() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    builder.add((Arguments.arguments(ITEM_ONLY_PERMANENT_LOAN_TYPE, "permanentLoanType value", true)));
+    builder.add((Arguments.arguments(ITEM_BOTH_LOAN_TYPES, "temporaryLoanType value", true)));
+    builder.add((Arguments.arguments(ITEM_EMPTY_LOAN_TYPE, "", false)));
+    return builder.build();
+  }
+
   private void verifySrsInstanceSuccessfullyUpdated(JsonObject srsInstance) {
     JsonArray fields = getContentFieldsArray(srsInstance);
     JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
@@ -236,10 +265,10 @@ class RecordMetadataManagerTest {
     assertEquals("0", secondIndicator);
 
     List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "u", "test.com"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "y", "GS demo Holding 1_2"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "3", "Materials specified"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "z", "URL public note"));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "u", "test.com", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "y", "GS demo Holding 1_2", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "3", "Materials specified", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "z", "URL public note", true));
   }
 
   @SuppressWarnings("unchecked")
@@ -253,33 +282,33 @@ class RecordMetadataManagerTest {
     assertEquals("f", secondIndicator);
     List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
     if (locationGroupMustBePresented) {
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "a", "Københavns Universitet"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "b", "City Campus"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "c", "Datalogisk Institut"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "d", "testName"));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "a", "Københavns Universitet", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "b", "City Campus", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "c", "Datalogisk Institut", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "d", "testName", true));
     } else {
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "a", "Københavns Universitet"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "b", "City Campus"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "c", "Datalogisk Institut"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "d", "testName"));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "a", "Københavns Universitet", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "b", "City Campus", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "c", "Datalogisk Institut", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "d", "testName", true));
     }
     if (callNumberGroupMustBePresented) {
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "e", "Call number 1_2_1"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "f", "prefix"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "g", "suffix"));
-      assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe"));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "e", "Call number 1_2_1", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "f", "prefix", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "g", "suffix", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe", true));
     } else {
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "e", "Call number 1_2_1"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "f", "prefix"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "g", "suffix"));
-      assertFalse(containsSubFieldWithCodeAndValue(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe"));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "e", "Call number 1_2_1", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "f", "prefix", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "g", "suffix", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe", true));
     }
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "i", "book"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "j", "Volume 1_2_1"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "k", "Enumeration 1_2_1"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "l", "testChronology"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "m", "testBarcode"));
-    assertTrue(containsSubFieldWithCodeAndValue(subFieldsList, "n", "copy number"));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "i", "book", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "j", "Volume 1_2_1", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "l", "testChronology", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "m", "testBarcode", true));
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "n", "copy number", true));
   }
 
   private JsonArray getContentFieldsArray(JsonObject srsInstance) {
@@ -288,11 +317,19 @@ class RecordMetadataManagerTest {
     return content.getJsonArray(FIELDS);
   }
 
-  private boolean containsSubFieldWithCodeAndValue(List<Map<String, Object>> subFieldsList, String subFieldCode,
-      String subFieldValue) {
-    return subFieldsList.stream()
-      .anyMatch(subField -> subField.containsKey(subFieldCode) && subField.get(subFieldCode)
-        .equals(subFieldValue));
+  private boolean verifySubFieldValuePresence(List<Map<String, Object>> subFieldsList, String subFieldCode,
+                                              String subFieldValue, boolean subfieldShouldPresent) {
+    if (subfieldShouldPresent) {
+      return subFieldsList.stream()
+        .anyMatch(subField -> subField.containsKey(subFieldCode) && subField.get(subFieldCode)
+          .equals(subFieldValue));
+    } else {
+      return subFieldsList.stream()
+        .noneMatch(subField -> subField.containsKey(subFieldCode) && subField.get(subFieldCode)
+          .equals(subFieldValue));
+    }
+
+
   }
 
   private JsonObject getFieldFromFieldsListByTagNumber(JsonArray fields, String tag) {
