@@ -306,6 +306,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, downloadInstancesStatistics);
   }
 
+
   private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
     String tenant = request.getTenant();
@@ -316,13 +317,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
+      var size = batch.size();
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
-            downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
           } else {
-            downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+            downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+            var ids = batch.stream()
+                    .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+            downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }
           batch.clear();
           jsonParser.resume();
@@ -331,12 +336,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
+        var size = batch.size();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
           .onComplete(result -> {
             if (result.succeeded()) {
-              downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+              downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
             } else {
-              downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+              downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+              var ids = batch.stream()
+                      .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+              downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
           }).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
