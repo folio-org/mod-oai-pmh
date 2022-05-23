@@ -323,9 +323,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result);
-        }).onComplete(vVoid -> downloadInstancesPromise.complete());
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
+          .onComplete(result -> completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result)).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
         downloadInstancesPromise.complete();
       }
