@@ -39,7 +39,8 @@ OAI-PMH is heavily loaded module and for correct work with big data set(approxim
 Configuration properties are intended to be retrieved from [mod-configuration](https://github.com/folio-org/mod-configuration/blob/master/README.md) module. System property values are used as a fallback.
 Configurations can be managed from the UI through the mod-configuration via folio settings.
 The default configuration system properties split into the logically bounded groups and defined within next 3 json files: [behavior.json](src/main/resources/config/behavior.json), [general.json](src/main/resources/config/general.json), [technical.json](src/main/resources/config/technical.json). 
-The configurations by itself are placed within json 'value' field in the "key":"value" way.
+The configurations by itself are placed within json 'value' field in the "key":"value" way. For stable operation, the application requires the following memory configuration. Java: -XX:MetaspaceSize=384m -XX:MaxMetaspaceSize=512m -Xmx1433m.
+Amazon Container: cpu - 2048, memory - 2048, memoryReservation - 1845.
 
 The following configuration properties are used:
 
