@@ -35,10 +35,12 @@ import org.folio.oaipmh.service.InstancesService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
+import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,6 +81,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -225,6 +228,8 @@ class OaiPmhImplTest {
   private Pattern DATE_ONLY_PATTERN = Pattern.compile(DATE_ONLY_REXEXP);
   private Pattern DATE_TIME_PATTERN = Pattern.compile(DATE_TIME_REGEXP);
 
+  List<String> failedInstancesEndpoints = List.of("failed-to-save-instances", "failed-instances", "skipped-instances", "suppressed-from-discovery-instances");
+
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
   private String idleTimeout;
@@ -232,7 +237,7 @@ class OaiPmhImplTest {
   private InstancesService instancesService;
 
   @BeforeAll
-  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     resetSystemProperties();
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000*60*60);
@@ -1245,7 +1250,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
-  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
+  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) throws InterruptedException {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -1255,7 +1260,12 @@ class OaiPmhImplTest {
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
 
     if (metadataPrefix == MetadataPrefix.MARC21WITHHOLDINGS) {
-      verifyRequestMetadataStatistics(getRequestMetadataCollection(), 2, 0, 1, 1, 0, 0);
+      var requestMetadataCollection = getRequestMetadataCollection();
+      verifyRequestMetadataStatistics(requestMetadataCollection, 2, 0, 1, 1, 0, 0);
+      var requestId = requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId();
+      var uuidCollection = getUuidCollection(requestId, "failed-instances");
+      assertThat(uuidCollection.getUuidCollection(), hasSize(1));
+      assertThat(uuidCollection.getTotalRecords(), is(1));
     }
     verifyListResponse(response, LIST_RECORDS, 1);
   }
@@ -1272,7 +1282,14 @@ class OaiPmhImplTest {
       .get(0);
     assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 1, 0, 0, 0, 1, 0);
+    // Statistics API verification
+    var requestMetadataCollection = getRequestMetadataCollection();
+    verifyRequestMetadataStatistics(requestMetadataCollection, 1, 0, 0, 0, 1, 0);
+    failedInstancesEndpoints.forEach(path -> {
+      var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
+      assertThat(uuidCollection.getUuidCollection(), hasSize("skipped-instances".equals(path) ? 1: 0));
+      assertThat(uuidCollection.getTotalRecords(), is("skipped-instances".equals(path) ? 1: 0));
+    });
 
   }
 
@@ -2304,8 +2321,15 @@ class OaiPmhImplTest {
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 0, 27, 0, 0, 0);
+    // Statistics API verification
+    var requestMetadataCollection = getRequestMetadataCollection();
+    verifyRequestMetadataStatistics(requestMetadataCollection, 27, 0, 27, 0, 0, 0);
 
+    failedInstancesEndpoints.forEach(path -> {
+      var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
+      assertThat(uuidCollection.getUuidCollection(), hasSize(0));
+      assertThat(uuidCollection.getTotalRecords(), is(0));
+    });
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
@@ -2696,8 +2720,23 @@ class OaiPmhImplTest {
       .as(RequestMetadataCollection.class);
   }
 
+  private UuidCollection getUuidCollection(String requestId, String path) {
+    return RestAssured.given()
+      .header(okapiUrlHeader)
+      .header(tokenHeader)
+      .header(tenantHeader)
+      .basePath(REQUEST_METADATA_PATH + "/" + requestId + "/" + path)
+      .when()
+      .get()
+      .then()
+      .contentType(ContentType.JSON)
+      .statusCode(200)
+      .extract()
+      .as(UuidCollection.class);
+  }
+
   private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int downloadedAndSavedInstancesCounter, int failedToSaveInstancesCounter, int returnedInstancesCounter,
-                                               int failedInstancesCounter, int skippedInstancesCounter, int supressedInstancesCounter) {
+                                               int failedInstancesCounter, int skippedInstancesCounter, int suppressedInstancesCounter) {
     assertThat(requestMetadata.getRequestMetadataCollection()
        .get(0)
        .getStreamEnded(), is(true));
@@ -2718,7 +2757,7 @@ class OaiPmhImplTest {
       .getSkippedInstancesCounter(), is(skippedInstancesCounter));
     assertThat(requestMetadata.getRequestMetadataCollection()
       .get(0)
-      .getSupressedInstancesCounter(), is(supressedInstancesCounter));
+      .getSuppressedInstancesCounter(), is(suppressedInstancesCounter));
   }
 
   @Autowired

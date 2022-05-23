@@ -79,6 +79,22 @@ At the first time, the last updated date is set during the initial-load and then
 
 But in a case when harvester lost his resumptionToken then saved instances ids with metadata that have not been retrieved and processed yet will be kept in DB and never will be cleaned. For preventing this case, request id has an expired period which for now equals to one day(24 h.) Therefore, when some request ids with expired last updated date exist then both such request ids and associated with them instances ids start to be considered as expired and will be removed from DB by cleaning job which are run each 2 hours.<br/>
 
+### Harvesting Statistics API
+
+Statistics API contains information on marc21_withholdings harvesting.
+The following endpoints can be used to monitor status of the completed harvesting.
+
+Name | Endpoint | Description 
+------------ | ------------- | ------------- 
+Request Metadata Collection | GET /oai/request-metadata | Returns whole collection of executed harvesting metadata 
+Failed to save instances UUIDs | GET /oai/request-metadata/{requestId}/failed-to-save-instances | Returns UUIDs collection of failed to save instances
+Failed instances UUIDs | GET /oai/request-metadata/{requestId}/failed-instances | Returns UUIDs collection of failed instances (instances were downloaded but failed to convert in MARC format)
+Skipped instances UUIDs| GET /oai/request-metadata/{requestId}/skipped-instances | Returns UUIDs collection of skipped instances (instances were downloaded but there are no corresponding records in SRS)
+Suppressed from discovery instances UUIDs| GET /oai/request-metadata/{requestId}/suppressed-from-discovery-instances | Returns UUIDs collection of suppressed from discovery instances
+
+A typical API usage should be performed with the following approach. The user requests a collection of Request Metadata. Finds the necessary request metadata by the harvesting start time. Request Metadata contains the `requestId` 
+and counters of the corresponding events. Next, the user can call the necessary endpoints using `requestId` to get a list of UUIDs.
+
 ### Issue tracker
 
 See project [MODOAIPMH](https://issues.folio.org/browse/MODOAIPMH)

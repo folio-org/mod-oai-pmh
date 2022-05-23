@@ -23,6 +23,8 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
 
   private static final Logger logger = LogManager.getLogger(RequestMetadataAPIs.class);
   private static final String REQUEST_METADATA_ERROR_MESSAGE_TEMPLATE = "Error occurred while get request metadata. Message: {}.";
+  private static final String UUID_COLLECTION_ERROR_MESSAGE_TEMPLATE = "Error occurred while get UUIDs collection. Message: {}.";
+
 
   @Autowired
   InstancesDao instancesDao;
@@ -49,5 +51,69 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
         asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
       }
     });
+  }
+
+  @Override
+  public void getOaiRequestMetadataFailedToSaveInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    try {
+      var tenantId = TenantTool.tenantId(okapiHeaders);
+      logger.info("Get request metadata collection for tenant: {}", tenantId);
+      instancesDao.getFailedToSaveInstancesIdsCollection(requestId, offset, limit, tenantId)
+        .map(GetOaiRequestMetadataFailedToSaveInstancesByRequestIdResponse::respond200WithApplicationJson)
+        .map(Response.class::cast)
+        .otherwise(ExceptionHelper::mapExceptionToResponse)
+        .onComplete(asyncResultHandler);
+    } catch (Exception e) {
+      logger.error(UUID_COLLECTION_ERROR_MESSAGE_TEMPLATE, e.getMessage());
+      asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+    }
+  }
+
+  @Override
+  public void getOaiRequestMetadataSkippedInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    try {
+      var tenantId = TenantTool.tenantId(okapiHeaders);
+      logger.info("Get request metadata collection for tenant: {}", tenantId);
+      instancesDao.getSkippedInstancesIdsCollection(requestId, offset, limit, tenantId)
+        .map(GetOaiRequestMetadataSkippedInstancesByRequestIdResponse::respond200WithApplicationJson)
+        .map(Response.class::cast)
+        .otherwise(ExceptionHelper::mapExceptionToResponse)
+        .onComplete(asyncResultHandler);
+    } catch (Exception e) {
+      logger.error(UUID_COLLECTION_ERROR_MESSAGE_TEMPLATE, e.getMessage());
+      asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+    }
+  }
+
+  @Override
+  public void getOaiRequestMetadataFailedInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    try {
+      var tenantId = TenantTool.tenantId(okapiHeaders);
+      logger.info("Get request metadata collection for tenant: {}", tenantId);
+      instancesDao.getFailedInstancesIdsCollection(requestId, offset, limit, tenantId)
+        .map(GetOaiRequestMetadataFailedInstancesByRequestIdResponse::respond200WithApplicationJson)
+        .map(Response.class::cast)
+        .otherwise(ExceptionHelper::mapExceptionToResponse)
+        .onComplete(asyncResultHandler);
+    } catch (Exception e) {
+      logger.error(UUID_COLLECTION_ERROR_MESSAGE_TEMPLATE, e.getMessage());
+      asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+    }
+  }
+
+  @Override
+  public void getOaiRequestMetadataSuppressedFromDiscoveryInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    try {
+      var tenantId = TenantTool.tenantId(okapiHeaders);
+      logger.info("Get request metadata collection for tenant: {}", tenantId);
+      instancesDao.getSuppressedInstancesIdsCollection(requestId, offset, limit, tenantId)
+        .map(GetOaiRequestMetadataSuppressedFromDiscoveryInstancesByRequestIdResponse::respond200WithApplicationJson)
+        .map(Response.class::cast)
+        .otherwise(ExceptionHelper::mapExceptionToResponse)
+        .onComplete(asyncResultHandler);
+    } catch (Exception e) {
+      logger.error(UUID_COLLECTION_ERROR_MESSAGE_TEMPLATE, e.getMessage());
+      asyncResultHandler.handle(Future.succeededFuture(ExceptionHelper.mapExceptionToResponse(e)));
+    }
   }
 }
