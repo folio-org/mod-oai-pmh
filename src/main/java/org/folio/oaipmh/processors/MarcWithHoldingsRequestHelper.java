@@ -319,33 +319,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          var size = batch.size();
-          if (result.succeeded()) {
-            downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
-          } else {
-            downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
-            var ids = batch.stream()
-              .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
-            downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
-          }
-          batch.clear();
+          completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result);
           jsonParser.resume();
         });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          var size = batch.size();
-          if (result.succeeded()) {
-            downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
-          } else {
-            downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
-            downloadInstancesStatistics.addFailedToSaveInstancesIds(batch.stream()
-              .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList()));
-          }
-          batch.clear();
-        }).onComplete(vVoid -> downloadInstancesPromise.complete());
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
+          .onComplete(result -> completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result)).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
         downloadInstancesPromise.complete();
       }
@@ -387,6 +369,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           throwable);
         promise.fail(throwable);
       });
+  }
+
+  private void completeBatchAndUpdateDownloadStatistics(StatisticsHolder downloadInstancesStatistics, ArrayList<JsonEvent> batch, AsyncResult<Void> result) {
+    if (result.succeeded()) {
+      downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+    } else {
+      downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+    }
+    batch.clear();
   }
 
   private HttpRequest<Buffer> buildInventoryQuery(Request request) {
