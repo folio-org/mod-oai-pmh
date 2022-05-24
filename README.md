@@ -35,12 +35,12 @@ The following schemas used:
  + MARC 21 XML Schema: [MARC21slim.xsd](http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd) (please refer to [MARC 21 XML Schema](http://www.loc.gov/standards/marcxml/) for more details)
 ### Deployment requirements
 OAI-PMH is heavily loaded module and for correct work with big data set(approximately 4-5 millions records) it requires to have as least 400 Mb of java heap and 1Gb for docker container memory.
-It is required to set environment variables according to ModuleDescriptor: DB_QUERYTIMEOUT = 2700000, DB_MAXPOOLSIZE = 35.
 ### Configuration
 Configuration properties are intended to be retrieved from [mod-configuration](https://github.com/folio-org/mod-configuration/blob/master/README.md) module. System property values are used as a fallback.
 Configurations can be managed from the UI through the mod-configuration via folio settings.
 The default configuration system properties split into the logically bounded groups and defined within next 3 json files: [behavior.json](src/main/resources/config/behavior.json), [general.json](src/main/resources/config/general.json), [technical.json](src/main/resources/config/technical.json). 
-The configurations by itself are placed within json 'value' field in the "key":"value" way.
+The configurations by itself are placed within json 'value' field in the "key":"value" way. For stable operation, the application requires the following memory configuration. Java: -XX:MetaspaceSize=384m -XX:MaxMetaspaceSize=512m -Xmx1440m.
+Amazon Container: cpu - 2048, memory - 2048, memoryReservation - 1845.
 
 The following configuration properties are used:
 

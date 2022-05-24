@@ -10,10 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Setter
 @NoArgsConstructor
 public class StatisticsHolder {
+
     final AtomicInteger downloadedAndSavedInstancesCounter = new AtomicInteger();
     final AtomicInteger failedToSaveInstancesCounter = new AtomicInteger();
     final AtomicInteger returnedInstancesCounter = new AtomicInteger();
     final AtomicInteger skippedInstancesCounter = new AtomicInteger();
     final AtomicInteger failedInstancesCounter = new AtomicInteger();
     final AtomicInteger supressedFromDiscoveryCounter = new AtomicInteger();
+
 }
