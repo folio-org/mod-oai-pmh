@@ -237,7 +237,7 @@ public class InstancesDaoImpl implements InstancesDao {
 
       GenericCompositeFuture.all(List.of(saveFailedToSaveInstancesIds, saveFailedInstancesIds, saveSkippedInstancesIds, saveSuppressedFromDiscoveryInstancesIds, updateRequestMetadataRecordFuture)).onComplete(x -> {
         if (x.succeeded()) {
-          promise.complete();
+          promise.complete(updateRequestMetadataRecordFuture.result());
         } else {
           promise.fail(x.cause());
         }
