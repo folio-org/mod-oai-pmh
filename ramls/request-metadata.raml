@@ -24,6 +24,7 @@ traits:
 
 resourceTypes:
   collection-get: !include raml-util/rtypes/collection-get.raml
+  get-only: !include raml-util/rtypes/get-only.raml
 
 /oai/request-metadata:
   displayName: OAIPMH Request Metadata API
@@ -42,51 +43,43 @@ resourceTypes:
   /{requestId}/failed-to-save-instances:
     description: Service that allows to retrieve UUIDs of failed to save instances
     type:
-      collection-get:
+      get-only:
         exampleCollection: !include examples/uuidCollection.sample
-        exampleItem: !include examples/uuid.sample
-        schemaCollection: uuid_collection
-        schemaItem: uuid
+        schema: uuid_collection
     is: [ validate ]
     get:
-      description: Get list of request metadata
+      description: Get list of failed to save instances UUIDs
       is: [ pageable ]
 
   /{requestId}/skipped-instances:
     description: Service that allows to retrieve UUIDs of skipped instances
     type:
-      collection-get:
+      get-only:
         exampleCollection: !include examples/uuidCollection.sample
-        exampleItem: !include examples/uuid.sample
-        schemaCollection: uuid_collection
-        schemaItem: uuid
+        schema: uuid_collection
     is: [ validate ]
     get:
-      description: Get list of request metadata
+      description: Get list of skipped instances UUIDs
       is: [ pageable ]
 
   /{requestId}/failed-instances:
     description: Service that allows to retrieve UUIDs of failed instances
     type:
-      collection-get:
+      get-only:
         exampleCollection: !include examples/uuidCollection.sample
-        exampleItem: !include examples/uuid.sample
-        schemaCollection: uuid_collection
-        schemaItem: uuid
+        schema: uuid_collection
     is: [ validate ]
     get:
-      description: Get list of request metadata
+      description: Get list of failed instances UUIDs
       is: [ pageable ]
 
   /{requestId}/suppressed-from-discovery-instances:
     description: Service that allows to retrieve UUIDs of suppressed from discovery instances
     type:
-      collection-get:
+      get-only:
         exampleCollection: !include examples/uuidCollection.sample
-        exampleItem: !include examples/uuid.sample
-        schemaCollection: uuid_collection
-        schemaItem: uuid
+        schema: uuid_collection
     is: [ validate ]
     get:
-      description: Get list of request metadata
+      description: Get list of suppressed from discovery instances UUIDs
       is: [ pageable ]
