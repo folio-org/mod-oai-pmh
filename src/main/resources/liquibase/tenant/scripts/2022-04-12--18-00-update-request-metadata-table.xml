@@ -9,7 +9,7 @@
       <column name="returned_instances_counter" type="int" defaultValue="0"/>
       <column name="skipped_instances_counter" type="int" defaultValue="0"/>
       <column name="failed_instances_counter" type="int" defaultValue="0"/>
-      <column name="suppressed_instances_counter" type="int" defaultValue="0"/>
+      <column name="supressed_instances_counter" type="int" defaultValue="0"/>
     </addColumn>
   </changeSet>
 
