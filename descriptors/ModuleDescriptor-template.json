@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "oai-pmh",
-      "version": "3.2",
+      "version": "3.3",
       "handlers": [
         {
           "methods": ["GET"],
@@ -62,6 +62,26 @@
           "methods": ["GET"],
           "pathPattern": "/oai/request-metadata",
           "permissionsRequired": ["oai-pmh.request-metadata.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/failed-to-save-instances",
+          "permissionsRequired": ["oai-pmh.request-metadata.failed-to-save-instances.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/failed-instances",
+          "permissionsRequired": ["oai-pmh.request-metadata.failed-instances.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/skipped-instances",
+          "permissionsRequired": ["oai-pmh.request-metadata.skipped-instances.collection.get"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/suppressed-from-discovery-instances",
+          "permissionsRequired": ["oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"]
         },
         {
           "methods": [
@@ -143,6 +163,26 @@
       "description": "Retrieves request metadata collection"
     },
     {
+      "permissionName": "oai-pmh.request-metadata.failed-to-save-instances.collection.get",
+      "displayName": "OAI-PMH Request metadata - get collection of failed to save instances UUIDs",
+      "description": "Retrieves request metadata collection - failed to save instances UUIDs"
+    },
+    {
+      "permissionName": "oai-pmh.request-metadata.failed-instances.collection.get",
+      "displayName": "OAI-PMH Request metadata - get collection of failed instances UUIDs",
+      "description": "Retrieves request metadata collection - failed instances UUIDs"
+    },
+    {
+      "permissionName": "oai-pmh.request-metadata.skipped-instances.collection.get",
+      "displayName": "OAI-PMH Request metadata - get collection of skipped instances UUIDs",
+      "description": "Retrieves request metadata collection - skipped instances UUIDs"
+    },
+    {
+      "permissionName": "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get",
+      "displayName": "OAI-PMH Request metadata - get collection of suppressed from discovery instances UUIDs",
+      "description": "Retrieves request metadata collection - suppressed from discovery instances UUIDs"
+    },
+    {
       "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
@@ -154,7 +194,11 @@
         "oai-pmh.sets.item.delete",
         "oai-pmh.sets.item.collection.get",
         "oai-pmh.filtering-conditions.get",
-        "oai-pmh.request-metadata.collection.get"
+        "oai-pmh.request-metadata.collection.get",
+        "oai-pmh.request-metadata.failed-to-save-instances.collection.get",
+        "oai-pmh.request-metadata.failed-instances.collection.get",
+        "oai-pmh.request-metadata.skipped-instances.collection.get",
+        "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"
       ]
     },
     {

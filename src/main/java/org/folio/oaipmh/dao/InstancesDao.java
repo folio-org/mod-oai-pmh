@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
+import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 
@@ -23,6 +24,14 @@ public interface InstancesDao {
    * Returns request metadata collection
    */
   Future<RequestMetadataCollection> getRequestMetadataCollection(int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getFailedToSaveInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getSkippedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getFailedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getSuppressedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
 
   /**
    * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.

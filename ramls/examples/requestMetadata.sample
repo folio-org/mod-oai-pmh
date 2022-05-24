@@ -2,8 +2,10 @@
     "requestId" : "a8e1d986-2eef-4007-827d-59c49f640086",
     "lastUpdatedDate" : "2022-04-28T10:56:15.192+00:00",
     "streamEnded" : true,
+    "downloadedAndSavedInstancesCounter" : 20,
+    "failedToSaveInstancesCounter" : 10,
     "returnedInstancesCounter" : 1,
     "skippedInstancesCounter" : 0,
     "failedInstancesCounter" : 1,
-    "supressedInstancesCounter" : 0
-  }
+    "suppressedInstancesCounter" : 0
+}

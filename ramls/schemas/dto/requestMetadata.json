@@ -38,8 +38,8 @@
       "description": "failed instances counter",
       "type": "integer"
     },
-    "supressedInstancesCounter": {
-      "description": "supressed instances counter",
+    "suppressedInstancesCounter": {
+      "description": "suppressed instances counter",
       "type": "integer"
     }
   }

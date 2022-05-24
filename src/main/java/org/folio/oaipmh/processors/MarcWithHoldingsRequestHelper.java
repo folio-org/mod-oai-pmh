@@ -177,8 +177,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       var batchInstancesStatistics = new StatisticsHolder();
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null;
-        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, batchInstancesStatistics)
-          .onComplete(vVoid -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchInstancesStatistics, request.getTenant()));
+        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, batchInstancesStatistics, lastUpdateDate);
         if (isFirstBatch) {
           var downloadInstancesStatistics = new StatisticsHolder();
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
@@ -205,31 +204,33 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder holder) {
     Promise<Void> promise = Promise.promise();
-    PostgresClient.getInstance(downloadContext.owner(), tenantId).getConnection(e -> {
+
+    PostgresClient.getInstance(downloadContext.owner(), tenantId).withTrans(connection -> {
       Tuple params = Tuple.of(true, UUID.fromString(requestId), holder.getDownloadedAndSavedInstancesCounter(), holder.getFailedToSaveInstancesCounter());
-      String sql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
+      String updateRequestMetadataSql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".request_metadata_lb SET stream_ended = $1, downloaded_and_saved_instances_counter = $3, failed_to_save_instances_counter = $4 WHERE request_id = $2";
 
-      if (e.failed()) {
-        logger.error("Update stream ended failed: {}.", e.cause().getMessage(), e.cause());
-        promise.fail(e.cause());
-      } else {
-        PgConnection connection = e.result();
-        connection.preparedQuery(sql)
-          .execute(params, queryRes -> {
-            connection.close();
-            if (queryRes.failed()) {
-              promise.fail(queryRes.cause());
-            } else {
-              promise.complete();
-            }
-          });
-      }
+      List<Tuple> batch = new ArrayList<>();
+      holder.getFailedToSaveInstancesIds().forEach(instanceId -> batch.add(Tuple.of(UUID.fromString(requestId), UUID.fromString(instanceId))));
+      String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
+        + ".failed_to_save_instances_ids (request_id, instance_id) VALUES ($1, $2)";
+
+      connection.execute(updateRequestMetadataSql, params)
+        .compose(x -> connection.execute(sql, batch))
+        .onComplete(result -> {
+          if (result.failed()) {
+            promise.fail(result.cause());
+
+          } else {
+            promise.complete();
+          }
+        });
+      return Future.succeededFuture();
     });
   }
 
   private Future<Void> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
-      boolean firstBatch, StatisticsHolder statistics) {
+      boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
     Promise<Void> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
@@ -263,6 +264,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             logger.debug("Got empty instances.");
             buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
+              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
           }
@@ -280,6 +282,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
               deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
+              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
@@ -666,7 +669,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
         final JsonObject srsInstance = srsResponse.get(instanceId);
         if (Objects.isNull(srsInstance)) {
-          statistics.getSkippedInstancesCounter().incrementAndGet();
+          statistics.addSkippedInstancesCounter(1);
+          statistics.addSkippedInstancesIds(instanceId);
           return false;
         }
         return true;
@@ -694,7 +698,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           try {
             record.withMetadata(buildOaiMetadata(request, source));
           } catch (Exception e) {
-            statistics.getFailedInstancesCounter().incrementAndGet();
+            statistics.addFailedInstancesCounter(1);
+            statistics.addFailedInstancesIds(instanceId);
             logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
             logger.debug("Skipping problematic record due the conversion error. Source record id - {}.",
                 storageHelper.getRecordId(srsInstance));
@@ -702,10 +707,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           }
         }
         if (filterInstance(request, srsInstance)) {
-          statistics.getReturnedInstancesCounter().incrementAndGet();
+          statistics.addReturnedInstancesCounter(1);
           records.add(record);
         } else {
-          statistics.getSupressedFromDiscoveryCounter().incrementAndGet();
+          statistics.addSuppressedInstancesCounter(1);
+          statistics.addSuppressedInstancesIds(instanceId);
         }
       });
     return records;
