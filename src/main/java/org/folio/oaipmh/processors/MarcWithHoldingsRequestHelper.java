@@ -319,7 +319,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result);
+          if (result.succeeded()) {
+            downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+          } else {
+            downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+          }
+          batch.clear();
           jsonParser.resume();
         });
       }
@@ -327,7 +332,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
-          .onComplete(result -> completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result)).onComplete(vVoid -> downloadInstancesPromise.complete());
+          .onComplete(result -> {
+            if (result.succeeded()) {
+              downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
+            } else {
+              downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
+            }
+          }).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
         downloadInstancesPromise.complete();
       }
@@ -369,15 +380,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           throwable);
         promise.fail(throwable);
       });
-  }
-
-  private void completeBatchAndUpdateDownloadStatistics(StatisticsHolder downloadInstancesStatistics, ArrayList<JsonEvent> batch, AsyncResult<Void> result) {
-    if (result.succeeded()) {
-      downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
-    } else {
-      downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
-    }
-    batch.clear();
   }
 
   private HttpRequest<Buffer> buildInventoryQuery(Request request) {
