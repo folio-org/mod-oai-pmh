@@ -2281,6 +2281,35 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthSmallBatchSize() {
+    // Verify harvesting statistics
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "5");
+
+    RequestSpecification initial = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
+    String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+
+    while(!"".equals(resumptionToken)) {
+        RequestSpecification request = createBaseRequest()
+    .with()
+    .param(VERB_PARAM, LIST_RECORDS.value())
+    .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      oaipmh = verify200WithXml(request, LIST_RECORDS);
+      resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    }
+
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 0, 27, 0, 0, 0);
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
   void shouldNotThrowNullPointerException_whenGetListRecordsAndInventoryRespondedBeforeCapacityCheckerWasSet() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "60");
@@ -2669,6 +2698,9 @@ class OaiPmhImplTest {
 
   private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int downloadedAndSavedInstancesCounter, int failedToSaveInstancesCounter, int returnedInstancesCounter,
                                                int failedInstancesCounter, int skippedInstancesCounter, int supressedInstancesCounter) {
+    assertThat(requestMetadata.getRequestMetadataCollection()
+       .get(0)
+       .getStreamEnded(), is(true));
     assertThat(requestMetadata.getRequestMetadataCollection()
       .get(0)
       .getDownloadedAndSavedInstancesCounter(), is(downloadedAndSavedInstancesCounter));
