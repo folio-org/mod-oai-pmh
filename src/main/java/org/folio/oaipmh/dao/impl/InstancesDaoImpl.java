@@ -36,7 +36,6 @@ import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
-import org.folio.rest.jooq.tables.pojos.SuppressedFromDiscoveryInstancesIds;
 import org.folio.rest.jooq.tables.records.FailedInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.FailedToSaveInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
@@ -114,7 +113,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getFailedToSaveInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_TO_SAVE_INSTANCES_IDS))).compose(recordsCount ->
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_TO_SAVE_INSTANCES_IDS)
+            .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
       getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_TO_SAVE_INSTANCES_IDS)
           .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
@@ -125,7 +125,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getSkippedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SKIPPED_INSTANCES_IDS))).compose(recordsCount ->
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SKIPPED_INSTANCES_IDS)
+            .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
       getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SKIPPED_INSTANCES_IDS)
           .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
@@ -136,7 +137,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getFailedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_INSTANCES_IDS))).compose(recordsCount ->
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_INSTANCES_IDS)
+            .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
       getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_INSTANCES_IDS)
           .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
@@ -147,7 +149,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getSuppressedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS))).compose(recordsCount ->
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
+            .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
       getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
           .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)

@@ -228,6 +228,8 @@ class OaiPmhImplTest {
   private Pattern DATE_ONLY_PATTERN = Pattern.compile(DATE_ONLY_REXEXP);
   private Pattern DATE_TIME_PATTERN = Pattern.compile(DATE_TIME_REGEXP);
 
+  private static final int REQUEST_METADATA_QUERY_LIMIT = 100;
+
   List<String> failedInstancesEndpoints = List.of("failed-to-save-instances", "failed-instances", "skipped-instances", "suppressed-from-discovery-instances");
 
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
@@ -1260,7 +1262,7 @@ class OaiPmhImplTest {
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
 
     if (metadataPrefix == MetadataPrefix.MARC21WITHHOLDINGS) {
-      var requestMetadataCollection = getRequestMetadataCollection();
+      var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
       verifyRequestMetadataStatistics(requestMetadataCollection, 2, 0, 1, 1, 0, 0);
       var requestId = requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId();
       var uuidCollection = getUuidCollection(requestId, "failed-instances");
@@ -1283,7 +1285,7 @@ class OaiPmhImplTest {
     assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
 
     // Statistics API verification
-    var requestMetadataCollection = getRequestMetadataCollection();
+    var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
     verifyRequestMetadataStatistics(requestMetadataCollection, 1, 0, 0, 0, 1, 0);
     failedInstancesEndpoints.forEach(path -> {
       var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
@@ -2292,7 +2294,7 @@ class OaiPmhImplTest {
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(), 27, 0, 27, 0, 0, 0);
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 27, 0, 27, 0, 0, 0);
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
@@ -2322,7 +2324,7 @@ class OaiPmhImplTest {
     }
 
     // Statistics API verification
-    var requestMetadataCollection = getRequestMetadataCollection();
+    var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
     verifyRequestMetadataStatistics(requestMetadataCollection, 27, 0, 27, 0, 0, 0);
 
     failedInstancesEndpoints.forEach(path -> {
@@ -2705,19 +2707,20 @@ class OaiPmhImplTest {
       .getHeaders();
   }
 
-  private RequestMetadataCollection getRequestMetadataCollection() {
+  private RequestMetadataCollection getRequestMetadataCollection(int limit) {
     return RestAssured.given()
       .header(okapiUrlHeader)
       .header(tokenHeader)
       .header(tenantHeader)
       .basePath(REQUEST_METADATA_PATH)
-      .when()
-      .get()
-      .then()
-      .contentType(ContentType.JSON)
-      .statusCode(200)
-      .extract()
-      .as(RequestMetadataCollection.class);
+      .queryParam("limit", limit)
+        .when()
+          .get()
+        .then()
+          .contentType(ContentType.JSON)
+          .statusCode(200)
+          .extract()
+          .as(RequestMetadataCollection.class);
   }
 
   private UuidCollection getUuidCollection(String requestId, String path) {
@@ -2726,13 +2729,13 @@ class OaiPmhImplTest {
       .header(tokenHeader)
       .header(tenantHeader)
       .basePath(REQUEST_METADATA_PATH + "/" + requestId + "/" + path)
-      .when()
-      .get()
-      .then()
-      .contentType(ContentType.JSON)
-      .statusCode(200)
-      .extract()
-      .as(UuidCollection.class);
+        .when()
+          .get()
+        .then()
+          .contentType(ContentType.JSON)
+          .statusCode(200)
+          .extract()
+          .as(UuidCollection.class);
   }
 
   private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int downloadedAndSavedInstancesCounter, int failedToSaveInstancesCounter, int returnedInstancesCounter,
