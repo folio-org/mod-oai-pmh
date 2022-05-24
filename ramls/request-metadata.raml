@@ -10,7 +10,12 @@ documentation:
 types:
   request_metadata: !include schemas/dto/requestMetadata.json
   request_metadata_collection: !include schemas/dto/requestMetadataCollection.json
+  uuid: !include schemas/common/uuid.json
+  uuid_collection: !include schemas/dto/uuidCollection.json
   errors: !include raml-util/schemas/errors.schema
+  UUID:
+    type: string
+    pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
 
 traits:
   pageable:  !include raml-util/traits/pageable.raml
@@ -19,8 +24,11 @@ traits:
 
 resourceTypes:
   collection-get: !include raml-util/rtypes/collection-get.raml
+  get-only: !include raml-util/rtypes/get-only.raml
 
 /oai/request-metadata:
+  displayName: OAIPMH Request Metadata API
+  description: Service that allows to retrieve Request Metadata Collection
   type:
     collection-get:
       exampleCollection: !include examples/requestMetadata.sample
@@ -32,3 +40,46 @@ resourceTypes:
     description: Get list of request metadata
     is: [pageable]
 
+  /{requestId}/failed-to-save-instances:
+    description: Service that allows to retrieve UUIDs of failed to save instances
+    type:
+      get-only:
+        exampleCollection: !include examples/uuidCollection.sample
+        schema: uuid_collection
+    is: [ validate ]
+    get:
+      description: Get list of failed to save instances UUIDs
+      is: [ pageable ]
+
+  /{requestId}/skipped-instances:
+    description: Service that allows to retrieve UUIDs of skipped instances
+    type:
+      get-only:
+        exampleCollection: !include examples/uuidCollection.sample
+        schema: uuid_collection
+    is: [ validate ]
+    get:
+      description: Get list of skipped instances UUIDs
+      is: [ pageable ]
+
+  /{requestId}/failed-instances:
+    description: Service that allows to retrieve UUIDs of failed instances
+    type:
+      get-only:
+        exampleCollection: !include examples/uuidCollection.sample
+        schema: uuid_collection
+    is: [ validate ]
+    get:
+      description: Get list of failed instances UUIDs
+      is: [ pageable ]
+
+  /{requestId}/suppressed-from-discovery-instances:
+    description: Service that allows to retrieve UUIDs of suppressed from discovery instances
+    type:
+      get-only:
+        exampleCollection: !include examples/uuidCollection.sample
+        schema: uuid_collection
+    is: [ validate ]
+    get:
+      description: Get list of suppressed from discovery instances UUIDs
+      is: [ pageable ]

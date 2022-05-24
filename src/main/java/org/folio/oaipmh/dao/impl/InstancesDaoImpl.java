@@ -2,8 +2,12 @@ package org.folio.oaipmh.dao.impl;
 
 import static java.util.Optional.of;
 import static java.util.stream.Collectors.toList;
+import static org.folio.rest.jooq.tables.SuppressedFromDiscoveryInstancesIds.SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS;
+import static org.folio.rest.jooq.tables.FailedInstancesIds.FAILED_INSTANCES_IDS;
+import static org.folio.rest.jooq.tables.FailedToSaveInstancesIds.FAILED_TO_SAVE_INSTANCES_IDS;
 import static org.folio.rest.jooq.tables.Instances.INSTANCES;
 import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
+import static org.folio.rest.jooq.tables.SkippedInstancesIds.SKIPPED_INSTANCES_IDS;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -18,19 +22,27 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.NotFoundException;
 
+import io.vertx.core.Promise;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.domain.StatisticsHolder;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jaxrs.model.RequestMetadata;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
+import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.jooq.tables.mappers.RowMappers;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
+import org.folio.rest.jooq.tables.records.FailedInstancesIdsRecord;
+import org.folio.rest.jooq.tables.records.FailedToSaveInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
+import org.folio.rest.jooq.tables.records.SkippedInstancesIdsRecord;
+import org.folio.rest.jooq.tables.records.SuppressedFromDiscoveryInstancesIdsRecord;
+import org.jooq.InsertValuesStep2;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
@@ -100,6 +112,54 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
+  public Future<UuidCollection> getFailedToSaveInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_TO_SAVE_INSTANCES_IDS)
+            .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
+      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_TO_SAVE_INSTANCES_IDS)
+          .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .offset(offset)
+          .limit(limit))
+        .map(collection -> queryResultToUuidCollection(collection, recordsCount.get(0, int.class))))
+    );
+  }
+
+  @Override
+  public Future<UuidCollection> getSkippedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SKIPPED_INSTANCES_IDS)
+            .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
+      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SKIPPED_INSTANCES_IDS)
+          .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .offset(offset)
+          .limit(limit))
+        .map(collection -> queryResultToUuidCollection(collection, recordsCount.get(0, int.class))))
+    );
+  }
+
+  @Override
+  public Future<UuidCollection> getFailedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_INSTANCES_IDS)
+            .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
+      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_INSTANCES_IDS)
+          .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .offset(offset)
+          .limit(limit))
+        .map(collection -> queryResultToUuidCollection(collection, recordsCount.get(0, int.class))))
+    );
+  }
+
+  @Override
+  public Future<UuidCollection> getSuppressedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
+            .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
+      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
+          .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .offset(offset)
+          .limit(limit))
+        .map(collection -> queryResultToUuidCollection(collection, recordsCount.get(0, int.class))))
+    );
+  }
+
+  @Override
   public Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId) {
     UUID uuid = requestMetadata.getRequestId();
     requestMetadata.setStreamEnded(false);
@@ -115,12 +175,16 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder,
-      String tenantId) {
+                                                                         String tenantId) {
     RequestMetadataLb requestMetadataLb = new RequestMetadataLb();
     requestMetadataLb.setRequestId(UUID.fromString(requestId))
       .setLastUpdatedDate(lastUpdatedDate);
 
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> {
+
+      Promise<RequestMetadataLb> promise = Promise.promise();
+
+      var updateRequestMetadataRecordFuture = queryExecutor
       .executeAny(dslContext -> dslContext.update(REQUEST_METADATA_LB)
         .set(REQUEST_METADATA_LB.LAST_UPDATED_DATE, lastUpdatedDate)
         .set(REQUEST_METADATA_LB.DOWNLOADED_AND_SAVED_INSTANCES_COUNTER, REQUEST_METADATA_LB.DOWNLOADED_AND_SAVED_INSTANCES_COUNTER.plus(holder.getDownloadedAndSavedInstancesCounter().get()))
@@ -128,7 +192,7 @@ public class InstancesDaoImpl implements InstancesDao {
         .set(REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER, REQUEST_METADATA_LB.RETURNED_INSTANCES_COUNTER.plus(holder.getReturnedInstancesCounter().get()))
         .set(REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SKIPPED_INSTANCES_COUNTER.plus(holder.getSkippedInstancesCounter().get()))
         .set(REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER, REQUEST_METADATA_LB.FAILED_INSTANCES_COUNTER.plus(holder.getFailedInstancesCounter().get()))
-        .set(REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SUPRESSED_INSTANCES_COUNTER.plus(holder.getSupressedFromDiscoveryCounter().get()))
+        .set(REQUEST_METADATA_LB.SUPPRESSED_INSTANCES_COUNTER, REQUEST_METADATA_LB.SUPPRESSED_INSTANCES_COUNTER.plus(holder.getSuppressedFromDiscoveryCounter().get()))
 
         .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
         .returning())
@@ -138,7 +202,51 @@ public class InstancesDaoImpl implements InstancesDao {
           return optional.get();
         }
         throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
-      }));
+
+      });
+
+      var saveFailedToSaveInstancesIds = holder.getFailedToSaveInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
+          InsertValuesStep2<FailedToSaveInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(FAILED_TO_SAVE_INSTANCES_IDS, FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID,
+            FAILED_TO_SAVE_INSTANCES_IDS.INSTANCE_ID);
+          holder.getFailedToSaveInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          return insertValues;
+        })
+        .map(rows -> null);
+
+      var saveFailedInstancesIds = holder.getFailedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
+          InsertValuesStep2<FailedInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(FAILED_INSTANCES_IDS, FAILED_INSTANCES_IDS.REQUEST_ID,
+            FAILED_INSTANCES_IDS.INSTANCE_ID);
+          holder.getFailedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          return insertValues;
+        })
+        .map(rows -> null);
+
+      var saveSkippedInstancesIds = holder.getSkippedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
+          InsertValuesStep2<SkippedInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(SKIPPED_INSTANCES_IDS, SKIPPED_INSTANCES_IDS.REQUEST_ID,
+            SKIPPED_INSTANCES_IDS.INSTANCE_ID);
+          holder.getSkippedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          return insertValues;
+        })
+        .map(rows -> null);
+
+      var saveSuppressedFromDiscoveryInstancesIds = holder.getSuppressedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
+          InsertValuesStep2<SuppressedFromDiscoveryInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS, SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID,
+            SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.INSTANCE_ID);
+          holder.getSuppressedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          return insertValues;
+        })
+        .map(rows -> null);
+
+
+      GenericCompositeFuture.all(List.of(saveFailedToSaveInstancesIds, saveFailedInstancesIds, saveSkippedInstancesIds, saveSuppressedFromDiscoveryInstancesIds, updateRequestMetadataRecordFuture)).onComplete(x -> {
+        if (x.succeeded()) {
+          promise.complete(updateRequestMetadataRecordFuture.result());
+        } else {
+          promise.fail(x.cause());
+        }
+      });
+      return promise.future();
+    });
   }
 
   /**
@@ -289,6 +397,14 @@ public class InstancesDaoImpl implements InstancesDao {
       .withTotalRecords(totalRecordsCount);
   }
 
+  private UuidCollection queryResultToUuidCollection(QueryResult queryResult, int totalRecordsCount) {
+    List<String> list = queryResult.stream()
+      .map(row -> rowToUUID(row.unwrap()))
+      .collect(toList());
+    return new UuidCollection().withUuidCollection(list)
+      .withTotalRecords(totalRecordsCount);
+  }
+
   private RequestMetadata rowToRequestMetadata(Row row) {
     var pojo = RowMappers.getRequestMetadataLbMapper()
       .apply(row);
@@ -303,9 +419,14 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getReturnedInstancesCounter()).ifPresent(requestMetadata::withReturnedInstancesCounter);
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
-    of(pojo.getSupressedInstancesCounter()).ifPresent(requestMetadata::withSupressedInstancesCounter);
+    of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
 
     return requestMetadata;
+  }
+
+  private String rowToUUID(Row row) {
+    var pojo = RowMappers.getFailedInstancesIdsMapper().apply(row);
+    return pojo.getInstanceId().toString();
   }
 
 }
