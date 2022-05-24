@@ -5,6 +5,7 @@
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
   <changeSet id="2022-05-18--16-00-add-extended-statistic-tables" author="Viachaslau Khandramai">
+    <renameColumn newColumnName="suppressed_instances_counter" oldColumnName="supressed_instances_counter" tableName="request_metadata_lb"/>
     <createTable tableName="failed_to_save_instances_ids">
       <column name="request_id" type="uuid">
         <constraints primaryKey="true" nullable="false"/>
