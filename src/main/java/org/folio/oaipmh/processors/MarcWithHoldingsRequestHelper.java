@@ -659,9 +659,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
 
+      logger.info("Update statistics");
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> promise.complete(response));
     } catch (Exception e) {
+      logger.info("Update statistics error");
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> handleException(promise, e));
     }
