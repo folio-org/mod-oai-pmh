@@ -206,33 +206,33 @@ public class InstancesDaoImpl implements InstancesDao {
       });
 
       var saveFailedToSaveInstancesIds = holder.getFailedToSaveInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
-          InsertValuesStep2<FailedToSaveInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(FAILED_TO_SAVE_INSTANCES_IDS, FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID,
+          InsertValuesStep3<FailedToSaveInstancesIdsRecord, UUID, UUID, UUID> insertValues = dslContext.insertInto(FAILED_TO_SAVE_INSTANCES_IDS, FAILED_TO_SAVE_INSTANCES_IDS.ID, FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID,
             FAILED_TO_SAVE_INSTANCES_IDS.INSTANCE_ID);
-          holder.getFailedToSaveInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          holder.getFailedToSaveInstancesIds().forEach(id -> insertValues.values(UUID.randomUUID(), UUID.fromString(requestId), UUID.fromString(id)));
           return insertValues;
         })
         .map(rows -> null);
 
       var saveFailedInstancesIds = holder.getFailedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
-          InsertValuesStep2<FailedInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(FAILED_INSTANCES_IDS, FAILED_INSTANCES_IDS.REQUEST_ID,
+          InsertValuesStep3<FailedInstancesIdsRecord, UUID, UUID, UUID> insertValues = dslContext.insertInto(FAILED_INSTANCES_IDS, FAILED_INSTANCES_IDS.ID, FAILED_INSTANCES_IDS.REQUEST_ID,
             FAILED_INSTANCES_IDS.INSTANCE_ID);
-          holder.getFailedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          holder.getFailedInstancesIds().forEach(id -> insertValues.values(UUID.randomUUID(), UUID.fromString(requestId), UUID.fromString(id)));
           return insertValues;
         })
         .map(rows -> null);
 
       var saveSkippedInstancesIds = holder.getSkippedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
-          InsertValuesStep2<SkippedInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(SKIPPED_INSTANCES_IDS, SKIPPED_INSTANCES_IDS.REQUEST_ID,
+          InsertValuesStep3<SkippedInstancesIdsRecord, UUID, UUID, UUID> insertValues = dslContext.insertInto(SKIPPED_INSTANCES_IDS, SKIPPED_INSTANCES_IDS.ID, SKIPPED_INSTANCES_IDS.REQUEST_ID,
             SKIPPED_INSTANCES_IDS.INSTANCE_ID);
-          holder.getSkippedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          holder.getSkippedInstancesIds().forEach(id -> insertValues.values(UUID.randomUUID(), UUID.fromString(requestId), UUID.fromString(id)));
           return insertValues;
         })
         .map(rows -> null);
 
       var saveSuppressedFromDiscoveryInstancesIds = holder.getSuppressedInstancesIds().isEmpty() ? Future.succeededFuture() : queryExecutor.execute(dslContext -> {
-          InsertValuesStep2<SuppressedFromDiscoveryInstancesIdsRecord, UUID, UUID> insertValues = dslContext.insertInto(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS, SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID,
+          InsertValuesStep3<SuppressedFromDiscoveryInstancesIdsRecord, UUID, UUID, UUID> insertValues = dslContext.insertInto(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS, SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.ID, SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID,
             SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.INSTANCE_ID);
-          holder.getSuppressedInstancesIds().forEach(id -> insertValues.values(UUID.fromString(requestId), UUID.fromString(id)));
+          holder.getSuppressedInstancesIds().forEach(id -> insertValues.values(UUID.randomUUID(), UUID.fromString(requestId), UUID.fromString(id)));
           return insertValues;
         })
         .map(rows -> null);
@@ -399,7 +399,7 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private UuidCollection queryResultToUuidCollection(QueryResult queryResult, int totalRecordsCount) {
     List<String> list = queryResult.stream()
-      .map(row -> rowToUUID(row.unwrap()))
+      .map(row -> rowToUUID(row.unwrap()).toString())
       .collect(toList());
     return new UuidCollection().withUuidCollection(list)
       .withTotalRecords(totalRecordsCount);
@@ -424,8 +424,8 @@ public class InstancesDaoImpl implements InstancesDao {
     return requestMetadata;
   }
 
-  private String rowToUUID(Row row) {
-    return (String) row.getValue("instance_id");
+  private UUID rowToUUID(Row row) {
+    return (UUID) row.getValue("instance_id");
   }
 
 }
