@@ -348,6 +348,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
                       .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
               downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
+            batch.clear();
           }).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
         downloadInstancesPromise.complete();
