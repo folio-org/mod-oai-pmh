@@ -194,7 +194,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             try {
               record.withMetadata(buildOaiMetadata(request, source));
             } catch (Exception e) {
-              logger.info(" failed Abstract");
               logger.error("Error occurred while converting record to xml representation. {}.", e.getMessage(), e);
               logger.debug("Skipping problematic record due the conversion error. Source record id - {}.", recordId);
               return;

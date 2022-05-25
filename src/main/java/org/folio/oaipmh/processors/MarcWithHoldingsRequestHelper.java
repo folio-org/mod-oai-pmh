@@ -317,7 +317,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       var size = batch.size();
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
-        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
+        saveInstancesIds(batch, tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
           } else {
@@ -682,7 +682,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
         final JsonObject srsInstance = srsResponse.get(instanceId);
         if (Objects.isNull(srsInstance)) {
-          logger.info("-- addSkippedInstancesCounter -- :" + instanceId);
           statistics.addSkippedInstancesCounter(1);
           statistics.addSkippedInstancesIds(instanceId);
           return false;
@@ -712,7 +711,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           try {
             record.withMetadata(buildOaiMetadata(request, source));
           } catch (Exception e) {
-            logger.info("-- addFailedInstancesCounter -- :" + instanceId);
             statistics.addFailedInstancesCounter(1);
             statistics.addFailedInstancesIds(instanceId);
             logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
@@ -725,7 +723,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           statistics.addReturnedInstancesCounter(1);
           records.add(record);
         } else {
-          logger.info("-- addSuppressedInstancesCounter -- :" + instanceId);
           statistics.addSuppressedInstancesCounter(1);
           statistics.addSuppressedInstancesIds(instanceId);
         }
