@@ -230,7 +230,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Void> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
-      boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
+      boolean firstBatch, StatisticsHolder batchStatistics, OffsetDateTime lastUpdateDate) {
     Promise<Void> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
@@ -262,9 +262,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           if (CollectionUtils.isEmpty(instances)) {
             logger.debug("Got empty instances.");
-            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
+            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, batchStatistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
+              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchStatistics, request.getTenant()))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
           }
@@ -280,12 +280,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
-              deletedRecordSupport, statistics)
+              deletedRecordSupport, batchStatistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
-            .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+            .onFailure(e -> handleException(oaiPmhResponsePromise, e))
+            .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchStatistics, request.getTenant()));
+
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
