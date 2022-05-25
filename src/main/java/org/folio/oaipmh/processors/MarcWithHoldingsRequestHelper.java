@@ -262,9 +262,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           if (CollectionUtils.isEmpty(instances)) {
             logger.debug("Got empty instances.");
-            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
+            buildRecordsResponse(request, requestId, instances, lastUpdateDate, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
           }
@@ -279,10 +278,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
-            .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
-              deletedRecordSupport, statistics)
+            .onSuccess(res ->
+                    buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
@@ -316,18 +314,38 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
+      var size = batch.size();
       if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result);
+          if (result.succeeded()) {
+            downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
+          } else {
+            downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+            var ids = batch.stream()
+                    .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+            downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
+          }
+          batch.clear();
           jsonParser.resume();
         });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
+        var size = batch.size();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
-          .onComplete(result -> completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result)).onComplete(vVoid -> downloadInstancesPromise.complete());
+          .onComplete(result -> {
+            if (result.succeeded()) {
+              downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
+            } else {
+              downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+              var ids = batch.stream()
+                      .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+              downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
+            }
+            batch.clear();
+          }).onComplete(vVoid -> downloadInstancesPromise.complete());
       } else {
         downloadInstancesPromise.complete();
       }
@@ -369,15 +387,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           throwable);
         promise.fail(throwable);
       });
-  }
-
-  private void completeBatchAndUpdateDownloadStatistics(StatisticsHolder downloadInstancesStatistics, ArrayList<JsonEvent> batch, AsyncResult<Void> result) {
-    if (result.succeeded()) {
-      downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
-    } else {
-      downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
-    }
-    batch.clear();
   }
 
   private HttpRequest<Buffer> buildInventoryQuery(Request request) {
@@ -623,7 +632,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch,
+  private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch, OffsetDateTime lastUpdateDate,
       Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder statistics) {
 
     Promise<Response> promise = Promise.promise();
@@ -650,9 +659,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
 
-      promise.complete(response);
+      instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
+              .onComplete(x -> promise.complete(response));
     } catch (Exception e) {
-      handleException(promise, e);
+      instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
+              .onComplete(x -> handleException(promise, e));
     }
     return promise.future();
   }
