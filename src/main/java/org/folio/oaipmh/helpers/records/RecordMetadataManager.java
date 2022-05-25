@@ -39,7 +39,6 @@ public class RecordMetadataManager {
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
   private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
-  private static final String LOAN_TYPE_SUBFIELD_CODE = "p";
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
@@ -51,8 +50,6 @@ public class RecordMetadataManager {
   private final Predicate<JsonObject> electronicAccessPredicate;
   private static RecordMetadataManager instance;
 
-  private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
-  private static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
   public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
   public static final String ITEMS = "items";
@@ -241,25 +238,12 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
-    updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     //Map location name, which changed paths in json, to 952$d
     Optional.ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
     return effectiveLocationSubFields;
-  }
-
-  private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {
-    String permanentLoanType = itemData.getString(PERMANENT_LOAN_TYPE);
-    String temporaryLoanType = itemData.getString(TEMPORARY_LOAN_TYPE);
-    if (isNotEmpty(temporaryLoanType)) {
-      subFields.put(LOAN_TYPE_SUBFIELD_CODE, temporaryLoanType);
-      return;
-    }
-    if (isNotEmpty(permanentLoanType)) {
-      subFields.put(LOAN_TYPE_SUBFIELD_CODE, permanentLoanType);
-    }
   }
 
   private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject itemData,
