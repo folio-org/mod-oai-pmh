@@ -177,7 +177,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       var batchInstancesStatistics = new StatisticsHolder();
       updateRequestMetadataFuture.onSuccess(res -> {
         boolean isFirstBatch = resumptionToken == null;
-        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, batchInstancesStatistics, lastUpdateDate);
+        processBatch(request, vertxContext, oaipmhResponsePromise, requestId, isFirstBatch, batchInstancesStatistics, lastUpdateDate)
+            .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchInstancesStatistics, request.getTenant()));
         if (isFirstBatch) {
           var downloadInstancesStatistics = new StatisticsHolder();
           saveInstancesExecutor.executeBlocking(downloadInstancesPromise -> downloadInstances(request, oaipmhResponsePromise,
@@ -220,7 +221,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .onComplete(result -> {
           if (result.failed()) {
             promise.fail(result.cause());
-
           } else {
             promise.complete();
           }
@@ -264,7 +264,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             logger.debug("Got empty instances.");
             buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, batchStatistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchStatistics, request.getTenant()))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
           }
@@ -284,9 +283,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               .onSuccess(oaiPmhResponsePromise::complete)
               .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
-            .onFailure(e -> handleException(oaiPmhResponsePromise, e))
-            .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, batchStatistics, request.getTenant()));
-
+            .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
@@ -637,11 +634,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch,
-      Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder statistics) {
+      Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder batchStatistics) {
 
     Promise<Response> promise = Promise.promise();
     try {
-      List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport, statistics);
+      List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport, batchStatistics);
       logger.debug("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
