@@ -8,7 +8,7 @@
     <renameColumn newColumnName="suppressed_instances_counter" oldColumnName="supressed_instances_counter" tableName="request_metadata_lb"/>
     <createTable tableName="failed_to_save_instances_ids">
       <column name="request_id" type="uuid">
-        <constraints primaryKey="true" nullable="false" unique="false"/>
+        <constraints nullable="false"/>
       </column>
       <column name="instance_id" type="uuid">
         <constraints nullable="false"/>
@@ -16,7 +16,7 @@
     </createTable>
     <createTable tableName="failed_instances_ids">
       <column name="request_id" type="uuid">
-        <constraints primaryKey="true" nullable="false" unique="false"/>
+        <constraints nullable="false"/>
       </column>
       <column name="instance_id" type="uuid">
         <constraints nullable="false"/>
@@ -24,7 +24,7 @@
     </createTable>
     <createTable tableName="skipped_instances_ids">
       <column name="request_id" type="uuid">
-        <constraints primaryKey="true" nullable="false" unique="false"/>
+        <constraints nullable="false"/>
       </column>
       <column name="instance_id" type="uuid">
         <constraints nullable="false"/>
@@ -32,7 +32,7 @@
     </createTable>
     <createTable tableName="suppressed_from_discovery_instances_ids">
       <column name="request_id" type="uuid">
-        <constraints primaryKey="true" nullable="false" unique="false"/>
+        <constraints nullable="false"/>
       </column>
       <column name="instance_id" type="uuid">
         <constraints nullable="false"/>

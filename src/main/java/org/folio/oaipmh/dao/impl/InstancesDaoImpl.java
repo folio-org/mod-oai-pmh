@@ -425,8 +425,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private String rowToUUID(Row row) {
-    var pojo = RowMappers.getFailedInstancesIdsMapper().apply(row);
-    return pojo.getInstanceId().toString();
+    return (String) row.getValue("instance_id");
   }
 
 }
