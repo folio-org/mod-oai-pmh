@@ -135,7 +135,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
 
-  private MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+  private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
 
   public static MarcWithHoldingsRequestHelper getInstance() {
@@ -204,7 +204,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
   private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder holder) {
     Promise<Void> promise = Promise.promise();
-
     PostgresClient.getInstance(downloadContext.owner(), tenantId).withTrans(connection -> {
       Tuple params = Tuple.of(true, UUID.fromString(requestId), holder.getDownloadedAndSavedInstancesCounter(), holder.getFailedToSaveInstancesCounter());
       String updateRequestMetadataSql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
@@ -220,7 +219,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .onComplete(result -> {
           if (result.failed()) {
             promise.fail(result.cause());
-
           } else {
             promise.complete();
           }
@@ -229,9 +227,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
   }
 
-  private Future<Void> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
+  private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
       boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
-    Promise<Void> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
@@ -278,17 +275,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
-            .onSuccess(res ->
-                    buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId, deletedRecordSupport, statistics)
+            .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+              deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
-    return promise.future();
   }
 
   private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
@@ -315,9 +310,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
-      if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
+      if (size >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
-        saveInstancesIds(batch, tenant, requestId, postgresClient).onComplete(result -> {
+        saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
           } else {
@@ -658,12 +653,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       } else {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
-
-      logger.info("Update statistics");
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> promise.complete(response));
     } catch (Exception e) {
-      logger.info("Update statistics error");
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> handleException(promise, e));
     }
