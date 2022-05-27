@@ -20,6 +20,7 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -64,6 +65,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -135,6 +137,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
 
+  private final AtomicInteger batchesSizeCounter = new AtomicInteger();
+
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
 
@@ -202,15 +206,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder holder) {
+  private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder downloadInstancesStatistics) {
     Promise<Void> promise = Promise.promise();
     PostgresClient.getInstance(downloadContext.owner(), tenantId).withTrans(connection -> {
-      Tuple params = Tuple.of(true, UUID.fromString(requestId), holder.getDownloadedAndSavedInstancesCounter(), holder.getFailedToSaveInstancesCounter());
+      Tuple params = Tuple.of(true, UUID.fromString(requestId), downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter(), downloadInstancesStatistics.getFailedToSaveInstancesCounter());
       String updateRequestMetadataSql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".request_metadata_lb SET stream_ended = $1, downloaded_and_saved_instances_counter = $3, failed_to_save_instances_counter = $4 WHERE request_id = $2";
 
       List<Tuple> batch = new ArrayList<>();
-      holder.getFailedToSaveInstancesIds().forEach(instanceId -> batch.add(Tuple.of(UUID.fromString(requestId), UUID.fromString(instanceId))));
+      downloadInstancesStatistics.getFailedToSaveInstancesIds()
+        .forEach(instanceId -> batch.add(Tuple.of(UUID.fromString(requestId), UUID.fromString(instanceId))));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".failed_to_save_instances_ids (request_id, instance_id) VALUES ($1, $2)";
 
@@ -218,8 +223,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
         .compose(x -> connection.execute(sql, batch))
         .onComplete(result -> {
           if (result.failed()) {
-            promise.fail(result.cause());
+            var error = result.cause();
+            logger.error("Error updating request metadata on instances stream completion.", error);
+            promise.fail(error);
           } else {
+            logger.info("Updating request metadata on instances stream completion finished.");
             promise.complete();
           }
         });
@@ -246,6 +254,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           List<JsonObject> instances = fut.result();
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
+            logger.error("Error: Instances collection is empty for non-first batch.");
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
           }
@@ -340,8 +349,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
               downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
             batch.clear();
-          }).onComplete(vVoid -> downloadInstancesPromise.complete());
+          }).onComplete(vVoid -> {
+            logger.info("Completing batch processing for requestId: " + requestId + ". Last batch size was: " + size);
+            downloadInstancesPromise.complete();
+          });
       } else {
+        logger.info("Completing batch processing for requestId: " + requestId + ". Last batch was empty");
         downloadInstancesPromise.complete();
       }
     });
@@ -631,6 +644,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder statistics) {
 
     Promise<Response> promise = Promise.promise();
+    // Set incoming instances number
+    batchesSizeCounter.addAndGet(batch.size());
     try {
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport, statistics);
       logger.debug("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
@@ -726,6 +741,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String nextInstanceId) {
     long cursor = request.getOffset();
     if (nextInstanceId == null) {
+      logHarvestingCompletion();
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(BigInteger.valueOf(cursor));
@@ -749,6 +765,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .withValue(resumptionToken)
       .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
+  }
+
+  private void logHarvestingCompletion() {
+    logger.info("Harvesting completed. Number of processed instances: " + batchesSizeCounter.get());
+    batchesSizeCounter.setRelease(0);
   }
 
   private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
