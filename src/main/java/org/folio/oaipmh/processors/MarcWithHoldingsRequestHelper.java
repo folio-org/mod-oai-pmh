@@ -20,7 +20,6 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -222,6 +221,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       connection.execute(updateRequestMetadataSql, params)
         .compose(x -> connection.execute(sql, batch))
         .onComplete(result -> {
+          connection.getPgConnection().close();
           if (result.failed()) {
             var error = result.cause();
             logger.error("Error updating request metadata on instances stream completion.", error);
