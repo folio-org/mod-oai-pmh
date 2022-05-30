@@ -3,6 +3,9 @@ package org.folio.oaipmh.dao;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import org.folio.oaipmh.domain.StatisticsHolder;
+import org.folio.rest.jaxrs.model.RequestMetadataCollection;
+import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 
@@ -18,6 +21,19 @@ public interface InstancesDao {
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
 
   /**
+   * Returns request metadata collection
+   */
+  Future<RequestMetadataCollection> getRequestMetadataCollection(int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getFailedToSaveInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getSkippedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getFailedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  Future<UuidCollection> getSuppressedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId);
+
+  /**
    * Saves specified request metadata. Entity must contain request id, in opposite case IllegalStateException will be thrown.
    */
   Future<RequestMetadataLb> saveRequestMetadata(RequestMetadataLb requestMetadata, String tenantId);
@@ -25,11 +41,12 @@ public interface InstancesDao {
   /**
    * Updates request metadata update date column by request id.
    */
-  Future<RequestMetadataLb> updateRequestUpdatedDate(String requestId, OffsetDateTime lastUpdatedDate, String tenantId);
+  Future<RequestMetadataLb> updateRequestUpdatedDateAndStatistics(String requestId, OffsetDateTime lastUpdatedDate, StatisticsHolder holder, String tenantId);
 
   /**
-   * Updates request metadata stream ended column by request id.
+   * @deprecated due to issue with VertX re-usage issue
    */
+  @Deprecated(since = "3.7.2", forRemoval = true)
   Future<RequestMetadataLb> updateRequestStreamEnded(String requestId, boolean isStreamEnded, String tenantId);
 
   /**

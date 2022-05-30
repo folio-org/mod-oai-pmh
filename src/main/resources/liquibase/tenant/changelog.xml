@@ -13,4 +13,7 @@ xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
   <include file="scripts/2020-09-02--17-00-drop-sample-data.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-09-03--12-00-add-case-insensitive-unique-constraints.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2020-11-19--18-00-create-request-metadata-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2022-04-12--18-00-update-request-metadata-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2022-05-12--15-00-add-saved-instances-counter-request-metadata-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2022-05-18--16-00-add-extended-statistics-tables.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

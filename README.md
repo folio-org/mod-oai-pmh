@@ -39,7 +39,8 @@ OAI-PMH is heavily loaded module and for correct work with big data set(approxim
 Configuration properties are intended to be retrieved from [mod-configuration](https://github.com/folio-org/mod-configuration/blob/master/README.md) module. System property values are used as a fallback.
 Configurations can be managed from the UI through the mod-configuration via folio settings.
 The default configuration system properties split into the logically bounded groups and defined within next 3 json files: [behavior.json](src/main/resources/config/behavior.json), [general.json](src/main/resources/config/general.json), [technical.json](src/main/resources/config/technical.json). 
-The configurations by itself are placed within json 'value' field in the "key":"value" way.
+The configurations by itself are placed within json 'value' field in the "key":"value" way. For stable operation, the application requires the following memory configuration. Java: -XX:MetaspaceSize=384m -XX:MaxMetaspaceSize=512m -Xmx1440m.
+Amazon Container: cpu - 2048, memory - 2048, memoryReservation - 1845.
 
 The following configuration properties are used:
 
@@ -78,6 +79,22 @@ To differ each set of saved instances between several marc21_withholdings reques
 At the first time, the last updated date is set during the initial-load and then is updated when each next batch of records is requested via resumptionToken which holds such request id. Instances table as well holds particular requestId as foreign key for associating instance ids with particular harvesting process. By default, each batch of instance ids are removed from database when requesting records via resumptionToken, i.e. when a request with resumption token is sent then required instances ids are processed and then they are cleaned from the database.<br/>
 
 But in a case when harvester lost his resumptionToken then saved instances ids with metadata that have not been retrieved and processed yet will be kept in DB and never will be cleaned. For preventing this case, request id has an expired period which for now equals to one day(24 h.) Therefore, when some request ids with expired last updated date exist then both such request ids and associated with them instances ids start to be considered as expired and will be removed from DB by cleaning job which are run each 2 hours.<br/>
+
+### Harvesting Statistics API
+
+Statistics API contains information on marc21_withholdings harvesting.
+The following endpoints can be used to monitor status of the completed harvesting.
+
+Name | Endpoint | Description 
+------------ | ------------- | ------------- 
+Request Metadata Collection | GET /oai/request-metadata | Returns whole collection of executed harvesting metadata 
+Failed to save instances UUIDs | GET /oai/request-metadata/{requestId}/failed-to-save-instances | Returns UUIDs collection of failed to save instances
+Failed instances UUIDs | GET /oai/request-metadata/{requestId}/failed-instances | Returns UUIDs collection of failed instances (instances were downloaded but failed to convert in MARC format)
+Skipped instances UUIDs| GET /oai/request-metadata/{requestId}/skipped-instances | Returns UUIDs collection of skipped instances (instances were downloaded but there are no corresponding records in SRS)
+Suppressed from discovery instances UUIDs| GET /oai/request-metadata/{requestId}/suppressed-from-discovery-instances | Returns UUIDs collection of suppressed from discovery instances
+
+A typical API usage should be performed with the following approach. The user requests a collection of Request Metadata. Finds the necessary request metadata by the harvesting start time. Request Metadata contains the `requestId` 
+and counters of the corresponding events. Next, the user can call the necessary endpoints using `requestId` to get a list of UUIDs.
 
 ### Issue tracker
 

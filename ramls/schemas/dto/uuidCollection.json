@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "UUID collection",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "uuidCollection" : {
+      "description": "list of UUIDs",
+      "type": "array",
+      "id": "uuidCollection",
+      "items": {
+        "type": "object",
+        "$ref": "../common/uuid.json"
+      }
+    },
+    "totalRecords": {
+      "type": "integer",
+      "description": "Total number of records"
+    }
+  },
+  "required": [
+    "uuidCollection",
+    "totalRecords"
+  ]
+}

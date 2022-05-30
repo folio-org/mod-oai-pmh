@@ -34,10 +34,13 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.RequestMetadataCollection;
+import org.folio.rest.jaxrs.model.UuidCollection;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +81,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -188,6 +192,7 @@ class OaiPmhImplTest {
   // API paths
   private static final String ROOT_PATH = "/oai";
   private static final String RECORDS_PATH = ROOT_PATH + "/records";
+  private static final String REQUEST_METADATA_PATH = ROOT_PATH + "/request-metadata";
 
   private static final int okapiPort = NetworkUtils.nextFreePort();
   private static final int mockPort = NetworkUtils.nextFreePort();
@@ -210,7 +215,7 @@ class OaiPmhImplTest {
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
-  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
@@ -223,6 +228,10 @@ class OaiPmhImplTest {
   private Pattern DATE_ONLY_PATTERN = Pattern.compile(DATE_ONLY_REXEXP);
   private Pattern DATE_TIME_PATTERN = Pattern.compile(DATE_TIME_REGEXP);
 
+  private static final int REQUEST_METADATA_QUERY_LIMIT = 100;
+
+  List<String> failedInstancesEndpoints = List.of("failed-to-save-instances", "failed-instances", "skipped-instances", "suppressed-from-discovery-instances");
+
   private Predicate<DataFieldType> suppressedDiscoveryMarcFieldPredicate;
   private Predicate<JAXBElement<ElementType>> suppressedDiscoveryDcFieldPredicate;
   private String idleTimeout;
@@ -230,7 +239,7 @@ class OaiPmhImplTest {
   private InstancesService instancesService;
 
   @BeforeAll
-  void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
+  void setUpOnce(Vertx vertx, VertxTestContext testContext) {
     resetSystemProperties();
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000*60*60);
@@ -1243,7 +1252,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(value = MetadataPrefix.class, names = {"DC", "MARC21XML", "MARC21WITHHOLDINGS"})
-  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) {
+  void shouldSkipProblematicRecord_whenGetListRecordsAndSrsReturnedInconvertibleToXmlRecord(MetadataPrefix metadataPrefix) throws InterruptedException {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
@@ -1251,6 +1260,15 @@ class OaiPmhImplTest {
       .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
 
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+
+    if (metadataPrefix == MetadataPrefix.MARC21WITHHOLDINGS) {
+      var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
+      verifyRequestMetadataStatistics(requestMetadataCollection, 2, 0, 1, 1, 0, 0);
+      var requestId = requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId();
+      var uuidCollection = getUuidCollection(requestId, "failed-instances");
+      assertThat(uuidCollection.getUuidCollection(), hasSize(1));
+      assertThat(uuidCollection.getTotalRecords(), is(1));
+    }
     verifyListResponse(response, LIST_RECORDS, 1);
   }
 
@@ -1265,6 +1283,16 @@ class OaiPmhImplTest {
     OAIPMHerrorType error = oaipmh.getErrors()
       .get(0);
     assertEquals(NO_RECORD_FOUND_ERROR, error.getValue());
+
+    // Statistics API verification
+    var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 1, 0, 0, 0, 1, 0);
+    failedInstancesEndpoints.forEach(path -> {
+      var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
+      assertThat(uuidCollection.getUuidCollection(), hasSize("skipped-instances".equals(path) ? 1: 0));
+      assertThat(uuidCollection.getTotalRecords(), is("skipped-instances".equals(path) ? 1: 0));
+    });
+
   }
 
   @ParameterizedTest
@@ -2266,6 +2294,44 @@ class OaiPmhImplTest {
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 27, 0, 27, 0, 0, 0);
+
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+  }
+
+  @Test
+  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthSmallBatchSize() {
+    // Verify harvesting statistics
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "5");
+
+    RequestSpecification initial = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
+    String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+
+    while(!"".equals(resumptionToken)) {
+        RequestSpecification request = createBaseRequest()
+    .with()
+    .param(VERB_PARAM, LIST_RECORDS.value())
+    .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      oaipmh = verify200WithXml(request, LIST_RECORDS);
+      resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    }
+
+    // Statistics API verification
+    var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 27, 0, 27, 0, 0, 0);
+
+    failedInstancesEndpoints.forEach(path -> {
+      var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
+      assertThat(uuidCollection.getUuidCollection(), hasSize(0));
+      assertThat(uuidCollection.getTotalRecords(), is(0));
+    });
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
@@ -2639,6 +2705,62 @@ class OaiPmhImplTest {
       .collect(Collectors.toList())
       : oaipmh.getListIdentifiers()
       .getHeaders();
+  }
+
+  private RequestMetadataCollection getRequestMetadataCollection(int limit) {
+    return RestAssured.given()
+      .header(okapiUrlHeader)
+      .header(tokenHeader)
+      .header(tenantHeader)
+      .basePath(REQUEST_METADATA_PATH)
+      .queryParam("limit", limit)
+        .when()
+          .get()
+        .then()
+          .contentType(ContentType.JSON)
+          .statusCode(200)
+          .extract()
+          .as(RequestMetadataCollection.class);
+  }
+
+  private UuidCollection getUuidCollection(String requestId, String path) {
+    return RestAssured.given()
+      .header(okapiUrlHeader)
+      .header(tokenHeader)
+      .header(tenantHeader)
+      .basePath(REQUEST_METADATA_PATH + "/" + requestId + "/" + path)
+        .when()
+          .get()
+        .then()
+          .contentType(ContentType.JSON)
+          .statusCode(200)
+          .extract()
+          .as(UuidCollection.class);
+  }
+
+  private void verifyRequestMetadataStatistics(RequestMetadataCollection requestMetadata, int downloadedAndSavedInstancesCounter, int failedToSaveInstancesCounter, int returnedInstancesCounter,
+                                               int failedInstancesCounter, int skippedInstancesCounter, int suppressedInstancesCounter) {
+    assertThat(requestMetadata.getRequestMetadataCollection()
+       .get(0)
+       .getStreamEnded(), is(true));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getDownloadedAndSavedInstancesCounter(), is(downloadedAndSavedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+       .get(0)
+       .getFailedInstancesCounter(), is(failedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getReturnedInstancesCounter(), is(returnedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getFailedInstancesCounter(), is(failedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getSkippedInstancesCounter(), is(skippedInstancesCounter));
+    assertThat(requestMetadata.getRequestMetadataCollection()
+      .get(0)
+      .getSuppressedInstancesCounter(), is(suppressedInstancesCounter));
   }
 
   @Autowired
