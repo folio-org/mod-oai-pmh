@@ -1,4 +1,22 @@
-## 3.8.0 - Unreleased
+## 3.9.0 - Unreleased
+
+## 3.8.0 (Released)
+
+This release contains stability improvements and Statistics API for harvesting monitoring
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.7.1...v3.8.0)
+
+### Stories
+
+* [MODOAIPMH-420](https://issues.folio.org/browse/MODOAIPMH-420) Save UUIDs of failed instances
+* [MODOAIPMH-419](https://issues.folio.org/browse/MODOAIPMH-419) Harvesting statistics API: stored instances statistics
+* [MODOAIPMH-412](https://issues.folio.org/browse/MODOAIPMH-412) API for harvesting statistics
+* [MODOAIPMH-408](https://issues.folio.org/browse/MODOAIPMH-408) mod-oai-pmh instances statistics
+
+### Bug fixes
+
+* [MODOAIPMH-418](https://issues.folio.org/browse/MODOAIPMH-418) Changes to holdings or items are not triggering harvesting records with marc21_withholdings
+* [MODOAIPMH-417](https://issues.folio.org/browse/MODOAIPMH-417) Handle DB timeouts on mod-oai-pmh
 
 ## 3.7.1 (Released)
 
