@@ -42,7 +42,6 @@ import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.folio.rest.jooq.tables.records.SkippedInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.SuppressedFromDiscoveryInstancesIdsRecord;
-import org.jooq.InsertValuesStep2;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;

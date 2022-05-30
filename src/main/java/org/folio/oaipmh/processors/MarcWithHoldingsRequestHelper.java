@@ -64,7 +64,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -350,11 +349,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             }
             batch.clear();
           }).onComplete(vVoid -> {
-            logger.info("Completing batch processing for requestId: " + requestId + ". Last batch size was: " + size);
+            logger.info("Completing batch processing for requestId: {}. Last batch size was: {}.", requestId, size);
             downloadInstancesPromise.complete();
           });
       } else {
-        logger.info("Completing batch processing for requestId: " + requestId + ". Last batch was empty");
+        logger.info("Completing batch processing for requestId: {}. Last batch was empty.", requestId);
         downloadInstancesPromise.complete();
       }
     });
@@ -768,7 +767,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
   private void logHarvestingCompletion() {
-    logger.info("Harvesting completed. Number of processed instances: " + batchesSizeCounter.get());
+    logger.info("Harvesting completed. Number of processed instances: {}.", batchesSizeCounter.get());
     batchesSizeCounter.setRelease(0);
   }
 
