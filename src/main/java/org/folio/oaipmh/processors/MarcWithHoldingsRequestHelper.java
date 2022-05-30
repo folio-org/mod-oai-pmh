@@ -135,7 +135,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private final WorkerExecutor saveInstancesExecutor;
   private final Context downloadContext;
 
-  private MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+  private final AtomicInteger batchesSizeCounter = new AtomicInteger();
+
+  private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
 
   public static MarcWithHoldingsRequestHelper getInstance() {
@@ -202,26 +204,29 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   }
 
 
-  private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder holder) {
+  private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder downloadInstancesStatistics) {
     Promise<Void> promise = Promise.promise();
-
     PostgresClient.getInstance(downloadContext.owner(), tenantId).withTrans(connection -> {
-      Tuple params = Tuple.of(true, UUID.fromString(requestId), holder.getDownloadedAndSavedInstancesCounter(), holder.getFailedToSaveInstancesCounter());
+      Tuple params = Tuple.of(true, UUID.fromString(requestId), downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter(), downloadInstancesStatistics.getFailedToSaveInstancesCounter());
       String updateRequestMetadataSql = "UPDATE " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".request_metadata_lb SET stream_ended = $1, downloaded_and_saved_instances_counter = $3, failed_to_save_instances_counter = $4 WHERE request_id = $2";
 
       List<Tuple> batch = new ArrayList<>();
-      holder.getFailedToSaveInstancesIds().forEach(instanceId -> batch.add(Tuple.of(UUID.fromString(requestId), UUID.fromString(instanceId))));
+      downloadInstancesStatistics.getFailedToSaveInstancesIds()
+        .forEach(instanceId -> batch.add(Tuple.of(UUID.fromString(requestId), UUID.fromString(instanceId))));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
         + ".failed_to_save_instances_ids (request_id, instance_id) VALUES ($1, $2)";
 
       connection.execute(updateRequestMetadataSql, params)
         .compose(x -> connection.execute(sql, batch))
         .onComplete(result -> {
+          connection.getPgConnection().close();
           if (result.failed()) {
-            promise.fail(result.cause());
-
+            var error = result.cause();
+            logger.error("Error updating request metadata on instances stream completion.", error);
+            promise.fail(error);
           } else {
+            logger.info("Updating request metadata on instances stream completion finished.");
             promise.complete();
           }
         });
@@ -229,9 +234,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     });
   }
 
-  private Future<Void> processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
+  private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
       boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
-    Promise<Void> promise = Promise.promise();
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
@@ -249,6 +253,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           List<JsonObject> instances = fut.result();
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
+            logger.error("Error: Instances collection is empty for non-first batch.");
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
           }
@@ -262,9 +267,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
 
           if (CollectionUtils.isEmpty(instances)) {
             logger.debug("Got empty instances.");
-            buildRecordsResponse(request, requestId, instances, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
+            buildRecordsResponse(request, requestId, instances, lastUpdateDate, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
               .onFailure(e -> handleException(oaiPmhResponsePromise, e));
             return;
           }
@@ -279,18 +283,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
-            .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, res, firstBatch, nextInstanceId,
+            .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
               deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
-              .onComplete(x -> instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant()))
-              .onSuccess(p -> promise.complete())
               .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
-    return promise.future();
   }
 
   private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
@@ -316,19 +317,43 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
-      if (batch.size() >= DATABASE_FETCHING_CHUNK_SIZE) {
+      var size = batch.size();
+      if (size >= DATABASE_FETCHING_CHUNK_SIZE) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
-          completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result);
+          if (result.succeeded()) {
+            downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
+          } else {
+            downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+            var ids = batch.stream()
+                    .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+            downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
+          }
+          batch.clear();
           jsonParser.resume();
         });
       }
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
+        var size = batch.size();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
-          .onComplete(result -> completeBatchAndUpdateDownloadStatistics(downloadInstancesStatistics, batch, result)).onComplete(vVoid -> downloadInstancesPromise.complete());
+          .onComplete(result -> {
+            if (result.succeeded()) {
+              downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
+            } else {
+              downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+              var ids = batch.stream()
+                      .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
+              downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
+            }
+            batch.clear();
+          }).onComplete(vVoid -> {
+            logger.info("Completing batch processing for requestId: {}. Last batch size was: {}.", requestId, size);
+            downloadInstancesPromise.complete();
+          });
       } else {
+        logger.info("Completing batch processing for requestId: {}. Last batch was empty.", requestId);
         downloadInstancesPromise.complete();
       }
     });
@@ -369,15 +394,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
           throwable);
         promise.fail(throwable);
       });
-  }
-
-  private void completeBatchAndUpdateDownloadStatistics(StatisticsHolder downloadInstancesStatistics, ArrayList<JsonEvent> batch, AsyncResult<Void> result) {
-    if (result.succeeded()) {
-      downloadInstancesStatistics.getDownloadedAndSavedInstancesCounter().addAndGet(batch.size());
-    } else {
-      downloadInstancesStatistics.getFailedToSaveInstancesCounter().addAndGet(batch.size());
-    }
-    batch.clear();
   }
 
   private HttpRequest<Buffer> buildInventoryQuery(Request request) {
@@ -623,10 +639,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch,
+  private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch, OffsetDateTime lastUpdateDate,
       Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder statistics) {
 
     Promise<Response> promise = Promise.promise();
+    // Set incoming instances number
+    batchesSizeCounter.addAndGet(batch.size());
     try {
       List<RecordType> records = buildRecordsList(request, batch, srsResponse, deletedRecordSupport, statistics);
       logger.debug("Build records response, instances = {}, instances with srs records = {}.", batch.size(), records.size());
@@ -649,10 +667,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       } else {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
-
-      promise.complete(response);
+      instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
+              .onComplete(x -> promise.complete(response));
     } catch (Exception e) {
-      handleException(promise, e);
+      instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
+              .onComplete(x -> handleException(promise, e));
     }
     return promise.future();
   }
@@ -721,6 +740,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       String nextInstanceId) {
     long cursor = request.getOffset();
     if (nextInstanceId == null) {
+      logHarvestingCompletion();
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(BigInteger.valueOf(cursor));
@@ -744,6 +764,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .withValue(resumptionToken)
       .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
+  }
+
+  private void logHarvestingCompletion() {
+    logger.info("Harvesting completed. Number of processed instances: {}.", batchesSizeCounter.get());
+    batchesSizeCounter.setRelease(0);
   }
 
   private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
