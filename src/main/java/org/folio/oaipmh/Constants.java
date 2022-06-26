@@ -98,5 +98,10 @@ public final class Constants {
   public static final String STATUS_CODE = "statusCode";
   public static final String STATUS_MESSAGE = "statusMessage";
 
+  public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
+  public static final String INSTANCE_ID_FIELD_NAME = "instanceId";
+  public static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
+  public static final String INVENTORY_STORAGE = "inventory-storage";
+
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
 }

@@ -30,8 +30,8 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected javax.ws.rs.core.Response processRecords(Context ctx, Request request, JsonObject instancesResponseBody) {
-    JsonArray instances = storageHelper.getItems(instancesResponseBody);
+  protected javax.ws.rs.core.Response processRecords(Context ctx, Request request, JsonObject srsRecords) {
+    JsonArray instances = storageHelper.getItems(srsRecords);
     if (instances != null && !instances.isEmpty()) {
       return retrieveMetadataFormatsWithNoIdentifier(request);
     } else {

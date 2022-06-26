@@ -10,7 +10,7 @@ import static org.folio.oaipmh.Constants.LOCATION_URI;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
-import static org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
