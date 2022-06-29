@@ -21,6 +21,7 @@ import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.processors.OaiPmhJsonParser;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
+import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
@@ -152,8 +153,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
-            final Response responseCompletableFuture = processRecords(ctx, request, srsRecords);
-            promise.complete(responseCompletableFuture);
+            processRecords(ctx, request, srsRecords).onComplete(oaiResponse -> {
+              promise.complete(oaiResponse.result());
+            });
           } else {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
@@ -177,7 +179,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     };
   }
 
-  protected Response processRecords(Context ctx, Request request,
+  protected Future<Response> processRecords(Context ctx, Request request,
                                     JsonObject srsRecords) {
     JsonArray sourceRecords = storageHelper.getItems(srsRecords);
     Integer totalRecords = storageHelper.getTotalRecords(srsRecords);
@@ -188,7 +190,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
-      return getResponseHelper().buildFailureResponse(oaipmh, request);
+      Response response = getResponseHelper().buildFailureResponse(oaipmh, request);
+      return Future.succeededFuture(response);
     }
 
     ResumptionTokenType resumptionToken = buildResumptionToken(request, sourceRecords, totalRecords);
@@ -198,23 +201,28 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
      * of any database query or search function necessary to answer the list request, rather than when the output is written.
      */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
-    final Map<String, RecordType> recordsMap = buildRecords(ctx, request, sourceRecords);
-    if (recordsMap.isEmpty()) {
-      return buildNoRecordsFoundOaiResponse(oaipmh, request);
-    } else {
-      addRecordsToOaiResponse(oaipmh, recordsMap.values());
-      addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-      return buildResponse(oaipmh, request);
-    }
+    Promise<Response> oaiResponsePromise = Promise.promise();
+    buildRecords(ctx, request, sourceRecords).onSuccess(recordsMap -> {
+      Response response;
+      if (recordsMap.isEmpty()) {
+        response = buildNoRecordsFoundOaiResponse(oaipmh, request);
+      } else {
+        addRecordsToOaiResponse(oaipmh, recordsMap.values());
+        addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+        response = buildResponse(oaipmh, request);
+      }
+      oaiResponsePromise.complete(response);
+    });
+    return oaiResponsePromise.future();
   }
 
   /**
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
    * otherwise empty map is returned
    */
-  private Map<String, RecordType> buildRecords(Context context, Request request, JsonArray srsRecords) {
-    Promise<Map<String, RecordType>> promise = Promise.promise();
-    CopyOnWriteArrayList<Future<Void>> futures = new CopyOnWriteArrayList<>();
+  private Future<Map<String, RecordType>> buildRecords(Context context, Request request, JsonArray srsRecords) {
+    Promise<Map<String, RecordType>> recordsPromise = Promise.promise();
+    List<Future<JsonObject>> futures = new ArrayList<>();
 
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(),
       REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -230,7 +238,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           String srsRecordId = storageHelper.getRecordId(srsRecord);
           String instanceId = storageHelper.getIdentifierId(srsRecord);
           RecordType record = createRecord(request, srsRecord, instanceId);
-          enrichRecordIfRequired(request, srsRecord, record, instanceId, suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
+          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, srsRecord, record, instanceId, suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
             // Some repositories like SRS can return record source data along with other info
             String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
             if (source != null && record.getHeader().getStatus() == null) {
@@ -257,10 +265,20 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, srsRecordId, throwable.getMessage());
             logger.error(errorMsg, throwable);
           });
+          futures.add(enrichRecordFuture);
         });
-      return records;
+
+      GenericCompositeFuture.all(futures).onComplete(res -> {
+        if (res.succeeded()) {
+          recordsPromise.complete(records);
+        } else {
+          recordsPromise.fail(res.cause());
+        }
+      });
+      return recordsPromise.future();
     }
-    return Collections.emptyMap();
+    recordsPromise.complete();
+    return recordsPromise.future();
   }
 
   private RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
