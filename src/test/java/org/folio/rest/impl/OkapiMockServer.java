@@ -48,6 +48,7 @@ public class OkapiMockServer {
   public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 
   static final String EXISTING_IDENTIFIER = "existing-identifier";
+  static final String RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS = "00000000-0000-4a89-a2f9-78ce3145e4fc";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
@@ -144,6 +145,7 @@ public class OkapiMockServer {
   private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS = "/configurations.entries/config_invalid_setting_value.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
+  private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
   private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
   private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
@@ -182,12 +184,15 @@ public class OkapiMockServer {
   private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON = "inventory_instance_mock_forbidden_response.json";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON = "inventory_instance_mock_500_response.json";
+  private static final String INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "instance.json";
+  private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "enriched_instance.json";
 
   private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE = "8f33cdf4-6a85-4877-8b99-7d5e3be910f1";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE = "12d31a35-e6cf-4840-bd85-4ae51e02a741";
+  private static final String INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS = "00000000-0000-4a89-a2f9-78ce3145e4fc";
 
 
   private static final String JSON_TEMPLATE_KEY_RECORDS = "replace_with_records";
@@ -195,6 +200,7 @@ public class OkapiMockServer {
   private static final int LAST_RECORDS_BATCH_OFFSET_VALUE = 8;
   private static final int LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON = 2;
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+
 
   private static int srsRerequestAttemptsCount = 4;
   private static int totalSrsRerequestCallsNumber = 0;
@@ -243,6 +249,8 @@ public class OkapiMockServer {
     router.get(CONFIGURATIONS_ENTRIES)
       .handler(this::handleConfigurationModuleResponse);
 
+    router.get(INSTANCE_STORAGE_URI)
+        .handler(this::handleInstanceStorageRequest);
     //related to MarcWithHoldingsRequestHelper
     router.post(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleRecordStorageResultPostResponse);
@@ -330,6 +338,8 @@ public class OkapiMockServer {
       failureResponseWithForbidden(ctx);
     } else if (instanceIds.contains(INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE)) {
       failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
+    } else if (instanceIds.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
     }
@@ -390,6 +400,15 @@ public class OkapiMockServer {
     }
   }
 
+  private void handleInstanceStorageRequest(RoutingContext ctx) {
+    String uri = ctx.request().uri();
+    if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
+    } else {
+      failureResponse(ctx, 404, "Not found");
+    }
+  }
+
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody()
       .toJsonArray();
@@ -435,7 +454,8 @@ public class OkapiMockServer {
     if (uri != null) {
       if (uri.contains(DEFAULT_RECORD_DATE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
-      } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))) {
+      } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))
+          || uri.contains(String.format("%s=%s", ID_PARAM, RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS))) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
