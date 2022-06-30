@@ -43,7 +43,6 @@ import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1398,7 +1397,6 @@ class OaiPmhImplTest {
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
   }
 
-  //kek
   @Test
   void getOaiGetRecordVerbWithExistingIdentifierAndMetadataPrefixMarc21WithHoldings() {
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS;
@@ -1424,6 +1422,20 @@ class OaiPmhImplTest {
     assertEquals(expectedResponse, response);
   }
 
+  @Test
+  void getOaiGetRecordVerbMarc21WithHoldingsWhenRecordInstanceNotFound() {
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.RECORD_IDENTIFIER_INSTANCE_NOT_FOUND;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
+    assertThat(oaipmh.getGetRecord(), is(nullValue()));
+    assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
+  }
+
   @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiGetRecordVerbWithNonExistingIdentifier(MetadataPrefix metadataPrefix) {
@@ -1437,7 +1449,6 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
     assertThat(oaipmh.getGetRecord(), is(nullValue()));
     assertThat(oaipmh.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
-
   }
 
   @Test

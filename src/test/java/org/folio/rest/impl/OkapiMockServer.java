@@ -49,6 +49,7 @@ public class OkapiMockServer {
 
   static final String EXISTING_IDENTIFIER = "existing-identifier";
   static final String RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS = "00000000-0000-4a89-a2f9-78ce3145e4fc";
+  static final String RECORD_IDENTIFIER_INSTANCE_NOT_FOUND = "fb3e23e5-eb7f-4b8b-b531-40e74ec9c6e9";
   static final String NON_EXISTING_IDENTIFIER = "non-existing-identifier";
   static final String INVALID_IDENTIFIER = "non-existing-identifier";
   static final String ERROR_IDENTIFIER = "please-return-error";
@@ -124,6 +125,7 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS = "3a6a47ac-597d-4abe-916d-e35c72340000";
 
   // Paths to json files
+  private static final String SRS_RECORD_WITH_NON_EXISTING_INSTANCE_JSON = "/srs_record_with_non_existing_instance.json";
   private static final String INSTANCES_0 = "/instances_0.json";
   private static final String INSTANCES_1 = "/instances_1.json";
   private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instances_1_withNoRecordSource.json";
@@ -200,6 +202,7 @@ public class OkapiMockServer {
   private static final int LAST_RECORDS_BATCH_OFFSET_VALUE = 8;
   private static final int LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON = 2;
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+  private static final String INSTANCE_ID_NOT_FOUND_RESPONSE = "fb3e23e5-eb7f-4b8b-b531-40e74ec9c6e9";
 
 
   private static int srsRerequestAttemptsCount = 4;
@@ -404,8 +407,10 @@ public class OkapiMockServer {
     String uri = ctx.request().uri();
     if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
-    } else {
+    } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
       failureResponse(ctx, 404, "Not found");
+    } else {
+      failureResponse(ctx, 500, "Internal Server Error");
     }
   }
 
@@ -457,6 +462,8 @@ public class OkapiMockServer {
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))
           || uri.contains(String.format("%s=%s", ID_PARAM, RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS))) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));
+      } else if (uri.contains(String.format("%s=%s", ID_PARAM, RECORD_IDENTIFIER_INSTANCE_NOT_FOUND))) {
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_NON_EXISTING_INSTANCE_JSON));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, NON_EXISTING_IDENTIFIER))) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
       } else if (uri.contains(NO_RECORDS_DATE_STORAGE)) {
