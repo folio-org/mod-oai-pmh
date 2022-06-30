@@ -17,6 +17,8 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import java.util.Collections;
 import java.util.List;
 
+import javax.ws.rs.core.Response;
+
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 
 public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
@@ -30,13 +32,15 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected javax.ws.rs.core.Response processRecords(Context ctx, Request request, JsonObject instancesResponseBody) {
-    JsonArray instances = storageHelper.getItems(instancesResponseBody);
+  protected Future<javax.ws.rs.core.Response> processRecords(Context ctx, Request request, JsonObject srsRecords) {
+    JsonArray instances = storageHelper.getItems(srsRecords);
+    Response response;
     if (instances != null && !instances.isEmpty()) {
-      return retrieveMetadataFormatsWithNoIdentifier(request);
+      response = retrieveMetadataFormatsWithNoIdentifier(request);
     } else {
-      return buildIdentifierNotFoundResponse(request);
+      response = buildIdentifierNotFoundResponse(request);
     }
+    return Future.succeededFuture(response);
   }
 
   @Override

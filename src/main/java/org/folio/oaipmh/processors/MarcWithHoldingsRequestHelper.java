@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.domain.StatisticsHolder;
+import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
@@ -69,6 +70,8 @@ import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
+import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.LOCATION;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
@@ -81,8 +84,10 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.Constants.STATUS_CODE;
 import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
@@ -92,36 +97,19 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 
-public class MarcWithHoldingsRequestHelper extends AbstractHelper {
+public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
-  private static final String INSTANCE_ID_FIELD_NAME = "instanceId";
-  private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
-
-  public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
-  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
   private static final String ONLY_INSTANCE_UPDATE_DATE = "onlyInstanceUpdateDate";
 
   private static final String START_DATE_PARAM_NAME = "startDate";
   private static final String END_DATE_PARAM_NAME = "endDate";
 
-  private static final String TEMPORARY_LOCATION = "temporaryLocation";
-  private static final String PERMANENT_LOCATION = "permanentLocation";
-  private static final String EFFECTIVE_LOCATION = "effectiveLocation";
-
-  private static final String CODE = "code";
-
-  private static final String HOLDINGS = "holdings";
-
-  private static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
-  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String DOWNLOAD_INSTANCES_MISSED_PERMISSION = "Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
-  private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
-  private static final String INVENTORY_STORAGE = "inventory-storage";
 
   private static final int DATABASE_FETCHING_CHUNK_SIZE = 5000;
   private static final int REREQUEST_SRS_DELAY = 2000;
@@ -160,7 +148,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     metricsCollectingService.startMetric(request.getRequestId(), SEND_REQUEST);
     try {
       String resumptionToken = request.getResumptionToken();
-      List<OAIPMHerrorType> errors = validateListRequest(request);
+      List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, oaipmhResponsePromise, errors);
       }
@@ -511,134 +499,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     };
   }
 
-  private Future<List<JsonObject>> enrichInstances(List<JsonObject> result, Request request) {
-    Map<String, JsonObject> instances = result.stream()
-      .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
-    Promise<List<JsonObject>> promise = Promise.promise();
-    var webClient = WebClientProvider.getWebClient();
-    var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
-    if (request.getOkapiUrl()
-      .contains("https:")) {
-      httpRequest.ssl(true);
-    }
-    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-
-    JsonObject entries = new JsonObject();
-    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instances.keySet())));
-    entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
-
-    Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser()
-      .objectValueMode();
-    jsonParser.handler(event -> {
-      JsonObject itemsAndHoldingsFields = event.objectValue();
-      String instanceId = itemsAndHoldingsFields.getString(INSTANCE_ID_FIELD_NAME);
-      JsonObject instance = instances.get(instanceId);
-      if (instance != null) {
-        enrichDiscoverySuppressed(itemsAndHoldingsFields, instance);
-        instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsAndHoldingsFields);
-        // case when no items
-        if (itemsAndHoldingsFields.getJsonArray(ITEMS)
-          .isEmpty()) {
-          enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
-        } else {
-          adjustItems(instance);
-        }
-      } else {
-        logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
-      }
-    });
-    jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
-        if (invalidResponseReceivedAndProcessed) {
-          return;
-        }
-        logger.error("Error has been occurred at JsonParser while reading data from items-and-holdings response. Message:{}", throwable.getMessage(),
-          throwable);
-        promise.fail(throwable);
-      })
-    );
-
-    httpRequest.as(BodyCodec.jsonStream(jsonParser))
-      .sendBuffer(entries.toBuffer())
-      .onSuccess(response -> {
-        switch (response.statusCode()) {
-          case 200:
-            responseChecked.complete(false);
-            break;
-          case 403: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, ENRICH_INSTANCES_MISSED_PERMISSION);
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
-            responseChecked.complete(true);
-            break;
-          }
-          default: {
-            String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
-            String errorMessage = errorFromStorageMessage + response.statusCode();
-            logger.error(errorMessage);
-            promise.fail(new IllegalStateException(errorFromStorageMessage));
-            responseChecked.complete(true);
-          }
-        }
-        promise.complete(new ArrayList<>(instances.values()));
-      })
-      .onFailure(e -> {
-        logger.error(e.getMessage());
-        promise.fail(e);
-      });
-    return promise.future();
-  }
-
-  private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY)))
-      for (Object item : itemsandholdingsfields.getJsonArray("items")) {
-        if (item instanceof JsonObject) {
-          JsonObject itemJson = (JsonObject) item;
-          itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, true);
-        }
-      }
-  }
-
-  private void enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(JsonObject instance) {
-    JsonArray holdingsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(HOLDINGS);
-    JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(ITEMS);
-    for (Object holding : holdingsJson) {
-      if (holding instanceof JsonObject) {
-        JsonObject holdingJson = (JsonObject) holding;
-        JsonObject callNumberJson = holdingJson.getJsonObject(CALL_NUMBER);
-        JsonObject locationJson = holdingJson.getJsonObject(LOCATION);
-        JsonObject effectiveLocationJson = locationJson.getJsonObject(EFFECTIVE_LOCATION);
-        JsonObject itemJson = new JsonObject();
-        itemJson.put(CALL_NUMBER, callNumberJson);
-        JsonObject locationItemJson = new JsonObject();
-        locationItemJson.put(NAME, effectiveLocationJson.getString(NAME));
-        effectiveLocationJson.remove(NAME);
-        locationItemJson.put(LOCATION, effectiveLocationJson);
-        itemJson.put(LOCATION, locationItemJson);
-        itemsJson.add(itemJson);
-      }
-    }
-  }
-
-  private void adjustItems(JsonObject instance) {
-    JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(ITEMS);
-    for (Object item: itemsJson) {
-      JsonObject itemJson = (JsonObject) item;
-      itemJson.getJsonObject(LOCATION).put(NAME, itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).getString(NAME));
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(NAME);
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(CODE);
-      itemJson.getJsonObject(LOCATION).remove(TEMPORARY_LOCATION);
-      itemJson.getJsonObject(LOCATION).remove(PERMANENT_LOCATION);
-    }
-  }
-
   private Future<Response> buildRecordsResponse(Request request, String requestId, List<JsonObject> batch, OffsetDateTime lastUpdateDate,
       Map<String, JsonObject> srsResponse, boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport, StatisticsHolder statistics) {
 
@@ -696,23 +556,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       })
       .forEach(instance -> {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-        final JsonObject srsInstance = srsResponse.get(instanceId);
-        RecordType record = createRecord(request, srsInstance, instanceId);
+        final JsonObject srsRecord = srsResponse.get(instanceId);
+        RecordType record = createRecord(request, srsRecord, instanceId);
 
-        JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsInstance, instance,
+        JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecord, instance,
             suppressedRecordsProcessing);
-        JsonObject updatedSrsInstance = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
+        JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
           suppressedRecordsProcessing);
-        if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsInstance)) {
-          record.getHeader()
-            .setStatus(StatusType.DELETED);
-        }
-        String source = storageHelper.getInstanceRecordSource(updatedSrsInstance);
+        String source = storageHelper.getInstanceRecordSource(updatedSrsRecord);
         if (source != null && record.getHeader()
           .getStatus() == null) {
           if (suppressedRecordsProcessing) {
-            source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsInstance);
-            source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsInstance);
+            source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsRecord);
+            source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsRecord);
           }
           try {
             record.withMetadata(buildOaiMetadata(request, source));
@@ -721,11 +577,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
             statistics.addFailedInstancesIds(instanceId);
             logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
             logger.debug("Skipping problematic record due the conversion error. Source record id - {}.",
-                storageHelper.getRecordId(srsInstance));
+                storageHelper.getRecordId(srsRecord));
             return;
           }
         }
-        if (filterInstance(request, srsInstance)) {
+        if (filterInstance(request, srsRecord)) {
           statistics.addReturnedInstancesCounter(1);
           records.add(record);
         } else {
@@ -769,15 +625,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
   private void logHarvestingCompletion() {
     logger.info("Harvesting completed. Number of processed instances: {}.", batchesSizeCounter.get());
     batchesSizeCounter.setRelease(0);
-  }
-
-  private RecordType createRecord(Request request, JsonObject instance, String instanceId) {
-    String identifierPrefix = request.getIdentifierPrefix();
-    return new RecordType().withHeader(createHeader(instance, request).withIdentifier(getIdentifier(identifierPrefix, instanceId)));
-  }
-
-  private boolean isSkipSuppressed(Request request) {
-    return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
   }
 
   private Future<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
@@ -929,10 +776,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
     }
   }
 
-  private String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
-    return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
-  }
-
   private List<String> extractListOfIdsForSRSRequest(List<JsonObject> batch) {
 
     return batch.stream()
@@ -941,9 +784,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractHelper {
       .collect(toList());
   }
 
-  private void handleException(Promise<?> promise, Throwable e) {
-    logger.error(e.getMessage(), e);
-    promise.fail(e);
+  @Override
+  protected List<OAIPMHerrorType> validateRequest(Request request) {
+    return validateListRequest(request);
   }
 
   @Autowired
