@@ -224,8 +224,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
+    Map<String, RecordType> records = new ConcurrentHashMap<>();
+
     if (srsRecords != null && !srsRecords.isEmpty()) {
-      Map<String, RecordType> records = new ConcurrentHashMap<>();
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
       srsRecords.stream()
@@ -276,7 +277,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         });
       return recordsPromise.future();
     }
-    recordsPromise.complete();
+    recordsPromise.complete(records);
     return recordsPromise.future();
   }
 
