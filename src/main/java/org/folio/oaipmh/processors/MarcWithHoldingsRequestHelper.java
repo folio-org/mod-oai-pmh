@@ -563,10 +563,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             suppressedRecordsProcessing);
         JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
           suppressedRecordsProcessing);
-        if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
-          record.getHeader()
-            .setStatus(StatusType.DELETED);
-        }
+//        if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
+//          record.getHeader()
+//            .setStatus(StatusType.DELETED);
+//        }
         String source = storageHelper.getInstanceRecordSource(updatedSrsRecord);
         if (source != null && record.getHeader()
           .getStatus() == null) {
@@ -631,10 +631,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     batchesSizeCounter.setRelease(0);
   }
 
-  private RecordType createRecord(Request request, JsonObject srsRecord, String instanceId) {
-    String identifierPrefix = request.getIdentifierPrefix();
-    return new RecordType().withHeader(createHeader(srsRecord, request).withIdentifier(getIdentifier(identifierPrefix, instanceId)));
-  }
+//  private RecordType createRecord(Request request, JsonObject srsRecord, String instanceId) {
+//    String identifierPrefix = request.getIdentifierPrefix();
+//    return new RecordType().withHeader(createHeader(srsRecord, request).withIdentifier(getIdentifier(identifierPrefix, instanceId)));
+//  }
 
   private Future<Void> saveInstancesIds(List<JsonEvent> instances, String tenant, String requestId,
                                          PostgresClient postgresClient) {

@@ -281,7 +281,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return recordsPromise.future();
   }
 
-  private RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
+  protected RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
     String identifierPrefix = request.getIdentifierPrefix();
     RecordType record = new RecordType()
       .withHeader(createHeader(srsRecord, request)
