@@ -35,12 +35,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import static java.lang.String.format;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -212,7 +210,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         response = buildResponse(oaipmh, request);
       }
       oaiResponsePromise.complete(response);
-    });
+    }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request)));
     return oaiResponsePromise.future();
   }
 
@@ -224,8 +222,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<Map<String, RecordType>> recordsPromise = Promise.promise();
     List<Future<JsonObject>> futures = new ArrayList<>();
 
-    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(),
-      REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     if (srsRecords != null && !srsRecords.isEmpty()) {
       Map<String, RecordType> records = new ConcurrentHashMap<>();
@@ -238,43 +235,45 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           String srsRecordId = storageHelper.getRecordId(srsRecord);
           String instanceId = storageHelper.getIdentifierId(srsRecord);
           RecordType record = createRecord(request, srsRecord, instanceId);
-          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, srsRecord, record, instanceId, suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
-            // Some repositories like SRS can return record source data along with other info
-            String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
-            if (source != null && record.getHeader().getStatus() == null) {
-              if (suppressedRecordsProcessingEnabled) {
-                source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-                if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-                  source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
+          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, srsRecord, record, instanceId,
+              suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
+                // Some repositories like SRS can return record source data along with other info
+                String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
+                if (source != null && record.getHeader().getStatus() == null) {
+                  if (suppressedRecordsProcessingEnabled) {
+                    source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
+                    if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
+                      source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
+                    }
+                  }
+                  try {
+                    record.withMetadata(buildOaiMetadata(request, source));
+                  } catch (Exception e) {
+                    logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
+                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, srsRecordId);
+                    return;
+                  }
+                } else {
+                  context.put(srsRecordId, srsRecord);
                 }
-              }
-              try {
-                record.withMetadata(buildOaiMetadata(request, source));
-              } catch (Exception e) {
-                logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
-                logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, srsRecordId);
-                return;
-              }
-            } else {
-              context.put(srsRecordId, srsRecord);
-            }
-            if (filterInstance(request, srsRecord)) {
-              records.put(srsRecordId, record);
-            }
-          }).onFailure(throwable -> {
-            String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, srsRecordId, throwable.getMessage());
-            logger.error(errorMsg, throwable);
-          });
+                if (filterInstance(request, srsRecord)) {
+                  records.put(srsRecordId, record);
+                }
+              })
+                .onFailure(throwable -> {
+                  String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, srsRecordId, throwable.getMessage());
+                  logger.error(errorMsg, throwable);
+                });
           futures.add(enrichRecordFuture);
         });
 
       GenericCompositeFuture.all(futures).onComplete(res -> {
-        if (res.succeeded()) {
-          recordsPromise.complete(records);
-        } else {
-          recordsPromise.fail(res.cause());
-        }
-      });
+          if (res.succeeded()) {
+            recordsPromise.complete(records);
+          } else {
+            recordsPromise.fail(res.cause());
+          }
+        });
       return recordsPromise.future();
     }
     recordsPromise.complete();
@@ -318,19 +317,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
         return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
-        })
+      })
         .compose(oneItemList -> Future.succeededFuture(oneItemList.iterator().next()))
         .compose(instanceWithHoldingsAndItems -> {
           RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
           boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
-            JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecordToEnrich, instanceWithHoldingsAndItems,
-              shouldProcessSuppressedRecords);
-            JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instanceWithHoldingsAndItems,
-              shouldProcessSuppressedRecords);
-            if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
-              recordType.getHeader()
-                .setStatus(StatusType.DELETED);
-            }
+          JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecordToEnrich,
+              instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
+          JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData,
+              instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
+          if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
+            recordType.getHeader().setStatus(StatusType.DELETED);
+          }
           return Future.succeededFuture(updatedSrsRecord);
         });
     } else {
@@ -341,7 +339,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private Future<JsonObject> requestInstanceById(Request request, String instanceId) {
     Promise<JsonObject> promise = Promise.promise();
     var webClient = WebClientProvider.getWebClient();
-    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "/" + instanceId;
+    String query = "query=id==" + instanceId;
+    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains("https:")) {
       httpRequest.ssl(true);
