@@ -793,11 +793,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       .collect(toList());
   }
 
-//  private void handleException(Promise<?> promise, Throwable e) {
-//    logger.error(e.getMessage(), e);
-//    promise.fail(e);
-//  }
-
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     return validateListRequest(request);
