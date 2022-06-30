@@ -151,9 +151,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
-            processRecords(ctx, request, srsRecords).onComplete(oaiResponse -> {
-              promise.complete(oaiResponse.result());
-            });
+            processRecords(ctx, request, srsRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
           } else {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
