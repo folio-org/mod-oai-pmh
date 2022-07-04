@@ -222,7 +222,7 @@ class OaiPmhImplTest {
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
   private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
-  private static final String GET_RECORD_MARC_21_WITH_HOLDINGS_EXPECTED_RESPONSE = "responses/get_record_marc21_with_holdings_expected_response.txt";
+  private static final String GET_RECORD_MARC_21_WITH_HOLDINGS_EXPECTED_RESPONSE = "responses/get_record_marc21_with_holdings_expected_response.xml";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
@@ -1417,7 +1417,7 @@ class OaiPmhImplTest {
     Instant instant = localDateTime.toInstant(ZoneOffset.UTC);
     oaiPmhResponseWithExistingIdentifier.setResponseDate(instant);
 
-    String response = ResponseConverter.getInstance().convertToString(oaiPmhResponseWithExistingIdentifier);
+    String response = ResponseConverter.getInstance().convertToString(oaiPmhResponseWithExistingIdentifier).replace("\n", "");
     String expectedResponse = readFileAsString(GET_RECORD_MARC_21_WITH_HOLDINGS_EXPECTED_RESPONSE).replace("\n", "");
     assertEquals(expectedResponse, response);
   }
