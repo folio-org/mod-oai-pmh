@@ -55,9 +55,9 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected Response processRecords(Context ctx, Request request, JsonObject srsRecords) {
+  protected Future<Response> processRecords(Context ctx, Request request, JsonObject srsRecords) {
     OAIPMH oaipmh = buildListIdentifiers(request, srsRecords);
-    return buildResponse(oaipmh, request);
+    return Future.succeededFuture(buildResponse(oaipmh, request));
   }
 
   /**
