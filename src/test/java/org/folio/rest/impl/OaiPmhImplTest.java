@@ -222,7 +222,6 @@ class OaiPmhImplTest {
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
   private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
-  private static final String GET_RECORD_MARC_21_WITH_HOLDINGS_EXPECTED_RESPONSE = "responses/get_record_marc21_with_holdings_expected_response.xml";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
   private final Header tenantWithotConfigsHeader = new Header("X-Okapi-Tenant", "noConfigTenant");
@@ -1410,16 +1409,6 @@ class OaiPmhImplTest {
     verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
     assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
-
-    //set response date to be equal date within expected response file to be able to compare
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-    LocalDateTime localDateTime = LocalDateTime.parse("2022-06-29T15:15:59", formatter);
-    Instant instant = localDateTime.toInstant(ZoneOffset.UTC);
-    oaiPmhResponseWithExistingIdentifier.setResponseDate(instant);
-
-    String response = ResponseConverter.getInstance().convertToString(oaiPmhResponseWithExistingIdentifier).replace("\n", "");
-    String expectedResponse = readFileAsString(GET_RECORD_MARC_21_WITH_HOLDINGS_EXPECTED_RESPONSE).replace("\n", "");
-    assertEquals(expectedResponse, response);
   }
 
   @Test
