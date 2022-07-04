@@ -1405,9 +1405,11 @@ class OaiPmhImplTest {
       .param(IDENTIFIER_PARAM, identifier)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
     OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+
     HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
     verifyIdentifiers(Collections.singletonList(recordHeader), Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
-    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    verifyForMarcRecord(oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord());
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
   }
 
