@@ -1,4 +1,20 @@
-## 3.9.0 - Unreleased
+# 3.10.0 - Unreleased
+
+## 3.9.0 (Released)
+
+This release contains minor improvements and bug fixes
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.8.0...v3.9.0)
+
+### Stories
+* [MODOAIPMH-318](https://issues.folio.org/browse/MODOAIPMH-318) Add Item Loan type to the fields exported as part of the withholdings metadatPrefix
+
+### Technical tasks
+* [MODOAIPMH-425](https://issues.folio.org/browse/MODOAIPMH-425) RMB v34 upgrade - Morning Glory 2022 R2 module release
+
+### Bug fixes
+* [MODOAIPMH-426](https://issues.folio.org/browse/MODOAIPMH-426) OAI-PMH requests made with the verb GetRecord and metadataPrefix set to marc21_withholdings do not return holdings and items data
+* [MODOAIPMH-421](https://issues.folio.org/browse/MODOAIPMH-421) Issues with saving instances to the database
 
 ## 3.8.0 (Released)
 
