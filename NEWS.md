@@ -11,7 +11,6 @@ This release contains minor improvements and bug fixes
 
 ### Technical tasks
 * [MODOAIPMH-425](https://issues.folio.org/browse/MODOAIPMH-425) RMB v34 upgrade - Morning Glory 2022 R2 module release
-* [MODOAIPMH-423](https://issues.folio.org/browse/MODOAIPMH-423) Schema Upgrade Testing
 
 ### Bug fixes
 * [MODOAIPMH-426](https://issues.folio.org/browse/MODOAIPMH-426) OAI-PMH requests made with the verb GetRecord and metadataPrefix set to marc21_withholdings do not return holdings and items data
