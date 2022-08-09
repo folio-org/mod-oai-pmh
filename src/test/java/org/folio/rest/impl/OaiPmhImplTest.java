@@ -2327,6 +2327,45 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiRecordsMarc21WithHoldingsWhenNoItemsWithSuppressedRecordsProcessing() {
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, NO_ITEMS_DATE)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    OAIPMH response = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(response.getErrors(), is(empty()));
+    response.getListRecords().getRecords().forEach(r -> {
+      Optional<SubfieldatafieldType> optInstitutionName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "a");
+      Optional<SubfieldatafieldType> optCampusName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "b");
+      Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
+      Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
+      Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      Optional<SubfieldatafieldType> optDiscoverySuppressed = findSubfieldByFiledTagAndSubfieldCode(r, "952", "t");
+      Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
+      Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
+      Optional<SubfieldatafieldType> optHoldingsUrlNote = findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
+      assertTrue(optInstitutionName.isPresent());
+      assertTrue(optCampusName.isPresent());
+      assertTrue(optLibraryName.isPresent());
+      assertTrue(optLocationName.isPresent());
+      assertTrue(optCallNumber.isPresent());
+      assertTrue(optDiscoverySuppressed.isPresent());
+      assertThat(optDiscoverySuppressed.get().getValue(), equalTo("0"));
+      assertTrue(optHoldingsUrlField.isPresent());
+      assertTrue(optHoldingsType.isPresent());
+      assertTrue(optHoldingsUrlNote.isPresent());
+    });
+
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+  }
+
+  @Test
   void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthDefaultBatchSize() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");

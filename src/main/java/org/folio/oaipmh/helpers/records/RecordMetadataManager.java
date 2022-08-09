@@ -1,5 +1,6 @@
 package org.folio.oaipmh.helpers.records;
 
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -172,8 +173,7 @@ public class RecordMetadataManager {
                                                           boolean suppressedRecordsProcessing) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
-      int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
-      effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
+      effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
     }
     FieldBuilder fieldBuilder = new FieldBuilder();
     Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
@@ -182,6 +182,19 @@ public class RecordMetadataManager {
       .withSubFields(effectiveLocationSubFields)
       .build();
     marcRecordFields.add(effectiveLocationField);
+  }
+
+  /**
+   * Calculates discovery suppressed subfield value.
+   *
+   * @param itemData - json of single item
+   * @return subfield value
+   */
+  private int calculateDiscoverySuppressedSubfieldValue(JsonObject itemData) {
+    if (isNull(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD))) {
+      return 0;
+    }
+    return BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
   }
 
   /**
