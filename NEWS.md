@@ -1,5 +1,14 @@
 # 3.10.0 - Unreleased
 
+## 3.9.1 (Released)
+
+This release contains fix for harvesting holdings without items
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.9.0...v3.9.1)
+
+### Bug fixes
+* [MODOAIPMH-436](https://issues.folio.org/browse/MODOAIPMH-436) Holdings without items have  always subfield t in 952 set to 1
+
 ## 3.9.0 (Released)
 
 This release contains minor improvements and bug fixes
