@@ -149,9 +149,6 @@ public class RecordMetadataManager {
         updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing);
         updateFieldsWithHoldingsRecordField((JsonObject) holding, fieldsList, suppressedRecordsProcessing);
       });
-      // holdings.forEach(holding ->
-      //   updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing)
-      // );
     }
     return srsInstance;
   }
@@ -178,7 +175,6 @@ public class RecordMetadataManager {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
     if (suppressedRecordsProcessing) {
-      // hoist: int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
     if (subFieldValue == 0) {
