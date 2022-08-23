@@ -173,11 +173,12 @@ public class RecordMetadataManager {
                                                           List<Object> marcRecordFields,
                                                           boolean suppressedRecordsProcessing) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
-    int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+    
     if (suppressedRecordsProcessing) {
+      int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
-    if (subFieldValue == 0) {
+    // if (subFieldValue == 0) {
       FieldBuilder fieldBuilder = new FieldBuilder();
       Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
         .withFirstIndicator(INDICATOR_VALUE)
@@ -185,7 +186,7 @@ public class RecordMetadataManager {
         .withSubFields(effectiveLocationSubFields)
         .build();
       marcRecordFields.add(effectiveLocationField);
-    }
+    // }
   }
 
   /**
@@ -238,7 +239,7 @@ public class RecordMetadataManager {
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
     JsonObject locationGroup = null;
-    if(Objects.nonNull(itemData.getJsonObject(LOCATION))) {
+    if (Objects.nonNull(itemData.getJsonObject(LOCATION))) {
       locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
     }
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
@@ -255,7 +256,7 @@ public class RecordMetadataManager {
 
   private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject itemData,
                                 List<EffectiveLocationSubFields> subFieldGroupProperties) {
-    if(Objects.nonNull(itemData)) {
+    if (Objects.nonNull(itemData)) {
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
