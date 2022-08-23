@@ -173,20 +173,17 @@ public class RecordMetadataManager {
                                                           List<Object> marcRecordFields,
                                                           boolean suppressedRecordsProcessing) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
-    
     if (suppressedRecordsProcessing) {
       int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
-    // if (subFieldValue == 0) {
-      FieldBuilder fieldBuilder = new FieldBuilder();
-      Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
-        .withFirstIndicator(INDICATOR_VALUE)
-        .withSecondIndicator(INDICATOR_VALUE)
-        .withSubFields(effectiveLocationSubFields)
-        .build();
-      marcRecordFields.add(effectiveLocationField);
-    // }
+    FieldBuilder fieldBuilder = new FieldBuilder();
+    Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
+      .withFirstIndicator(INDICATOR_VALUE)
+      .withSecondIndicator(INDICATOR_VALUE)
+      .withSubFields(effectiveLocationSubFields)
+      .build();
+    marcRecordFields.add(effectiveLocationField);
   }
 
   /**
