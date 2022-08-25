@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -181,7 +181,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  @Ignore
+  @Disabled
   void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemNotSuppressedFromDiscovery() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
