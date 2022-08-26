@@ -37,57 +37,6 @@ public class RecordMetadataManager {
   private static final String EFFECTIVE_LOCATION_FIELD_TAG_NUMBER = "952";
   private static final String HOLDINGS_RECORD_FIELD_TAG_NUMBER = "998";
 
-  // java.lang.NullPointerException: null
-	// at io.vertx.core.parsetools.impl.JsonParserImpl$TokenParser.access$100(JsonParserImpl.java:318) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.parsetools.impl.JsonParserImpl$BufferingHandler.handle(JsonParserImpl.java:400) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.parsetools.impl.JsonParserImpl$BufferingHandler.handle(JsonParserImpl.java:390) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.parsetools.impl.JsonParserImpl.checkPending(JsonParserImpl.java:254) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.parsetools.impl.JsonParserImpl.handle(JsonParserImpl.java:160) ~[mod-oai-pmh-fat.jar:?]
-	// at org.folio.oaipmh.processors.OaiPmhJsonParser.handle(OaiPmhJsonParser.java:31) ~[mod-oai-pmh-fat.jar:?]
-	// at org.folio.oaipmh.processors.OaiPmhJsonParser.handle(OaiPmhJsonParser.java:11) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.ext.web.codec.impl.JsonStreamBodyCodec$1.write(JsonStreamBodyCodec.java:37) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.ext.web.codec.impl.JsonStreamBodyCodec$1.write(JsonStreamBodyCodec.java:22) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.ext.web.codec.impl.StreamingBodyCodec$1.write(StreamingBodyCodec.java:82) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.ext.web.codec.impl.StreamingBodyCodec$1.write(StreamingBodyCodec.java:60) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.streams.impl.PipeImpl.lambda$to$1(PipeImpl.java:81) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.impl.AbstractContext.dispatch(AbstractContext.java:96) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.HttpEventHandler.handleChunk(HttpEventHandler.java:51) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.HttpClientResponseImpl.handleChunk(HttpClientResponseImpl.java:239) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.Http1xClientConnection$StreamImpl.lambda$new$0(Http1xClientConnection.java:380) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.streams.impl.InboundBuffer.handleEvent(InboundBuffer.java:240) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.streams.impl.InboundBuffer.write(InboundBuffer.java:130) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.Http1xClientConnection$StreamImpl.handleChunk(Http1xClientConnection.java:583) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.impl.EventLoopContext.execute(EventLoopContext.java:70) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.impl.ContextImpl.execute(ContextImpl.java:268) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.Http1xClientConnection.handleResponseChunk(Http1xClientConnection.java:784) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.Http1xClientConnection.handleHttpMessage(Http1xClientConnection.java:682) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.http.impl.Http1xClientConnection.handleMessage(Http1xClientConnection.java:649) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.net.impl.ConnectionBase.read(ConnectionBase.java:155) ~[mod-oai-pmh-fat.jar:?]
-	// at io.vertx.core.net.impl.VertxHandler.channelRead(VertxHandler.java:154) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:327) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:299) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:719) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:655) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:581) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:493) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:989) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) ~[mod-oai-pmh-fat.jar:?]
-	// at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30) ~[mod-oai-pmh-fat.jar:?]
-	// at java.lang.Thread.run(Unknown Source) ~[?:?]
-
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
   private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
@@ -223,12 +172,12 @@ public class RecordMetadataManager {
   private void updateFieldsWithItemEffectiveLocationField(JsonObject itemData,
                                                           List<Object> marcRecordFields,
                                                           boolean suppressedRecordsProcessing) {
-    Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     int subFieldValue = BooleanUtils.isFalse(itemData.getBoolean(INVENTORY_SUPPRESS_DISCOVERY_FIELD)) ? 0 : 1;
+    Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
     }
-    if (subFieldValue == 1) {
+    if (subFieldValue == 0) {
       FieldBuilder fieldBuilder = new FieldBuilder();
       Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FIELD_TAG_NUMBER)
         .withFirstIndicator(INDICATOR_VALUE)
