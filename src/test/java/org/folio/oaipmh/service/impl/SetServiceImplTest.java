@@ -142,13 +142,16 @@ class SetServiceImplTest extends AbstractSetTest {
 
   @Test
   void shouldSaveAndReturnSavedSetItem_whenSaveSet(VertxTestContext testContext) {
-    setService.saveSet(POST_SET_ENTRY, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
+    var entry = new FolioSet().withName("new")
+      .withDescription("new")
+      .withSetSpec("new")
+      .withId(UUID.randomUUID().toString());
+    setService.saveSet(entry, OAI_TEST_TENANT, OkapiMockServer.TEST_USER_ID)
       .onComplete(result -> {
         if (result.failed()) {
           testContext.failNow(result.cause());
         }
         FolioSet savedSet = result.result();
-        verifyMainSetData(POST_SET_ENTRY, savedSet, false);
         verifyMetadata(savedSet);
         testContext.completeNow();
       });
