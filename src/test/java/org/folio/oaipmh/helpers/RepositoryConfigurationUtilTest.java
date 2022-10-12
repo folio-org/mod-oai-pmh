@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -127,7 +128,6 @@ class RepositoryConfigurationUtilTest {
     vertx.runOnContext(event -> testContext.verify(() -> {
         RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, "requestId").onFailure(throwable -> {
           assertTrue(throwable instanceof VertxException);
-          assertTrue(throwable.getMessage().contains("Invalid url"));
           testContext.completeNow();
         }).onSuccess(v -> testContext.failNow(new IllegalStateException("An VertxException was expected to be thrown.")));
       })
