@@ -180,8 +180,8 @@ class SetServiceImplTest extends AbstractSetTest {
           assertTrue(throwable instanceof PgException);
           String expectedErrorMessage = format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, SET_SPEC_UNIQUE_CONSTRAINT);
           assertThat(throwable.getMessage(), containsString(expectedErrorMessage));
-          testContext.completeNow();
         });
+        testContext.completeNow();
       });
     });
   }
@@ -198,8 +198,8 @@ class SetServiceImplTest extends AbstractSetTest {
           assertTrue(throwable instanceof PgException);
           String expectedErrorMessage = format(DUPLICATED_VALUE_DATABASE_ERROR_MSG, NAME_UNIQUE_CONSTRAINT);
           assertThat(throwable.getMessage(), containsString(expectedErrorMessage));
-          testContext.completeNow();
         });
+        testContext.completeNow();
       });
     });
   }
