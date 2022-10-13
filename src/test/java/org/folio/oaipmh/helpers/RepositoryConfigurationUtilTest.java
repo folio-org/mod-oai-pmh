@@ -127,7 +127,6 @@ class RepositoryConfigurationUtilTest {
     vertx.runOnContext(event -> testContext.verify(() -> {
         RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, "requestId").onFailure(throwable -> {
           assertTrue(throwable instanceof VertxException);
-          assertTrue(throwable.getMessage().contains("Invalid url"));
           testContext.completeNow();
         }).onSuccess(v -> testContext.failNow(new IllegalStateException("An VertxException was expected to be thrown.")));
       })
