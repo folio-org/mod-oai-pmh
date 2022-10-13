@@ -71,7 +71,7 @@ public class InitAPIs implements InitAPI {
       });
     } catch (Exception e) {
       logger.error("Unable to populate system properties.", e);
-      handler.handle(Future.failedFuture(e));
+      throw e;
     }
   }
 

@@ -21,7 +21,6 @@ import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 
