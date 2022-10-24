@@ -1,4 +1,15 @@
-# 3.10.0 - Unreleased
+## 3.11.0 - Unreleased
+
+## 3.10.0 (Released)
+
+This release contains minor improvements
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.9.0...v3.10.0)
+
+### Technical tasks
+* [MODOAIPMH-446](https://issues.folio.org/browse/MODOAIPMH-446) mod-oai-pmh: Upgrade RAML Module Builder
+* [MODOAIPMH-440](https://issues.folio.org/browse/MODOAIPMH-440) Support instance-storage 9.0 interface
+* [MODOAIPMH-437](https://issues.folio.org/browse/MODOAIPMH-437) Add personal data disclosure form
 
 ## 3.9.0 (Released)
 
