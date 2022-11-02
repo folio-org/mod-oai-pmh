@@ -37,6 +37,7 @@ public final class Constants {
   public static final String REPOSITORY_SUPPRESSED_RECORDS_PROCESSING = "repository.suppressedRecordsProcessing";
   public static final String REPOSITORY_ENABLE_OAI_SERVICE = "repository.enableOaiService";
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
+  public static final String REPOSITORY_FETCHING_CHUNK_SIZE = "repository.fetchingChunkSize";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
 
