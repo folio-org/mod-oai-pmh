@@ -28,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.Constants;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.WebClientProvider;
@@ -2392,6 +2393,8 @@ class OaiPmhImplTest {
     // Verify harvesting statistics
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "5");
+    final String chunkSizeCurrentValue = System.getProperty(REPOSITORY_FETCHING_CHUNK_SIZE);
+    System.setProperty(REPOSITORY_FETCHING_CHUNK_SIZE, "5");
 
     RequestSpecification initial = createBaseRequest()
       .with()
@@ -2421,6 +2424,7 @@ class OaiPmhImplTest {
       assertThat(uuidCollection.getTotalRecords(), is(0));
     });
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    System.setProperty(REPOSITORY_FETCHING_CHUNK_SIZE, chunkSizeCurrentValue);
   }
 
   @Test

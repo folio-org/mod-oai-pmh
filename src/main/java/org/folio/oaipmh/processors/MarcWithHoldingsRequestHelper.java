@@ -22,12 +22,13 @@ import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
-import org.folio.oaipmh.helpers.AbstractHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.service.InstancesService;
@@ -43,7 +44,6 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
@@ -56,7 +56,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -67,12 +66,10 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
-import static org.folio.oaipmh.Constants.LOCATION;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
@@ -90,10 +87,6 @@ import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 
@@ -111,7 +104,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private static final String DOWNLOAD_INSTANCES_MISSED_PERMISSION = "Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
 
-  private static final int DATABASE_FETCHING_CHUNK_SIZE = 5000;
   private static final int REREQUEST_SRS_DELAY = 2000;
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
@@ -227,7 +219,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
-        .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+        .parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
@@ -268,7 +260,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           final SourceStorageSourceRecordsClientWrapper srsClient = createAndSetupSrsClient(request);
 
           int retryAttempts = Integer
-            .parseInt(RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
+            .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
           requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
@@ -306,7 +298,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
-      if (size >= DATABASE_FETCHING_CHUNK_SIZE) {
+      var chunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
+      if (size >= chunkSize) {
         jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
