@@ -11,6 +11,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
 import static org.folio.oaipmh.Constants.REPOSITORY_ERRORS_PROCESSING;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
@@ -40,6 +41,7 @@ public class PropertyNameMapper {
     frontendToBackendMapper.put("formattedOutput", JAXB_MARSHALLER_FORMATTED_OUTPUT);
     frontendToBackendMapper.put("srsHttpRequestRetryAttempts", REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
     frontendToBackendMapper.put("srsClientIdleTimeoutSec", REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+    frontendToBackendMapper.put("fetchingChunkSize", REPOSITORY_FETCHING_CHUNK_SIZE);
     frontendToBackendMapper.forEach((key, value) -> backendToFrontendMapper.put(value, key));
   }
 
