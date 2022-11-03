@@ -44,21 +44,22 @@ Amazon Container: cpu - 2048, memory - 2048, memoryReservation - 1845.
 
 The following configuration properties are used:
 
-Module| Config Code | System Default Value | Description 
------------- | ------------- | ------------- | -------------
+Module| Config Code | System Default Value   | Description 
+------------ | ------------- |------------------------| -------------
  |  |
 OAI-PMH | `repository.name` | `FOLIO_OAI_Repository` | The name of the repository. The value is used to construct value for `OAI-PMH/Identify/repositoryName` element.
 OAI-PMH | `repository.baseURL` | `http://folio.org/oai` | The URL of the repository (basically the URL of the edge-oai-pmh). The value is used  in `OAI-PMH/Identify/baseURL` element.
-OAI-PMH | `repository.adminEmails` | `oai-pmh@folio.org` | The e-mail address of an administrator(s) of the repository. Might contain several emails which should be separated by comma. The value is used in `OAI-PMH/Identify/adminEmail` element(s).
+OAI-PMH | `repository.adminEmails` | `oai-pmh@folio.org`    | The e-mail address of an administrator(s) of the repository. Might contain several emails which should be separated by comma. The value is used in `OAI-PMH/Identify/adminEmail` element(s).
 OAI-PMH | `repository.timeGranularity` | `YYYY-MM-DDThh:mm:ssZ` | The finest [harvesting granularity](https://www.openarchives.org/OAI/openarchivesprotocol.html#Datestamp) supported by the repository. The legitimate values are `YYYY-MM-DD` and `YYYY-MM-DDThh:mm:ssZ` with meanings as defined in [ISO8601](http://www.w3.org/TR/NOTE-datetime).
-OAI-PMH | `repository.deletedRecords` | `persistent` | The manner in which the repository supports the notion of deleted records. Legitimate values are no ; transient ; persistent with meanings defined in the section on deletion.
-OAI-PMH | `repository.maxRecordsPerResponse` | `100` | The maximum number of records returned in the List responses. The main intention is to implement [Flow Control](https://www.openarchives.org/OAI/openarchivesprotocol.html#FlowControl)
-OAI-PMH | `jaxb.marshaller.enableValidation` | `false` | Boolean value which defines if the response content should be validated against xsd schemas.
-OAI-PMH | `jaxb.marshaller.formattedOutput` | `false` | Boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation.
-OAI-PMH | `repository.errorsProcessing` | `500` | Defines in which way OAI-PMH level errors are going to be processed. `200` -  OAI-PMH level error is associated with HTTP status 200. `500` - OAI-PMH level error may be associated with HTTP error status (4xx or 5xx). 
-OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50` | Property is used in marc21_withholdings metadata prefix handler. If SRS returns an incorrect response then the same request will be sent again up to 50 times until the expected response will not be received or all 50 attempts will fail which leads to error response.
-OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20` | The idle timeout for requests to SRS.
-OAI-PMH | `repository.fetchingChunkSize` | `5000` | The chunk size in batch processing.
+OAI-PMH | `repository.deletedRecords` | `persistent`           | The manner in which the repository supports the notion of deleted records. Legitimate values are no ; transient ; persistent with meanings defined in the section on deletion.
+OAI-PMH | `repository.suppressedRecordsProcessing` | `true`                 | Boolean value which defines if supress records should be processed
+OAI-PMH | `repository.maxRecordsPerResponse` | `100`                  | The maximum number of records returned in the List responses. The main intention is to implement [Flow Control](https://www.openarchives.org/OAI/openarchivesprotocol.html#FlowControl)
+OAI-PMH | `jaxb.marshaller.enableValidation` | `false`                | Boolean value which defines if the response content should be validated against xsd schemas.
+OAI-PMH | `jaxb.marshaller.formattedOutput` | `false`                | Boolean value which is used to specify whether or not the marshalled XML data is formatted with linefeeds and indentation.
+OAI-PMH | `repository.errorsProcessing` | `500`                  | Defines in which way OAI-PMH level errors are going to be processed. `200` -  OAI-PMH level error is associated with HTTP status 200. `500` - OAI-PMH level error may be associated with HTTP error status (4xx or 5xx). 
+OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50`                   | Property is used in marc21_withholdings metadata prefix handler. If SRS returns an incorrect response then the same request will be sent again up to 50 times until the expected response will not be received or all 50 attempts will fail which leads to error response.
+OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20`                   | The idle timeout for requests to SRS.
+OAI-PMH | `repository.fetchingChunkSize` | `5000`                 | The chunk size in batch processing.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>
