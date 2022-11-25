@@ -60,6 +60,7 @@ OAI-PMH | `repository.errorsProcessing` | `500` | Defines in which way OAI-PMH l
 OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50`| Property is used in marc21_withholdings metadata prefix handler. If SRS returns an incorrect response then the same request will be sent again up to 50 times until the expected response will not be received or all 50 attempts will fail which leads to error response.
 OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20` | The idle timeout for requests to SRS.
 OAI-PMH | `repository.fetchingChunkSize` | `5000` | The chunk size in batch processing.
+OAI-PMH | `repository.recordsSource` | `Source record storage` | Indicates from where instance records are retrieved. Other possible values: Inventory, Source record storage and Inventory.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>

@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.ResponseConverter;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+
+import java.util.Map;
 
 @ExtendWith(VertxExtension.class)
 class InitAPIsTest {
@@ -77,8 +81,23 @@ class InitAPIsTest {
       assertNotNull(System.getProperty(BEHAVIOUR_GROUP_TEST_CONFIG));
       assertNotNull(System.getProperty(GENERAL_GROUP_TEST_CONFIG));
       assertNotNull(System.getProperty(TECHNICAL_GROUP_TEST_CONFIG));
+      JsonObject jsonConfigBehavior = ConfigurationHelper.getInstance().getJsonConfigFromResources("config", "behavior.json");
+      assertEquals("Source record storage", new JsonObject(jsonConfigBehavior.getString("value")).getString("recordsSource"));
       verifyJaxbInitialized();
       logger.info("shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed finished");
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldAddRecordsSourceDefaultValueSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed(Vertx vertx, VertxTestContext testContext) {
+    System.clearProperty(CONFIGURATION_PATH);
+    System.clearProperty(CONFIGURATION_FILES);
+    new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
+      assertTrue(result);
+      JsonObject jsonConfigBehavior = ConfigurationHelper.getInstance().getJsonConfigFromResources("config", "behavior.json");
+      assertEquals("Source record storage", new JsonObject(jsonConfigBehavior.getString("value")).getString("recordsSource"));
+      verifyJaxbInitialized();
       testContext.completeNow();
     }));
   }
