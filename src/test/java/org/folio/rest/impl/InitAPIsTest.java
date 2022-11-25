@@ -20,8 +20,6 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-import java.util.Map;
-
 @ExtendWith(VertxExtension.class)
 class InitAPIsTest {
 

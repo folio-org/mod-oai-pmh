@@ -146,8 +146,8 @@ public class ModTenantAPI extends TenantAPI {
     }
     JsonObject body = response.bodyAsJsonObject();
     JsonArray configs = body.getJsonArray(CONFIGS);
-    if (configs.isEmpty() || isRecordsSourceNotFound(configName, configs) || isFetchingChunkSizeNotFound(configName, configs)) {
-      logger.info("Configuration group with configName {} doesn't exist or incomplete. Posting default configs for {} configuration group.",
+    if (configs.isEmpty()) {
+      logger.info("Configuration group with configName {} doesn't exist. Posting default configs for {} configuration group.",
         MODULE_NAME, configName);
       postConfig(client, configName, promise);
     } else {
@@ -155,29 +155,6 @@ public class ModTenantAPI extends TenantAPI {
       populateSystemPropertiesWithConfig(body);
       promise.complete();
     }
-  }
-
-  private boolean isRecordsSourceNotFound(String configName, JsonArray configs) {
-    return isFieldNotFound(configName, configs, "behavior", "recordsSource");
-  }
-
-  private boolean isFetchingChunkSizeNotFound(String configName, JsonArray configs) {
-    return isFieldNotFound(configName, configs, "technical", "fetchingChunkSize");
-  }
-
-  private boolean isFieldNotFound(String configName, JsonArray configs, String requiredConfigName, String field) {
-    if (configName.equals(requiredConfigName)) {
-      for (Object config : configs) {
-        if (config instanceof JsonObject) {
-          JsonObject jsonObjectConfig = (JsonObject) config;
-          if (jsonObjectConfig.getString("configName").equals(configName)) {
-            JsonObject jsonObjectValue = new JsonObject(jsonObjectConfig.getString("value"));
-            return !jsonObjectValue.containsKey(field);
-          }
-        }
-      }
-    }
-    return false;
   }
 
   private void postConfig(ConfigurationsClient client, String configName, Promise<String> promise) {
