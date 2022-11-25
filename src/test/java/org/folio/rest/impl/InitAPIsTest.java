@@ -81,8 +81,6 @@ class InitAPIsTest {
       assertNotNull(System.getProperty(BEHAVIOUR_GROUP_TEST_CONFIG));
       assertNotNull(System.getProperty(GENERAL_GROUP_TEST_CONFIG));
       assertNotNull(System.getProperty(TECHNICAL_GROUP_TEST_CONFIG));
-      JsonObject jsonConfigBehavior = ConfigurationHelper.getInstance().getJsonConfigFromResources("config", "behavior.json");
-      assertEquals("Source record storage", new JsonObject(jsonConfigBehavior.getString("value")).getString("recordsSource"));
       verifyJaxbInitialized();
       logger.info("shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed finished");
       testContext.completeNow();
