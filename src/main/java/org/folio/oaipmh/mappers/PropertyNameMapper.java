@@ -2,7 +2,6 @@ package org.folio.oaipmh.mappers;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.folio.oaipmh.Constants;
 
 import static org.folio.oaipmh.Constants.JAXB_MARSHALLER_ENABLE_VALIDATION;
 import static org.folio.oaipmh.Constants.JAXB_MARSHALLER_FORMATTED_OUTPUT;
@@ -18,6 +17,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 
 /**
  * Mapper is used for mapping names of frontend property names to server names.
@@ -42,6 +42,7 @@ public class PropertyNameMapper {
     frontendToBackendMapper.put("srsHttpRequestRetryAttempts", REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
     frontendToBackendMapper.put("srsClientIdleTimeoutSec", REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
     frontendToBackendMapper.put("fetchingChunkSize", REPOSITORY_FETCHING_CHUNK_SIZE);
+    frontendToBackendMapper.put("recordsSource", REPOSITORY_RECORDS_SOURCE);
     frontendToBackendMapper.forEach((key, value) -> backendToFrontendMapper.put(value, key));
   }
 
