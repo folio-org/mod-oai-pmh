@@ -143,6 +143,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       getSrsRecordsBodyHandler(request, ctx, promise));
   }
 
+  protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
+
+  }
+
   private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsRecordsBodyHandler(Request request, Context ctx,
       Promise<Response> promise) {
     return asyncResult -> {

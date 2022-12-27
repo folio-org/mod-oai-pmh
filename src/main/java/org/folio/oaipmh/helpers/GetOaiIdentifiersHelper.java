@@ -8,7 +8,11 @@ import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import org.folio.oaipmh.Request;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
@@ -42,7 +46,14 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
         promise.complete(getResponseHelper().buildFailureResponse(oai, request));
         return promise.future();
       }
-      requestAndProcessSrsRecords(request, ctx, promise);
+      var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+      if (recordsSource.equals(INVENTORY)) {
+        requestAndProcessInventoryRecords(request, ctx, promise);
+      } else if (recordsSource.equals(SRS_AND_INVENTORY)) {
+
+      } else {
+        requestAndProcessSrsRecords(request, ctx, promise);
+      }
     } catch (Exception e) {
       handleException(promise, e);
     }
