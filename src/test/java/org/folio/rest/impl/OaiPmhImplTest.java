@@ -28,7 +28,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.Constants;
-import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.WebClientProvider;
@@ -79,7 +78,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -126,6 +124,11 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.SRS;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
@@ -377,6 +380,28 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", encoding));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { INVENTORY, SRS, SRS_AND_INVENTORY })
+  void getOaiIdentifiersSuccessWithDifferentRecordsSource(String recordsSource) {
+    logger.debug(format("==== Starting getOaiIdentifiersSuccess(%s) ====", recordsSource));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_IDENTIFIERS.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
+    addAcceptEncodingHeader(request, "GZIP");
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
+
+    // 10 with source FOLIO + 10 with source MARC, but isDeletedRecordsEnabled=true, so removed last instance and 19
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, recordsSource.equals(SRS_AND_INVENTORY) ? 19 : 10);
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), recordsSource.equals(SRS_AND_INVENTORY) ? is(notNullValue()) : is(nullValue()));
+
+    logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
   }
 
   @ParameterizedTest

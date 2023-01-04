@@ -134,6 +134,7 @@ public class OkapiMockServer {
   private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
   private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_10 = "/instances_10_totalRecords_10.json";
+  private static final String INSTANCES_WITH_SOURCE_FOLIO = "/instances_with_source_folio.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_11 = "/instances_10_totalRecords_11.json";
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
   private static final String SRS_RECORD_WITH_INVALID_JSON = "/srs_record_with_invalid_json.json";
@@ -409,6 +410,8 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
       failureResponse(ctx, 404, "Not found");
+    } else  if (uri.contains("/instance-storage/instances?limit=11&query=(source==FOLIO)")) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");
     }

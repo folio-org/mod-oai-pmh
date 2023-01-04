@@ -13,7 +13,6 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -231,7 +230,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       totalRecords += storageHelper.getTotalRecords(inventoryRecords);
     }
 
-    logger.debug("{} entries retrieved out of {}.", items != null ? items.size() : 0, totalRecords);
+    logger.debug("{} entries retrieved out of {}.", items.size(), totalRecords);
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, items)) {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
@@ -402,12 +401,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         if (response.statusCode() == 200) {
           promise.complete(response.bodyAsJsonObject());
         } else {
-          String errorMsg = format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
+          String errorMsg = nonNull(instanceId) ?
+            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, instanceId, response.statusCode(), response.statusMessage()) :
+            format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           promise.fail(new IllegalStateException(errorMsg));
         }
       })
       .onFailure(throwable -> {
-        logger.error(CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
+        logger.error(nonNull(instanceId) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + instanceId :
+          CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
         promise.fail(throwable);
       });
     return promise.future();
@@ -532,7 +534,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
         .map(JsonObject.class::cast)
-        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
+        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
         .filter(instance -> filterInstance(request, instance))
         .map(instance -> addHeader(identifierPrefix, request, instance))
         .forEach(identifiers::withHeaders);

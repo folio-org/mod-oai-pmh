@@ -42,6 +42,7 @@ public final class Constants {
 
   public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
   public static final String INVENTORY = "Inventory";
+  public static final String SRS = "Source record storage";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
   public static final String INVENTORY_RECORD_STORAGE = "INVENTORY";
