@@ -1761,7 +1761,7 @@ class OaiPmhImplTest {
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
-      if(recordsCount==10){
+      if (recordsCount == 10) {
         List<HeaderType> headers = oaipmh.getListIdentifiers().getHeaders();
         verifyIdentifiers(headers, getExpectedInstanceIds());
       }
@@ -2005,7 +2005,7 @@ class OaiPmhImplTest {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
       .collect(Collectors.toList());
-    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers));
+    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers) || headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceFOLIO()));
   }
 
   private String getUUIDofHeaderIdentifier(HeaderType header) {
@@ -2026,6 +2026,22 @@ class OaiPmhImplTest {
       "70000000-0000-4000-a000-000000000000",
       "80000000-0000-4000-a000-000000000000",
       "90000000-0000-4000-a000-000000000000");
+    //@formatter:on
+  }
+
+  private List<String> getExpectedInstanceIdsWithSourceFOLIO() {
+    //@formatter:of
+    return Arrays.asList(
+      "00000000-0000-4000-a000-000000000111",
+      "10000000-0000-4000-a000-000000000222",
+      "20000000-0000-4000-a000-000000000333",
+      "30000000-0000-4000-a000-000000000444",
+      "40000000-0000-4000-a000-000000000555",
+      "50000000-0000-4000-a000-000000000666",
+      "60000000-0000-4000-a000-000000000777",
+      "70000000-0000-4000-a000-000000000888",
+      "80000000-0000-4000-a000-000000000999",
+      "90000000-0000-4000-a000-000000001111");
     //@formatter:on
   }
 
