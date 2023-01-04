@@ -80,7 +80,7 @@ public class RecordStorageHelper implements StorageHelper {
   public String getIdentifierId(final JsonObject entry) {
     Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
     return jsonObject.map(obj -> obj.getString(INSTANCE_ID))
-      .orElse(entry.getString(ID));
+      .orElse(Optional.ofNullable(entry.getString(ID)).orElse(""));
   }
 
   @Override
