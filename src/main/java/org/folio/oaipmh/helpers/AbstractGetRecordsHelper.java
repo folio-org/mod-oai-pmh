@@ -13,22 +13,25 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.OaiPmhJsonParser;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.ListRecordsType;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -41,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -82,7 +86,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
   private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE = "Cannot get instance by id %s. Status code: %s; status message: %s .";
+  private static final String GET_INSTANCES_INVALID_RESPONSE = "Cannot get instances. Status code: %s; status message: %s .";
   private static final String CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR = "Cannot get instance by id, instanceId - ";
+  private static final String CANNOT_GET_INSTANCES_REQUEST_ERROR = "Cannot get instances";
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
@@ -100,14 +106,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
       }
-      requestAndProcessSrsRecords(request, ctx, promise);
+      requestAndProcessSrsRecords(request, ctx, promise, false);
     } catch (Exception e) {
       handleException(promise, e);
     }
     return promise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
-  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise) {
+  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise, boolean withInventory) {
     final var srsClient = new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(),
       request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
 
@@ -140,22 +146,55 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       null,
       request.getOffset(),
       batchSize + 1,
-      getSrsRecordsBodyHandler(request, ctx, promise));
+      getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
 
   protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
-
+    int batchSize = Integer.parseInt(
+      RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    requestInstances(request, batchSize + 1).onComplete(handler -> {
+      try {
+        if (handler.succeeded()) {
+          var inventoryRecords = handler.result();
+          processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> {
+            promise.complete(oaiResponse.result());
+          });
+        } else {
+          String verbName = request.getVerb().value();
+          logger.error("{} response from Inventory.", verbName);
+          throw new IllegalStateException(handler.cause());
+        }
+      } catch (DecodeException ex) {
+        String msg = "Invalid json has been returned from Inventory, cannot parse response to json.";
+        logger.error(msg, ex);
+        promise.fail(new IllegalStateException(msg, ex));
+      } catch (Exception ex) {
+        logger.error("Exception getting {}.", request.getVerb()
+          .value(), ex);
+        promise.fail(ex);
+      }
+    });
   }
 
   private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsRecordsBodyHandler(Request request, Context ctx,
-      Promise<Response> promise) {
+      Promise<Response> promise, boolean withInventory, int limit) {
     return asyncResult -> {
       try {
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
-            processRecords(ctx, request, srsRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+            if (withInventory) {
+              requestInstances(request, limit).onComplete(instancesHandler -> {
+                if (instancesHandler.succeeded()) {
+                  processRecords(ctx, request, srsRecords, instancesHandler.result())
+                    .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+                }
+              });
+            } else {
+              processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+            }
           } else {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
@@ -180,13 +219,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected Future<Response> processRecords(Context ctx, Request request,
-                                    JsonObject srsRecords) {
-    JsonArray sourceRecords = storageHelper.getItems(srsRecords);
+                                    JsonObject srsRecords, JsonObject inventoryRecords) {
+    JsonArray items = storageHelper.getItems(srsRecords);
     Integer totalRecords = storageHelper.getTotalRecords(srsRecords);
 
-    logger.debug("{} entries retrieved out of {}.", sourceRecords != null ? sourceRecords.size() : 0, totalRecords);
+    logger.debug("{} entries retrieved out of {}.", items != null ? items.size() : 0, totalRecords);
 
-    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, sourceRecords)) {
+    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, items)) {
       OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
         .withCode(BAD_RESUMPTION_TOKEN)
         .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
@@ -194,7 +233,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       return Future.succeededFuture(response);
     }
 
-    ResumptionTokenType resumptionToken = buildResumptionToken(request, sourceRecords, totalRecords);
+    ResumptionTokenType resumptionToken = buildResumptionToken(request, items, totalRecords);
 
     /*
      * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
@@ -202,7 +241,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
      */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
     Promise<Response> oaiResponsePromise = Promise.promise();
-    buildRecords(ctx, request, sourceRecords).onSuccess(recordsMap -> {
+    buildRecords(ctx, request, items).onSuccess(recordsMap -> {
       Response response;
       if (recordsMap.isEmpty()) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
@@ -215,6 +254,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request)));
     return oaiResponsePromise.future();
   }
+
+//  protected Future<Response> processRecords(Context ctx, Request request, JsonObject records, JsonObject inventoryRecords) {
+//    OAIPMH oaipmh = buildListIdentifiers(request, records, inventoryRecords);
+//    return Future.succeededFuture(buildResponse(oaipmh, request));
+//  }
 
   /**
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
@@ -366,6 +410,32 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future();
   }
 
+  private Future<JsonObject> requestInstances(Request request, int limit) {
+    Promise<JsonObject> promise = Promise.promise();
+    var webClient = WebClientProvider.getWebClient();
+    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?limit=" + limit + "&query=(source==FOLIO)";
+    var httpRequest = webClient.getAbs(uri);
+    if (request.getOkapiUrl().contains("https:")) {
+      httpRequest.ssl(true);
+    }
+    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
+    httpRequest.send().onSuccess(response -> {
+        if (response.statusCode() == 200) {
+          promise.complete(response.bodyAsJsonObject());
+        } else {
+          String errorMsg = format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
+          promise.fail(new IllegalStateException(errorMsg));
+        }
+      })
+      .onFailure(throwable -> {
+        logger.error(CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
+        promise.fail(throwable);
+      });
+    return promise.future();
+  }
+
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {
     Map<String, JsonObject> instancesMap = instances.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
@@ -450,6 +520,56 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected boolean isSkipSuppressed(Request request) {
     return !getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+  }
+
+  /**
+   * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
+   *
+   * @param request           request
+   * @param srsRecords the response from the SRS storage which contains items
+   * @param inventoryRecords the response from the Inventory storage which contains items
+   * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
+   */
+  protected OAIPMH buildListIdentifiers(Request request, JsonObject srsRecords, JsonObject inventoryRecords) {
+    ResponseHelper responseHelper = getResponseHelper();
+    JsonArray instances = new JsonArray();
+    Integer totalRecords = 0;
+    if (nonNull(srsRecords)) {
+      instances.addAll(storageHelper.getItems(srsRecords));
+      totalRecords = storageHelper.getTotalRecords(srsRecords);
+    }
+    if (nonNull(inventoryRecords)) {
+      instances.addAll(storageHelper.getItems(inventoryRecords));
+      totalRecords += storageHelper.getTotalRecords(inventoryRecords);
+    }
+
+    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
+      return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
+    }
+    if (instances != null && !instances.isEmpty()) {
+      logger.debug("{} entries retrieved out of {}.", instances.size(), totalRecords);
+
+      ListIdentifiersType identifiers = new ListIdentifiersType()
+        .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
+
+      String identifierPrefix = request.getIdentifierPrefix();
+      instances.stream()
+        .map(object -> (JsonObject) object)
+        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
+        .filter(instance -> filterInstance(request, instance))
+        .map(instance -> addHeader(identifierPrefix, request, instance))
+        .forEach(identifiers::withHeaders);
+
+      if (identifiers.getHeaders().isEmpty()) {
+        OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
+        return oaipmh.withErrors(createNoRecordsFoundError());
+      }
+      ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
+      OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request).withListIdentifiers(identifiers);
+      addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
+      return oaipmh;
+    }
+    return responseHelper.buildOaipmhResponseWithErrors(request, createNoRecordsFoundError());
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {

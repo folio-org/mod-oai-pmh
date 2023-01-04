@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.storage;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
+import static org.folio.oaipmh.Constants.INVENTORY_RECORD_STORAGE;
 
 import java.time.Instant;
 
@@ -15,8 +16,8 @@ public interface StorageHelper {
    */
   static StorageHelper getInstance() {
     String repositoryType = System.getProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
-    if (SOURCE_RECORD_STORAGE.equals(repositoryType)) {
-      return new SourceRecordStorageHelper();
+    if (SOURCE_RECORD_STORAGE.equals(repositoryType) || INVENTORY_RECORD_STORAGE.equals(repositoryType)) {
+      return new RecordStorageHelper();
     } else {
       throw new UnsupportedOperationException(repositoryType + " repository is not supported.");
     }

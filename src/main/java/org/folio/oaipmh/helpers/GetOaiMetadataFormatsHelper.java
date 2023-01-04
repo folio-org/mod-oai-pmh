@@ -19,6 +19,7 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
 
 public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
@@ -32,8 +33,14 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected Future<javax.ws.rs.core.Response> processRecords(Context ctx, Request request, JsonObject srsRecords) {
-    JsonArray instances = storageHelper.getItems(srsRecords);
+  protected Future<javax.ws.rs.core.Response> processRecords(Context ctx, Request request, JsonObject srsRecords, JsonObject inventoryRecords) {
+    JsonArray instances = new JsonArray();
+    if (nonNull(srsRecords)) {
+      instances.addAll(storageHelper.getItems(srsRecords));
+    }
+    if (nonNull(inventoryRecords)) {
+      instances.addAll(storageHelper.getItems(inventoryRecords));
+    }
     Response response;
     if (instances != null && !instances.isEmpty()) {
       response = retrieveMetadataFormatsWithNoIdentifier(request);

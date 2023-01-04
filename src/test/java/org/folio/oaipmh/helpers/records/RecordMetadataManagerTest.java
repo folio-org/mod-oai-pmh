@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
+import org.folio.oaipmh.helpers.storage.RecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ class RecordMetadataManagerTest {
   private static final int SECOND_INDICATOR_INDEX = 1;
 
   private RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-  private StorageHelper storageHelper = new SourceRecordStorageHelper();
+  private StorageHelper storageHelper = new RecordStorageHelper();
 
   @Test
   void shouldUpdateRecordMetadataWithInventoryItemsDataAndItemsArrayHasOneElement() {
