@@ -110,4 +110,6 @@ public final class Constants {
   public static final String INVENTORY_STORAGE = "inventory-storage";
 
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
+
+  public static final String HTTPS = "https:";
 }

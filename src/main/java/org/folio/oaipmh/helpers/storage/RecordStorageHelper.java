@@ -36,8 +36,8 @@ public class RecordStorageHelper implements StorageHelper {
   }
 
   @Override
-  public Instant getLastModifiedDate(JsonObject record) {
-    JsonObject metadata = record.getJsonObject("metadata");
+  public Instant getLastModifiedDate(JsonObject entry) {
+    JsonObject metadata = entry.getJsonObject("metadata");
     Instant instant = Instant.EPOCH;
     if (metadata != null) {
       try {
@@ -86,14 +86,14 @@ public class RecordStorageHelper implements StorageHelper {
   @Override
   public String getInstanceRecordSource(JsonObject entry) {
     return Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
-      .map(record -> record.getJsonObject(CONTENT))
+      .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
       .map(JsonObject::encode)
       .orElse(null);
   }
 
   @Override
-  public String getRecordSource(JsonObject record) {
-    return getInstanceRecordSource(record);
+  public String getRecordSource(JsonObject entry) {
+    return getInstanceRecordSource(entry);
   }
 
   @Override
@@ -105,7 +105,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   private String getLeaderValue(JsonObject entry) {
     return Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
-      .map(record -> record.getJsonObject(CONTENT))
+      .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
       .map(content -> content.getString(LEADER))
       .orElse("");
   }

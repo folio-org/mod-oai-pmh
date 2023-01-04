@@ -281,7 +281,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected HeaderType populateHeader(String identifierPrefix, JsonObject instance, Request request) {
     return createHeader(instance, request)
-      .withIdentifier(getIdentifier(identifierPrefix, storageHelper.getIdentifierId(instance)));
+      .withIdentifier(getIdentifier(identifierPrefix, instance));
   }
 
   /**

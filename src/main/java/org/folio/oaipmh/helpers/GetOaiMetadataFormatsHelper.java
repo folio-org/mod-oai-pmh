@@ -42,7 +42,7 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
       instances.addAll(storageHelper.getItems(inventoryRecords));
     }
     Response response;
-    if (instances != null && !instances.isEmpty()) {
+    if (!instances.isEmpty()) {
       response = retrieveMetadataFormatsWithNoIdentifier(request);
     } else {
       response = buildIdentifierNotFoundResponse(request);

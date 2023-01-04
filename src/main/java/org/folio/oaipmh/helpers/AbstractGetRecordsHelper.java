@@ -60,6 +60,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSIN
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
+import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
@@ -153,13 +154,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestInstances(request, batchSize + 1).onComplete(handler -> {
+    requestFromInventory(request, batchSize + 1, null).onComplete(handler -> {
       try {
         if (handler.succeeded()) {
           var inventoryRecords = handler.result();
-          processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> {
-            promise.complete(oaiResponse.result());
-          });
+          processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
         } else {
           String verbName = request.getVerb().value();
           logger.error("{} response from Inventory.", verbName);
@@ -186,7 +185,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestInstances(request, limit).onComplete(instancesHandler -> {
+              requestFromInventory(request, limit, null).onComplete(instancesHandler -> {
                 if (instancesHandler.succeeded()) {
                   processRecords(ctx, request, srsRecords, instancesHandler.result())
                     .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -220,8 +219,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected Future<Response> processRecords(Context ctx, Request request,
                                     JsonObject srsRecords, JsonObject inventoryRecords) {
-    JsonArray items = storageHelper.getItems(srsRecords);
-    Integer totalRecords = storageHelper.getTotalRecords(srsRecords);
+    JsonArray items = new JsonArray();
+    Integer totalRecords = 0;
+
+    if (nonNull(srsRecords)) {
+      items.addAll(storageHelper.getItems(srsRecords));
+      totalRecords = storageHelper.getTotalRecords(srsRecords);
+    }
+    if (nonNull(inventoryRecords)) {
+      items.addAll(storageHelper.getItems(inventoryRecords));
+      totalRecords += storageHelper.getTotalRecords(inventoryRecords);
+    }
 
     logger.debug("{} entries retrieved out of {}.", items != null ? items.size() : 0, totalRecords);
 
@@ -254,11 +262,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request)));
     return oaiResponsePromise.future();
   }
-
-//  protected Future<Response> processRecords(Context ctx, Request request, JsonObject records, JsonObject inventoryRecords) {
-//    OAIPMH oaipmh = buildListIdentifiers(request, records, inventoryRecords);
-//    return Future.succeededFuture(buildResponse(oaipmh, request));
-//  }
 
   /**
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
@@ -359,7 +362,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestInstanceById(request, instanceId).compose(instance -> {
+      return requestFromInventory(request, 0, instanceId).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
@@ -383,39 +386,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private Future<JsonObject> requestInstanceById(Request request, String instanceId) {
+  private Future<JsonObject> requestFromInventory(Request request, int limit, String instanceId) {
     Promise<JsonObject> promise = Promise.promise();
     var webClient = WebClientProvider.getWebClient();
-    String query = "query=id==" + instanceId;
+    String query = nonNull(instanceId) ? "query=id==" + instanceId : "limit=" + limit + "&query=(source==FOLIO)";
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
     var httpRequest = webClient.getAbs(uri);
-    if (request.getOkapiUrl().contains("https:")) {
-      httpRequest.ssl(true);
-    }
-    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.send().onSuccess(response -> {
-      if (response.statusCode() == 200) {
-        promise.complete(response.bodyAsJsonObject());
-      } else {
-        String errorMsg = format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, instanceId, response.statusCode(), response.statusMessage());
-        promise.fail(new IllegalStateException(errorMsg));
-      }
-      })
-      .onFailure(throwable -> {
-        logger.error(CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + instanceId, throwable);
-        promise.fail(throwable);
-      });
-    return promise.future();
-  }
-
-  private Future<JsonObject> requestInstances(Request request, int limit) {
-    Promise<JsonObject> promise = Promise.promise();
-    var webClient = WebClientProvider.getWebClient();
-    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?limit=" + limit + "&query=(source==FOLIO)";
-    var httpRequest = webClient.getAbs(uri);
-    if (request.getOkapiUrl().contains("https:")) {
+    if (request.getOkapiUrl().contains(HTTPS)) {
       httpRequest.ssl(true);
     }
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
@@ -443,7 +420,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
     if (request.getOkapiUrl()
-      .contains("https:")) {
+      .contains(HTTPS)) {
       httpRequest.ssl(true);
     }
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
@@ -546,7 +523,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
       return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
     }
-    if (instances != null && !instances.isEmpty()) {
+    if (!instances.isEmpty()) {
       logger.debug("{} entries retrieved out of {}.", instances.size(), totalRecords);
 
       ListIdentifiersType identifiers = new ListIdentifiersType()
@@ -554,7 +531,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-        .map(object -> (JsonObject) object)
+        .map(JsonObject.class::cast)
         .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
         .filter(instance -> filterInstance(request, instance))
         .map(instance -> addHeader(identifierPrefix, request, instance))

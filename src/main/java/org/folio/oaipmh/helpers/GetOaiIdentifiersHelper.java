@@ -4,8 +4,6 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.openarchives.oai._2.OAIPMH;
@@ -23,8 +21,6 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
-
-  private static final Logger logger = LogManager.getLogger(GetOaiIdentifiersHelper.class);
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -45,10 +41,8 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         requestAndProcessInventoryRecords(request, ctx, promise);
-      } else if (recordsSource.equals(SRS_AND_INVENTORY)) {
-        requestAndProcessSrsRecords(request, ctx, promise, true);
       } else {
-        requestAndProcessSrsRecords(request, ctx, promise, false);
+        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
       handleException(promise, e);
