@@ -400,7 +400,7 @@ class OaiPmhImplTest {
     // 10 with source FOLIO + 10 with source MARC, but isDeletedRecordsEnabled=true, so removed last instance and 19
     verifyListResponse(oaipmh, LIST_IDENTIFIERS, recordsSource.equals(SRS_AND_INVENTORY) ? 19 : 10);
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), recordsSource.equals(SRS_AND_INVENTORY) ? is(notNullValue()) : is(nullValue()));
-
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
   }
 
