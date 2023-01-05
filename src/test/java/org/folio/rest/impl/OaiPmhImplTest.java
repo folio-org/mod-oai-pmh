@@ -209,6 +209,7 @@ class OaiPmhImplTest {
   private static final String XML_TYPE = "text/xml";
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + OAI_TEST_TENANT + "/";
   private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
+  private static final String[] RECORDS_SOURCES = {INVENTORY, SRS, SRS_AND_INVENTORY};
   private static final List<VerbType> LIST_VERBS = Arrays.asList(LIST_RECORDS, LIST_IDENTIFIERS);
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
@@ -383,8 +384,8 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = { INVENTORY, SRS, SRS_AND_INVENTORY })
-  void getOaiIdentifiersSuccessWithDifferentRecordsSource(String recordsSource) {
+  @MethodSource("metadataPrefixAndEncodingProviderAndRecordsSource")
+  void getOaiIdentifiersSuccessWithDifferentRecordsSourceMetadataPrefixAndEncoding(MetadataPrefix prefix, String encoding, String recordsSource) {
     logger.debug(format("==== Starting getOaiIdentifiersSuccess(%s) ====", recordsSource));
 
     System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
@@ -392,8 +393,8 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_IDENTIFIERS.value())
       .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.MARC21XML.getName());
-    addAcceptEncodingHeader(request, "GZIP");
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+    addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
@@ -1940,6 +1941,18 @@ class OaiPmhImplTest {
       for (String encoding : ENCODINGS) {
         if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
           builder.add(Arguments.arguments(prefix, encoding));
+        }
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> metadataPrefixAndEncodingProviderAndRecordsSource() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (String encoding : ENCODINGS) {
+        for (String recordsSource : RECORDS_SOURCES) {
+          builder.add(Arguments.arguments(prefix, encoding, recordsSource));
         }
       }
     }
