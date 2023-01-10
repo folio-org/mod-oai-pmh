@@ -28,7 +28,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.Constants;
-import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.WebClientProvider;
@@ -79,7 +78,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -126,6 +124,11 @@ import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.SRS;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
@@ -206,6 +209,7 @@ class OaiPmhImplTest {
   private static final String XML_TYPE = "text/xml";
   private static final String IDENTIFIER_PREFIX = "oai:test.folio.org:" + OAI_TEST_TENANT + "/";
   private static final String[] ENCODINGS = {"GZIP", "DEFLATE", "IDENTITY"};
+  private static final String[] RECORDS_SOURCES = {INVENTORY, SRS, SRS_AND_INVENTORY};
   private static final List<VerbType> LIST_VERBS = Arrays.asList(LIST_RECORDS, LIST_IDENTIFIERS);
   private final static String DATE_ONLY_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
   private final static String DATE_TIME_GRANULARITY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$";
@@ -377,6 +381,28 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", encoding));
+  }
+
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProviderAndRecordsSource")
+  void getOaiIdentifiersSuccessWithDifferentRecordsSourceMetadataPrefixAndEncoding(MetadataPrefix prefix, String encoding, String recordsSource) {
+    logger.debug(format("==== Starting getOaiIdentifiersSuccess(%s) ====", recordsSource));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_IDENTIFIERS.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+    addAcceptEncodingHeader(request, encoding);
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
+
+    // 10 with source FOLIO + 10 with source MARC, but isDeletedRecordsEnabled=true, so removed last instance and 19
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, recordsSource.equals(SRS_AND_INVENTORY) ? 19 : 10);
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), recordsSource.equals(SRS_AND_INVENTORY) ? is(notNullValue()) : is(nullValue()));
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
   }
 
   @ParameterizedTest
@@ -1736,7 +1762,7 @@ class OaiPmhImplTest {
       assertThat(oaipmh.getListIdentifiers(), is(notNullValue()));
       assertThat(oaipmh.getListIdentifiers().getHeaders(), hasSize(recordsCount));
       oaipmh.getListIdentifiers().getHeaders().forEach(this::verifyHeader);
-      if(recordsCount==10){
+      if (recordsCount == 10) {
         List<HeaderType> headers = oaipmh.getListIdentifiers().getHeaders();
         verifyIdentifiers(headers, getExpectedInstanceIds());
       }
@@ -1921,6 +1947,18 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
+  private static Stream<Arguments> metadataPrefixAndEncodingProviderAndRecordsSource() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (String encoding : ENCODINGS) {
+        for (String recordsSource : RECORDS_SOURCES) {
+          builder.add(Arguments.arguments(prefix, encoding, recordsSource));
+        }
+      }
+    }
+    return builder.build();
+  }
+
   private static Stream<Arguments> metadataPrefixAndEncodingProviderExceptOaiDc() {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
@@ -1980,7 +2018,7 @@ class OaiPmhImplTest {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
       .collect(Collectors.toList());
-    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers));
+    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers) || headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceFOLIO()));
   }
 
   private String getUUIDofHeaderIdentifier(HeaderType header) {
@@ -2001,6 +2039,22 @@ class OaiPmhImplTest {
       "70000000-0000-4000-a000-000000000000",
       "80000000-0000-4000-a000-000000000000",
       "90000000-0000-4000-a000-000000000000");
+    //@formatter:on
+  }
+
+  private List<String> getExpectedInstanceIdsWithSourceFOLIO() {
+    //@formatter:of
+    return Arrays.asList(
+      "00000000-0000-4000-a000-000000000111",
+      "10000000-0000-4000-a000-000000000222",
+      "20000000-0000-4000-a000-000000000333",
+      "30000000-0000-4000-a000-000000000444",
+      "40000000-0000-4000-a000-000000000555",
+      "50000000-0000-4000-a000-000000000666",
+      "60000000-0000-4000-a000-000000000777",
+      "70000000-0000-4000-a000-000000000888",
+      "80000000-0000-4000-a000-000000000999",
+      "90000000-0000-4000-a000-000000001111");
     //@formatter:on
   }
 

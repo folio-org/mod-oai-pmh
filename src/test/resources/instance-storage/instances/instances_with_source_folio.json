@@ -1,0 +1,663 @@
+{
+  "instances": [
+    {
+      "id": "00000000-0000-4000-a000-000000000111",
+      "hrid": "in000014",
+      "source": "FOLIO",
+      "title": "Environment and identity politics in colonial Africa Fulani migrations and land conflict by Emmanuel M. Mbah",
+      "alternativeTitles": [],
+      "series": [
+        "Global Africa 2"
+      ],
+      "identifiers": [
+        {
+          "value": "2016030844",
+          "identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb"
+        },
+        {
+          "value": "9781138239555",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "9781315294179",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "(OCoLC)961183745",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        },
+        {
+          "value": "(DE-599)GBV869303589",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Mbah, Emmanuel M",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "subjects": [
+        "Fula (African people)--Cameroon--Bamenda Highlands",
+        "Fula (African people)--Land tenure",
+        "Land settlement patterns--Cameroon--Bamenda Highlands",
+        "Cattle--Environmental aspects--Cameroon--Bamenda Highlands",
+        "Grazing--Environmental aspects--Cameroon--Bamenda Highlands",
+        "Kolonie",
+        "Fulbe",
+        "Regionale Mobilität",
+        "Weidewirtschaft",
+        "Ethnische Beziehungen",
+        "Konflikt",
+        "Grundeigentum",
+        "Natürliche Ressourcen",
+        "Cameroon--Ethnic relations",
+        "Great Britain--Colonies--Africa--Administration",
+        "Großbritannien",
+        "Kamerun--Nordwest",
+        "Cameroon Ethnic relations",
+        "Great Britain Colonies Africa Administration",
+        "Cattle Environmental aspects Cameroon Bamenda Highlands",
+        "Fula (African people) Land tenure",
+        "Fula (African people) Cameroon Bamenda Highlands",
+        "Grazing Environmental aspects Cameroon Bamenda Highlands",
+        "Land settlement patterns Cameroon Bamenda Highlands",
+        "Geschichte 1916-1960"
+      ],
+      "classifications": [
+        {
+          "classificationNumber": "DT571.F84",
+          "classificationTypeId": "ce176ace-a53e-4b4d-aa89-725ed7b2edac"
+        },
+        {
+          "classificationNumber": "967.1100496322",
+          "classificationTypeId": "42471af9-7d25-4f3a-bf78-60d29dcf463b"
+        }
+      ],
+      "publication": [
+        {
+          "publisher": "Routledge Taylor & Francis Group",
+          "place": "London New York, NY",
+          "dateOfPublication": "2017"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [
+        "175 Seiten Karten"
+      ],
+      "languages": [
+        "eng"
+      ],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:18.018+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:18.018+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "10000000-0000-4000-a000-000000000222",
+      "hrid": "in000011",
+      "source": "FOLIO",
+      "title": "The Girl on the Train",
+      "alternativeTitles": [
+        {
+          "alternativeTitle": "First alternative title"
+        },
+        {
+          "alternativeTitle": "Second alternative title"
+        }
+      ],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "B01LO7PJOE",
+          "identifierTypeId": "7f907515-a1bf-4513-8a38-92e1a07c539d"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Creator A",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        },
+        {
+          "name": "Creator B",
+          "contributorNameTypeId": "e8b311a6-3b21-43f2-a269-dd9310cb2d0a"
+        }
+      ],
+      "subjects": [],
+      "classifications": [],
+      "publication": [],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [],
+      "languages": [],
+      "notes": [],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:19.050+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:19.050+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "20000000-0000-4000-a000-000000000333",
+      "hrid": "in000013",
+      "source": "FOLIO",
+      "title": "Dissent, protest and dispute in Africa edited by Emmanuel M. Mbah and Toyin Falola",
+      "alternativeTitles": [],
+      "series": [
+        "Global Africa 1"
+      ],
+      "identifiers": [
+        {
+          "value": "2016022536",
+          "identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb"
+        },
+        {
+          "value": "9781138220034",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "9781315413099",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "(DE-599)GBV86011306X",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Mbah, Emmanuel M",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "Falola, Toyin",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "subjects": [
+        "Social conflict--Africa--History--20th century",
+        "Social conflict--Africa--History--21st century",
+        "Political participation--Africa",
+        "Land tenure--Africa",
+        "Africa--Social conditions--20th century",
+        "Africa--Social conditions--21st century",
+        "Africa--Politics and government--20th century",
+        "Africa--Politics and government--21st century",
+        "Africa Politics and government 20th century",
+        "Africa Politics and government 21st century",
+        "Africa Social conditions 20th century",
+        "Africa Social conditions 21st century",
+        "Land tenure Africa",
+        "Political participation Africa",
+        "Social conflict Africa History 20th century",
+        "Social conflict Africa History 21st century"
+      ],
+      "classifications": [
+        {
+          "classificationNumber": "HN773",
+          "classificationTypeId": "ce176ace-a53e-4b4d-aa89-725ed7b2edac"
+        },
+        {
+          "classificationNumber": "303.6/9096",
+          "classificationTypeId": "42471af9-7d25-4f3a-bf78-60d29dcf463b"
+        }
+      ],
+      "publication": [
+        {
+          "publisher": "Routledge, Taylor & Francis Group",
+          "place": "London New York",
+          "dateOfPublication": "2017"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [
+        "https://external.dandelon.com/download/attachments/dandelon/ids/DE0069AE502CCFE91E537C1258123001D0DCA.pdf"
+      ],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [
+        "xi, 293 Seiten"
+      ],
+      "languages": [
+        "eng"
+      ],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:20.064+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:20.064+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "30000000-0000-4000-a000-000000000444",
+      "hrid": "in000022",
+      "source": "FOLIO",
+      "title": "Temeraire",
+      "alternativeTitles": [],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "1447294130",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "9781447294130",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Novik, Naomi",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "subjects": [],
+      "classifications": [],
+      "publication": [],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [],
+      "languages": [],
+      "notes": [],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:21.046+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:21.046+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "40000000-0000-4000-a000-000000000555",
+      "hrid": "in000001",
+      "source": "FOLIO",
+      "title": "ABA Journal",
+      "alternativeTitles": [],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "0747-0088",
+          "identifierTypeId": "913300b2-03ed-469a-8179-c1092c991227"
+        },
+        {
+          "value": "84641839",
+          "identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb"
+        }
+      ],
+      "contributors": [],
+      "subjects": [],
+      "classifications": [],
+      "publication": [
+        {
+          "publisher": "American Bar Association",
+          "place": "Chicago, Ill.",
+          "dateOfPublication": "1915-1983"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [],
+      "languages": [],
+      "notes": [],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:22.096+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:22.096+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "50000000-0000-4000-a000-000000000666",
+      "hrid": "in000015",
+      "source": "FOLIO",
+      "title": "Poverty reduction strategies in Africa edited by Toyin Falola and Mike Odugbo Odey",
+      "alternativeTitles": [],
+      "series": [
+        "Global Africa 3"
+      ],
+      "identifiers": [
+        {
+          "value": "2017004333",
+          "identifierTypeId": "c858e4f2-2b6b-4385-842b-60732ee14abb"
+        },
+        {
+          "value": "9781138240667",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "9781315282978",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "(DE-599)GBV880159367",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Falola, Toyin",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "Odey, Mike Odugbo",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "subjects": [
+        "Poverty--Government policy--Africa, Sub-Saharan",
+        "Armut",
+        "Bekämpfung",
+        "Armutsbekämpfung",
+        "Subsahara-Afrika",
+        "Westafrika",
+        "Africa, Sub-Saharan--Economic conditions--21st century",
+        "Subsaharisches Afrika",
+        "Africa, Sub-Saharan Economic conditions 21st century",
+        "Poverty Government policy Africa, Sub-Saharan"
+      ],
+      "classifications": [
+        {
+          "classificationNumber": "HV438.A357",
+          "classificationTypeId": "ce176ace-a53e-4b4d-aa89-725ed7b2edac"
+        },
+        {
+          "classificationNumber": "362.50967",
+          "classificationTypeId": "42471af9-7d25-4f3a-bf78-60d29dcf463b"
+        }
+      ],
+      "publication": [
+        {
+          "publisher": "Routledge",
+          "place": "London",
+          "dateOfPublication": "2018"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [
+        "http://www.gbv.de/dms/zbw/880159367.pdf"
+      ],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [
+        "xiv, 300 Seiten"
+      ],
+      "languages": [
+        "eng"
+      ],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:26.175+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:26.175+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "60000000-0000-4000-a000-000000000777",
+      "hrid": "in000012",
+      "source": "FOLIO",
+      "title": "Global Africa",
+      "alternativeTitles": [],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "(OCoLC)981117973",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        },
+        {
+          "value": "(DE-599)ZDB2905315-8",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [],
+      "subjects": [
+        "Monografische Reihe"
+      ],
+      "classifications": [
+        {
+          "classificationNumber": "300",
+          "classificationTypeId": "42471af9-7d25-4f3a-bf78-60d29dcf463b"
+        }
+      ],
+      "publication": [
+        {
+          "publisher": "Routledge, Taylor & Francis Group",
+          "place": "London New York",
+          "dateOfPublication": "2017-"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [
+        "Bände"
+      ],
+      "languages": [
+        "eng"
+      ],
+      "notes": [],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:27.250+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:27.250+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "70000000-0000-4000-a000-000000000888",
+      "hrid": "in000018",
+      "source": "FOLIO",
+      "title": "MobiCom'17 5 mmNets'17, October 16, 2017, Snowbird, UT, USA / general chairs: Haitham Hassanieh (University of Illinois at Urbana Champaign, USA), Xinyu Zhang (University of California San Diego, USA)",
+      "alternativeTitles": [
+        {
+          "alternativeTitle": "1st First ACM Workshop Millimeter Wave Networks Sensing Systems"
+        }
+      ],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "1011273942",
+          "identifierTypeId": "5d164f4b-0b15-4e42-ae75-cfcf85318ad9"
+        },
+        {
+          "value": "9781450351430",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "(DE-599)GBV1011273942",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "ACM Workshop on Millimeter Wave Networks and Sensing Systems 1. 2017 Snowbird, Utah",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        },
+        {
+          "name": "Hassanieh, Haitham",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "Zhang, Xinyu",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "MobiCom 23. 2017 Snowbird, Utah",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        },
+        {
+          "name": "Association for Computing Machinery Special Interest Group on Mobility of Systems Users, Data, and Computing",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        },
+        {
+          "name": "ACM Workshop on Millimeter Wave Networks and Sensing Systems 1 2017.10.16 Snowbird, Utah",
+          "contributorNameTypeId": "e8b311a6-3b21-43f2-a269-dd9310cb2d0a"
+        },
+        {
+          "name": "mmNets 1 2017.10.16 Snowbird, Utah",
+          "contributorNameTypeId": "e8b311a6-3b21-43f2-a269-dd9310cb2d0a"
+        },
+        {
+          "name": "Annual International Conference on Mobile Computing and Networking (ACM MobiCom) 23 2017.10.16-20 Snowbird, Utah",
+          "contributorNameTypeId": "e8b311a6-3b21-43f2-a269-dd9310cb2d0a"
+        }
+      ],
+      "subjects": [],
+      "classifications": [],
+      "publication": [],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "a2c91e87-6bab-44d6-8adb-1fd02481fc4f",
+      "physicalDescriptions": [],
+      "languages": [
+        "eng"
+      ],
+      "notes": [],
+      "statisticalCodes": [],
+      "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:25.139+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:25.139+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "80000000-0000-4000-a000-000000000999",
+      "hrid": "in000010",
+      "source": "FOLIO",
+      "title": "DC Motor Control Experiment Objekt for introduction to control systems Herbert Werner",
+      "alternativeTitles": [],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "727867881",
+          "identifierTypeId": "5d164f4b-0b15-4e42-ae75-cfcf85318ad9"
+        },
+        {
+          "value": "(DE-599)GBV727867881",
+          "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Werner, Herbert",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        },
+        {
+          "name": "Technische Universität Hamburg-Harburg Institut für Regelungstechnik",
+          "contributorNameTypeId": "2e48e713-17f3-4c13-a9f8-23845bb210aa"
+        }
+      ],
+      "subjects": [],
+      "classifications": [],
+      "publication": [
+        {
+          "publisher": "Techn. Univ., Inst. für Regelungstechnik",
+          "place": "Hamburg",
+          "dateOfPublication": "[2016]"
+        }
+      ],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "c1e95c2b-4efc-48cf-9e71-edb622cf0c22",
+      "physicalDescriptions": [
+        "1 Koffer (Inhalt: 1 Motor mit Platine auf Plattform, 1 Netzteil, 1 USB-Kabel)"
+      ],
+      "languages": [
+        "ger"
+      ],
+      "notes": [],
+      "statisticalCodes": [],
+      "sourceRecordFormat": "MARC-JSON",
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:23.102+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:23.102+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    },
+    {
+      "id": "90000000-0000-4000-a000-000000001111",
+      "hrid": "in000020",
+      "source": "FOLIO",
+      "title": "Nod",
+      "alternativeTitles": [],
+      "series": [],
+      "identifiers": [
+        {
+          "value": "0956687695",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        },
+        {
+          "value": "9780956687695",
+          "identifierTypeId": "8261054f-be78-422d-bd51-4ed9f33c3422"
+        }
+      ],
+      "contributors": [
+        {
+          "name": "Barnes, Adrian",
+          "contributorNameTypeId": "2b94c631-fca9-4892-a730-03ee529ffe2a"
+        }
+      ],
+      "subjects": [],
+      "classifications": [],
+      "publication": [],
+      "publicationFrequency": [],
+      "publicationRange": [],
+      "urls": [],
+      "electronicAccess": [],
+      "instanceTypeId": "6312d172-f0cf-40f6-b27d-9fa8feaf332f",
+      "physicalDescriptions": [],
+      "languages": [],
+      "notes": [],
+      "statisticalCodes": [],
+      "discoverySuppress": false,
+      "metadata": {
+        "createdDate": "2018-09-19T02:52:29.217+0000",
+        "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
+        "updateddate": "2018-09-19T02:52:29.217+0000",
+        "updatedByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff"
+      }
+    }
+  ],
+  "totalRecords": 10
+}
