@@ -51,7 +51,8 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
             if (handler.succeeded()) {
               var inventoryRecords = handler.result();
               generateRecordsOnTheFly(request, inventoryRecords);
-              processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+              processRecords(ctx, request, null, inventoryRecords)
+                .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             } else {
               logger.error("Request from inventory has been failed due to {}", handler.cause());
               promise.fail(handler.cause());

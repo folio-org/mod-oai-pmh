@@ -89,11 +89,4 @@ public interface StorageHelper {
    * @return true if record marked as deleted
    */
   boolean isRecordMarkAsDeleted(JsonObject entry);
-
-  /**
-   * This method determines whether the record is MARC record
-   * @param entry the entry returned by items storage service
-   * @return true if record is MARC, otherwise false
-   */
-  boolean isMarkRecord(JsonObject entry);
 }

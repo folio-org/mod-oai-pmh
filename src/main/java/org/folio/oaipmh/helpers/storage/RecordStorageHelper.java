@@ -130,11 +130,6 @@ public class RecordStorageHelper implements StorageHelper {
   }
 
   @Override
-  public boolean isMarkRecord(JsonObject entry) {
-    return entry.containsKey("recordType") && entry.getString("recordType").equals("MARC");
-  }
-
-  @Override
   public String getId(JsonObject entry) {
     return entry.getString(ID);
   }

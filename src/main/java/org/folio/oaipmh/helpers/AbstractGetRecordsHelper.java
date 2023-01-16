@@ -380,7 +380,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       // Using LinkedHashMap just to rely on order returned by storage service
       records.stream()
         .map(JsonObject.class::cast)
-        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)) && storageHelper.isMarkRecord(instance))
+        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
         .forEach(record -> {
           String recordId = storageHelper.getRecordId(record);
           String instanceId = storageHelper.getIdentifierId(record);

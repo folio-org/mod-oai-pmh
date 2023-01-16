@@ -464,7 +464,7 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
       failureResponse(ctx, 404, "Not found");
-    } else  if (uri.contains("/instance-storage/instances?limit=11&query=(source==FOLIO)")) {
+    } else  if (uri.contains("/instance-storage/instances?limit=11&query=" + URLEncoder.encode("(source==FOLIO and metadata.updatedDate>=2001-01-29T00:00:00 and discoverySuppress==false)", Charset.defaultCharset()))) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
     } else  if (uri.startsWith("/instance-storage/instances") && uri.endsWith(URLEncoder.encode("(source==FOLIO and id==existing-identifier and discoverySuppress==false)", Charset.defaultCharset()))) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_WITH_SOURCE_FOLIO));
