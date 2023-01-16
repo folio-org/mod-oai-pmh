@@ -21,6 +21,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.helpers.client.InventoryClient;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
@@ -48,7 +49,6 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.ListRecordsType;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -71,6 +71,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -134,12 +135,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private List<Rule> defaultRules;
 
-  @Autowired
   private ReferenceDataProvider referenceDataProvider;
-
-  public AbstractGetRecordsHelper() {
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
-  }
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -220,6 +216,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void generateRecordsOnTheFly(Request request, JsonObject inventoryRecords) {
+    if (isNull(referenceDataProvider)) {
+      referenceDataProvider = new ReferenceDataProvider(new InventoryClient());
+    }
     var instances = inventoryRecords.getJsonArray("instances");
     instances.forEach(item -> {
       var instance = new JsonObject();
