@@ -4,10 +4,23 @@ import static java.lang.Integer.parseInt;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.ALTERNATIVE_TITLE_TYPES_URI;
+import static org.folio.oaipmh.Constants.CALL_NUMBER_TYPES_URI;
+import static org.folio.oaipmh.Constants.CAMPUSES_URI;
+import static org.folio.oaipmh.Constants.CONTRIBUTOR_NAME_TYPES_URI;
+import static org.folio.oaipmh.Constants.ELECTRONIC_ACCESS_RELATIONSHIPS_URI;
+import static org.folio.oaipmh.Constants.HOLDINGS_NOTE_TYPES_URI;
+import static org.folio.oaipmh.Constants.IDENTIFIER_TYPES_URI;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
 import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.INSTITUTIONS_URI;
+import static org.folio.oaipmh.Constants.ITEM_NOTE_TYPES_URI;
+import static org.folio.oaipmh.Constants.LIBRARIES_URI;
+import static org.folio.oaipmh.Constants.LOANTYPES_URI;
 import static org.folio.oaipmh.Constants.LOCATION_URI;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
+import static org.folio.oaipmh.Constants.MODES_OF_ISSUANCE_URI;
+import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
@@ -16,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -135,12 +150,12 @@ public class OkapiMockServer {
   private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_10 = "/instances_10_totalRecords_10.json";
   private static final String INSTANCES_WITH_SOURCE_FOLIO = "/instances_with_source_folio.json";
+  private static final String INSTANCE_WITH_SOURCE_FOLIO = "/instance_with_source_folio.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_11 = "/instances_10_totalRecords_11.json";
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
   private static final String SRS_RECORD_WITH_INVALID_JSON = "/srs_record_with_invalid_json.json";
   private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON = "/two_records_one_cannot_be_converted_to_xml.json";
   private static final String INVALID_SRS_RECORD_INSTANCE_ID_JSON = "invalid_srs_record_instance_id.json";
-
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
@@ -161,6 +176,19 @@ public class OkapiMockServer {
   private static final String MATERIAL_TYPES_JSON_PATH = "/filtering-conditions/materialTypes.json";
   private static final String INSTANCE_TYPES_JSON_PATH = "/filtering-conditions/instanceTypes.json";
   private static final String INSTANCE_FORMATS_JSON_PATH = "/filtering-conditions/instanceFormats.json";
+  private static final String ELECTRONIC_ACCESS_RELATIONSHIPS_JSON_PATH = "/filtering-conditions/electronicAccessRelationships.json";
+  private static final String ALTERNATIVE_TITLE_TYPES_JSON_PATH = "/filtering-conditions/alternativeTitleTypes.json";
+  private static final String CALL_NUMBER_TYPES_JSON_PATH = "/filtering-conditions/callNumberTypes.json";
+  private static final String CAMPUSES_JSON_PATH = "/filtering-conditions/campuses.json";
+  private static final String CONTRIBUTOR_NAME_TYPES_JSON_PATH = "/filtering-conditions/contributorNameTypes.json";
+  private static final String HOLDINGS_NOTE_TYPES_JSON_PATH = "/filtering-conditions/holdingsNoteTypes.json";
+  private static final String IDENTIFIER_TYPES_JSON_PATH = "/filtering-conditions/identifierTypes.json";
+  private static final String INSTITUTIONS_JSON_PATH = "/filtering-conditions/institutions.json";
+  private static final String ITEM_NOTE_TYPES_JSON_PATH = "/filtering-conditions/itemNoteTypes.json";
+  private static final String LIBRARIES_JSON_PATH= "/filtering-conditions/libraries.json";
+  private static final String LOAN_TYPES_JSON_PATH = "/filtering-conditions/loanTypes.json";
+  private static final String MODES_OF_ISSUANCE_JSON_PATH = "/filtering-conditions/modesOfIssuance.json";
+  private static final String NATURE_OF_CONTENT_TERMS_JSON_PATH = "/filtering-conditions/natureOfContentTerms.json";
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
@@ -242,6 +270,32 @@ public class OkapiMockServer {
     router.get(LOCATION_URI)
       .handler(this::handleInventoryStorageFilteringConditionsResponse);
     router.get(MATERIAL_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(ELECTRONIC_ACCESS_RELATIONSHIPS_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(ALTERNATIVE_TITLE_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(CALL_NUMBER_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(CAMPUSES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(CONTRIBUTOR_NAME_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(HOLDINGS_NOTE_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(IDENTIFIER_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(INSTITUTIONS_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(ITEM_NOTE_TYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(LIBRARIES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(LOANTYPES_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(MODES_OF_ISSUANCE_URI)
+      .handler(this::handleInventoryStorageFilteringConditionsResponse);
+    router.get(NATURE_OF_CONTENT_TERMS_URI)
       .handler(this::handleInventoryStorageFilteringConditionsResponse);
 
     router.get(SOURCE_STORAGE_RESULT_URI)
@@ -412,6 +466,10 @@ public class OkapiMockServer {
       failureResponse(ctx, 404, "Not found");
     } else  if (uri.contains("/instance-storage/instances?limit=11&query=(source==FOLIO)")) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
+    } else  if (uri.startsWith("/instance-storage/instances") && uri.endsWith(URLEncoder.encode("(source==FOLIO and id==existing-identifier and discoverySuppress==false)", Charset.defaultCharset()))) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_WITH_SOURCE_FOLIO));
+    } else  if (uri.contains("/instance-storage/instances?limit=1&query=" + URLEncoder.encode("(source==FOLIO and id==00000000-0000-4000-a000-000000000111 and discoverySuppress==false)", Charset.defaultCharset()))) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");
     }
@@ -555,6 +613,32 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(LOCATION_JSON_PATH));
     } else if (uri.contains(MATERIAL_TYPES_URI)) {
       successResponse(ctx, getJsonObjectFromFileAsString(MATERIAL_TYPES_JSON_PATH));
+    } else if (uri.contains(ALTERNATIVE_TITLE_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(ALTERNATIVE_TITLE_TYPES_JSON_PATH));
+    } else if (uri.contains(CALL_NUMBER_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(CALL_NUMBER_TYPES_JSON_PATH));
+    } else if (uri.contains(CAMPUSES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(CAMPUSES_JSON_PATH));
+    } else if (uri.contains(CONTRIBUTOR_NAME_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(CONTRIBUTOR_NAME_TYPES_JSON_PATH));
+    } else if (uri.contains(ELECTRONIC_ACCESS_RELATIONSHIPS_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(ELECTRONIC_ACCESS_RELATIONSHIPS_JSON_PATH));
+    } else if (uri.contains(HOLDINGS_NOTE_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(HOLDINGS_NOTE_TYPES_JSON_PATH));
+    } else if (uri.contains(IDENTIFIER_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(IDENTIFIER_TYPES_JSON_PATH));
+    } else if (uri.contains(INSTITUTIONS_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTITUTIONS_JSON_PATH));
+    } else if (uri.contains(ITEM_NOTE_TYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(ITEM_NOTE_TYPES_JSON_PATH));
+    } else if (uri.contains(LIBRARIES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(LIBRARIES_JSON_PATH));
+    } else if (uri.contains(LOANTYPES_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(LOAN_TYPES_JSON_PATH));
+    } else if (uri.contains(MODES_OF_ISSUANCE_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(MODES_OF_ISSUANCE_JSON_PATH));
+    } else if (uri.contains(NATURE_OF_CONTENT_TERMS_URI)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(NATURE_OF_CONTENT_TERMS_JSON_PATH));
     } else {
       failureResponse(ctx, 400, "there is no mocked handler for request uri '{" + uri + "}'");
     }

@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 @ComponentScan(basePackages = {
   "org.folio.rest.impl",
   "org.folio.oaipmh.helpers.configuration",
+  "org.folio.oaipmh.helpers.referencedata",
+  "org.folio.oaipmh.helpers.client",
   "org.folio.oaipmh.dao",
   "org.folio.oaipmh.service",
   "org.folio.oaipmh.validator",

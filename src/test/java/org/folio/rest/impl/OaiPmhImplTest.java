@@ -1423,6 +1423,44 @@ class OaiPmhImplTest {
     assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
   }
 
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsInventory(MetadataPrefix metadataPrefix) {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("00000000-0000-4000-a000-000000000111"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsSRSAndInventory(MetadataPrefix metadataPrefix) {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS_AND_INVENTORY);
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("00000000-0000-4a89-a2f9-78ce3145e4fc"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
   @Test
   void getOaiGetRecordVerbWithExistingIdentifierAndMetadataPrefixMarc21WithHoldings() {
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS;

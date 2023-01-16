@@ -1,0 +1,14 @@
+{
+  "callNumberTypes": [
+    {
+      "id": "95467209-6d7b-468b-94df-0f5d7ad2747d",
+      "name": "Library of Congress classification",
+      "source": "folio",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.213+00:00",
+        "updatedDate": "2023-01-16T01:53:27.213+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}
