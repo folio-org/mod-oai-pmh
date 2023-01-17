@@ -393,8 +393,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
                 if (source != null && recordType.getHeader().getStatus() == null) {
-                  buildRecordsWithSource(source, recordType, suppressedRecordsProcessingEnabled, metadataManager,
-                    enrichedSrsRecord, request, recordId);
+                  source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord, request);
+                  try {
+                    recordType.withMetadata(buildOaiMetadata(request, source));
+                  } catch (Exception e) {
+                    logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
+                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
+                    return;
+                  }
                 } else {
                   context.put(recordId, jsonRecord);
                 }
@@ -422,21 +428,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return recordsPromise.future();
   }
 
-  private void buildRecordsWithSource(String source, RecordType recordType, boolean suppressedRecordsProcessingEnabled,
-                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request, String recordId) {
+  private String enrichSource(String source, boolean suppressedRecordsProcessingEnabled,
+                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request) {
     if (suppressedRecordsProcessingEnabled) {
       source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
       if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
         source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
       }
     }
-    try {
-      recordType.withMetadata(buildOaiMetadata(request, source));
-    } catch (Exception e) {
-      logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
-      logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
-      return;
-    }
+    return source;
   }
 
   protected RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
