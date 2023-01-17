@@ -29,8 +29,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -464,12 +462,12 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
       failureResponse(ctx, 404, "Not found");
-    } else  if (uri.contains("/instance-storage/instances?limit=11&query=" + URLEncoder.encode("(source==FOLIO and metadata.updatedDate>=2001-01-29T00:00:00 and discoverySuppress==false)", Charset.defaultCharset()))) {
-      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
-    } else  if (uri.startsWith("/instance-storage/instances") && uri.endsWith(URLEncoder.encode("(source==FOLIO and id==existing-identifier and discoverySuppress==false)", Charset.defaultCharset()))) {
+    } else  if (uri.contains("existing-identifier")) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_WITH_SOURCE_FOLIO));
-    } else  if (uri.contains("/instance-storage/instances?limit=1&query=" + URLEncoder.encode("(source==FOLIO and id==00000000-0000-4000-a000-000000000111 and discoverySuppress==false)", Charset.defaultCharset()))) {
+    } else  if (uri.contains("00000000-0000-4000-a000-000000000111")) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
+    } else  if (uri.contains("FOLIO")) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");
     }
