@@ -21,7 +21,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.helpers.client.InventoryClient;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
@@ -49,6 +48,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.ListRecordsType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -71,7 +71,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -136,6 +135,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private List<Rule> defaultRules;
 
   private ReferenceDataProvider referenceDataProvider;
+
+  public AbstractGetRecordsHelper() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -216,9 +219,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void generateRecordsOnTheFly(Request request, JsonObject inventoryRecords) {
-    if (isNull(referenceDataProvider)) {
-      referenceDataProvider = new ReferenceDataProvider(new InventoryClient());
-    }
     var instances = inventoryRecords.getJsonArray("instances");
     instances.forEach(item -> {
       var instance = new JsonObject();
@@ -228,10 +228,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ReferenceData referenceData = referenceDataProvider.get(request);
       ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
       List<Rule> rules = getDefaultRulesFromFile();
-      String record = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException -> {
-        logger.error("Exception occurred while mapping, exception: {}, inventory instance: {}", translationException.getCause(), instance);
-      }));
-      enrichWithParsedRecord((JsonObject) item, record);
+      String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException ->
+        logger.error("Exception occurred while mapping, exception: {}, inventory instance: {}", translationException.getCause(), instance)));
+      enrichWithParsedRecord((JsonObject) item, processedRecord);
     });
   }
 
@@ -278,19 +277,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
-                if (instancesHandler.succeeded()) {
-                  var inventoryRecords = instancesHandler.result();
-                  if (srsRecords.getJsonArray("sourceRecords").isEmpty()) { // Case when recordsSource is SRS+Inventory and record not found in SRS.
-                    generateRecordsOnTheFly(request, inventoryRecords);
-                  }
-                  processRecords(ctx, request, srsRecords, inventoryRecords)
-                    .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-                } else {
-                  promise.fail(instancesHandler.cause());
-                  logger.error("Request from Inventory has been failed due to {}", instancesHandler.cause());
-                }
-              });
+              requestWithInventory(request, ctx, promise, srsRecords, limit);
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             }
@@ -315,6 +302,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         promise.fail(ex);
       }
     };
+  }
+
+  private void requestWithInventory(Request request, Context ctx, Promise<Response> promise, JsonObject srsRecords, int limit) {
+    requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
+      if (instancesHandler.succeeded()) {
+        var inventoryRecords = instancesHandler.result();
+        if (srsRecords.getJsonArray("sourceRecords").isEmpty()) { // Case when recordsSource is SRS+Inventory and record not found in SRS.
+          generateRecordsOnTheFly(request, inventoryRecords);
+        }
+        processRecords(ctx, request, srsRecords, inventoryRecords)
+          .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+      } else {
+        logger.error("Request from Inventory has been failed.",  instancesHandler.cause());
+        promise.fail(instancesHandler.cause());
+      }
+    });
   }
 
   protected Future<Response> processRecords(Context ctx, Request request,
@@ -381,32 +384,21 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       records.stream()
         .map(JsonObject.class::cast)
         .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
-        .forEach(record -> {
-          String recordId = storageHelper.getRecordId(record);
-          String instanceId = storageHelper.getIdentifierId(record);
-          RecordType recordType = createRecord(request, record, instanceId);
-          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, record, recordType, instanceId,
+        .forEach(jsonRecord -> {
+          String recordId = storageHelper.getRecordId(jsonRecord);
+          String instanceId = storageHelper.getIdentifierId(jsonRecord);
+          RecordType recordType = createRecord(request, jsonRecord, instanceId);
+          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
               suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
                 if (source != null && recordType.getHeader().getStatus() == null) {
-                  if (suppressedRecordsProcessingEnabled) {
-                    source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-                    if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-                      source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
-                    }
-                  }
-                  try {
-                    recordType.withMetadata(buildOaiMetadata(request, source));
-                  } catch (Exception e) {
-                    logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
-                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
-                    return;
-                  }
+                  buildRecordsWithSource(source, recordType, suppressedRecordsProcessingEnabled, metadataManager,
+                    enrichedSrsRecord, request, recordId);
                 } else {
-                  context.put(recordId, record);
+                  context.put(recordId, jsonRecord);
                 }
-                if (filterInstance(request, record)) {
+                if (filterInstance(request, jsonRecord)) {
                   recordsMap.put(recordId, recordType);
                 }
               })
@@ -428,6 +420,23 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
     recordsPromise.complete(recordsMap);
     return recordsPromise.future();
+  }
+
+  private void buildRecordsWithSource(String source, RecordType recordType, boolean suppressedRecordsProcessingEnabled,
+                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request, String recordId) {
+    if (suppressedRecordsProcessingEnabled) {
+      source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
+      if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
+        source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
+      }
+    }
+    try {
+      recordType.withMetadata(buildOaiMetadata(request, source));
+    } catch (Exception e) {
+      logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
+      logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
+      return;
+    }
   }
 
   protected RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
@@ -502,7 +511,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var queryUntil = nonNull(updatedBefore) ?
       " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
-    var querySuppressFromDiscovery = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport) ? " and discoverySuppress==" + suppressedRecordsSupport :
+    var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
+    var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
       EMPTY;
 
     String query = "limit=" + limit + "&query=" +
@@ -730,6 +740,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     throw new NotImplementedException();
+  }
+
+  @Autowired
+  public void setReferenceDataProvider(ReferenceDataProvider referenceDataProvider) {
+    this.referenceDataProvider = referenceDataProvider;
   }
 
 }

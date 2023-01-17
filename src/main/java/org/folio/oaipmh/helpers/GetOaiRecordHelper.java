@@ -54,7 +54,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
               processRecords(ctx, request, null, inventoryRecords)
                 .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             } else {
-              logger.error("Request from inventory has been failed due to {}", handler.cause());
+              logger.error("Request from inventory has been failed.", handler.cause());
               promise.fail(handler.cause());
             }
           });

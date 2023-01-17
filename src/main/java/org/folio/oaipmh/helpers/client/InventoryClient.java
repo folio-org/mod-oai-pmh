@@ -29,7 +29,7 @@ public class InventoryClient {
 
   private static final Logger logger = LogManager.getLogger(InventoryClient.class);
   private static final int REFERENCE_DATA_LIMIT = 1000;
-  private static final String ENDPOINT_PATTERN = "/%s?limit=%d";
+  private static final String ENDPOINT_PATTERN = "%s/%s?limit=%d";
   public Map<String, JsonObject> getAlternativeTitleTypes(Request request) {
     return get(request, "alternative-title-types", "alternativeTitleTypes");
   }
@@ -100,7 +100,7 @@ public class InventoryClient {
 
   private Map<String, JsonObject> get(Request request, String endpoint, String key) {
     Map<String, JsonObject> map = new HashMap<>();
-    endpoint = format(request.getOkapiUrl() + ENDPOINT_PATTERN, endpoint, REFERENCE_DATA_LIMIT);
+    endpoint = format(ENDPOINT_PATTERN, request.getOkapiUrl(), endpoint, REFERENCE_DATA_LIMIT);
     HttpGet httpGet = new HttpGet();
     httpGet.setHeader(OKAPI_HEADER_TOKEN, request.getOkapiToken());
     httpGet.setHeader(OKAPI_HEADER_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));

@@ -222,6 +222,9 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE = "8f33cdf4-6a85-4877-8b99-7d5e3be910f1";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE = "12d31a35-e6cf-4840-bd85-4ae51e02a741";
   private static final String INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS = "00000000-0000-4a89-a2f9-78ce3145e4fc";
+  private static final String INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY = "existing-identifier";
+  private static final String INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY = "00000000-0000-4000-a000-000000000111";
+  private static final String INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO = "FOLIO";
 
 
   private static final String JSON_TEMPLATE_KEY_RECORDS = "replace_with_records";
@@ -462,11 +465,11 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
       failureResponse(ctx, 404, "Not found");
-    } else  if (uri.contains("existing-identifier")) {
+    } else  if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_WITH_SOURCE_FOLIO));
-    } else  if (uri.contains("00000000-0000-4000-a000-000000000111")) {
+    } else  if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
-    } else  if (uri.contains("FOLIO")) {
+    } else  if (uri.contains(INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");

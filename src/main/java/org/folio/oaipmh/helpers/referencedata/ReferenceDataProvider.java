@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.referencedata;
 
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.client.InventoryClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static org.folio.processor.referencedata.ReferenceDataConstants.ALTERNATIVE_TITLE_TYPES;
@@ -29,7 +30,7 @@ public class ReferenceDataProvider {
   private Cache<String, ReferenceData> cache;
   private InventoryClient inventoryClient;
 
-  public ReferenceDataProvider(InventoryClient inventoryClient) {
+  public ReferenceDataProvider(@Autowired InventoryClient inventoryClient) {
     this.inventoryClient = inventoryClient;
     this.cache = new Cache<>(CACHE_EXPIRATION_AFTER_ACCESS_SECONDS);
   }
