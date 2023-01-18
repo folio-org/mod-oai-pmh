@@ -1,0 +1,14 @@
+{
+  "identifierTypes": [
+    {
+      "id": "5069054d-bc3a-4212-a4e8-e2013a02386f",
+      "name": "Cancelled GPO item number",
+      "source": "folio",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:24.951+00:00",
+        "updatedDate": "2023-01-16T01:53:24.951+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

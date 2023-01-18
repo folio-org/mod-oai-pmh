@@ -1,29 +1,46 @@
 package org.folio.oaipmh.helpers;
 
+import com.google.common.io.Resources;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.referencedata.ReferenceData;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.OaiPmhJsonParser;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.processor.RuleProcessor;
+import org.folio.processor.referencedata.JsonObjectWrapper;
+import org.folio.processor.referencedata.ReferenceDataWrapper;
+import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
+import org.folio.processor.rule.Rule;
+import org.folio.processor.translations.TranslationsFunctionHolder;
+import org.folio.reader.EntityReader;
+import org.folio.reader.JPathSyntaxEntityReader;
 import org.folio.rest.tools.utils.TenantTool;
+import org.folio.spring.SpringContextUtil;
+import org.folio.writer.RecordWriter;
+import org.folio.writer.impl.JsonRecordWriter;
 import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.RecordType;
@@ -31,8 +48,18 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.ListRecordsType;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,19 +68,23 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.LOCATION;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
@@ -92,10 +123,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
+  private static final String QUERY_TEMPLATE = "(source==FOLIO%s%s%s%s)";
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+  private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
 
   private static final Logger logger = LogManager.getLogger(AbstractGetRecordsHelper.class);
+
+  private static final String DEFAULT_RULES_PATH = "rules/rulesDefault.json";
+
+  private List<Rule> defaultRules;
+
+  private ReferenceDataProvider referenceDataProvider;
+
+  protected AbstractGetRecordsHelper() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
 
   @Override
   public Future<Response> handle(Request request, Context ctx) {
@@ -153,7 +196,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, batchSize + 1, null).onComplete(handler -> {
+    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(handler -> {
       try {
         if (handler.succeeded()) {
           var inventoryRecords = handler.result();
@@ -175,6 +218,56 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     });
   }
 
+  protected void generateRecordsOnTheFly(Request request, JsonObject inventoryRecords) {
+    var instances = inventoryRecords.getJsonArray("instances");
+    instances.forEach(item -> {
+      var instance = new JsonObject();
+      instance.put("instance", item);
+      EntityReader entityReader = new JPathSyntaxEntityReader(instance.encode());
+      RecordWriter recordWriter = new JsonRecordWriter();
+      ReferenceData referenceData = referenceDataProvider.get(request);
+      ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
+      List<Rule> rules = getDefaultRulesFromFile();
+      String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException ->
+        logger.error("Exception occurred while mapping, exception: {}, inventory instance: {}", translationException.getCause(), instance)));
+      enrichWithParsedRecord((JsonObject) item, processedRecord);
+    });
+  }
+
+  private void enrichWithParsedRecord(JsonObject instance, String marcRecord) {
+    var parsedRecord = new JsonObject();
+    parsedRecord.put("id", instance.getValue("id"));
+    parsedRecord.put(CONTENT, new JsonObject(marcRecord));
+    instance.put(PARSED_RECORD, parsedRecord);
+  }
+
+  private List<Rule> getDefaultRulesFromFile() {
+    if (nonNull(defaultRules)) {
+      return defaultRules;
+    }
+    URL url = Resources.getResource(DEFAULT_RULES_PATH);
+    String stringRules;
+    try {
+      stringRules = Resources.toString(url, StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      logger.error("Failed to fetch default rules for export");
+      throw new NotFoundException(e);
+    }
+    defaultRules = new ArrayList<>();
+    CollectionUtils.addAll(defaultRules, Json.decodeValue(stringRules, Rule[].class));
+    return defaultRules;
+  }
+
+  private ReferenceDataWrapper getReferenceDataWrapper(ReferenceData referenceData) {
+    if (referenceData == null) {
+      return null;
+    }
+    Map<String, Map<String, JsonObjectWrapper>> referenceDataWrapper = referenceData.getReferenceData().entrySet().stream()
+      .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, value -> new JsonObjectWrapper(value.getValue().getMap())))));
+    return new ReferenceDataWrapperImpl(referenceDataWrapper);
+  }
+
   private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsRecordsBodyHandler(Request request, Context ctx,
       Promise<Response> promise, boolean withInventory, int limit) {
     return asyncResult -> {
@@ -184,12 +277,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, null).onComplete(instancesHandler -> {
-                if (instancesHandler.succeeded()) {
-                  processRecords(ctx, request, srsRecords, instancesHandler.result())
-                    .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-                }
-              });
+              requestWithInventory(request, ctx, promise, srsRecords, limit);
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             }
@@ -214,6 +302,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         promise.fail(ex);
       }
     };
+  }
+
+  private void requestWithInventory(Request request, Context ctx, Promise<Response> promise, JsonObject srsRecords, int limit) {
+    requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
+      if (instancesHandler.succeeded()) {
+        var inventoryRecords = instancesHandler.result();
+        if (srsRecords.getJsonArray("sourceRecords").isEmpty()) { // Case when recordsSource is SRS+Inventory and record not found in SRS.
+          generateRecordsOnTheFly(request, inventoryRecords);
+        }
+        processRecords(ctx, request, srsRecords, inventoryRecords)
+          .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+      } else {
+        logger.error("Request from Inventory has been failed.",  instancesHandler.cause());
+        promise.fail(instancesHandler.cause());
+      }
+    });
   }
 
   protected Future<Response> processRecords(Context ctx, Request request,
@@ -266,51 +370,46 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
    * otherwise empty map is returned
    */
-  private Future<Map<String, RecordType>> buildRecords(Context context, Request request, JsonArray srsRecords) {
+  private Future<Map<String, RecordType>> buildRecords(Context context, Request request, JsonArray records) {
     Promise<Map<String, RecordType>> recordsPromise = Promise.promise();
     List<Future<JsonObject>> futures = new ArrayList<>();
 
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    Map<String, RecordType> records = new ConcurrentHashMap<>();
+    Map<String, RecordType> recordsMap = new ConcurrentHashMap<>();
 
-    if (srsRecords != null && !srsRecords.isEmpty()) {
+    if (records != null && !records.isEmpty()) {
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
-      srsRecords.stream()
+      records.stream()
         .map(JsonObject.class::cast)
         .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
-        .forEach(srsRecord -> {
-          String srsRecordId = storageHelper.getRecordId(srsRecord);
-          String instanceId = storageHelper.getIdentifierId(srsRecord);
-          RecordType record = createRecord(request, srsRecord, instanceId);
-          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, srsRecord, record, instanceId,
+        .forEach(jsonRecord -> {
+          String recordId = storageHelper.getRecordId(jsonRecord);
+          String instanceId = storageHelper.getIdentifierId(jsonRecord);
+          RecordType recordType = createRecord(request, jsonRecord, instanceId);
+          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
               suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
-                if (source != null && record.getHeader().getStatus() == null) {
-                  if (suppressedRecordsProcessingEnabled) {
-                    source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-                    if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-                      source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
-                    }
-                  }
+                if (source != null && recordType.getHeader().getStatus() == null) {
+                  source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord, request);
                   try {
-                    record.withMetadata(buildOaiMetadata(request, source));
+                    recordType.withMetadata(buildOaiMetadata(request, source));
                   } catch (Exception e) {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
-                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, srsRecordId);
+                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
                     return;
                   }
                 } else {
-                  context.put(srsRecordId, srsRecord);
+                  context.put(recordId, jsonRecord);
                 }
-                if (filterInstance(request, srsRecord)) {
-                  records.put(srsRecordId, record);
+                if (filterInstance(request, jsonRecord)) {
+                  recordsMap.put(recordId, recordType);
                 }
               })
                 .onFailure(throwable -> {
-                  String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, srsRecordId, throwable.getMessage());
+                  String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
                   logger.error(errorMsg, throwable);
                 });
           futures.add(enrichRecordFuture);
@@ -318,15 +417,26 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       GenericCompositeFuture.all(futures).onComplete(res -> {
           if (res.succeeded()) {
-            recordsPromise.complete(records);
+            recordsPromise.complete(recordsMap);
           } else {
             recordsPromise.fail(res.cause());
           }
         });
       return recordsPromise.future();
     }
-    recordsPromise.complete(records);
+    recordsPromise.complete(recordsMap);
     return recordsPromise.future();
+  }
+
+  private String enrichSource(String source, boolean suppressedRecordsProcessingEnabled,
+                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request) {
+    if (suppressedRecordsProcessingEnabled) {
+      source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
+      if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
+        source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
+      }
+    }
+    return source;
   }
 
   protected RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
@@ -361,7 +471,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestFromInventory(request, 0, instanceId).compose(instance -> {
+      return requestFromInventory(request, 1, instanceId).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
@@ -385,10 +495,28 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private Future<JsonObject> requestFromInventory(Request request, int limit, String instanceId) {
+  protected Future<JsonObject> requestFromInventory(Request request, int limit, String instanceId) {
+    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
+    final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
+
     Promise<JsonObject> promise = Promise.promise();
     var webClient = WebClientProvider.getWebClient();
-    String query = nonNull(instanceId) ? "query=id==" + instanceId : "limit=" + limit + "&query=(source==FOLIO)";
+    var queryId = nonNull(instanceId) ? " and id==" + instanceId : EMPTY;
+    var queryFrom = nonNull(updatedAfter) ?
+      " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    var queryUntil = nonNull(updatedBefore) ?
+      " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
+    var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
+      EMPTY;
+
+    String query = "limit=" + limit + "&query=" +
+      URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
@@ -612,6 +740,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
     throw new NotImplementedException();
+  }
+
+  @Autowired
+  public void setReferenceDataProvider(ReferenceDataProvider referenceDataProvider) {
+    this.referenceDataProvider = referenceDataProvider;
   }
 
 }

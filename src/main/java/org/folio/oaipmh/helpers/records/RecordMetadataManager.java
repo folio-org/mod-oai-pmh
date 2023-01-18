@@ -1,6 +1,7 @@
 package org.folio.oaipmh.helpers.records;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -10,13 +11,13 @@ import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SECOND_INDICATOR;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -94,7 +95,7 @@ public class RecordMetadataManager {
   }
 
   public static RecordMetadataManager getInstance() {
-    if (Objects.nonNull(instance)) {
+    if (nonNull(instance)) {
       return instance;
     }
     instance = new RecordMetadataManager();
@@ -117,7 +118,7 @@ public class RecordMetadataManager {
     JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
 
-    if (Objects.nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
+    if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       items.forEach(item -> {
         updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
@@ -143,7 +144,7 @@ public class RecordMetadataManager {
     JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
 
-    if (Objects.nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
+    if (nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       holdings.forEach(holding ->
         updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList, suppressedRecordsProcessing)
@@ -154,6 +155,9 @@ public class RecordMetadataManager {
 
   @SuppressWarnings("unchecked")
   private List<Object> getFieldsForUpdate(JsonObject srsInstance) {
+    if (!srsInstance.containsKey(PARSED_RECORD)) {
+      return new ArrayList<>();
+    }
     JsonObject parsedRecord = srsInstance.getJsonObject(PARSED_RECORD);
     JsonObject content = parsedRecord.getJsonObject(CONTENT);
     JsonArray fields = content.getJsonArray(FIELDS);
@@ -209,7 +213,7 @@ public class RecordMetadataManager {
                                                      List<Object> marcRecordFields,
                                                      boolean suppressedRecordsProcessing) {
     JsonArray electronicAccessArray = jsonData.getJsonArray(ELECTRONIC_ACCESS);
-    if (Objects.nonNull(electronicAccessArray)) {
+    if (nonNull(electronicAccessArray)) {
       electronicAccessArray.forEach(electronicAccess -> {
         if (electronicAccess instanceof JsonObject) {
           Map<String, Object> electronicAccessSubFields = constructElectronicAccessSubFieldsMap((JsonObject) electronicAccess);
@@ -247,7 +251,7 @@ public class RecordMetadataManager {
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
     JsonObject locationGroup = null;
-    if(Objects.nonNull(itemData.getJsonObject(LOCATION))) {
+    if(nonNull(itemData.getJsonObject(LOCATION))) {
       locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
     }
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
@@ -277,7 +281,7 @@ public class RecordMetadataManager {
 
   private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject itemData,
                                 List<EffectiveLocationSubFields> subFieldGroupProperties) {
-    if(Objects.nonNull(itemData)) {
+    if(nonNull(itemData)) {
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());

@@ -1,0 +1,14 @@
+{
+  "itemNoteTypes": [
+    {
+      "id": "acb3a58f-1d72-461d-97c3-0e7119e8d544",
+      "name": "Reproduction",
+      "source": "folio",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.459+00:00",
+        "updatedDate": "2023-01-16T01:53:27.459+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

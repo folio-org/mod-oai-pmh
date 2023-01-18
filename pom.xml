@@ -159,6 +159,7 @@
     <junit.version>5.8.2</junit.version>
     <netty.version>4.1.78.Final</netty.version>
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
+    <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
   </properties>
 
   <dependencies>
@@ -336,6 +337,23 @@
       <artifactId>lombok</artifactId>
       <version>${lombok.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>generate-marc-utils</artifactId>
+      <version>${generate-marc-utils-version}</version>
+      <type>jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>3.1.1</version>
     </dependency>
   </dependencies>
 

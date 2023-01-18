@@ -1,0 +1,14 @@
+{
+  "contributorNameTypes": [
+    {
+      "id": "e8b311a6-3b21-43f2-a269-dd9310cb2d0a",
+      "name": "Meeting name",
+      "ordering": "3",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:26.405+00:00",
+        "updatedDate": "2023-01-16T01:53:26.405+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

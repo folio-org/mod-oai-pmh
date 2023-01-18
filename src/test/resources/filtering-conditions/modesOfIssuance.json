@@ -1,0 +1,14 @@
+{
+  "issuanceModes": [
+    {
+      "id": "f5cc2ab6-bb92-4cab-b83f-5a3d09261a41",
+      "name": "multipart monograph",
+      "source": "rdamodeissue",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.010+00:00",
+        "updatedDate": "2023-01-16T01:53:27.010+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

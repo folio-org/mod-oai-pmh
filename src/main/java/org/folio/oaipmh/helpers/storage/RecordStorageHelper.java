@@ -67,13 +67,13 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public String getRecordId(JsonObject entry) {
-    return entry.getString(RECORD_ID);
+    return Optional.ofNullable(entry.getString(RECORD_ID)).orElse(entry.getString(ID));
   }
 
   /**
    * Returns instance id that is linked to record within externalIdsHolder field.
    *
-   * @param entry the item returned by source-storage
+   * @param entry the item returned by source-storage or inventory-storage
    * @return instance id
    */
   @Override

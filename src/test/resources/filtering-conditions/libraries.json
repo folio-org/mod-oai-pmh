@@ -1,0 +1,15 @@
+{
+  "loclibs": [
+    {
+      "id": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+      "name": "Datalogisk Institut",
+      "code": "DI",
+      "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.682+00:00",
+        "updatedDate": "2023-01-16T01:53:27.682+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

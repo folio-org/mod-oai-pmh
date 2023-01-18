@@ -95,6 +95,19 @@ public final class Constants {
   public static final String MATERIAL_TYPES_URI = "/material-types";
   public static final String RESOURCE_TYPES_URI = "/instance-types";
   public static final String INSTANCE_FORMATS_URI = "/instance-formats";
+  public static final String IDENTIFIER_TYPES_URI = "/identifier-types";
+  public static final String ELECTRONIC_ACCESS_RELATIONSHIPS_URI = "/electronic-access-relationships";
+  public static final String ALTERNATIVE_TITLE_TYPES_URI = "/alternative-title-types";
+  public static final String CALL_NUMBER_TYPES_URI = "/call-number-types";
+  public static final String CAMPUSES_URI = "/location-units/campuses";
+  public static final String CONTRIBUTOR_NAME_TYPES_URI = "/contributor-name-types";
+  public static final String HOLDINGS_NOTE_TYPES_URI = "/holdings-note-types";
+  public static final String INSTITUTIONS_URI = "/location-units/institutions";
+  public static final String ITEM_NOTE_TYPES_URI = "/item-note-types";
+  public static final String LIBRARIES_URI = "/location-units/libraries";
+  public static final String LOANTYPES_URI = "/loan-types";
+  public static final String MODES_OF_ISSUANCE_URI = "/modes-of-issuance";
+  public static final String NATURE_OF_CONTENT_TERMS_URI = "/nature-of-content-terms";
 
   public static final String LOCATION = "location";
   public static final String ILL_POLICIES = "illPolicy";

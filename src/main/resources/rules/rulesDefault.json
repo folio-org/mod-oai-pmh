@@ -1,0 +1,1977 @@
+[
+  {
+    "id": "instance.leader",
+    "field": "leader",
+    "description": "Leader",
+    "dataSources": [
+      {
+        "translation": {
+          "function": "set_17-19_positions",
+          "parameters": {
+            "position17": "3",
+            "position18": "c",
+            "position19": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.hrid",
+    "field": "001",
+    "description": "The human readable ID",
+    "dataSources": [
+      {
+        "from": "$.instance.hrid"
+      }
+    ]
+  },
+  {
+    "id": "instance.metadata.updateddate",
+    "field": "005",
+    "description": "Date and Time of Latest Transaction",
+    "dataSources": [
+      {
+        "from": "$.instance.metadata.updatedDate",
+        "translation": {
+          "function": "set_transaction_datetime"
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.metadata.createddate",
+    "field": "008",
+    "description": "Fixed-Length Data Elements",
+    "dataSources": [
+      {
+        "from": "$.instance.metadata.createdDate",
+        "translation": {
+          "function": "set_fixed_length_data_elements"
+        }
+      }
+    ],
+    "metadata": {
+      "datesOfPublication": "$.instance.publication[*].dateOfPublication",
+      "languages": "$.instance.languages"
+    }
+  },
+  {
+    "id": "instance.identifiers.lccn",
+    "field": "010",
+    "description": "Identifier LCCN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "LCCN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.cancelled.system.control.number",
+    "field": "019",
+    "description": "Cancelled system control number",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Cancelled system control number"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.isbn",
+    "field": "020",
+    "description": "Identifier ISBN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "ISBN"
+          }
+        }
+      },
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "z",
+        "translation": {
+          "function": "set_related_identifier",
+          "parameters": {
+            "relatedIdentifierTypes": "ISBN",
+            "type": "Invalid ISBN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.issn",
+    "field": "022",
+    "description": "Identifier ISSN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "ISSN"
+          }
+        }
+      },
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "i",
+        "translation": {
+          "function": "set_related_identifier",
+          "parameters": {
+            "relatedIdentifierTypes": "ISSN",
+            "type": "Linking ISSN"
+          }
+        }
+      },
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "z",
+        "translation": {
+          "function": "set_related_identifier",
+          "parameters": {
+            "relatedIdentifierTypes": "ISSN",
+            "type": "Invalid ISSN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.asin",
+    "field": "024",
+    "description": "Identifier ASIN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='7f907515-a1bf-4513-8a38-92e1a07c539d')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "ASIN"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "ASIN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='7f907515-a1bf-4513-8a38-92e1a07c539d')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.bnb",
+    "field": "024",
+    "description": "Identifier BNB",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='3187432f-9434-40a8-8782-35a111a1491e')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "BNB"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "BNB"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='3187432f-9434-40a8-8782-35a111a1491e')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.local.identifier",
+    "field": "024",
+    "description": "Local identifier",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='5130aed5-1095-4fb6-8f6f-caa3d6cc7aae')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Local identifier"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "Local identifier"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='5130aed5-1095-4fb6-8f6f-caa3d6cc7aae')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.stednl",
+    "field": "024",
+    "description": "Identifier StEdNL",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='3fbacad6-0240-4823-bce8-bb122cfdf229')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "StEdNL"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "StEdNL"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='3fbacad6-0240-4823-bce8-bb122cfdf229')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.ukmac",
+    "field": "024",
+    "description": "Identifier UkMac",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='650ef996-35e3-48ec-bf3a-a0d078a0ca37')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "UkMac"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "UkMac"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='650ef996-35e3-48ec-bf3a-a0d078a0ca37')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.coden",
+    "field": "030",
+    "description": "Identifier CODEN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='593b78cb-32f3-44d1-ba8c-63fd5e6989e6')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "CODEN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='593b78cb-32f3-44d1-ba8c-63fd5e6989e6')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.report.number",
+    "field": "088",
+    "description": "Report number identifier",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='37b65e79-0392-450d-adc6-e2a1f47de452')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Report number"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='37b65e79-0392-450d-adc6-e2a1f47de452')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.ismn",
+    "field": "024",
+    "description": "Identifier ISMN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='ebfd00b6-61d3-4d87-a6d8-810c941176d5')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "ISMN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='ebfd00b6-61d3-4d87-a6d8-810c941176d5')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.invalid.ismn",
+    "field": "024",
+    "description": "Identifier invalid ISMN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='4f07ea37-6c7f-4836-add2-14249e628ed1')].value",
+        "subfield": "z",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Invalid ISMN"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='4f07ea37-6c7f-4836-add2-14249e628ed1')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.upc",
+    "field": "024",
+    "description": "Identifier UPC",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='1795ea23-6856-48a5-a772-f356e16a8a6c')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "UPC"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='1795ea23-6856-48a5-a772-f356e16a8a6c')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.invalid.upc",
+    "field": "024",
+    "description": "Identifier invalid UPC",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='b3ea81fb-3324-4c64-9efc-7c0c93d5943c')].value",
+        "subfield": "z",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Invalid UPC"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='b3ea81fb-3324-4c64-9efc-7c0c93d5943c')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.other.standard.identifier",
+    "field": "024",
+    "description": "Other standard identifier",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='2e8b3b6c-0e7d-4e48-bca2-b0b23b376af5')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Other standard identifier"
+          }
+        }
+      },
+      {
+        "subfield": "q",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "Other standard identifier"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "8"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='2e8b3b6c-0e7d-4e48-bca2-b0b23b376af5')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.doi",
+    "field": "024",
+    "description": "Identifier DOI",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='39554f54-d0bb-4f0a-89a4-e422f6136316')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "DOI"
+          }
+        }
+      },
+      {
+        "subfield": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "doi"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "7"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='39554f54-d0bb-4f0a-89a4-e422f6136316')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.handle",
+    "field": "024",
+    "description": "Identifier Handle",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='216b156b-215e-4839-a53e-ade35cb5702a')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Handle"
+          }
+        }
+      },
+      {
+        "subfield": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "hdl"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "7"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='216b156b-215e-4839-a53e-ade35cb5702a')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.urn",
+    "field": "024",
+    "description": "Identifier URN",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[?(@.identifierTypeId=='eb7b2717-f149-4fec-81a3-deefb8f5ee6b')].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "URN"
+          }
+        }
+      },
+      {
+        "subfield": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "urn"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "7"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[?(@.identifierTypeId=='eb7b2717-f149-4fec-81a3-deefb8f5ee6b')]"
+    }
+  },
+  {
+    "id": "instance.identifiers.publisher.or.distributor.number",
+    "field": "028",
+    "description": "Publisher or distributor number",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "Publisher or distributor number"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "5"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.system.control.number",
+    "field": "035",
+    "description": "Identifier System Control Number",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "System control number"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.identifiers.oclc",
+    "field": "035",
+    "description": "Identifier OCLC",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "OCLC"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.languages",
+    "field": "041",
+    "description": "Instance languages",
+    "dataSources": [
+      {
+        "from": "$.instance.languages",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.identifiers.gpo.item.number",
+    "field": "074",
+    "description": "Identifier GPO",
+    "dataSources": [
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "a",
+        "translation": {
+          "function": "set_identifier",
+          "parameters": {
+            "type": "GPO item number"
+          }
+        }
+      },
+      {
+        "from": "$.instance.identifiers[*].value",
+        "subfield": "z",
+        "translation": {
+          "function": "set_related_identifier",
+          "parameters": {
+            "relatedIdentifierTypes": "GPO item number",
+            "type": "Cancelled GPO item number"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "identifierType": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.contributorname.primary.personal.name",
+    "field": "100",
+    "description": "Contributors - Personal Name  and Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?(@.primary && @.primary == true)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Personal name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?(@.primary && @.primary == true)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.contributorname.primary.corporate.name",
+    "field": "110",
+    "description": "Contributors - Corporate Name  and Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?((@.primary) && @.primary == true)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Corporate name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?((@.primary) && @.primary == true)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.contributorname.primary.meeting.name",
+    "field": "111",
+    "description": "Contributors - Meeting Name and Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?((@.primary) && @.primary == true)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Meeting name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?((@.primary) && @.primary == true)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.alternativetitletypename.variant.title",
+    "field": "246",
+    "description": "Variant title",
+    "dataSources": [
+      {
+        "from": "$.instance.alternativeTitles[*].alternativeTitle",
+        "subfield": "a",
+        "translation": {
+          "function": "set_alternative_title",
+          "parameters": {
+            "type": "Variant title"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "alternativeTitleTypeId": "$.instance.alternativeTitles[*].alternativeTitleTypeId"
+    }
+  },
+  {
+    "id": "instance.alternativetitletypename.former.title",
+    "field": "247",
+    "description": "Former title",
+    "dataSources": [
+      {
+        "from": "$.instance.alternativeTitles[*].alternativeTitle",
+        "subfield": "a",
+        "translation": {
+          "function": "set_alternative_title",
+          "parameters": {
+            "type": "Former title"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "alternativeTitleTypeId": "$.instance.alternativeTitles[*].alternativeTitleTypeId"
+    }
+  },
+  {
+    "id": "instance.alternativetitletypename.uniform.title",
+    "field": "130",
+    "description": "Uniform title",
+    "dataSources": [
+      {
+        "from": "$.instance.alternativeTitles[*].alternativeTitle",
+        "subfield": "a",
+        "translation": {
+          "function": "set_alternative_title",
+          "parameters": {
+            "type": "Uniform title"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "alternativeTitleTypeId": "$.instance.alternativeTitles[*].alternativeTitleTypeId"
+    }
+  },
+  {
+    "id": "instance.title",
+    "field": "245",
+    "description": "Title",
+    "dataSources": [
+      {
+        "from": "$.instance.title",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.editions",
+    "field": "250",
+    "description": "Instance editions",
+    "dataSources": [
+      {
+        "from": "$.instance.editions",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.publication",
+    "field": "264",
+    "description": "Publication",
+    "dataSources": [
+      {
+        "from": "$.instance.publication[*].place",
+        "subfield": "a"
+      },
+      {
+        "from": "$.instance.publication[*].publisher",
+        "subfield": "b"
+      },
+      {
+        "from": "$.instance.publication[*].dateOfPublication",
+        "subfield": "c"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.physicalDescriptions",
+    "field": "300",
+    "description": "Physical Descriptions",
+    "dataSources": [
+      {
+        "from": "$.instance.physicalDescriptions",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.publication.frequency",
+    "field": "310",
+    "description": "Instance publication frequency",
+    "dataSources": [
+      {
+        "from": "$.instance.publicationFrequency",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.instancetypeid",
+    "field": "336",
+    "description": "InstanceTypeID",
+    "dataSources": [
+      {
+        "from": "$.instance.instanceTypeId",
+        "subfield": "a",
+        "translation": {
+          "function": "set_instance_type_id"
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.instanceformatids",
+    "field": "337",
+    "description": "Instance formats",
+    "dataSources": [
+      {
+        "from": "$.instance.instanceFormatIds[*]",
+        "subfield": "a",
+        "translation": {
+          "function": "set_instance_format_id",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.instanceformatids",
+    "field": "338",
+    "description": "Instance formats",
+    "dataSources": [
+      {
+        "from": "$.instance.instanceFormatIds[*]",
+        "subfield": "a",
+        "translation": {
+          "function": "set_instance_format_id",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.publication.range",
+    "field": "362",
+    "description": "Instance publication range",
+    "dataSources": [
+      {
+        "from": "$.instance.publicationRange",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.series",
+    "field": "490",
+    "description": "Series",
+    "dataSources": [
+      {
+        "from": "$.instance.series",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.notes.note",
+    "field": "500",
+    "description": "Instance note",
+    "dataSources": [
+      {
+        "from": "$.instance.notes[?(@.staffOnly == false)].note",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.subjects",
+    "field": "653",
+    "description": "Physical Descriptions",
+    "dataSources": [
+      {
+        "from": "$.instance.subjects",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.natureofcontenttermids",
+    "field": "655",
+    "description": "Nature of content terms",
+    "dataSources": [
+      {
+        "from": "$.instance.natureOfContentTermIds",
+        "subfield": "a",
+        "translation": {
+          "function": "set_nature_of_content_term"
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "4"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "instance.contributorname.personal.name",
+    "field": "700",
+    "description": "Contributors - Personal Name Not Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?(!(@.primary) || @.primary == false)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Personal name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "1"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?(!(@.primary) || @.primary == false)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.contributorname.corporate.name",
+    "field": "710",
+    "description": "Contributors - Corporate Name Not Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?(!(@.primary) || @.primary == false)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Corporate name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?(!(@.primary) || @.primary == false)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.contributorname.meeting.name",
+    "field": "711",
+    "description": "Contributors - Meeting Name Not Primary",
+    "dataSources": [
+      {
+        "from": "$.instance.contributors[?(!(@.primary) || @.primary == false)].name",
+        "subfield": "a",
+        "translation": {
+          "function": "set_contributor",
+          "parameters": {
+            "type": "Meeting name"
+          }
+        }
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "2"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": " "
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "contributorNameTypeId": "$.instance.contributors[?(!(@.primary) || @.primary == false)].contributorNameTypeId"
+    }
+  },
+  {
+    "id": "instance.preceding.title",
+    "field": "780",
+    "description": "Instance preceding title",
+    "dataSources": [
+      {
+        "from": "$.instance.precedingTitles[*].precedingInstanceId",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "id": "$.instance.succeedingTitles[*].id",
+      "title": "$.instance.succeedingTitles[*].title",
+      "hrid": "$.instance.succeedingTitles[*].hrid",
+      "identifiers": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.succeeding.title",
+    "field": "785",
+    "description": "Instance succeeding title",
+    "dataSources": [
+      {
+        "from": "$.instance.succeedingTitles[*].succeedingInstanceId",
+        "subfield": "a"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "0"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "id": "$.instance.succeedingTitles[*].id",
+      "title": "$.instance.succeedingTitles[*].title",
+      "hrid": "$.instance.succeedingTitles[*].hrid",
+      "identifiers": "$.instance.identifiers[*]"
+    }
+  },
+  {
+    "id": "instance.electronic.access",
+    "field": "856",
+    "description": "Electronic access",
+    "dataSources": [
+      {
+        "from": "$.instance.electronicAccess[*].uri",
+        "subfield": "u"
+      },
+      {
+        "from": "$.instance.electronicAccess[*].linkText",
+        "subfield": "y"
+      },
+      {
+        "from": "$.instance.electronicAccess[*].publicNote",
+        "subfield": "z"
+      },
+      {
+        "from": "$.instance.electronicAccess[*].materialsSpecification",
+        "subfield": "3"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "4"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_electronic_access_indicator",
+          "parameters": {
+            "Resource": "0",
+            "Version of resource": "1",
+            "Related resource": "2"
+          }
+        }
+      }
+    ],
+    "metadata": {
+      "relationshipId": "$.instance.electronicAccess[*].relationshipId"
+    }
+  },
+  {
+    "id": "instance.id",
+    "field": "999",
+    "description": "Unique ID of the instance record",
+    "dataSources": [
+      {
+        "from": "$.instance.id",
+        "subfield": "i"
+      },
+      {
+        "indicator": "1",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "f"
+          }
+        }
+      },
+      {
+        "indicator": "2",
+        "translation": {
+          "function": "set_value",
+          "parameters": {
+            "value": "f"
+          }
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "holdingsNoteTypes": [
+    {
+      "id": "6a41b714-8574-4084-8d64-a9373c3fbb59",
+      "name": "Reproduction",
+      "source": "folio",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.421+00:00",
+        "updatedDate": "2023-01-16T01:53:27.421+00:00"
+      }
+    }
+  ],
+  "totalRecords": 1
+}

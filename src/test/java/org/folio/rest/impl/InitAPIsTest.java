@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
+import org.folio.rest.RestVerticle;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,22 +61,24 @@ class InitAPIsTest {
   void shouldInitSuccessfully_whenConfigFilePathAndConfigFilesPropertiesHaveCorrectValues(Vertx vertx,
       VertxTestContext testContext) {
     logger.info("run shouldInitSuccessfully_whenConfigFilePathAndConfigFilesPropertiesHaveCorrectValues");
-    new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
-      assertTrue(result);
-      assertEquals(FIRST_TEST_PROPERTY_VALUE, System.getProperty(FIRST_TEST_PROPERTY_NAME));
-      assertEquals(SECOND_TEST_PROPERTY_VALUE, System.getProperty(SECOND_TEST_PROPERTY_NAME));
-      verifyJaxbInitialized();
-      logger.info("shouldInitSuccessfully_whenConfigFilePathAndConfigFilesPropertiesHaveCorrectValues finished");
-      testContext.completeNow();
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(), testContext.succeeding(id ->
+      new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
+        assertTrue(result);
+        assertEquals(FIRST_TEST_PROPERTY_VALUE, System.getProperty(FIRST_TEST_PROPERTY_NAME));
+        assertEquals(SECOND_TEST_PROPERTY_VALUE, System.getProperty(SECOND_TEST_PROPERTY_NAME));
+        verifyJaxbInitialized();
+        logger.info("shouldInitSuccessfully_whenConfigFilePathAndConfigFilesPropertiesHaveCorrectValues finished");
+        testContext.completeNow();
+      }))));
   }
 
   @Test
   void shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed(Vertx vertx, VertxTestContext testContext) {
     System.clearProperty(CONFIGURATION_PATH);
     System.clearProperty(CONFIGURATION_FILES);
-    logger.info("run shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed");
-    new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
+    logger.info("run shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed, {}", Vertx.currentContext());
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(), testContext.succeeding(id ->
+      new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
       assertTrue(result);
       assertNotNull(System.getProperty(BEHAVIOUR_GROUP_TEST_CONFIG));
       assertNotNull(System.getProperty(GENERAL_GROUP_TEST_CONFIG));
@@ -82,20 +86,21 @@ class InitAPIsTest {
       verifyJaxbInitialized();
       logger.info("shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed finished");
       testContext.completeNow();
-    }));
+    }))));
   }
 
   @Test
   void shouldAddRecordsSourceDefaultValueSuccessfully_whenDefaultConfigFilePathAndConfigFilesPropertyValuesAreUsed(Vertx vertx, VertxTestContext testContext) {
     System.clearProperty(CONFIGURATION_PATH);
     System.clearProperty(CONFIGURATION_FILES);
-    new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(), testContext.succeeding(id ->
+      new InitAPIs().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(result -> {
       assertTrue(result);
       JsonObject jsonConfigBehavior = ConfigurationHelper.getInstance().getJsonConfigFromResources("config", "behavior.json");
       assertEquals("Source record storage", new JsonObject(jsonConfigBehavior.getString("value")).getString("recordsSource"));
       verifyJaxbInitialized();
       testContext.completeNow();
-    }));
+    }))));
   }
 
   @Test
