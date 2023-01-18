@@ -136,7 +136,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private ReferenceDataProvider referenceDataProvider;
 
-  public AbstractGetRecordsHelper() {
+  protected AbstractGetRecordsHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 

@@ -21,6 +21,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.folio.oaipmh.Constants.ALTERNATIVE_TITLE_TYPES_URI;
+import static org.folio.oaipmh.Constants.CALL_NUMBER_TYPES_URI;
+import static org.folio.oaipmh.Constants.CAMPUSES_URI;
+import static org.folio.oaipmh.Constants.CONTRIBUTOR_NAME_TYPES_URI;
+import static org.folio.oaipmh.Constants.ELECTRONIC_ACCESS_RELATIONSHIPS_URI;
+import static org.folio.oaipmh.Constants.HOLDINGS_NOTE_TYPES_URI;
+import static org.folio.oaipmh.Constants.IDENTIFIER_TYPES_URI;
+import static org.folio.oaipmh.Constants.INSTANCE_FORMATS_URI;
+import static org.folio.oaipmh.Constants.INSTITUTIONS_URI;
+import static org.folio.oaipmh.Constants.ITEM_NOTE_TYPES_URI;
+import static org.folio.oaipmh.Constants.LIBRARIES_URI;
+import static org.folio.oaipmh.Constants.LOANTYPES_URI;
+import static org.folio.oaipmh.Constants.LOCATION_URI;
+import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
+import static org.folio.oaipmh.Constants.MODES_OF_ISSUANCE_URI;
+import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
+import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TENANT;
 import static org.folio.rest.RestVerticle.OKAPI_HEADER_TOKEN;
 
@@ -29,73 +46,73 @@ public class InventoryClient {
 
   private static final Logger logger = LogManager.getLogger(InventoryClient.class);
   private static final int REFERENCE_DATA_LIMIT = 1000;
-  private static final String ENDPOINT_PATTERN = "%s/%s?limit=%d";
+  private static final String ENDPOINT_PATTERN = "%s%s?limit=%d";
   public Map<String, JsonObject> getAlternativeTitleTypes(Request request) {
-    return get(request, "alternative-title-types", "alternativeTitleTypes");
+    return get(request, ALTERNATIVE_TITLE_TYPES_URI, "alternativeTitleTypes");
   }
 
   public Map<String, JsonObject> getContributorNameTypes(Request request) {
-    return get(request, "contributor-name-types", "contributorNameTypes");
+    return get(request, CONTRIBUTOR_NAME_TYPES_URI, "contributorNameTypes");
   }
 
   public Map<String, JsonObject> getElectronicAccessRelationships(Request request) {
-    return get(request, "electronic-access-relationships", "electronicAccessRelationships");
+    return get(request, ELECTRONIC_ACCESS_RELATIONSHIPS_URI, "electronicAccessRelationships");
   }
 
   public Map<String, JsonObject> getInstanceTypes(Request request) {
-    return get(request, "instance-types", "instanceTypes");
+    return get(request, RESOURCE_TYPES_URI, "instanceTypes");
   }
 
   public Map<String, JsonObject> getIdentifierTypes(Request request) {
-    return get(request, "identifier-types", "identifierTypes");
+    return get(request, IDENTIFIER_TYPES_URI, "identifierTypes");
   }
 
   public Map<String, JsonObject> getModesOfIssuance(Request request) {
-    return get(request, "modes-of-issuance", "issuanceModes");
+    return get(request, MODES_OF_ISSUANCE_URI, "issuanceModes");
   }
 
   public Map<String, JsonObject> getHoldingsNoteTypes(Request request) {
-    return get(request, "holdings-note-types", "holdingsNoteTypes");
+    return get(request, HOLDINGS_NOTE_TYPES_URI, "holdingsNoteTypes");
   }
 
   public Map<String, JsonObject> getItemNoteTypes(Request request) {
-    return get(request, "item-note-types", "itemNoteTypes");
+    return get(request, ITEM_NOTE_TYPES_URI, "itemNoteTypes");
   }
 
   public Map<String, JsonObject> getNatureOfContentTerms(Request request) {
-    return get(request, "nature-of-content-terms", "natureOfContentTerms");
+    return get(request, NATURE_OF_CONTENT_TERMS_URI, "natureOfContentTerms");
   }
 
   public Map<String, JsonObject> getLocations(Request request) {
-    return get(request, "locations", "locations");
+    return get(request, LOCATION_URI, "locations");
   }
 
   public Map<String, JsonObject> getLoanTypes(Request request) {
-    return get(request, "loan-types", "loantypes");
+    return get(request, LOANTYPES_URI, "loantypes");
   }
 
   public Map<String, JsonObject> getLibraries(Request request) {
-    return get(request, "location-units/libraries", "loclibs");
+    return get(request, LIBRARIES_URI, "loclibs");
   }
 
   public Map<String, JsonObject> getCampuses(Request request) {
-    return get(request, "location-units/campuses", "loccamps");
+    return get(request, CAMPUSES_URI, "loccamps");
   }
 
   public Map<String, JsonObject> getInstitutions(Request request) {
-    return get(request, "location-units/institutions", "locinsts");
+    return get(request, INSTITUTIONS_URI, "locinsts");
   }
 
   public Map<String, JsonObject> getMaterialTypes(Request request) {
-    return get(request, "material-types", "mtypes");
+    return get(request, MATERIAL_TYPES_URI, "mtypes");
   }
 
   public Map<String, JsonObject> getInstanceFormats(Request request) {
-    return get(request, "instance-formats", "instanceFormats");
+    return get(request, INSTANCE_FORMATS_URI, "instanceFormats");
   }
 
   public Map<String, JsonObject> getCallNumberTypes(Request request) {
-    return get(request, "call-number-types", "callNumberTypes");
+    return get(request, CALL_NUMBER_TYPES_URI, "callNumberTypes");
   }
 
   private Map<String, JsonObject> get(Request request, String endpoint, String key) {
