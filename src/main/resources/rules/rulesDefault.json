@@ -1602,7 +1602,7 @@
     "description": "Series",
     "dataSources": [
       {
-        "from": "$.instance.series",
+        "from": "$.instance.series[*].value",
         "subfield": "a"
       },
       {
@@ -1660,7 +1660,7 @@
     "description": "Physical Descriptions",
     "dataSources": [
       {
-        "from": "$.instance.subjects",
+        "from": "$.instance.subjects[*].value",
         "subfield": "a"
       },
       {
