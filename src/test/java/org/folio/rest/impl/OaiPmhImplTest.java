@@ -521,6 +521,38 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
+  @MethodSource("metadataPrefixAndEncodingProviderAndRecordsSource")
+  void getOaiRecordsWithDateRangeAndDifferentRecordsSource(MetadataPrefix metadataPrefix) {
+    logger.debug("==== Starting getOaiRecordsWithDateRangeAndDifferentRecordsSource() ====");
+    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    String from = THREE_INSTANCES_DATE;
+    String until = "2018-12-20";
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, from)
+      .param(UNTIL_PARAM, until)
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
+
+    assertThat(oaipmh.getErrors(), is(empty()));
+
+    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
+    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
+    assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
+    assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
+    logger.debug("==== getOaiRecordsWithDateRangeAndDifferentRecordsSource() successfully completed ====");
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
+  @ParameterizedTest
   @EnumSource(value = MetadataPrefix.class, names = { "MARC21XML", "DC"})
   void shouldBuildRecordsResponseWithOldAMetadataDate(MetadataPrefix metadataPrefix) {
     RequestSpecification request = createBaseRequest()

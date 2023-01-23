@@ -48,6 +48,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.NotFoundException;
@@ -277,7 +278,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestWithInventory(request, ctx, promise, srsRecords, limit);
+              requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
+                handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise);
+              });
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             }
@@ -304,20 +307,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     };
   }
 
-  private void requestWithInventory(Request request, Context ctx, Promise<Response> promise, JsonObject srsRecords, int limit) {
-    requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
-      if (instancesHandler.succeeded()) {
-        var inventoryRecords = instancesHandler.result();
-        if (srsRecords.getJsonArray("sourceRecords").isEmpty()) { // Case when recordsSource is SRS+Inventory and record not found in SRS.
-          generateRecordsOnTheFly(request, inventoryRecords);
-        }
-        processRecords(ctx, request, srsRecords, inventoryRecords)
-          .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-      } else {
-        logger.error("Request from Inventory has been failed.",  instancesHandler.cause());
-        promise.fail(instancesHandler.cause());
+  private void handleInventoryResponse(Request request, Context ctx, AsyncResult<JsonObject> instancesHandler,
+                              JsonObject srsRecords, Promise<Response> promise) {
+    if (instancesHandler.succeeded()) {
+      var inventoryRecords = instancesHandler.result();
+
+      // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
+      // or verb is ListRecords (see MODOAIPMH-138).
+      if (srsRecords.getJsonArray("sourceRecords").isEmpty() || request.getVerb() == VerbType.LIST_RECORDS) {
+        generateRecordsOnTheFly(request, inventoryRecords);
       }
-    });
+      processRecords(ctx, request, srsRecords, inventoryRecords)
+        .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+    } else {
+      logger.error("Request from Inventory has been failed.", instancesHandler.cause());
+      promise.fail(instancesHandler.cause());
+    }
   }
 
   protected Future<Response> processRecords(Context ctx, Request request,
