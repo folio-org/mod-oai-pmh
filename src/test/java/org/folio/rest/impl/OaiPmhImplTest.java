@@ -162,6 +162,7 @@ import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_D
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
+import static org.folio.rest.impl.OkapiMockServer.TEN_INSTANCES_WITH_HOLDINGS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -521,35 +522,40 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProviderAndRecordsSource")
-  void getOaiRecordsWithDateRangeAndDifferentRecordsSource(MetadataPrefix metadataPrefix) {
-    logger.debug("==== Starting getOaiRecordsWithDateRangeAndDifferentRecordsSource() ====");
-    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+  @MethodSource("metadataPrefixAndRecordsSource")
+  void getOaiRecordsWithDifferentRecordsSource(MetadataPrefix metadataPrefix, String recordsSource) {
+    logger.debug("==== Starting getOaiRecordsWithDifferentRecordsSource() ====");
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
+    var maxRecords = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
 
-    String from = THREE_INSTANCES_DATE;
-    String until = "2018-12-20";
+    String from = TEN_INSTANCES_WITH_HOLDINGS_DATE;
+    String until = "2018-07-10";
 
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(UNTIL_PARAM, until)
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+    if (metadataPrefix == MARC21WITHHOLDINGS) {
+      request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
+    }
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
     assertThat(oaipmh.getErrors(), is(empty()));
-
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-    assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
 
-    verifyListResponse(oaipmh, LIST_RECORDS, 10);
+    if (metadataPrefix == MARC21WITHHOLDINGS) {
+      verifyListResponse(oaipmh, LIST_RECORDS, 10); // Not 20 for SRS+Inventory because of duplicates.
+    } else {
+      verifyListResponse(oaipmh, LIST_RECORDS, recordsSource.equals(SRS_AND_INVENTORY) ? 20 : 10);
+    }
+
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
-    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
-    logger.debug("==== getOaiRecordsWithDateRangeAndDifferentRecordsSource() successfully completed ====");
+
+    logger.debug("==== getOaiRecordsWithDifferentRecordsSource() successfully completed ====");
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
   }
 
   @ParameterizedTest
@@ -2024,6 +2030,16 @@ class OaiPmhImplTest {
         for (String recordsSource : RECORDS_SOURCES) {
           builder.add(Arguments.arguments(prefix, encoding, recordsSource));
         }
+      }
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> metadataPrefixAndRecordsSource() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (MetadataPrefix prefix : MetadataPrefix.values()) {
+      for (String recordsSource : RECORDS_SOURCES) {
+        builder.add(Arguments.arguments(prefix, recordsSource));
       }
     }
     return builder.build();

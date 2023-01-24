@@ -656,7 +656,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           + ".instances (instance_id, request_id, suppress_from_discovery) VALUES ($1, $2, $3) RETURNING instance_id";
 
       if (e.failed()) {
-        e.cause().printStackTrace();
         logger.error("Save instance Ids failed: {}.", e.cause()
           .getMessage(), e.cause());
         promise.fail(e.cause());
