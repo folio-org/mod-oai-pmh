@@ -40,9 +40,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
           RepositoryConfigurationUtil.getProperty(request.getRequestId(),
             REPOSITORY_MAX_RECORDS_PER_RESPONSE));
         requestFromInventory(request, batchSize, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
-          .onComplete(handler -> {
-            handleInventoryResponse(handler, request, ctx, promise);
-          });
+          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }

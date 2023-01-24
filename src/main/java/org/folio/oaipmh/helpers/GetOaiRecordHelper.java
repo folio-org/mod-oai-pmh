@@ -19,8 +19,6 @@ import java.util.List;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 
@@ -45,9 +43,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
-          .onComplete(handler -> {
-            handleInventoryResponse(handler, request, ctx, promise);
-          });
+          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
