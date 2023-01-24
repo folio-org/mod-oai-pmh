@@ -41,15 +41,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
             REPOSITORY_MAX_RECORDS_PER_RESPONSE));
         requestFromInventory(request, batchSize, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
           .onComplete(handler -> {
-            if (handler.succeeded()) {
-              var inventoryRecords = handler.result();
-              generateRecordsOnTheFly(request, inventoryRecords);
-              processRecords(ctx, request, null, inventoryRecords)
-                .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-            } else {
-              logger.error("Request from inventory has been failed.", handler.cause());
-              promise.fail(handler.cause());
-            }
+            handleInventoryResponse(handler, request, ctx, promise);
           });
       } else {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));

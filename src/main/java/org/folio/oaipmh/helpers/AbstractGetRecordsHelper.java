@@ -157,6 +157,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
+  protected void handleInventoryResponse(AsyncResult<JsonObject> handler, Request request, Context ctx, Promise<Response> promise) {
+    if (handler.succeeded()) {
+      var inventoryRecords = handler.result();
+      generateRecordsOnTheFly(request, inventoryRecords);
+      processRecords(ctx, request, null, inventoryRecords)
+        .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+    } else {
+      logger.error("Request from inventory has been failed.", handler.cause());
+      promise.fail(handler.cause());
+    }
+  }
+
   protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise, boolean withInventory) {
     final var srsClient = new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(),
       request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
@@ -278,9 +290,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
-                handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise);
-              });
+              requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler ->
+                handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             }

@@ -126,6 +126,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
 
+  private SourceStorageSourceRecordsClientWrapper srsClient;
+
   public static MarcWithHoldingsRequestHelper getInstance() {
     return INSTANCE;
   }
@@ -263,12 +265,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               : instances.get(batchSize)
                 .getString(INSTANCE_ID_FIELD_NAME);
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
-          final SourceStorageSourceRecordsClientWrapper srsClient = createAndSetupSrsClient(request);
+          srsClient = createAndSetupSrsClient(request);
 
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
-          requestSRSByIdentifiers(srsClient, context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request, batchSize)
+          requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
               deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
@@ -684,21 +686,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       .collect(Collectors.toList());
   }
 
-  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx,
-                                                                  List<JsonObject> batch, boolean deletedRecordSupport,
-                                                                  int retryAttempts, Request request, int limit) {
+  private Future<Map<String, JsonObject>> requestSRSByIdentifiers(Vertx vertx, List<JsonObject> batch, boolean deletedRecordSupport,
+                                                                  int retryAttempts, Request request) {
     final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
     logger.debug("Request to SRS, list id size: {}.", listOfIds.size());
     AtomicInteger attemptsCount = new AtomicInteger(retryAttempts);
     Promise<Map<String, JsonObject>> promise = Promise.promise();
-    doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise,
-      request, limit);
+    doPostRequestToSrs(vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise,
+      request);
     return promise.future();
   }
 
-  private void doPostRequestToSrs(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx, boolean deletedRecordSupport,
+  private void doPostRequestToSrs(Vertx vertx, boolean deletedRecordSupport,
                                   List<String> listOfIds, AtomicInteger attemptsCount, int retryAttempts, Promise<Map<String, JsonObject>> promise,
-                                  Request request, int limit) {
+                                  Request request) {
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     if (!recordsSource.equals(INVENTORY)) {
       try {
@@ -712,8 +713,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
               retrySRSRequestParams.put(STATUS_CODE, String.valueOf(statusCode));
               retrySRSRequestParams.put(STATUS_MESSAGE, statusMessage);
-              retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams,
-                request, limit);
+              retrySRSRequest(vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams,
+                request);
               return;
             }
             if (statusCode != 200) {
@@ -722,27 +723,28 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               handleException(promise, new IllegalStateException(errorMsg));
               return;
             }
-            handleSrsResponse(promise, srsResponse.body(), request, limit);
+            handleSrsResponse(promise, srsResponse.body(), request);
           } else {
             logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
               .getMessage(), asyncResult.cause());
             retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
             retrySRSRequestParams.put(STATUS_CODE, String.valueOf(-1));
             retrySRSRequestParams.put(STATUS_MESSAGE, "");
-            retrySRSRequest(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams,
-              request, limit);
+            retrySRSRequest(vertx, deletedRecordSupport, listOfIds, attemptsCount, promise, retrySRSRequestParams,
+              request);
           }
         });
       } catch (Exception e) {
         handleException(promise, e);
       }
     } else {
-      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray(), limit);
+      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray());
     }
   }
 
   private void doGetRequestToInventory(Request request, Promise<Map<String, JsonObject>> promise, Map<String, JsonObject> result,
-                                       JsonArray records, int limit) {
+                                       JsonArray records) {
+    int limit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
       if (instancesHandler.succeeded()) {
         var inventoryRecords = instancesHandler.result();
@@ -762,9 +764,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     });
   }
 
-  private void retrySRSRequest(SourceStorageSourceRecordsClientWrapper srsClient, Vertx vertx, boolean deletedRecordSupport,
+  private void retrySRSRequest(Vertx vertx, boolean deletedRecordSupport,
       List<String> listOfIds, AtomicInteger attemptsCount, Promise<Map<String, JsonObject>> promise, Map <String, String> retrySRSRequestParams,
-                               Request request, int limit) {
+                               Request request) {
     if (Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)) > 0) {
       logger.debug("Got error response form SRS, status code: {}, status message: {}.",
         Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)), retrySRSRequestParams.get(STATUS_MESSAGE));
@@ -779,11 +781,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     }
     logger.debug("Trying to request SRS again, attempts left: {}.", attemptsCount.get());
     vertx.setTimer(REREQUEST_SRS_DELAY,
-        timer -> doPostRequestToSrs(srsClient, vertx, deletedRecordSupport, listOfIds, attemptsCount,
-          Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request, limit));
+        timer -> doPostRequestToSrs(vertx, deletedRecordSupport, listOfIds, attemptsCount,
+          Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request));
   }
 
-  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request, int limit) {
+  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request) {
     final Map<String, JsonObject> result = Maps.newHashMap();
     try {
       final Object jsonResponse = buffer.toJson();
@@ -792,7 +794,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         final JsonArray records = entries.getJsonArray("sourceRecords");
         var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
         if (!recordsSource.equals(SRS)) {
-          doGetRequestToInventory(request, promise, result, records, limit);
+          doGetRequestToInventory(request, promise, result, records);
         } else {
           buildResult(records, result, promise);
         }
