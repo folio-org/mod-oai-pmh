@@ -95,6 +95,7 @@ public class OkapiMockServer {
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "2000-01-02T07:07:07Z";
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07";
   static final String THREE_INSTANCES_DATE = "2018-12-12";
+  static final String TEN_INSTANCES_WITH_HOLDINGS_DATE = "2018-07-07";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10_PARTIALLY = "2002-01-29";
@@ -191,6 +192,7 @@ public class OkapiMockServer {
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
+  private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
   private static final String INSTANCE_IDS_60_JSON = "60_instances_ids.json";
   private static final String SRS_RECORD_TEMPLATE_JSON = "/srs_record_template.json";
   private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
@@ -346,7 +348,7 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500_JSON);
       } else if (uri.contains(DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_SRS_TIMEOUT_JSON);
-      }else if (uri.contains(EMPTY_INSTANCES_IDS_DATE)) {
+      } else if (uri.contains(EMPTY_INSTANCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, EMPTY_INSTANCES_IDS_JSON);
       } else if (uri.contains(DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)) {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
@@ -372,6 +374,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON);
       } else if (uri.contains(ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON);
+      } else if (uri.contains(TEN_INSTANCES_WITH_HOLDINGS_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON_WITHHOLDINGS);
       } else {
         logger.debug("No mocks for the response, returning the default instance id.");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
