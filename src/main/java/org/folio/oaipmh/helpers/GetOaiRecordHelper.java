@@ -46,6 +46,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       }
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
+        logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
         requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
           .onComplete(handler -> {
             if (handler.succeeded()) {
@@ -54,14 +55,16 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
               processRecords(ctx, request, null, inventoryRecords)
                 .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
             } else {
-              logger.error("Request from inventory has been failed.", handler.cause());
+              logger.warn("handle:: Request from inventory failed for requestId {} with error {}", request.getRequestId(),  handler.cause().getMessage());
               promise.fail(handler.cause());
             }
           });
       } else {
+        logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
+      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future();

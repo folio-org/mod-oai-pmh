@@ -166,9 +166,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               downloadInstancesPromise, downloadContext, downloadInstancesStatistics), downloadInstancesResult -> {
               updateRequestStreamEnded(requestId, request.getTenant(), downloadInstancesStatistics);
                 if (downloadInstancesResult.succeeded()) {
-                  logger.info("Downloading instances complete.");
+                  logger.info("handle:: Downloading instances complete for requestId {}", request.getRequestId());
                 } else {
-                  logger.error("Downloading instances was canceled due to the error. ", downloadInstancesResult.cause());
+                  logger.warn("handle:: Downloading instances was canceled for requestId {} due to the error {}", request.getRequestId(), downloadInstancesResult.cause().getMessage());
                   if (!oaipmhResponsePromise.future().isComplete()) {
                     oaipmhResponsePromise.fail(new IllegalStateException(downloadInstancesResult.cause()));
                   }
@@ -203,10 +203,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           connection.getPgConnection().close();
           if (result.failed()) {
             var error = result.cause();
-            logger.error("Error updating request metadata on instances stream completion.", error);
+            logger.warn("updateRequestStreamEnded:: For requestId {} error updating request metadata on instances stream completion {}", requestId,  error);
             promise.fail(error);
           } else {
-            logger.info("Updating request metadata on instances stream completion finished.");
+            logger.info("updateRequestStreamEnded:: For requestId {} updating request metadata on instances stream completion finished", requestId);
             promise.complete();
           }
         });
@@ -224,8 +224,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
-            logger.error("Get instances failed: {}.", fut.cause()
-              .getMessage(), fut.cause());
+            logger.warn("processBatch:: For requestId {} get instances failed: {}", request.getRequestId(), fut.cause()
+              .getMessage());
             oaiPmhResponsePromise.fail(fut.cause());
             return;
           }
@@ -233,7 +233,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           List<JsonObject> instances = fut.result();
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
-            logger.error("Error: Instances collection is empty for non-first batch.");
+            logger.warn("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
           }
@@ -330,11 +330,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             }
             batch.clear();
           }).onComplete(vVoid -> {
-            logger.info("Completing batch processing for requestId: {}. Last batch size was: {}.", requestId, size);
+            logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch size was: {}", requestId, size);
             downloadInstancesPromise.complete();
           });
       } else {
-        logger.info("Completing batch processing for requestId: {}. Last batch was empty.", requestId);
+        logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch was empty", requestId);
         downloadInstancesPromise.complete();
       }
     });
@@ -342,7 +342,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         if (invalidResponseReceivedAndProcessed) {
           return;
         }
-        logger.error("Error has been occurred at JsonParser while saving instances. Message: {}", throwable.getMessage(),
+        logger.warn("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while saving instances. Message: {}", request.getRequestId(), throwable.getMessage(),
           throwable);
         downloadInstancesPromise.complete(throwable);
         promise.fail(throwable);
@@ -371,7 +371,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         }
       })
       .onFailure(throwable -> {
-        logger.error("Error has been occurred at JsonParser while reading data from response. Message: {}", throwable.getMessage(),
+        logger.warn("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while reading data from response. Message: {}", request.getRequestId(), throwable.getMessage(),
           throwable);
         promise.fail(throwable);
       });
@@ -432,12 +432,12 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           return enrichInstances(jsonInstances, request)
                   .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INSTANCES_PROCESSING));
         }
-        logger.debug("Skipping enrich instances call, empty instance ids list returned.");
+        logger.debug("getNextInstances:: Skipping enrich instances call, empty instance ids list returned");
         return Future.succeededFuture(Collections.emptyList());
       })
       .onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.error("Cannot get batch of instances ids from database: {}.", throwable.getMessage(), throwable);
+        logger.warn("getNextInstances:: For requestId {} cannot get batch of instances ids from database: {}", request.getRequestId(), throwable.getMessage());
         promise.fail(throwable);
       });
 
