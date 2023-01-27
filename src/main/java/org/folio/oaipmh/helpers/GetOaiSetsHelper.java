@@ -37,7 +37,7 @@ public class GetOaiSetsHelper extends AbstractHelper {
         .withSets(getSupportedSetTypes()));
       promise.complete(responseHelper.buildSuccessResponse(oai));
     } catch (Exception e) {
-      logger.warn("handle:: For requestId {} error happened while processing ListSets verb request {}", request.getRequestId(), e.getMessage());
+      logger.error("Error happened while processing ListSets verb request.", e);
       promise.fail(e);
     }
     return promise.future();
