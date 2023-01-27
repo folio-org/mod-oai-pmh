@@ -331,7 +331,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       processRecords(ctx, request, srsRecords, inventoryRecords)
         .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
     } else {
-      logger.warn("requestWithInventory:: For requestId {} Request to inventory failed with errors {}", request.getRequestId(), instancesHandler.cause().getMessage());
+      logger.warn("handleInventoryResponse:: For requestId {} Request to inventory failed with errors {}", request.getRequestId(), instancesHandler.cause().getMessage());
       promise.fail(instancesHandler.cause());
     }
   }
