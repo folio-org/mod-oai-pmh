@@ -47,25 +47,6 @@ public class ReferenceDataProvider {
   }
 
   /**
-   * This method returns the reference data that is required for generating the transformation fields during the call for
-   * /transformation-fields API
-   *
-   * @param request
-   */
-  public ReferenceData getReferenceDataForTransformationFields(Request request) {
-    ReferenceDataImpl referenceData = new ReferenceDataImpl();
-    referenceData.put(ALTERNATIVE_TITLE_TYPES, inventoryClient.getAlternativeTitleTypes(request));
-    referenceData.put(CONTRIBUTOR_NAME_TYPES, inventoryClient.getContributorNameTypes(request));
-    referenceData.put(ELECTRONIC_ACCESS_RELATIONSHIPS, inventoryClient.getElectronicAccessRelationships(request));
-    referenceData.put(INSTANCE_TYPES, inventoryClient.getInstanceTypes(request));
-    referenceData.put(IDENTIFIER_TYPES, inventoryClient.getIdentifierTypes(request));
-    referenceData.put(ISSUANCE_MODES, inventoryClient.getModesOfIssuance(request));
-    referenceData.put(HOLDING_NOTE_TYPES, inventoryClient.getHoldingsNoteTypes(request));
-    referenceData.put(ITEM_NOTE_TYPES, inventoryClient.getItemNoteTypes(request));
-    return referenceData;
-  }
-
-  /**
    * This methods returns the reference data that is needed to map the fields to MARC , while generating marc records on the fly
    *
    * @param request
@@ -87,6 +68,8 @@ public class ReferenceDataProvider {
     referenceData.put(ELECTRONIC_ACCESS_RELATIONSHIPS, inventoryClient.getElectronicAccessRelationships(request));
     referenceData.put(ISSUANCE_MODES, inventoryClient.getModesOfIssuance(request));
     referenceData.put(CALL_NUMBER_TYPES, inventoryClient.getCallNumberTypes(request));
+    referenceData.put(ITEM_NOTE_TYPES, inventoryClient.getItemNoteTypes(request));
+    referenceData.put(HOLDING_NOTE_TYPES, inventoryClient.getHoldingsNoteTypes(request));
     return referenceData;
   }
 }

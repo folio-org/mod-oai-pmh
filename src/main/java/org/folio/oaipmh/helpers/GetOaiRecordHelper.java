@@ -48,17 +48,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       if (recordsSource.equals(INVENTORY)) {
         logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
         requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
-          .onComplete(handler -> {
-            if (handler.succeeded()) {
-              var inventoryRecords = handler.result();
-              generateRecordsOnTheFly(request, inventoryRecords);
-              processRecords(ctx, request, null, inventoryRecords)
-                .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-            } else {
-              logger.warn("handle:: Request from inventory failed for requestId {} with error {}", request.getRequestId(),  handler.cause().getMessage());
-              promise.fail(handler.cause());
-            }
-          });
+          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
