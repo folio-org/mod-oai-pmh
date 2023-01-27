@@ -291,11 +291,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           }
         } else {
           logger.warn("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());
-          promise.fail(new IllegalStateException(asyncResult.cause()));
+          promise.fail(new IllegalStateException("Cannot obtain srs records. Got failed async result.", asyncResult.cause()));
         }
       } catch (DecodeException ex) {
         logger.warn("getSrsRecordsBodyHandler:: Invalid json from SRS, cannot parse it for requestId {}. Errors message {}", request.getRequestId(), ex.getMessage());
-        promise.fail(new IllegalStateException(ex));
+        promise.fail(new IllegalStateException("Invalid json has been returned from SRS, cannot parse response to json.", ex));
       } catch (Exception ex) {
         logger.warn("getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}", request.getRequestId(), request.getVerb()
           .value(), ex.getMessage());
