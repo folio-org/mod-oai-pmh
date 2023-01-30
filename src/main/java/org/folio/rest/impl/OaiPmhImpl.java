@@ -57,6 +57,8 @@ public class OaiPmhImpl implements Oai {
                             String from, String until, String set, String metadataPrefix,
                             Map<String, String> okapiHeaders,
                             Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+    logger.info("getOaiRecords:: parameters verb: {}, identifier: {}, resumptionToken: {}, from: {}, until: {}, set: {}, metadataPrefix: {}",
+      verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
       .onSuccess(v -> {
@@ -91,6 +93,7 @@ public class OaiPmhImpl implements Oai {
           List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
           requestId = setupRequestIdIfAbsent(request, generatedRequestId);
           if (isNotEmpty(errors)) {
+            logger.info("getOaiRecords:: Validation errors {} for verb {} for requestId {}", errors.size(), verb, request.getRequestId());
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
             asyncResultHandler.handle(succeededFuture(responseHelper.buildFailureResponse(oaipmh, request)));
@@ -105,11 +108,11 @@ public class OaiPmhImpl implements Oai {
             } else {
               verbHelper = HELPERS.get(verbType);
             }
+            logger.info("getOaiRecords:: Use {} for requestId {}", verbHelper.getClass().getCanonicalName(),  request.getRequestId());
             verbHelper
               .handle(request, vertxContext)
               .compose(response -> {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
-                logger.debug("{} response: {}", verb, response.getEntity());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
               }).onFailure(t-> {
@@ -118,6 +121,7 @@ public class OaiPmhImpl implements Oai {
                });
           }
         } catch (Exception e) {
+          logger.warn("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
           RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
           asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
         }
@@ -126,6 +130,7 @@ public class OaiPmhImpl implements Oai {
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
     final Response errorResponse;
+    logger.warn("getOaiRecords::  RequestId {} completed with error {}", request.getRequestId(), t.getMessage());
     if (t instanceof IllegalArgumentException) {
       final ResponseHelper rh = ResponseHelper.getInstance();
       OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);

@@ -62,7 +62,7 @@ public class GetOaiRepositoryInfoHelper extends AbstractHelper {
 
       promise.complete(getResponseHelper().buildSuccessResponse(oai));
     } catch (Exception e) {
-      logger.error("Error happened while processing Identify verb request.", e);
+      logger.warn("For requestId {} error happened while processing Identify verb request {}", request.getRequestId(), e.getMessage());
       promise.fail(e);
     }
     return promise.future();

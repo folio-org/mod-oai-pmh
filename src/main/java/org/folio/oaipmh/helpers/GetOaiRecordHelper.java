@@ -19,6 +19,8 @@ import java.util.List;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 
@@ -32,6 +34,8 @@ import javax.ws.rs.core.Response;
 
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
+  private static final Logger logger = LogManager.getLogger(GetOaiRecordHelper.class);
+
   @Override
   public Future<Response> handle(Request request, Context ctx) {
     Promise<Response> promise = Promise.promise();
@@ -42,12 +46,15 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       }
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
+        logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
         requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
+        logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
+      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future();
