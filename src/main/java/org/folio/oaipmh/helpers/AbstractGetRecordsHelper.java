@@ -150,8 +150,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
       }
+      logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
       requestAndProcessSrsRecords(request, ctx, promise, false);
     } catch (Exception e) {
+      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
@@ -216,16 +218,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
         } else {
           String verbName = request.getVerb().value();
-          logger.error("{} response from Inventory.", verbName);
+          logger.warn("requestAndProcessInventoryRecords:: {} response from Inventory for requestId {}", verbName, request.getRequestId());
           throw new IllegalStateException(handler.cause());
         }
       } catch (DecodeException ex) {
-        String msg = "Invalid json has been returned from Inventory, cannot parse response to json.";
-        logger.error(msg, ex);
-        promise.fail(new IllegalStateException(msg, ex));
+        logger.warn("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
+        promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
       } catch (Exception ex) {
-        logger.error("Exception getting {}.", request.getVerb()
-          .value(), ex);
+        logger.warn("requestAndProcessInventoryRecords:: Exception getting {} for requestId {}, errors message {}", request.getVerb()
+          .value(), request.getRequestId(), ex.getMessage());
         promise.fail(ex);
       }
     });
@@ -242,7 +243,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
       List<Rule> rules = getDefaultRulesFromFile();
       String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException ->
-        logger.error("Exception occurred while mapping, exception: {}, inventory instance: {}", translationException.getCause(), instance)));
+        logger.warn("generateRecordsOnTheFly:: Exception occurred for requestId {} while mapping, exception: {}, inventory instance: {}", request.getRequestId(), translationException.getCause(), instance)));
       enrichWithParsedRecord((JsonObject) item, processedRecord);
     });
   }
@@ -299,20 +300,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
-            logger.error("{} response from SRS status code: {}: {}.", verbName, statusMessage, statusCode);
+            logger.warn("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
             throw new IllegalStateException(response.statusMessage());
           }
         } else {
-          var msg = "Cannot obtain srs records. Got failed async result.";
-          promise.fail(new IllegalStateException(msg, asyncResult.cause()));
+          logger.warn("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());
+          promise.fail(new IllegalStateException("Cannot obtain srs records. Got failed async result.", asyncResult.cause()));
         }
       } catch (DecodeException ex) {
-        String msg = "Invalid json has been returned from SRS, cannot parse response to json.";
-        logger.error(msg, ex);
-        promise.fail(new IllegalStateException(msg, ex));
+        logger.warn("getSrsRecordsBodyHandler:: Invalid json from SRS, cannot parse it for requestId {}. Errors message {}", request.getRequestId(), ex.getMessage());
+        promise.fail(new IllegalStateException("Invalid json has been returned from SRS, cannot parse response to json.", ex));
       } catch (Exception ex) {
-        logger.error("Exception getting {}.", request.getVerb()
-          .value(), ex);
+        logger.warn("getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}", request.getRequestId(), request.getVerb()
+          .value(), ex.getMessage());
         promise.fail(ex);
       }
     };
@@ -331,7 +331,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       processRecords(ctx, request, srsRecords, inventoryRecords)
         .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
     } else {
-      logger.error("Request from Inventory has been failed.", instancesHandler.cause());
+      logger.warn("handleInventoryResponse:: For requestId {} Request to inventory failed with errors {}", request.getRequestId(), instancesHandler.cause().getMessage());
       promise.fail(instancesHandler.cause());
     }
   }
@@ -596,15 +596,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           adjustItems(instance);
         }
       } else {
-        logger.info("Instance with instanceId {} wasn't in the request.", instanceId);
+        logger.info("enrichInstances:: For requestId {} instance with instanceId {} wasn't in the request", request.getRequestId(), instanceId);
       }
     });
     jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
         if (invalidResponseReceivedAndProcessed) {
           return;
         }
-        logger.error("Error has been occurred at JsonParser while reading data from items-and-holdings response. Message:{}", throwable.getMessage(),
-          throwable);
+        logger.warn("enrichInstances:: For requestId {} error has been occurred at JsonParser for items-and-holdings response, errors {}", request.getRequestId(),  throwable.getMessage());
         promise.fail(throwable);
       })
     );
