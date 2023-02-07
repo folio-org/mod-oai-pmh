@@ -1,7 +1,6 @@
 package org.folio.oaipmh.helpers;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
 import static org.hamcrest.CoreMatchers.is;
@@ -21,11 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
+import org.folio.oaipmh.helpers.storage.SourceRecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +30,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class StorageHelperTest {
   private static final Logger logger = LogManager.getLogger(StorageHelperTest.class);
@@ -119,6 +118,16 @@ class StorageHelperTest {
     JsonArray items = getStorageHelper(SOURCE_RECORD_STORAGE).getRecordsItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(1)));
+  }
+
+  @ParameterizedTest
+  @ValueSource(chars = { 'a', 'c', 'd', 'n', 'p', 's' })
+  void shouldMarkRecordAsDeletedOnlyWhenLeader05IsD(Character character) {
+    var leader = new StringBuilder("12345ccm a2200361   4500");
+    leader.setCharAt(5, character);
+    JsonObject entry = new JsonObject(String.format("{ \"parsedRecord\": { \"content\": { \"leader\": \"%s\" } }, \"deleted\": false }", leader));
+    var isDeleted = getStorageHelper(SOURCE_RECORD_STORAGE).isRecordMarkAsDeleted(entry);
+    assertThat(isDeleted, is(character.equals('d')));
   }
 
   private StorageHelper getStorageHelper(String storageType) {

@@ -408,7 +408,7 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   /**
-   * Filter records from source-record-storage by the fields "deleted = true" or MARC Leader 05 is "d", "s" or "x"
+   * Filter records from source-record-storage by the fields "deleted = true" or MARC Leader 05 is "d"
    * For old behavior (repository.deletedRecords is "no") fields are checked only according to the previously described criteria.
    * In case when repository.deletedRecords is "persistent" or "transient" checked suppressedRecordsProcessing config setting
    *
