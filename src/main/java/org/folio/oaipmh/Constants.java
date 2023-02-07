@@ -37,8 +37,15 @@ public final class Constants {
   public static final String REPOSITORY_SUPPRESSED_RECORDS_PROCESSING = "repository.suppressedRecordsProcessing";
   public static final String REPOSITORY_ENABLE_OAI_SERVICE = "repository.enableOaiService";
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
+  public static final String REPOSITORY_FETCHING_CHUNK_SIZE = "repository.fetchingChunkSize";
+  public static final String REPOSITORY_RECORDS_SOURCE = "repository.recordsSource";
+
+  public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
+  public static final String INVENTORY = "Inventory";
+  public static final String SRS = "Source record storage";
 
   public static final String SOURCE_RECORD_STORAGE = "SRS";
+  public static final String INVENTORY_RECORD_STORAGE = "INVENTORY";
 
   public static final String PARSED_RECORD = "parsedRecord";
   public static final String CONTENT = "content";
@@ -74,7 +81,7 @@ public final class Constants {
   public static final String LIST_NO_REQUIRED_PARAM_ERROR = "Missing required parameters: metadataPrefix";
   public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "Verb '%s', argument 'resumptionToken' is exclusive, no others maybe specified with it.";
   public static final String INVALID_RESUMPTION_TOKEN = "Verb '%s', argument resumptionToken is invalid";
-  public static final String NO_RECORD_FOUND_ERROR = "There is no any record found matching search criteria";
+  public static final String NO_RECORD_FOUND_ERROR = "There were no records found matching the search criteria";
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
@@ -88,6 +95,19 @@ public final class Constants {
   public static final String MATERIAL_TYPES_URI = "/material-types";
   public static final String RESOURCE_TYPES_URI = "/instance-types";
   public static final String INSTANCE_FORMATS_URI = "/instance-formats";
+  public static final String IDENTIFIER_TYPES_URI = "/identifier-types";
+  public static final String ELECTRONIC_ACCESS_RELATIONSHIPS_URI = "/electronic-access-relationships";
+  public static final String ALTERNATIVE_TITLE_TYPES_URI = "/alternative-title-types";
+  public static final String CALL_NUMBER_TYPES_URI = "/call-number-types";
+  public static final String CAMPUSES_URI = "/location-units/campuses";
+  public static final String CONTRIBUTOR_NAME_TYPES_URI = "/contributor-name-types";
+  public static final String HOLDINGS_NOTE_TYPES_URI = "/holdings-note-types";
+  public static final String INSTITUTIONS_URI = "/location-units/institutions";
+  public static final String ITEM_NOTE_TYPES_URI = "/item-note-types";
+  public static final String LIBRARIES_URI = "/location-units/libraries";
+  public static final String LOANTYPES_URI = "/loan-types";
+  public static final String MODES_OF_ISSUANCE_URI = "/modes-of-issuance";
+  public static final String NATURE_OF_CONTENT_TERMS_URI = "/nature-of-content-terms";
 
   public static final String LOCATION = "location";
   public static final String ILL_POLICIES = "illPolicy";
@@ -98,5 +118,12 @@ public final class Constants {
   public static final String STATUS_CODE = "statusCode";
   public static final String STATUS_MESSAGE = "statusMessage";
 
+  public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
+  public static final String INSTANCE_ID_FIELD_NAME = "instanceId";
+  public static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
+  public static final String INVENTORY_STORAGE = "inventory-storage";
+
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
+
+  public static final String HTTPS = "https:";
 }

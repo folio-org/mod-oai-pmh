@@ -3,14 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
@@ -18,17 +13,18 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
 
-  private static final Logger logger = LogManager.getLogger(GetOaiIdentifiersHelper.class);
-
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
-    Promise<javax.ws.rs.core.Response> promise = Promise.promise();
+    Promise<Response> promise = Promise.promise();
     try {
       ResponseHelper responseHelper = getResponseHelper();
       List<OAIPMHerrorType> errors = validateRequest(request);
@@ -42,7 +38,12 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
         promise.complete(getResponseHelper().buildFailureResponse(oai, request));
         return promise.future();
       }
-      requestAndProcessSrsRecords(request, ctx, promise);
+      var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+      if (recordsSource.equals(INVENTORY)) {
+        requestAndProcessInventoryRecords(request, ctx, promise);
+      } else {
+        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
+      }
     } catch (Exception e) {
       handleException(promise, e);
     }
@@ -55,9 +56,9 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected Response processRecords(Context ctx, Request request, JsonObject srsRecords) {
-    OAIPMH oaipmh = buildListIdentifiers(request, srsRecords);
-    return buildResponse(oaipmh, request);
+  protected Future<Response> processRecords(Context ctx, Request request, JsonObject srsRecords, JsonObject inventoryRecords) {
+    OAIPMH oaipmhResult = buildListIdentifiers(request, srsRecords, inventoryRecords);
+    return Future.succeededFuture(buildResponse(oaipmhResult, request));
   }
 
   /**
@@ -70,47 +71,6 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
     } else {
       return getResponseHelper().buildSuccessResponse(oai);
     }
-  }
-
-  /**
-   * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
-   *
-   * @param request           request
-   * @param srsRecords the response from the storage which contains items
-   * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
-   */
-  private OAIPMH buildListIdentifiers(Request request, JsonObject srsRecords) {
-
-    ResponseHelper responseHelper = getResponseHelper();
-    JsonArray instances = storageHelper.getItems(srsRecords);
-    Integer totalRecords = storageHelper.getTotalRecords(srsRecords);
-    if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-      return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
-    }
-    if (instances != null && !instances.isEmpty()) {
-      logger.debug("{} entries retrieved out of {}.", instances.size(), totalRecords);
-
-      ListIdentifiersType identifiers = new ListIdentifiersType()
-        .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
-
-      String identifierPrefix = request.getIdentifierPrefix();
-      instances.stream()
-        .map(object -> (JsonObject) object)
-        .filter(instance -> StringUtils.isNotEmpty(storageHelper.getIdentifierId(instance)))
-        .filter(instance -> filterInstance(request, instance))
-        .map(instance -> addHeader(identifierPrefix, request, instance))
-        .forEach(identifiers::withHeaders);
-
-      if (identifiers.getHeaders().isEmpty()) {
-        OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
-        return oaipmh.withErrors(createNoRecordsFoundError());
-      }
-      ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
-      OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request).withListIdentifiers(identifiers);
-      addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
-      return oaipmh;
-    }
-    return responseHelper.buildOaipmhResponseWithErrors(request, createNoRecordsFoundError());
   }
 
   @Override

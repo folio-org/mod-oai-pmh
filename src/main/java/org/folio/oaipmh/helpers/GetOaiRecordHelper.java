@@ -2,8 +2,12 @@ package org.folio.oaipmh.helpers;
 
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.INVALID_IDENTIFIER_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.RECORD_METADATA_PREFIX_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.RECORD_NOT_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
@@ -12,15 +16,49 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+
 import org.openarchives.oai._2.GetRecordType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
+import javax.ws.rs.core.Response;
+
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
+
+  private static final Logger logger = LogManager.getLogger(GetOaiRecordHelper.class);
+
+  @Override
+  public Future<Response> handle(Request request, Context ctx) {
+    Promise<Response> promise = Promise.promise();
+    try {
+      List<OAIPMHerrorType> errors = validateRequest(request);
+      if (!errors.isEmpty()) {
+        return buildResponseWithErrors(request, promise, errors);
+      }
+      var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+      if (recordsSource.equals(INVENTORY)) {
+        logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
+        requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
+          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
+      } else {
+        logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
+        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
+      }
+    } catch (Exception e) {
+      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
+      handleException(promise, e);
+    }
+    return promise.future();
+  }
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {

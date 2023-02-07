@@ -1,0 +1,14 @@
+{
+  "electronicAccessRelationships": [
+    {
+      "id": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+      "name": "Resource",
+      "metadata": {
+        "createdDate": "2023-01-16T01:53:27.092+00:00",
+        "updatedDate": "2023-01-16T01:53:27.092+00:00"
+      },
+      "source": "folio"
+    }
+  ],
+  "totalRecords": 1
+}
