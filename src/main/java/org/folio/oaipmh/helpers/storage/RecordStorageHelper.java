@@ -111,7 +111,7 @@ public class RecordStorageHelper implements StorageHelper {
   }
 
   private boolean isLeaderValueContainsDeletedFlag(String leaderValue) {
-    final String leaderDeletedRegexp = "\\d{5}[dsx]";
+    final String leaderDeletedRegexp = "\\d{5}d";
     final Pattern pattern = Pattern.compile(leaderDeletedRegexp);
     if (leaderValue != null) {
       return pattern.matcher(leaderValue).find();
