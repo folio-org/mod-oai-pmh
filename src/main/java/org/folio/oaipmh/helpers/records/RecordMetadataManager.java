@@ -47,6 +47,8 @@ public class RecordMetadataManager {
   private static final int SECOND_INDICATOR_INDEX = 1;
   private static final String LOCATION = "location";
 
+  private static final String DEFAULT_INDICATORS = "4, ";
+
   private StorageHelper storageHelper = StorageHelper.getInstance();
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
@@ -66,11 +68,11 @@ public class RecordMetadataManager {
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
     indicatorsMap.put("No display constant generated", "4,8");
-    indicatorsMap.put("", "4, ");
+    indicatorsMap.put("", DEFAULT_INDICATORS);
     indicatorsMap.put("Related resource", "4,2");
     indicatorsMap.put("Resource", "4,0");
     indicatorsMap.put("Version of resource", "4,1");
-    indicatorsMap.put("No information provided", "4, ");
+    indicatorsMap.put("No information provided", DEFAULT_INDICATORS);
 
     generalInfoFieldPredicate = jsonObject -> {
       if (jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER)) {
@@ -240,7 +242,7 @@ public class RecordMetadataManager {
   private List<String> resolveIndicatorsValue(JsonObject electronicAccess) {
     String name = electronicAccess.getString(NAME);
     String key = StringUtils.isNotEmpty(name) ? name : EMPTY;
-    String indicatorsInString = indicatorsMap.get(key);
+    String indicatorsInString = indicatorsMap.getOrDefault(key, DEFAULT_INDICATORS);
     if (indicatorsInString != null) {
       return Arrays.asList(indicatorsInString.split(","));
     } else {
