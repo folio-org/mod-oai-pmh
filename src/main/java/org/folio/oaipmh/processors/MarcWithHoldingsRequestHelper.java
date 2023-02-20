@@ -24,6 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.Request;
@@ -189,6 +190,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       handleException(oaipmhResponsePromise, e);
     }
     return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
+  }
+
+  @Override
+  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    promise.complete(response.bodyAsJsonObject());
   }
 
 
@@ -723,7 +729,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               handleException(promise, new IllegalStateException(errorMsg));
               return;
             }
-            handleSrsResponse(promise, srsResponse.body(), request);
+            handleSrsResponse(promise, srsResponse.body(), request, listOfIds);
           } else {
             logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
               .getMessage(), asyncResult.cause());
@@ -738,14 +744,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         handleException(promise, e);
       }
     } else {
-      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray());
+      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray(), listOfIds);
     }
   }
 
   private void doGetRequestToInventory(Request request, Promise<Map<String, JsonObject>> promise, Map<String, JsonObject> result,
-                                       JsonArray records) {
+                                       JsonArray records, List<String> listOfIds) {
     int limit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
+    requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, listOfIds)).onComplete(instancesHandler -> {
       if (instancesHandler.succeeded()) {
         var inventoryRecords = instancesHandler.result();
         generateRecordsOnTheFly(request, inventoryRecords);
@@ -762,6 +768,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         promise.fail(instancesHandler.cause());
       }
     });
+  }
+
+  private List<String> getInstanceIdForInventorySearch(Request request, List<String> listOfIds) {
+    if (nonNull(listOfIds)) {
+      return listOfIds;
+    }
+    return request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null;
   }
 
   private void retrySRSRequest(Vertx vertx, boolean deletedRecordSupport,
@@ -785,7 +798,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request));
   }
 
-  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request) {
+  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request, List<String> listOfIds) {
     final Map<String, JsonObject> result = Maps.newHashMap();
     try {
       final Object jsonResponse = buffer.toJson();
@@ -794,7 +807,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         final JsonArray records = entries.getJsonArray("sourceRecords");
         var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
         if (!recordsSource.equals(SRS)) {
-          doGetRequestToInventory(request, promise, result, records);
+          doGetRequestToInventory(request, promise, result, records, listOfIds);
         } else {
           buildResult(records, result, promise);
         }

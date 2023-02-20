@@ -2,8 +2,11 @@ package org.folio.oaipmh.helpers;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import org.folio.oaipmh.Constants;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
@@ -30,6 +33,11 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
       return Future.succeededFuture(retrieveMetadataFormatsWithNoIdentifier(request));
     }
     return super.handle(request, ctx);
+  }
+
+  @Override
+  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    promise.complete(response.bodyAsJsonObject());
   }
 
   @Override

@@ -3,7 +3,11 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.openarchives.oai._2.OAIPMH;
@@ -13,14 +17,24 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import javax.ws.rs.core.Response;
 import java.util.List;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
+
+  private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
+  private static final String INVENTORY_UPDATED_INSTANCES_PARAMS = "?deletedRecordSupport=%s&skipSuppressedFromDiscoveryRecords=%s&onlyInstanceUpdateDate=%s";
+  private static final String JSON_OBJECTS_REGEX = "(?<=\\})(?=\\{)";
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -38,12 +52,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
         promise.complete(getResponseHelper().buildFailureResponse(oai, request));
         return promise.future();
       }
-      var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
-      if (recordsSource.equals(INVENTORY)) {
-        requestAndProcessInventoryRecords(request, ctx, promise);
-      } else {
-        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
-      }
+      requestAndProcessInventoryRecords(request, ctx, promise);
     } catch (Exception e) {
       handleException(promise, e);
     }
@@ -79,6 +88,44 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
       oaipmh.getListIdentifiers()
         .withResumptionToken(resumptionToken);
     }
+  }
+
+  @Override
+  protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds) {
+    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    var updatedAfter = request.getFrom() == null ? EMPTY :
+      "&startDate=" + dateFormat.format(convertStringToDate(request.getFrom(), false, true));
+    var updatedBefore = request.getUntil() == null ? EMPTY :
+      "&endDate=" + dateFormat.format(convertStringToDate(request.getUntil(), true, true));
+
+    var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
+
+    var includeHoldingsAndItemsUpdatedDate = request.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName());
+
+    Promise<JsonObject> promise = Promise.promise();
+    processRequest(promise, listOfIds, request, INVENTORY_UPDATED_INSTANCES_ENDPOINT, INVENTORY_UPDATED_INSTANCES_PARAMS + updatedAfter + updatedBefore,
+      Boolean.toString(deletedRecordsSupport), Boolean.toString(discoverySuppress), Boolean.toString(!includeHoldingsAndItemsUpdatedDate));
+    return promise.future();
+  }
+
+  @Override
+  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    var jsonStrings = isNull(response.body()) ? new String[]{} : response.bodyAsString().split(JSON_OBJECTS_REGEX);
+    var jsonArr = new JsonArray();
+    for (var jsonString: jsonStrings) {
+      var json = new JsonObject(jsonString);
+      if (recordsSource.equals(SRS) && json.getString("source").equals("MARC") ||
+        recordsSource.equals(INVENTORY) && json.getString("source").equals("FOLIO") ||
+        recordsSource.equals(SRS_AND_INVENTORY)) {
+        json.put("metadata", new JsonObject().put("updatedDate", json.getString("updatedDate")));
+        jsonArr.add(json);
+      }
+    }
+    var jsonInstances = new JsonObject().put("instances", jsonArr).put("totalRecords", jsonStrings.length);
+    promise.complete(jsonInstances);
   }
 
 }

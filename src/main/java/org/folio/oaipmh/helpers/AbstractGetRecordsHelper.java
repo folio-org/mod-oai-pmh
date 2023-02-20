@@ -72,6 +72,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -124,8 +125,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
-  private static final String QUERY_TEMPLATE = "(source==FOLIO%s%s%s%s)";
-
+  private static final String INVENTORY_INSTANCES_PARAMS = "?limit=%s&query=(source==FOLIO%s%s%s%s)";
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
 
@@ -211,7 +211,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(handler -> {
+    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null).onComplete(handler -> {
       try {
         if (handler.succeeded()) {
           var inventoryRecords = handler.result();
@@ -247,6 +247,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       enrichWithParsedRecord((JsonObject) item, processedRecord);
     });
   }
+
+  protected abstract void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response);
 
   private void enrichWithParsedRecord(JsonObject instance, String marcRecord) {
     var parsedRecord = new JsonObject();
@@ -291,7 +293,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler ->
+              requestFromInventory(request, limit, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null).onComplete(instancesHandler ->
                 handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -487,7 +489,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestFromInventory(request, 1, instanceId).compose(instance -> {
+      return requestFromInventory(request, 1, List.of(instanceId)).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
@@ -511,29 +513,35 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  protected Future<JsonObject> requestFromInventory(Request request, int limit, String instanceId) {
+  protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds) {
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
 
-    Promise<JsonObject> promise = Promise.promise();
-    var webClient = WebClientProvider.getWebClient();
-    var queryId = nonNull(instanceId) ? " and id==" + instanceId : EMPTY;
-    var queryFrom = nonNull(updatedAfter) ?
+    var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
+    var dateFrom = nonNull(updatedAfter) && isNull(listOfIds) ?
       " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
-    var queryUntil = nonNull(updatedBefore) ?
+    var dateUntil = nonNull(updatedBefore) && isNull(listOfIds) ?
       " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
     var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
     var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
       EMPTY;
 
-    String query = "limit=" + limit + "&query=" +
-      URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
-    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
+    Promise<JsonObject> promise = Promise.promise();
+    processRequest(promise, listOfIds, request, INSTANCES_STORAGE_ENDPOINT, INVENTORY_INSTANCES_PARAMS,
+      String.valueOf(limit), URLEncoder.encode(queryId, Charset.defaultCharset()), URLEncoder.encode(dateFrom, Charset.defaultCharset()),
+      URLEncoder.encode(dateUntil, Charset.defaultCharset()), querySuppressFromDiscovery);
+    return promise.future();
+  }
+
+  protected void processRequest(Promise<JsonObject> promise, List<String> listOfIds, Request request, String endpoint,
+                                String paramsTemplate, String ... params) {
+    var webClient = WebClientProvider.getWebClient();
+    String uri = request.getOkapiUrl() + endpoint + format(paramsTemplate, params);
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
       httpRequest.ssl(true);
@@ -543,20 +551,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.send().onSuccess(response -> {
         if (response.statusCode() == 200) {
-          promise.complete(response.bodyAsJsonObject());
+          handleResponse(promise, request, response);
         } else {
-          String errorMsg = nonNull(instanceId) ?
-            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, instanceId, response.statusCode(), response.statusMessage()) :
+          String errorMsg = nonNull(listOfIds) ?
+            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           promise.fail(new IllegalStateException(errorMsg));
         }
       })
       .onFailure(throwable -> {
-        logger.error(nonNull(instanceId) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + instanceId :
+        logger.error(nonNull(listOfIds) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
           CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
         promise.fail(throwable);
       });
-    return promise.future();
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {

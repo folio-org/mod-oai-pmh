@@ -3,6 +3,9 @@ package org.folio.oaipmh.helpers;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -39,7 +42,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
         int batchSize = Integer.parseInt(
           RepositoryConfigurationUtil.getProperty(request.getRequestId(),
             REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-        requestFromInventory(request, batchSize, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
+        requestFromInventory(request, batchSize, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
@@ -48,6 +51,11 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
       handleException(promise, e);
     }
     return promise.future();
+  }
+
+  @Override
+  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    promise.complete(response.bodyAsJsonObject());
   }
 
   @Override

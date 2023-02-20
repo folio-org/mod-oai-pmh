@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.storage;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -40,16 +41,20 @@ public class RecordStorageHelper implements StorageHelper {
     JsonObject metadata = entry.getJsonObject("metadata");
     Instant instant = Instant.EPOCH;
     if (metadata != null) {
+      String lastModifiedDate = metadata.getString("updatedDate");
       try {
-        String lastModifiedDate = metadata.getString("updatedDate");
         if (lastModifiedDate == null) {
           // According to metadata.schema the createdDate is required so it should be always available
           lastModifiedDate = metadata.getString("createdDate");
         }
         instant = DateUtils.parseDateStrictly(lastModifiedDate, patterns).toInstant();
       } catch (ParseException parseException) {
-        logger.error("Unable to parse the last modified date.", parseException);
-        return instant.truncatedTo(ChronoUnit.SECONDS);
+        try {
+          instant = Instant.parse(lastModifiedDate);
+        } catch (DateTimeParseException dateTimeParseException) {
+          logger.error("Unable to parse the last modified date.", parseException);
+          return instant.truncatedTo(ChronoUnit.SECONDS);
+        }
       }
     }
     return instant.truncatedTo(ChronoUnit.SECONDS);
@@ -80,7 +85,8 @@ public class RecordStorageHelper implements StorageHelper {
   public String getIdentifierId(final JsonObject entry) {
     Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
     return jsonObject.map(obj -> obj.getString(INSTANCE_ID))
-      .orElse(Optional.ofNullable(entry.getString(ID)).orElse(""));
+      .orElse(Optional.ofNullable(entry.getString(ID))
+        .orElse(Optional.ofNullable(entry.getString(INSTANCE_ID)).orElse("")));
   }
 
   @Override

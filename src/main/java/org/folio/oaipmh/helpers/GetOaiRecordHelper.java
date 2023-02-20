@@ -19,6 +19,9 @@ import java.util.List;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
@@ -47,7 +50,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
-        requestFromInventory(request, 1, request.getIdentifier() != null ? request.getStorageIdentifier() : null)
+        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
@@ -58,6 +61,11 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       handleException(promise, e);
     }
     return promise.future();
+  }
+
+  @Override
+  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    promise.complete(response.bodyAsJsonObject());
   }
 
   @Override
