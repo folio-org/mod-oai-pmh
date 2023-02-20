@@ -5,6 +5,44 @@
   "natureOfContent": [],
   "holdings": [
     {
+      "id": "6bd89306-c546-4d3e-9597-d5d41dd1e463",
+      "notes": [],
+      "location": {
+        "effectiveLocation": {
+          "code": "E",
+          "name": "Online",
+          "campusName": "Online",
+          "libraryName": "Online",
+          "institutionName": "Københavns Universitet"
+        },
+        "permanentLocation": {},
+        "temporaryLocation": {}
+      },
+      "formerIds": [],
+      "callNumber": {
+        "prefix": "call numb prefix __002",
+        "suffix": "call numb suffix__002",
+        "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
+        "typeName": "LC Modified",
+        "callNumber": "call number __002"
+      },
+      "copyNumber": "call number__002",
+      "holdingsType": "Electronic",
+      "electronicAccess": [],
+      "statisticalCodes": [{
+        "id": "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be",
+        "code": "vidstream",
+        "name": "Streaming video (vidstream)",
+        "source": "folio",
+        "statisticalCodeType": "DISC (Discovery)"
+      }
+      ],
+      "holdingsStatements": [],
+      "suppressFromDiscovery": false,
+      "holdingsStatementsForIndexes": [],
+      "holdingsStatementsForSupplements": []
+    },
+    {
       "id": "afd19b0d-e649-43c5-abb2-f201549d05ff",
       "notes": [
         {
