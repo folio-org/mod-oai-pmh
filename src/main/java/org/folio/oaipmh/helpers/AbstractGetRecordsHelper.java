@@ -708,12 +708,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(ITEMS);
     var excludeHoldingsIds = new HashSet<String>();
-    for (Object item: itemsJson) {
+    for (Object item : itemsJson) {
       JsonObject itemJson = (JsonObject) item;
       excludeHoldingsIds.add(itemJson.getString(HOLDINGS_RECORD_ID));
     }
     for (Object holding : holdingsJson) {
-      if (holding instanceof JsonObject ) {
+      if (holding instanceof JsonObject) {
         JsonObject holdingJson = (JsonObject) holding;
         if (excludeHoldingsIds.contains(holdingJson.getString(ID))) continue;
         JsonObject callNumberJson = holdingJson.getJsonObject(CALL_NUMBER);
