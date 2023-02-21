@@ -20,13 +20,13 @@
       },
       "formerIds": [],
       "callNumber": {
-        "prefix": "call numb prefix __002",
-        "suffix": "call numb suffix__002",
+        "prefix": "call number prefix",
+        "suffix": "call number suffix",
         "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
         "typeName": "LC Modified",
-        "callNumber": "call number __002"
+        "callNumber": "call number"
       },
-      "copyNumber": "call number__002",
+      "copyNumber": "copy number",
       "holdingsType": "Electronic",
       "electronicAccess": [],
       "statisticalCodes": [{
