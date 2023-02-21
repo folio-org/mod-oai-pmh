@@ -190,6 +190,7 @@ public class OkapiMockServer {
   private static final String NATURE_OF_CONTENT_TERMS_JSON_PATH = "/filtering-conditions/natureOfContentTerms.json";
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
+  private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
@@ -376,6 +377,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON);
       } else if (uri.contains(TEN_INSTANCES_WITH_HOLDINGS_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON_WITHHOLDINGS);
+      } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_VIEW);
       } else {
         logger.debug("No mocks for the response, returning the default instance id.");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);

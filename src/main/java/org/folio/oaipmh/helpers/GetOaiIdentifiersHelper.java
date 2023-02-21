@@ -15,11 +15,14 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.List;
 
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
@@ -105,15 +108,22 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
     var includeHoldingsAndItemsUpdatedDate = request.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     Promise<JsonObject> promise = Promise.promise();
-    processRequest(promise, listOfIds, request, INVENTORY_UPDATED_INSTANCES_ENDPOINT, INVENTORY_UPDATED_INSTANCES_PARAMS + updatedAfter + updatedBefore,
-      Boolean.toString(deletedRecordsSupport), Boolean.toString(discoverySuppress), Boolean.toString(!includeHoldingsAndItemsUpdatedDate));
+    var params = format(INVENTORY_UPDATED_INSTANCES_PARAMS + updatedAfter + updatedBefore, deletedRecordsSupport,
+      discoverySuppress, !includeHoldingsAndItemsUpdatedDate);
+    processRequest(promise, listOfIds, request, INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
     return promise.future();
   }
 
   @Override
   protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+    int batchSize = Integer.parseInt(
+      RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     var jsonStrings = isNull(response.body()) ? new String[]{} : response.bodyAsString().split(JSON_OBJECTS_REGEX);
+    var totalRecords = jsonStrings.length;
+    var upperIndex = request.getOffset() + batchSize + 1;
+    jsonStrings = Arrays.copyOfRange(jsonStrings, request.getOffset(), upperIndex < totalRecords ? upperIndex : totalRecords);
     var jsonArr = new JsonArray();
     for (var jsonString: jsonStrings) {
       var json = new JsonObject(jsonString);
@@ -124,7 +134,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
         jsonArr.add(json);
       }
     }
-    var jsonInstances = new JsonObject().put("instances", jsonArr).put("totalRecords", jsonStrings.length);
+    var jsonInstances = new JsonObject().put("instances", jsonArr).put("totalRecords", totalRecords);
     promise.complete(jsonInstances);
   }
 

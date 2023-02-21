@@ -125,7 +125,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
-  private static final String INVENTORY_INSTANCES_PARAMS = "?limit=%s&query=(source==FOLIO%s%s%s%s)";
+  private static final String INVENTORY_INSTANCES_PARAMS = "?limit=%s&query=";
+  private static final String INVENTORY_INSTANCES_QUERY = "(source==FOLIO%s%s%s%s)";
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
 
@@ -532,16 +533,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       EMPTY;
 
     Promise<JsonObject> promise = Promise.promise();
-    processRequest(promise, listOfIds, request, INSTANCES_STORAGE_ENDPOINT, INVENTORY_INSTANCES_PARAMS,
-      String.valueOf(limit), URLEncoder.encode(queryId, Charset.defaultCharset()), URLEncoder.encode(dateFrom, Charset.defaultCharset()),
-      URLEncoder.encode(dateUntil, Charset.defaultCharset()), querySuppressFromDiscovery);
+    var params = format(INVENTORY_INSTANCES_PARAMS, limit) +
+      URLEncoder.encode(format(INVENTORY_INSTANCES_QUERY, queryId, dateFrom, dateUntil, querySuppressFromDiscovery), Charset.defaultCharset());
+    processRequest(promise, listOfIds, request, INSTANCES_STORAGE_ENDPOINT, params);
     return promise.future();
   }
 
-  protected void processRequest(Promise<JsonObject> promise, List<String> listOfIds, Request request, String endpoint,
-                                String paramsTemplate, String ... params) {
+  protected void processRequest(Promise<JsonObject> promise, List<String> listOfIds, Request request, String endpoint, String params) {
     var webClient = WebClientProvider.getWebClient();
-    String uri = request.getOkapiUrl() + endpoint + format(paramsTemplate, params);
+    String uri = request.getOkapiUrl() + endpoint + params;
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
       httpRequest.ssl(true);
