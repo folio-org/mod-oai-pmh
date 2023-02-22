@@ -64,11 +64,6 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
-    promise.complete(response.bodyAsJsonObject());
-  }
-
-  @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
     if (!validateIdentifier(request)) {

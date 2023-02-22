@@ -36,11 +36,6 @@ public class GetOaiMetadataFormatsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
-    promise.complete(response.bodyAsJsonObject());
-  }
-
-  @Override
   protected Future<javax.ws.rs.core.Response> processRecords(Context ctx, Request request, JsonObject srsRecords, JsonObject inventoryRecords) {
     JsonArray instances = new JsonArray();
     if (nonNull(srsRecords)) {

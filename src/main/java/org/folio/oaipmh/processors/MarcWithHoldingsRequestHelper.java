@@ -192,12 +192,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
-  @Override
-  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
-    promise.complete(response.bodyAsJsonObject());
-  }
-
-
   private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder downloadInstancesStatistics) {
     Promise<Void> promise = Promise.promise();
     PostgresClient.getInstance(downloadContext.owner(), tenantId).withTrans(connection -> {

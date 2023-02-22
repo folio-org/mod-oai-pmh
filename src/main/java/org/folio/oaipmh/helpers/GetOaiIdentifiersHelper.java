@@ -9,7 +9,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.rest.tools.utils.TenantTool;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
@@ -21,7 +23,12 @@ import java.util.List;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.oaipmh.Constants.HTTPS;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
@@ -110,12 +117,34 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
     Promise<JsonObject> promise = Promise.promise();
     var params = format(INVENTORY_UPDATED_INSTANCES_PARAMS + updatedAfter + updatedBefore, deletedRecordsSupport,
       discoverySuppress, !includeHoldingsAndItemsUpdatedDate);
-    processRequest(promise, listOfIds, request, INVENTORY_UPDATED_INSTANCES_ENDPOINT, params);
+    var webClient = WebClientProvider.getWebClient();
+    String uri = request.getOkapiUrl() + INVENTORY_UPDATED_INSTANCES_ENDPOINT + params;
+    var httpRequest = webClient.getAbs(uri);
+    if (request.getOkapiUrl().contains(HTTPS)) {
+      httpRequest.ssl(true);
+    }
+    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
+    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
+    httpRequest.send().onSuccess(response -> {
+        if (response.statusCode() == 200) {
+          handleResponse(promise, request, response);
+        } else {
+//          String errorMsg = nonNull(listOfIds) ?
+//            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
+//            format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
+//          promise.fail(new IllegalStateException(errorMsg));
+        }
+      })
+      .onFailure(throwable -> {
+//        logger.error(nonNull(listOfIds) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
+//          CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
+        promise.fail(throwable);
+      });
     return promise.future();
   }
 
-  @Override
-  protected void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
+  private void handleResponse(Promise<JsonObject> promise, Request request, HttpResponse<Buffer> response) {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
