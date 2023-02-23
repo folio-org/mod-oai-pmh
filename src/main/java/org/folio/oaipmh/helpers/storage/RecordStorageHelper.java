@@ -72,7 +72,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public String getRecordId(JsonObject entry) {
-    return Optional.ofNullable(entry.getString(RECORD_ID)).orElse(entry.getString(ID));
+    return Optional.ofNullable(entry.getString(RECORD_ID)).orElse(Optional.ofNullable(entry.getString(ID)).orElse(entry.getString(INSTANCE_ID)));
   }
 
   /**
