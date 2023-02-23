@@ -7,6 +7,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
@@ -115,6 +116,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
   private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
+  private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
@@ -135,7 +137,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private MarcWithHoldingsRequestHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
-    vertx = Vertx.vertx();
+    var vertxOptions = new VertxOptions();
+    vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
+    vertx = Vertx.vertx(vertxOptions);
     downloadContext = vertx.getOrCreateContext();
     saveInstancesExecutor = vertx.createSharedWorkerExecutor("saving-executor", 5);
   }

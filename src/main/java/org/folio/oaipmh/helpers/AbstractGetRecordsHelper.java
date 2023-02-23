@@ -65,6 +65,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String PERMANENT_LOCATION = "permanentLocation";
   private static final String EFFECTIVE_LOCATION = "effectiveLocation";
   private static final String CODE = "code";
+  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
+  private static final String ID = "id";
 
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
@@ -597,13 +600,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (instance != null) {
         enrichDiscoverySuppressed(itemsAndHoldingsFields, instance);
         instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsAndHoldingsFields);
-        // case when no items
-        if (itemsAndHoldingsFields.getJsonArray(ITEMS)
-          .isEmpty()) {
-          enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(instance);
-        } else {
-          adjustItems(instance);
-        }
+        updateItems(instance);
+        addEffectiveLocationCallNumberFromHoldingsWithoutItems(instance);
       } else {
         logger.info("enrichInstances:: For requestId {} instance with instanceId {} wasn't in the request", request.getRequestId(), instanceId);
       }
@@ -713,14 +711,20 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
   }
 
-  private void enrichOnlyEffectiveLocationEffectiveCallNumberFromHoldings(JsonObject instance) {
+  private void addEffectiveLocationCallNumberFromHoldingsWithoutItems(JsonObject instance) {
     JsonArray holdingsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(HOLDINGS);
     JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(ITEMS);
+    var excludeHoldingsIds = new HashSet<String>();
+    for (Object item : itemsJson) {
+      JsonObject itemJson = (JsonObject) item;
+      excludeHoldingsIds.add(itemJson.getString(HOLDINGS_RECORD_ID));
+    }
     for (Object holding : holdingsJson) {
       if (holding instanceof JsonObject) {
         JsonObject holdingJson = (JsonObject) holding;
+        if (excludeHoldingsIds.contains(holdingJson.getString(ID))) continue;
         JsonObject callNumberJson = holdingJson.getJsonObject(CALL_NUMBER);
         JsonObject locationJson = holdingJson.getJsonObject(LOCATION);
         JsonObject effectiveLocationJson = locationJson.getJsonObject(EFFECTIVE_LOCATION);
@@ -736,7 +740,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  private void adjustItems(JsonObject instance) {
+  private void updateItems(JsonObject instance) {
     JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(ITEMS);
     for (Object item: itemsJson) {
