@@ -73,7 +73,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
@@ -567,6 +566,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       });
   }
 
+  /**
+   * This method is overridden by {@link GetOaiIdentifiersHelper} to invoke its own handleResponse.
+   *
+   * @param promise {@link JsonObject} to be returned
+   * @param response response from inventory
+   * @param request this parameter is used in {@link GetOaiIdentifiersHelper#handleResponse(Promise, HttpResponse, Request)}
+   */
   protected void handleResponse(Promise<JsonObject> promise, HttpResponse<Buffer> response, Request request) {
     promise.complete(response.bodyAsJsonObject());
   }

@@ -38,8 +38,9 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
 
   private static final String INVENTORY_UPDATED_INSTANCES_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
-  private static final String INVENTORY_UPDATED_INSTANCES_PARAMS = "?deletedRecordSupport=%s&skipSuppressedFromDiscoveryRecords=%s&onlyInstanceUpdateDate=%s";
+  private static final String INVENTORY_UPDATED_INSTANCES_PARAMS = "?deletedRecordSupport=%s&skipSuppressedFromDiscoveryRecords=%s&onlyInstanceUpdateDate=%s%s%s";
   private static final String JSON_OBJECTS_REGEX = "(?<=\\})(?=\\{)";
+  private static final String SOURCE = "source";
 
   @Override
   public Future<javax.ws.rs.core.Response> handle(Request request, Context ctx) {
@@ -110,8 +111,8 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
     var includeHoldingsAndItemsUpdatedDate = request.getMetadataPrefix().equals(MetadataPrefix.MARC21WITHHOLDINGS.getName());
 
     Promise<JsonObject> promise = Promise.promise();
-    var params = format(INVENTORY_UPDATED_INSTANCES_PARAMS + updatedAfter + updatedBefore, deletedRecordsSupport,
-      discoverySuppress, !includeHoldingsAndItemsUpdatedDate);
+    var params = format(INVENTORY_UPDATED_INSTANCES_PARAMS, deletedRecordsSupport,
+      discoverySuppress, !includeHoldingsAndItemsUpdatedDate, updatedAfter, updatedBefore);
     String uri = request.getOkapiUrl() + INVENTORY_UPDATED_INSTANCES_ENDPOINT + params;
     processRequest(request, promise, uri, listOfIds);
     return promise.future();
@@ -125,9 +126,9 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     var jsonStrings = isNull(response.body()) ? new String[]{} : response.bodyAsString().trim().split(JSON_OBJECTS_REGEX);
     var jsonObjects = Arrays.stream(jsonStrings)
-      .map(jsonString -> new JsonObject(jsonString))
-      .filter(json -> json.containsKey("source") && (recordsSource.equals(SRS) && json.getString("source").equals("MARC") ||
-        recordsSource.equals(INVENTORY) && json.getString("source").equals("FOLIO") ||
+      .map(JsonObject::new)
+      .filter(json -> json.containsKey(SOURCE) && (recordsSource.equals(SRS) && json.getString(SOURCE).equals("MARC") ||
+        recordsSource.equals(INVENTORY) && json.getString(SOURCE).equals("FOLIO") ||
         recordsSource.equals(SRS_AND_INVENTORY))).collect(Collectors.toList());
     var totalRecords = jsonObjects.size();
     var upperIndex = request.getOffset() + batchSize + 1;

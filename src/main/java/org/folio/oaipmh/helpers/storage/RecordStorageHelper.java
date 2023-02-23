@@ -30,6 +30,8 @@ public class RecordStorageHelper implements StorageHelper {
   private static final String EXTERNAL_IDS_HOLDER = "externalIdsHolder";
   private static final String ADDITIONAL_INFO = "additionalInfo";
   private static final String SUPPRESS_DISCOVERY = "suppressDiscovery";
+  private static final String DISCOVERY_SUPPRESS = "discoverySuppress";
+  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
 
   @Override
   public Integer getTotalRecords(JsonObject entries) {
@@ -105,10 +107,9 @@ public class RecordStorageHelper implements StorageHelper {
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
     Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
-    boolean res = jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
-      .orElse(Optional.ofNullable(entry.getBoolean("discoverySuppress"))
-        .orElse(Boolean.valueOf(entry.getString("suppressFromDiscovery"))));
-    return res;
+    return  jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
+      .orElse(Optional.ofNullable(entry.getBoolean(DISCOVERY_SUPPRESS))
+        .orElse(Boolean.valueOf(entry.getString(SUPPRESS_FROM_DISCOVERY))));
   }
 
   private String getLeaderValue(JsonObject entry) {
