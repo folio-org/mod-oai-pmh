@@ -105,8 +105,10 @@ public class RecordStorageHelper implements StorageHelper {
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
     Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
-    return jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
-      .orElse(entry.getBoolean("discoverySuppress"));
+    boolean res = jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
+      .orElse(Optional.ofNullable(entry.getBoolean("discoverySuppress"))
+        .orElse(Boolean.valueOf(entry.getString("suppressFromDiscovery"))));
+    return res;
   }
 
   private String getLeaderValue(JsonObject entry) {

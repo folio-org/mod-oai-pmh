@@ -97,9 +97,11 @@ public class OkapiMockServer {
   static final String THREE_INSTANCES_DATE = "2018-12-12";
   static final String TEN_INSTANCES_WITH_HOLDINGS_DATE = "2018-07-07";
   static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD = "2017-11-11";
+  static final String THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS = "2017-11-13";
   static final String THREE_INSTANCES_DATE_TIME = THREE_INSTANCES_DATE + "T12:12:12Z";
   static final String DATE_FOR_INSTANCES_10_PARTIALLY = "2002-01-29";
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
+  static final String DATE_FOR_INSTANCES_FOLIO_AND_MARC_10 = "2001-03-29";
   static final String INVENTORY_27_INSTANCES_IDS_DATE = "2020-01-01";
   static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
   static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
@@ -145,6 +147,7 @@ public class OkapiMockServer {
   private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instances_1_withNoRecordSource.json";
 
   private static final String INSTANCES_3 = "/instances_3.json";
+  private static final String INSTANCES_3_WITH_DELETED = "/instances_3_with_deleted.json";
   private static final String INSTANCES_4 = "/instances_4_lastWithNoRecordSource.json";
   private static final String INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "/instances_3_lastWithoutExternalIdsHolderField.json";
   private static final String INSTANCES_10_TOTAL_RECORDS_10 = "/instances_10_totalRecords_10.json";
@@ -191,8 +194,12 @@ public class OkapiMockServer {
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
+  private static final String LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW = "list_identifiers_folio_and_marc_view.json";
+  private static final String LIST_IDENTIFIERS_100_VIEW = "list_identifiers_100_view.json";
+  private static final String LIST_IDENTIFIERS_11_VIEW = "list_identifiers_11_view.json";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
+  private static final String INSTANCE_IDS_3_AND_1_DELETED_JSON = "instance_3_and_1_deleted.json";
   private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
   private static final String INSTANCE_IDS_60_JSON = "60_instances_ids.json";
   private static final String SRS_RECORD_TEMPLATE_JSON = "/srs_record_template.json";
@@ -209,6 +216,7 @@ public class OkapiMockServer {
   private static final String TWO_RECORDS_WITH_CYRILLIC_DATA_JSON = "/two_records_with_cyrillic_data.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
   private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
+  private static final String DEFAULT_LIST_IDENTIFIER_JSON = "default_list_identifier.json";
   private static final String SRS_RECORD = "/srs_record.json";
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
@@ -355,6 +363,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON);
       } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
         inventoryViewSuccessResponse(ctx, INVALID_SRS_RECORD_INSTANCE_ID_JSON);
+      } else if (uri.contains("2010-10-10")) {
+        failureResponse(ctx, 500, "");
       } else if (uri.contains(TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML)) {
         inventoryViewSuccessResponse(ctx, TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON);
       } else if (uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
@@ -377,9 +387,24 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON);
       } else if (uri.contains(TEN_INSTANCES_WITH_HOLDINGS_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON_WITHHOLDINGS);
-      } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY) || uri.contains(DATE_FOR_INSTANCES_10)) {
         inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_VIEW);
-      } else {
+      } else if (uri.contains(DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)) {
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW);
+      } else if (uri.contains("2003-01-01")) {
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_100_VIEW);
+      } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_3_AND_1_DELETED_JSON);
+      } else if (uri.contains("2011-11-11")) { // no records found
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+      } else if (uri.contains(THREE_INSTANCES_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_3_AND_1_DELETED_JSON);
+      } else if (uri.contains(DEFAULT_RECORD_DATE)) {
+        inventoryViewSuccessResponse(ctx, DEFAULT_LIST_IDENTIFIER_JSON);
+      } else if (uri.contains("deletedRecordSupport=false&skipSuppressedFromDiscoveryRecords=true&onlyInstanceUpdateDate=true")) {
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_11_VIEW);
+      }
+      else {
         logger.debug("No mocks for the response, returning the default instance id.");
         inventoryViewSuccessResponse(ctx, DEFAULT_INSTANCE_JSON);
       }
@@ -474,7 +499,8 @@ public class OkapiMockServer {
       failureResponse(ctx, 404, "Not found");
     } else  if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_WITH_SOURCE_FOLIO));
-    } else  if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY)) {
+    } else if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY) &&
+      !uri.contains("10000000-0000-4000-a000-000000000222")) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else  if (uri.contains(INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
@@ -561,6 +587,9 @@ public class OkapiMockServer {
         successResponse(ctx, getSrsRecordsPartially(ctx.request().params()));
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
         String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+        successResponse(ctx, json);
+      } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS)) {
+        String json = getJsonWithRecordMarkAsDeleted(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_WITH_DELETED));
         successResponse(ctx, json);
       } else if (uri.contains(SRS_RECORD_WITH_INVALID_JSON_STRUCTURE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_WITH_INVALID_JSON));

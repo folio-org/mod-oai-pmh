@@ -520,7 +520,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
 
     Promise<JsonObject> promise = Promise.promise();
-    var webClient = WebClientProvider.getWebClient();
     var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
     var queryFrom = nonNull(updatedAfter) ?
       " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
@@ -535,6 +534,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     String query = "limit=" + limit + "&query=" +
       URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
+    processRequest(request, promise, uri, listOfIds);
+    return promise.future();
+  }
+
+  protected void processRequest(Request request, Promise<JsonObject> promise, String uri, List<String> listOfIds) {
+    var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
       httpRequest.ssl(true);
@@ -544,7 +549,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.send().onSuccess(response -> {
         if (response.statusCode() == 200) {
-          promise.complete(response.bodyAsJsonObject());
+          handleResponse(promise, response, request);
         } else {
           String errorMsg = nonNull(listOfIds) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
@@ -557,7 +562,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
         promise.fail(throwable);
       });
-    return promise.future();
+  }
+
+  protected void handleResponse(Promise<JsonObject> promise, HttpResponse<Buffer> response, Request request) {
+    promise.complete(response.bodyAsJsonObject());
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {

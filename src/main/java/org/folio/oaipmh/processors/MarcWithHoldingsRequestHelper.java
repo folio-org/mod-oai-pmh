@@ -529,7 +529,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
-              .onComplete(x -> promise.complete(response));
+              .onComplete(x -> promise.tryComplete(response));
     } catch (Exception e) {
       instancesService.updateRequestUpdatedDateAndStatistics(requestId, lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> handleException(promise, e));
@@ -748,14 +748,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, listOfIds)).onComplete(instancesHandler -> {
       if (instancesHandler.succeeded()) {
         var inventoryRecords = instancesHandler.result();
-        generateRecordsOnTheFly(request, inventoryRecords);
-        inventoryRecords.getJsonArray("instances").forEach(instance -> {
-          var jsonInstance = (JsonObject)instance;
-          var externalIdsHolder = new JsonObject();
-          externalIdsHolder.put(INSTANCE_ID_FIELD_NAME, jsonInstance.getString("id"));
-          jsonInstance.put("externalIdsHolder", externalIdsHolder);
-          records.add(jsonInstance);
-        });
+        if (inventoryRecords.containsKey("instances")) {
+          generateRecordsOnTheFly(request, inventoryRecords);
+          inventoryRecords.getJsonArray("instances").forEach(instance -> {
+            var jsonInstance = (JsonObject) instance;
+            var externalIdsHolder = new JsonObject();
+            externalIdsHolder.put(INSTANCE_ID_FIELD_NAME, jsonInstance.getString("id"));
+            jsonInstance.put("externalIdsHolder", externalIdsHolder);
+            records.add(jsonInstance);
+          });
+        }
         buildResult(records, result, promise);
       } else {
         handleException(promise, instancesHandler.cause());
