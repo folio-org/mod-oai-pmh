@@ -138,7 +138,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
     var vertxOptions = new VertxOptions();
     vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
-    vertx = Vertx.vertx(vertxOptions);
+    vertx = Vertx.vertx();
     downloadContext = vertx.getOrCreateContext();
     saveInstancesExecutor = vertx.createSharedWorkerExecutor("saving-executor", 5);
   }
