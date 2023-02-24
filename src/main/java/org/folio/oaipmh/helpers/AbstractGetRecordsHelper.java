@@ -534,7 +534,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
       EMPTY;
 
-    String query = "limit=" + limit + "&query=" +
+    String query = "limit=" + limit + "&offset=" + request.getOffset() + "&query=" +
       URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
     var httpRequest = webClient.getAbs(uri);
