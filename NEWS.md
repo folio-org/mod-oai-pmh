@@ -1,4 +1,27 @@
-## 3.11.0 - Unreleased
+## 3.12.0 - Unreleased
+
+## 3.11.0 (Released)
+
+This release contains minor improvements, bug fixes and adding inventory as records source
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.10.0...v3.11.0)
+
+### Stories
+* [MODOAIPMH-448](https://issues.folio.org/browse/MODOAIPMH-448) Set default settings for OAI-PMH in FOLIO
+* [MODOAIPMH-434](https://issues.folio.org/browse/MODOAIPMH-434) Correct verbiage of error messaged
+* [MODOAIPMH-224](https://issues.folio.org/browse/MODOAIPMH-224) Retrieve records from inventory and SRS for GetRecord response - MARC format
+* [MODOAIPMH-138](https://issues.folio.org/browse/MODOAIPMH-138) Retrieve records from inventory and SRS for ListRecords response - MARC format
+
+### Technical tasks
+* [MODOAIPMH-475](https://issues.folio.org/browse/MODOAIPMH-475) Increase max event loop execute time
+* [MODOAIPMH-463](https://issues.folio.org/browse/MODOAIPMH-463) Align the module with API breaking change
+* [MODOAIPMH-453](https://issues.folio.org/browse/MODOAIPMH-453) Logging improvement - Configuration
+* [MODOAIPMH-422](https://issues.folio.org/browse/MODOAIPMH-422) Make DATABASE_FETCHING_CHUNK_SIZE configurable in the Configuration
+* [MODOAIPMH-395](https://issues.folio.org/browse/MODOAIPMH-395) Logging improvement
+
+### Bug fixes
+* [MODOAIPMH-473](https://issues.folio.org/browse/MODOAIPMH-473) "856" field is omitted in responce for Electronic access relationship type created by user
+* [MODOAIPMH-449](https://issues.folio.org/browse/MODOAIPMH-449) OAI-PMH exposes records as deleted even though their leader 05 is set to 's'
 
 ## 3.10.0 (Released)
 
