@@ -572,7 +572,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return promise.future();
   }
 
-  private String buildQuery(String tenant, String dateFrom, String dateUntil, int limit, int offset) {
+private String buildQuery(String tenant, String dateFrom, String dateUntil, int limit, int offset) {
     String sqlQueryTemplate;
     if (!dateFrom.isEmpty() && !dateUntil.isEmpty()) {
       var sqlQueryBetween = format(SQL_QUERY_DATE_BETWEEN_TEMPLATE, tenant, dateFrom, tenant, dateUntil);
