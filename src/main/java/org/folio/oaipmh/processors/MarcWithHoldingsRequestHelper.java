@@ -244,7 +244,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
           List<JsonObject> instances = fut.result();
           logger.debug("Processing instances: {}.", instances.size());
-          if (CollectionUtils.isEmpty(instances) && !firstBatch) {
+          var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+          if (CollectionUtils.isEmpty(instances) && !firstBatch && !recordsSource.equals(INVENTORY)) {
             logger.warn("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
@@ -257,7 +258,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             return;
           }
 
-          if (CollectionUtils.isEmpty(instances)) {
+          if (CollectionUtils.isEmpty(instances) && !recordsSource.equals(INVENTORY)) {
             logger.debug("Got empty instances.");
             buildRecordsResponse(request, requestId, instances, lastUpdateDate, new HashMap<>(), firstBatch, null, deletedRecordSupport, statistics)
               .onSuccess(oaiPmhResponsePromise::complete)
@@ -428,6 +429,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       boolean firstBatch) {
     Promise<List<JsonObject>> promise = Promise.promise();
     final Promise<List<Instances>> listPromise = Promise.promise();
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    if (recordsSource.equals(INVENTORY)) {
+      promise.complete(new ArrayList<>());
+      return promise;
+    }
     AtomicInteger retryCount = new AtomicInteger();
     vertx.setTimer(retryCount.get() == 0 ? 50 : 2000, id -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount));
     listPromise.future()
@@ -520,6 +526,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       } else {
         oaipmh.withListRecords(new ListRecordsType().withRecords(records));
       }
+      var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+      if (recordsSource.equals(INVENTORY)) {
+        nextInstanceId = srsResponse.get("misc").getString("nextInstanceId");
+      }
       Response response;
       if (oaipmh.getErrors()
         .isEmpty()) {
@@ -544,13 +554,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private List<RecordType> buildRecordsList(Request request, List<JsonObject> batch, Map<String, JsonObject> srsResponse,
       boolean deletedRecordSupport, StatisticsHolder statistics) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getRequestId(),
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     List<RecordType> records = new ArrayList<>();
+    if (batch.isEmpty()) { // Case if records source is inventory.
+      batch.addAll(srsResponse.values());
+    }
     batch.stream()
       .filter(instance -> {
-        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
+        final String instanceId = instance.getString(
+          recordsSource.equals(INVENTORY) ? "id" :
+            INSTANCE_ID_FIELD_NAME);
+        if (recordsSource.equals(INVENTORY) && nonNull(instanceId)) {
+          return true;
+        }
         final JsonObject srsInstance = srsResponse.get(instanceId);
         if (isNull(srsInstance)) {
           statistics.addSkippedInstancesCounter(1);
@@ -560,8 +578,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         return true;
       })
       .forEach(instance -> {
-        final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
-        final JsonObject srsRecord = srsResponse.get(instanceId);
+        final String instanceId = instance.getString(
+          recordsSource.equals(INVENTORY) ? "id" :
+          INSTANCE_ID_FIELD_NAME);
+        final JsonObject srsRecord = recordsSource.equals(INVENTORY) ? instance : srsResponse.get(instanceId);
         RecordType record = createRecord(request, srsRecord, instanceId);
 
         JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecord, instance,
@@ -761,6 +781,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             jsonInstance.put("externalIdsHolder", externalIdsHolder);
             records.add(jsonInstance);
           });
+          result.put("misc", new JsonObject().put("totalRecords", inventoryRecords.getInteger("totalRecords"))
+            .put("nextInstanceId", inventoryRecords.getString("nextInstanceId")));
         }
         buildResult(records, result, promise);
       } else {

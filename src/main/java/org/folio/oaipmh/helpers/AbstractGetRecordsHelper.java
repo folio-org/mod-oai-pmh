@@ -15,6 +15,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +39,7 @@ import org.folio.processor.rule.Rule;
 import org.folio.processor.translations.TranslationsFunctionHolder;
 import org.folio.reader.EntityReader;
 import org.folio.reader.JPathSyntaxEntityReader;
+import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.folio.writer.RecordWriter;
@@ -139,6 +142,32 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private List<Rule> defaultRules;
 
   private ReferenceDataProvider referenceDataProvider;
+
+  private static final String SQL_QUERY_DATE_FROM_TEMPLATE = " >= %s_mod_inventory_storage.dateOrMin('%s')\n";
+
+  private static final String SQL_QUERY_DATE_UNTIL_TEMPLATE = " <= %s_mod_inventory_storage.dateOrMax('%s')\n";
+
+  private static final String SQL_QUERY_DATE_BETWEEN_TEMPLATE = "  BETWEEN %s_mod_inventory_storage.dateOrMin('%s') AND %s_mod_inventory_storage.dateOrMax('%s')\n";
+
+  private static final String SQL_QUERY_DATE_RANGE_TEMPLATE =
+    "  LEFT JOIN %s_mod_inventory_storage.holdings_record hrd ON hrd.jsonb ->> 'instanceId' = inst.id::TEXT\n" +
+    "  LEFT JOIN %s_mod_inventory_storage.item itm ON itm.jsonb ->> 'holdingsRecordId' = hrd.id::TEXT\n" +
+    "  WHERE (%s_mod_inventory_storage.strToTimestamp(inst.jsonb -> 'metadata' ->> 'updatedDate')\n" +
+    "  %s" +
+    "  OR\n" +
+    "  %s_mod_inventory_storage.strToTimestamp(hrd.jsonb -> 'metadata' ->> 'updatedDate')\n" +
+    "  %s" +
+    "  AND hrd.jsonb ->> 'instanceId' = inst.id::TEXT\n" +
+    "  OR\n" +
+    "  %s_mod_inventory_storage.strToTimestamp(itm.jsonb -> 'metadata' ->> 'updatedDate')\n" +
+    "  %s" +
+    "  AND itm.jsonb ->> 'holdingsRecordId' = hrd.id::TEXT) ";
+
+  private static final String SQL_QUERY_SOURCE_FOLIO_AND = "AND inst.jsonb ->> 'source' = 'FOLIO'";
+  private static final String SQL_QUERY_SOURCE_FOLIO_WHERE = "WHERE inst.jsonb ->> 'source' = 'FOLIO'";
+
+  private static final String SQL_QUERY_TEMPLATE =
+    "SELECT DISTINCT inst.id, inst.jsonb, count(*) OVER() AS total_records FROM %s_mod_inventory_storage.instance inst %s ORDER BY inst.id ASC LIMIT %d OFFSET %d";
 
   protected AbstractGetRecordsHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -515,66 +544,75 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds) {
-    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
-    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-
     final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
-
+    var dateFrom = nonNull(updatedAfter) ?
+      DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    var dateUntil = nonNull(updatedBefore) ?
+      DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    var query = buildQuery(request.getTenant(), dateFrom, dateUntil, limit + 1, request.getOffset());
     Promise<JsonObject> promise = Promise.promise();
-    var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
-    var queryFrom = nonNull(updatedAfter) ?
-      " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
-    var queryUntil = nonNull(updatedBefore) ?
-      " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
-    var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
-    var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
-      EMPTY;
-
-    String query = "limit=" + limit + "&query=" +
-      URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
-    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
-    processRequest(request, promise, uri, listOfIds);
+    PostgresClient.getInstance(Vertx.currentContext().owner()).withTrans(connection -> {
+      connection.execute(query)
+        .onComplete(result -> {
+          connection.getPgConnection().close();
+          if (result.failed()) {
+            var error = result.cause();
+            logger.warn("requestFromInventory:: For requestId {} error updating request metadata on instances stream completion {}", request.getRequestId(),  error);
+            promise.fail(error);
+          } else {
+            logger.info("requestFromInventory:: For requestId {} updating request metadata on instances stream completion finished", request.getRequestId());
+            handleResponse(result.result(), promise, limit);
+          }
+        });
+      return promise.future();
+    });
     return promise.future();
   }
 
-  protected void processRequest(Request request, Promise<JsonObject> promise, String uri, List<String> listOfIds) {
-    var webClient = WebClientProvider.getWebClient();
-    var httpRequest = webClient.getAbs(uri);
-    if (request.getOkapiUrl().contains(HTTPS)) {
-      httpRequest.ssl(true);
+  private String buildQuery(String tenant, String dateFrom, String dateUntil, int limit, int offset) {
+    String sqlQueryTemplate;
+    if (!dateFrom.isEmpty() && !dateUntil.isEmpty()) {
+      var sqlQueryBetween = format(SQL_QUERY_DATE_BETWEEN_TEMPLATE, tenant, dateFrom, tenant, dateUntil);
+      var sqlQueryDateRange = format(SQL_QUERY_DATE_RANGE_TEMPLATE + SQL_QUERY_SOURCE_FOLIO_AND, tenant, tenant, tenant, sqlQueryBetween,
+        tenant, sqlQueryBetween, tenant, sqlQueryBetween);
+      sqlQueryTemplate = format(SQL_QUERY_TEMPLATE, tenant, sqlQueryDateRange, limit, offset);
+    } else if (!dateFrom.isEmpty()) {
+      var sqlQueryFrom = format(SQL_QUERY_DATE_FROM_TEMPLATE, tenant, dateFrom);
+      var sqlQueryDateRange = format(SQL_QUERY_DATE_RANGE_TEMPLATE + SQL_QUERY_SOURCE_FOLIO_AND, tenant, tenant, tenant, sqlQueryFrom,
+        tenant, sqlQueryFrom, tenant, sqlQueryFrom);
+      sqlQueryTemplate = format(SQL_QUERY_TEMPLATE, tenant, sqlQueryDateRange, limit, offset);
+    } else if (!dateUntil.isEmpty()) {
+      var sqlQueryUntil = format(SQL_QUERY_DATE_UNTIL_TEMPLATE, tenant, dateUntil);
+      var sqlQueryDateRange = format(SQL_QUERY_DATE_RANGE_TEMPLATE + SQL_QUERY_SOURCE_FOLIO_AND, tenant, tenant, tenant, sqlQueryUntil,
+        tenant, sqlQueryUntil, tenant, sqlQueryUntil);
+      sqlQueryTemplate = format(SQL_QUERY_TEMPLATE, tenant, sqlQueryDateRange, limit, offset);
+    } else {
+      sqlQueryTemplate = format(SQL_QUERY_TEMPLATE, tenant, SQL_QUERY_SOURCE_FOLIO_WHERE, limit, offset);
     }
-    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.send().onSuccess(response -> {
-        if (response.statusCode() == 200) {
-          handleResponse(promise, response, request);
-        } else {
-          String errorMsg = nonNull(listOfIds) ?
-            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
-            format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
-          promise.fail(new IllegalStateException(errorMsg));
-        }
-      })
-      .onFailure(throwable -> {
-        logger.error(nonNull(listOfIds) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
-          CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
-        promise.fail(throwable);
-      });
+    return sqlQueryTemplate;
   }
 
-  /**
-   * This method is overridden by {@link GetOaiIdentifiersHelper} to invoke its own handleResponse.
-   *
-   * @param promise {@link JsonObject} to be returned
-   * @param response response from inventory
-   * @param request this parameter is used in {@link GetOaiIdentifiersHelper#handleResponse(Promise, HttpResponse, Request)}
-   */
-  protected void handleResponse(Promise<JsonObject> promise, HttpResponse<Buffer> response, Request request) {
-    promise.complete(response.bodyAsJsonObject());
+  private void handleResponse(RowSet<Row> rows, Promise<JsonObject> promise, int limit) {
+    var arrayOfInstances = new JsonArray();
+    String nextInstanceId = null;
+    for (Row row: rows) {
+      if (arrayOfInstances.size() == limit) {
+        nextInstanceId = row.getJsonObject("jsonb").getString("id");
+      } else {
+        arrayOfInstances.add(row.getValue("jsonb"));
+      }
+    }
+    var instanceJson = new JsonObject();
+    instanceJson.put("instances", arrayOfInstances);
+    if (rows.iterator().hasNext()) {
+      var totalRecords = rows.iterator().next().getValue("total_records");
+      instanceJson.put("totalRecords", totalRecords);
+      instanceJson.put("nextInstanceId", nextInstanceId);
+    }
+    promise.complete(instanceJson);
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {
