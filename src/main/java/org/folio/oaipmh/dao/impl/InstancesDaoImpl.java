@@ -345,11 +345,57 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
+  public Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.SOURCE.eq("FOLIO"))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  @Override
+  public Future<List<Instances>> getInstancesSRSList(int limit, String requestId, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.SOURCE.eq("MARC"))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  @Override
   public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .and(INSTANCES.ID.greaterOrEqual(id))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  @Override
+  public Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, int id, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.ID.greaterOrEqual(id))
+        .and(INSTANCES.SOURCE.eq("FOLIO"))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  @Override
+  public Future<List<Instances>> getInstancesSRSList(int limit, String requestId, int id, String tenantId) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.ID.greaterOrEqual(id))
+        .and(INSTANCES.SOURCE.eq("MARC"))
         .orderBy(INSTANCES.ID)
         .limit(limit))
       .map(this::queryResultToInstancesList));

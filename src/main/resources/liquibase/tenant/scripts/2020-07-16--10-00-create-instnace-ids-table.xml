@@ -79,4 +79,10 @@
     </addColumn>
   </changeSet>
 
+  <changeSet id="2023-02-28--12-00-add-source-column"  author="Oleksandr Bozhko">
+    <addColumn tableName="instances"  schemaName="${database.defaultSchemaName}">
+      <column name="source" type="varchar(255)" />
+    </addColumn>
+  </changeSet>
+
 </databaseChangeLog>

@@ -214,7 +214,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null).onComplete(handler -> {
+    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(handler -> {
       try {
         if (handler.succeeded()) {
           var inventoryRecords = handler.result();
@@ -294,7 +294,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null).onComplete(instancesHandler ->
+              requestFromInventory(request, limit, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
                 handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -490,7 +490,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestFromInventory(request, 1, List.of(instanceId)).compose(instance -> {
+      return requestFromInventory(request, 1, List.of(instanceId), false, false).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
@@ -514,14 +514,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds) {
+  protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
+                                                    boolean ignoreOffset) {
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
-    final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
+    final Date updatedAfter = request.getFrom() == null || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
+    final Date updatedBefore = request.getUntil() == null || ignoreDate ? null : convertStringToDate(request.getUntil(), true, true);
 
     Promise<JsonObject> promise = Promise.promise();
+
     var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
     var queryFrom = nonNull(updatedAfter) ?
       " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
@@ -532,15 +534,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
     var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
       EMPTY;
-
-    String query = "limit=" + limit + "&query=" +
+    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + "&query=" +
       URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
-    processRequest(request, promise, uri, listOfIds);
+
+    processRequest(uri, request, promise, listOfIds);
+
     return promise.future();
   }
 
-  protected void processRequest(Request request, Promise<JsonObject> promise, String uri, List<String> listOfIds) {
+  private void processRequest(String uri, Request request, Promise<JsonObject> promise, List<String> listOfIds) {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
@@ -551,30 +554,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.send().onSuccess(response -> {
         if (response.statusCode() == 200) {
-          handleResponse(promise, response, request);
+          promise.complete(response.bodyAsJsonObject());
         } else {
-          String errorMsg = nonNull(listOfIds) ?
+          String errorMsg = nonNull(String.join(", ", listOfIds)) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           promise.fail(new IllegalStateException(errorMsg));
         }
       })
       .onFailure(throwable -> {
-        logger.error(nonNull(listOfIds) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
+        logger.error(nonNull(String.join(", ", listOfIds)) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
           CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
         promise.fail(throwable);
       });
-  }
-
-  /**
-   * This method is overridden by {@link GetOaiIdentifiersHelper} to invoke its own handleResponse.
-   *
-   * @param promise {@link JsonObject} to be returned
-   * @param response response from inventory
-   * @param request this parameter is used in {@link GetOaiIdentifiersHelper#handleResponse(Promise, HttpResponse, Request)}
-   */
-  protected void handleResponse(Promise<JsonObject> promise, HttpResponse<Buffer> response, Request request) {
-    promise.complete(response.bodyAsJsonObject());
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {

@@ -57,8 +57,28 @@ public interface InstancesService {
   Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
   /**
+   * Retrieves only inventory instances (with source FOLIO) by limit and request id.
+   */
+  Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, String tenantId);
+
+  /**
+   * Retrieves only SRS instances (with source MARC) by limit and request id.
+   */
+  Future<List<Instances>> getInstancesSRSList(int limit, String requestId, String tenantId);
+
+  /**
    * Retrieves instances which have PK id value >= id by limit and request id.
    */
   Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId);
+
+  /**
+   * Retrieves only inventory instances (with source FOLIO) which have PK id value >= id by limit and request id.
+   */
+  Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, int id, String tenantId);
+
+  /**
+   * Retrieves only SRS instances (with source MARC) which have PK id value >= id by limit and request id.
+   */
+  Future<List<Instances>> getInstancesSRSList(int limit, String requestId, int id, String tenantId);
 
 }
