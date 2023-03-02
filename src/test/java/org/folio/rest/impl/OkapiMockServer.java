@@ -579,7 +579,7 @@ public class OkapiMockServer {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_4));
       } else if (uri.contains(DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3_LAST_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD));
-      } else if (uri.contains(DATE_FOR_INSTANCES_10)) {
+      } else if (uri.contains(DATE_FOR_INSTANCES_10) || uri.contains(DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_10));
       } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
         int offset = parseInt(ctx.request().getParam("offset"));

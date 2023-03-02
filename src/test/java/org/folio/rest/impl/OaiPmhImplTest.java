@@ -401,12 +401,15 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
     if (recordsSource.equals(SRS_AND_INVENTORY)) {
       // 10 from SRS + 10 from Inventory
       assertEquals(BigInteger.valueOf(20), oaipmh.getListIdentifiers().getResumptionToken().getCompleteListSize());
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 19);
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(notNullValue()));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
     }
-    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), recordsSource.equals(SRS_AND_INVENTORY) ? is(notNullValue()) : is(nullValue()));
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
   }
@@ -431,7 +434,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
 
     logger.debug(format("==== getOaiIdentifiersVerbOneRecordWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
@@ -443,7 +446,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS, prefix, encoding);
 
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 3);
 
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
@@ -676,7 +679,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("10")));
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM),
-      is(equalTo((verb == LIST_RECORDS ? "6506b79b-7702-48b2-9774-a1c538fdd34e" : "10000000-0000-4000-a000-000000000000"))));
+      is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
 
   @ParameterizedTest
@@ -774,7 +777,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     String expectedDate = granularityType.equals(GranularityType.YYYY_MM_DD) ?
-      "2018-11-20" : (verb == LIST_IDENTIFIERS ? "2018-11-20T09:14:35Z" : "2018-11-20T07:23:11Z");
+      "2018-11-20" : "2018-11-20T07:23:11Z";
     verifyHeaderDate(expectedDate, oaipmh, verb);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
   }
@@ -947,7 +950,7 @@ class OaiPmhImplTest {
       .param(SET_PARAM, set);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, verb == LIST_RECORDS ? 9 : 10);
+    verifyListResponse(oaipmh, verb,9);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(actualResumptionToken, is(notNullValue()));
     assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -1029,7 +1032,7 @@ class OaiPmhImplTest {
       .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, verb == VerbType.LIST_IDENTIFIERS ? 10 : 9);
+    verifyListResponse(oaipmh, verb, 9);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(actualResumptionToken, is(notNullValue()));
     assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -1327,11 +1330,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(FROM_PARAM, SRS_RECORD_WITH_INVALID_JSON_STRUCTURE);
 
-    if (verb == LIST_IDENTIFIERS) {
-      verify404WithErrorMessage(request);
-    } else {
-      verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
-    }
+    verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
   }
 
   @ParameterizedTest
@@ -2207,7 +2206,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, verb == VerbType.LIST_RECORDS ? 3 : 2);
+    verifyListResponse(oaipmh, verb, 3);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
@@ -2251,7 +2250,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, verb == VerbType.LIST_RECORDS ? 3 : 2);
+    verifyListResponse(oaipmh, verb, 3);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
@@ -2295,7 +2294,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, verb == VerbType.LIST_RECORDS ? 2 : 3);
+    verifyListResponse(oaipmh, verb, 2);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
@@ -2323,7 +2322,7 @@ class OaiPmhImplTest {
     if (verb.equals(LIST_RECORDS)) {
       assertThat(oaipmh.getListRecords().getRecords().get(1).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(1).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
     }
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
@@ -2426,7 +2425,7 @@ class OaiPmhImplTest {
     if (verb.equals(LIST_RECORDS)) {
       assertThat(oaipmh.getListRecords().getRecords().get(2).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(1).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
     }
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
