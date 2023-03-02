@@ -763,6 +763,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private void doGetRequestToInventory(Request request, Promise<Map<String, JsonObject>> promise, Map<String, JsonObject> result,
                                        JsonArray records, List<String> listOfIds) {
     int limit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    @SuppressWarnings("rawtypes")
     List<Future> allParts = new ArrayList<>();
     ListUtils.partition(listOfIds, MAX_RECORDS_PER_REQUEST_FROM_INVENTORY).forEach(part -> {
       var future = requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, part), true, true).onComplete(instancesHandler -> {
