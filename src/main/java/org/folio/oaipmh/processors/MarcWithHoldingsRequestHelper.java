@@ -478,34 +478,22 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> {
+        String source = null;
+        if (recordsSource.equals(INVENTORY)) {
+          source = "FOLIO";
+        } else if (recordsSource.equals(SRS)) {
+          source = "MARC";
+        }
         if (firstBatch) {
-          if (recordsSource.equals(INVENTORY)) {
-            return instancesService.getInstancesInventoryList(batchSize + 1, requestId, request.getTenant())
-              .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-                timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
-          } else if (recordsSource.equals(SRS)) {
-            return instancesService.getInstancesSRSList(batchSize + 1, requestId, request.getTenant())
-              .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-                timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
-          }
-          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
+          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant(), source)
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-              timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
+              timer -> getNextBatch(requestId, request, true, batchSize, listPromise, retryCount)));
 
         }
         int autoIncrementedId = request.getNextInstancePkValue();
-        if (recordsSource.equals(INVENTORY)) {
-          return instancesService.getInstancesInventoryList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
-            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-              timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
-        } else if (recordsSource.equals(SRS)) {
-          return instancesService.getInstancesSRSList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
-            .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-              timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
-        }
-        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
+        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant(), source)
           .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-            timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
+            timer -> getNextBatch(requestId, request, false, batchSize, listPromise, retryCount)));
 
       });
   }

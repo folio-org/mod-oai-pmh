@@ -103,39 +103,15 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source) {
     metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
-    return instancesDao.getInstancesList(limit, requestId, tenantId)
+    return instancesDao.getInstancesList(limit, requestId, tenantId, source)
             .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
   }
 
   @Override
-  public Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, String tenantId) {
-    metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
-    return instancesDao.getInstancesInventoryList(limit, requestId, tenantId)
-      .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
-  }
-
-  @Override
-  public Future<List<Instances>> getInstancesSRSList(int limit, String requestId, String tenantId) {
-    metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
-    return instancesDao.getInstancesSRSList(limit, requestId, tenantId)
-      .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
-  }
-
-  @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
-    return instancesDao.getInstancesList(limit, requestId, id, tenantId);
-  }
-
-  @Override
-  public Future<List<Instances>> getInstancesInventoryList(int limit, String requestId, int id, String tenantId) {
-    return instancesDao.getInstancesInventoryList(limit, requestId, id, tenantId);
-  }
-
-  @Override
-  public Future<List<Instances>> getInstancesSRSList(int limit, String requestId, int id, String tenantId) {
-    return instancesDao.getInstancesSRSList(limit, requestId, id, tenantId);
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source) {
+    return instancesDao.getInstancesList(limit, requestId, id, tenantId, source);
   }
 
   @Autowired
