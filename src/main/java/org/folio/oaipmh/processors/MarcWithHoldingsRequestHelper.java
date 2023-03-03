@@ -38,7 +38,6 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.SRS;
-import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
