@@ -733,6 +733,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         effectiveLocationJson.remove(NAME);
         locationItemJson.put(LOCATION, effectiveLocationJson);
         itemJson.put(LOCATION, locationItemJson);
+        itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, Boolean.valueOf(holdingJson.getString(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD)));
         itemsJson.add(itemJson);
       }
     }
