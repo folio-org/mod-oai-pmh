@@ -133,6 +133,7 @@ import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
+import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_FOLIO_AND_MARC_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
@@ -163,6 +164,7 @@ import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
 import static org.folio.rest.impl.OkapiMockServer.TEN_INSTANCES_WITH_HOLDINGS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS;
 import static org.folio.rest.impl.OkapiMockServer.TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -393,15 +395,21 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_IDENTIFIERS.value())
-      .param(FROM_PARAM, DATE_FOR_INSTANCES_10)
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)
       .param(METADATA_PREFIX_PARAM, prefix.getName());
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
-    // 10 with source FOLIO + 10 with source MARC, but isDeletedRecordsEnabled=true, so removed last instance and 19
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, recordsSource.equals(SRS_AND_INVENTORY) ? 19 : 10);
-    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), recordsSource.equals(SRS_AND_INVENTORY) ? is(notNullValue()) : is(nullValue()));
+    if (recordsSource.equals(SRS_AND_INVENTORY)) {
+      // 10 from SRS + 10 from Inventory
+      assertEquals(BigInteger.valueOf(20), oaipmh.getListIdentifiers().getResumptionToken().getCompleteListSize());
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 19);
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(notNullValue()));
+    } else {
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
+    }
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
   }
@@ -670,7 +678,8 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, SET_PARAM), is(equalTo("all")));
     assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("10")));
     assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
-    assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM), is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
+    assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM),
+      is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
   }
 
   @ParameterizedTest
@@ -767,7 +776,8 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    String expectedDate = granularityType.equals(GranularityType.YYYY_MM_DD) ? "2021-03-31" : "2021-03-31T07:23:11Z";
+    String expectedDate = granularityType.equals(GranularityType.YYYY_MM_DD) ?
+      "2018-11-20" : "2018-11-20T07:23:11Z";
     verifyHeaderDate(expectedDate, oaipmh, verb);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
   }
@@ -905,10 +915,13 @@ class OaiPmhImplTest {
     String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9M" +
       "jAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4O" +
       "WEwMS1mM2NkLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDYmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
+    String resumptionTokenListIdentifiers = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMF" +
+      "omdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0w" +
+      "MDAwMDAwMC0wMDAwLTQwMDAtYTAwMC0wMDAwMDAwMDAwMDAmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      .param(RESUMPTION_TOKEN_PARAM, verb == VerbType.LIST_RECORDS ? resumptionToken : resumptionTokenListIdentifiers);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -937,7 +950,7 @@ class OaiPmhImplTest {
       .param(SET_PARAM, set);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 9);
+    verifyListResponse(oaipmh, verb,9);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(actualResumptionToken, is(notNullValue()));
     assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -1768,6 +1781,21 @@ class OaiPmhImplTest {
     assertThat(response, equalTo(message));
   }
 
+  private void verify404WithErrorMessage(RequestSpecification request) {
+    String response = request
+      .when()
+      .get()
+      .then()
+      .statusCode(404)
+      .contentType("text/xml")
+      .log().all()
+      .extract()
+      .body()
+      .asString();
+
+    assertThat(response, is(notNullValue()));
+  }
+
   private void verifyRepositoryInfoResponse(OAIPMH oaipmhFromString) {
     assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
@@ -2104,7 +2132,9 @@ class OaiPmhImplTest {
     List<String> headerIdentifiers = headers.stream()
       .map(this::getUUIDofHeaderIdentifier)
       .collect(Collectors.toList());
-    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers) || headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceFOLIO()));
+    assertTrue(headerIdentifiers.containsAll(expectedIdentifiers) ||
+      headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceFOLIO()) ||
+      headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceMARC()));
   }
 
   private String getUUIDofHeaderIdentifier(HeaderType header) {
@@ -2141,6 +2171,22 @@ class OaiPmhImplTest {
       "70000000-0000-4000-a000-000000000888",
       "80000000-0000-4000-a000-000000000999",
       "90000000-0000-4000-a000-000000001111");
+    //@formatter:on
+  }
+
+  private List<String> getExpectedInstanceIdsWithSourceMARC() {
+    //@formatter:of
+    return Arrays.asList(
+      "10000000-0000-4000-a000-000000000000",
+      "11000000-0000-4000-a000-000000000000",
+      "12000000-0000-4000-a000-000000000000",
+      "13000000-0000-4000-a000-000000000000",
+      "14000000-0000-4000-a000-000000000000",
+      "15000000-0000-4000-a000-000000000000",
+      "16000000-0000-4000-a000-000000000000",
+      "17000000-0000-4000-a000-000000000000",
+      "18000000-0000-4000-a000-000000000000",
+      "19000000-0000-4000-a000-000000000000");
     //@formatter:on
   }
 
@@ -2265,7 +2311,8 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(FROM_PARAM, verb == VerbType.LIST_IDENTIFIERS ? THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD :
+        THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS)
       .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
@@ -2273,7 +2320,7 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, verb, 3);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().get(2).getHeader().getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListRecords().getRecords().get(1).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
       assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
     }
