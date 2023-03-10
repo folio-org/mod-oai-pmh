@@ -66,13 +66,13 @@ public interface InstancesDao {
   Future<Void> saveInstances(List<Instances> instances, String tenantId);
 
   /**
-   * Retrieves instances by limit and request id.
+   * Retrieves instances by limit, source and request id.
    */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source);
 
   /**
-   * Retrieves instances which have PK id value >= id by limit and request id.
+   * Retrieves instances which have PK id value >= id by limit, source and request id.
    */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source);
 
 }

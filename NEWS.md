@@ -1,5 +1,15 @@
 ## 3.12.0 - Unreleased
 
+## 3.11.1 (Released)
+
+This release contains improvements related harvesting instances with holdings
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.0...v3.11.1)
+
+### Bug fixes
+* [MODOAIPMH-474](https://issues.folio.org/browse/MODOAIPMH-474) Added Item record to Instance FOLIO with Holdings FOLIO does not trigger the record to be harvested
+* [MODOAIPMH-470](https://issues.folio.org/browse/MODOAIPMH-470) Suppressed Holdings without items harvested with subfield "t" in "952" set to "0"
+
 ## 3.11.0 (Released)
 
 This release contains minor improvements, bug fixes and adding inventory as records source

@@ -2,6 +2,7 @@ package org.folio.oaipmh.processors;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -21,10 +22,12 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.Request;
@@ -116,6 +119,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
   private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
+  private static final int MAX_RECORDS_PER_REQUEST_FROM_INVENTORY = 50;
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
@@ -194,7 +198,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     }
     return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
-
 
   private void updateRequestStreamEnded(String requestId, String tenantId, StatisticsHolder downloadInstancesStatistics) {
     Promise<Void> promise = Promise.promise();
@@ -470,18 +473,27 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           "The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response."));
       return;
     }
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> {
+        String source = null;
+        if (recordsSource.equals(INVENTORY)) {
+          source = "FOLIO";
+        } else if (recordsSource.equals(SRS)) {
+          source = "MARC";
+        }
         if (firstBatch) {
-          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
+          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant(), source)
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-                timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
+              timer -> getNextBatch(requestId, request, true, batchSize, listPromise, retryCount)));
+
         }
         int autoIncrementedId = request.getNextInstancePkValue();
-        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
+        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant(), source)
           .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
-              timer -> getNextBatch(requestId, request, firstBatch, batchSize, listPromise, retryCount)));
+            timer -> getNextBatch(requestId, request, false, batchSize, listPromise, retryCount)));
+
       });
   }
 
@@ -657,9 +669,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     Promise<Void> promise = Promise.promise();
     postgresClient.getConnection(e -> {
       List<Tuple> batch = new ArrayList<>();
-      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId), inst.getSuppressFromDiscovery())));
+      instances.forEach(inst -> batch.add(Tuple.of(inst.getInstanceId(), UUID.fromString(requestId), inst.getSuppressFromDiscovery(),
+        inst.getSource())));
       String sql = "INSERT INTO " + PostgresClient.convertToPsqlStandard(tenantId)
-          + ".instances (instance_id, request_id, suppress_from_discovery) VALUES ($1, $2, $3) RETURNING instance_id";
+          + ".instances (instance_id, request_id, suppress_from_discovery, source) VALUES ($1, $2, $3, $4) RETURNING instance_id";
 
       if (e.failed()) {
         logger.error("Save instance Ids failed: {}.", e.cause()
@@ -686,7 +699,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       .map(JsonEvent::objectValue)
       .map(inst -> new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
         .setSuppressFromDiscovery(Boolean.parseBoolean(inst.getString(SUPPRESS_FROM_DISCOVERY)))
-        .setRequestId(requestId))
+        .setRequestId(requestId).setSource(inst.getString("source")))
       .collect(Collectors.toList());
   }
 
@@ -727,7 +740,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               handleException(promise, new IllegalStateException(errorMsg));
               return;
             }
-            handleSrsResponse(promise, srsResponse.body(), request);
+            handleSrsResponse(promise, srsResponse.body(), request, listOfIds);
           } else {
             logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
               .getMessage(), asyncResult.cause());
@@ -742,30 +755,46 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         handleException(promise, e);
       }
     } else {
-      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray());
+      doGetRequestToInventory(request, promise, Maps.newHashMap(), new JsonArray(), listOfIds);
     }
   }
 
   private void doGetRequestToInventory(Request request, Promise<Map<String, JsonObject>> promise, Map<String, JsonObject> result,
-                                       JsonArray records) {
+                                       JsonArray records, List<String> listOfIds) {
     int limit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, limit, request.getIdentifier() != null ? request.getStorageIdentifier() : null).onComplete(instancesHandler -> {
-      if (instancesHandler.succeeded()) {
-        var inventoryRecords = instancesHandler.result();
-        generateRecordsOnTheFly(request, inventoryRecords);
-        inventoryRecords.getJsonArray("instances").forEach(instance -> {
-          var jsonInstance = (JsonObject)instance;
-          var externalIdsHolder = new JsonObject();
-          externalIdsHolder.put(INSTANCE_ID_FIELD_NAME, jsonInstance.getString("id"));
-          jsonInstance.put("externalIdsHolder", externalIdsHolder);
-          records.add(jsonInstance);
-        });
+    @SuppressWarnings("rawtypes")
+    List<Future> allParts = new ArrayList<>();
+    ListUtils.partition(listOfIds, MAX_RECORDS_PER_REQUEST_FROM_INVENTORY).forEach(part -> {
+      var future = requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, part), true, true).onComplete(instancesHandler -> {
+        if (instancesHandler.succeeded()) {
+          var inventoryRecords = instancesHandler.result();
+          generateRecordsOnTheFly(request, inventoryRecords);
+          inventoryRecords.getJsonArray("instances").forEach(instance -> {
+            var jsonInstance = (JsonObject) instance;
+            var externalIdsHolder = new JsonObject();
+            externalIdsHolder.put(INSTANCE_ID_FIELD_NAME, jsonInstance.getString("id"));
+            jsonInstance.put("externalIdsHolder", externalIdsHolder);
+            records.add(jsonInstance);
+          });
+        } else {
+          handleException(promise, instancesHandler.cause());
+          promise.fail(instancesHandler.cause());
+        }
+      });
+      allParts.add(future);
+    });
+    CompositeFuture.join(allParts).onComplete(handler -> {
+      if (handler.succeeded()) {
         buildResult(records, result, promise);
-      } else {
-        handleException(promise, instancesHandler.cause());
-        promise.fail(instancesHandler.cause());
       }
     });
+  }
+
+  private List<String> getInstanceIdForInventorySearch(Request request, List<String> listOfIds) {
+    if (nonNull(listOfIds)) {
+      return listOfIds;
+    }
+    return request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null;
   }
 
   private void retrySRSRequest(Vertx vertx, boolean deletedRecordSupport,
@@ -789,7 +818,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request));
   }
 
-  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request) {
+  private void handleSrsResponse(Promise<Map<String, JsonObject>> promise, Buffer buffer, Request request, List<String> listOfIds) {
     final Map<String, JsonObject> result = Maps.newHashMap();
     try {
       final Object jsonResponse = buffer.toJson();
@@ -798,7 +827,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         final JsonArray records = entries.getJsonArray("sourceRecords");
         var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
         if (!recordsSource.equals(SRS)) {
-          doGetRequestToInventory(request, promise, result, records);
+          doGetRequestToInventory(request, promise, result, records, listOfIds);
         } else {
           buildResult(records, result, promise);
         }

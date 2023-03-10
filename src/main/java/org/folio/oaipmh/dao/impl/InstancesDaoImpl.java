@@ -1,5 +1,6 @@
 package org.folio.oaipmh.dao.impl;
 
+import static java.util.Objects.nonNull;
 import static java.util.Optional.of;
 import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jooq.tables.SuppressedFromDiscoveryInstancesIds.SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS;
@@ -93,10 +94,10 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private Optional<RequestMetadataLb> toOptionalRequestMetadata(Row row) {
     RequestMetadataLb requestMetadataLb = null;
-    if (Objects.nonNull(row)) {
+    if (nonNull(row)) {
       requestMetadataLb = RowMappers.getRequestMetadataLbMapper().apply(row);
     }
-    return Objects.nonNull(requestMetadataLb) ? of(requestMetadataLb) : Optional.empty();
+    return nonNull(requestMetadataLb) ? of(requestMetadataLb) : Optional.empty();
   }
 
   @Override
@@ -335,7 +336,10 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source) {
+    if (nonNull(source)) {
+      return getInstancesListFilteredBySource(limit, requestId, tenantId, source);
+    }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
@@ -345,10 +349,34 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source) {
+    if (nonNull(source)) {
+      return getInstancesListFilteredBySource(limit, requestId, id, tenantId, source);
+    }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.ID.greaterOrEqual(id))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, String tenantId, String source) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.SOURCE.eq(source))
+        .orderBy(INSTANCES.ID)
+        .limit(limit))
+      .map(this::queryResultToInstancesList));
+  }
+
+  private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId, String source) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext.selectFrom(INSTANCES)
+        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
+        .and(INSTANCES.SOURCE.eq(source))
         .and(INSTANCES.ID.greaterOrEqual(id))
         .orderBy(INSTANCES.ID)
         .limit(limit))

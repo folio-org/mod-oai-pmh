@@ -228,7 +228,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       String randomRequestId = UUID.randomUUID().toString();
       instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT).compose(res -> {
         assertFalse(res);
-        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
+        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT, null);
       }).onSuccess(instanceIdList -> {
         assertEquals(1, instanceIdList.size());
         assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
@@ -248,7 +248,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT)
+    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT, null)
       .onComplete(testContext.succeeding(instancesList -> {
         assertFalse(instancesList.isEmpty());
         testContext.completeNow();
@@ -257,7 +257,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithEmptyList_whenGetInstancesListAndThereNoAnyInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT))
+    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT, null))
       .onComplete(testContext.succeeding(instancesList -> {
         assertTrue(instancesList.isEmpty());
         testContext.completeNow();
