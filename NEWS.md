@@ -1,6 +1,6 @@
 ## 3.12.0 - Unreleased
 
-## 3.11.1 - Released
+## 3.11.1 (Released)
 
 This release contains improvements related harvesting instances with holdings
 
