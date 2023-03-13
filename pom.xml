@@ -355,6 +355,11 @@
       <artifactId>caffeine</artifactId>
       <version>3.1.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.opentable.components</groupId>
+      <artifactId>otj-pg-embedded</artifactId>
+      <version>1.0.1</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -720,9 +725,9 @@
       </plugin>
 
       <plugin>
-        <groupId>com.github.slavaz</groupId>
+        <groupId>com.gitlab.janecekpetr</groupId>
         <artifactId>embedded-postgresql-maven-plugin</artifactId>
-        <version>1.2.4</version>
+        <version>0.1.0</version>
         <configuration>
           <pgServerPort>15432</pgServerPort>
           <dbName>postgres</dbName>
