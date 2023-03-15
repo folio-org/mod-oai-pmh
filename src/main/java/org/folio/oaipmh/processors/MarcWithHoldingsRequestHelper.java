@@ -118,7 +118,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
   private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
-  private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
+//  private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
   private static final int MAX_RECORDS_PER_REQUEST_FROM_INVENTORY = 50;
 
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
@@ -140,9 +140,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private MarcWithHoldingsRequestHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
-    var vertxOptions = new VertxOptions();
-    vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
-    vertx = Vertx.vertx(vertxOptions);
+//    var vertxOptions = new VertxOptions();
+//    vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
+//    vertx = Vertx.vertx(vertxOptions);
+    vertx = Vertx.vertx();
     downloadContext = vertx.getOrCreateContext();
     saveInstancesExecutor = vertx.createSharedWorkerExecutor("saving-executor", 5);
   }
