@@ -160,7 +160,7 @@
     <netty.version>4.1.78.Final</netty.version>
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
     <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
-    <postgres.docker.env.POSTGRES_DB>localhost</postgres.docker.env.POSTGRES_DB>
+    <postgres.docker.env.POSTGRES_DB>${java.rmi.server.hostname}</postgres.docker.env.POSTGRES_DB>
     <postgres.docker.envRun.POSTGRES_PASSWORD>postgres</postgres.docker.envRun.POSTGRES_PASSWORD>
     <postgres.docker.envRun.POSTGRES_USER>postgres</postgres.docker.envRun.POSTGRES_USER>
     <postgres.docker.log.prefix>postgres</postgres.docker.log.prefix>
@@ -407,12 +407,14 @@
             <id>add_generated_sources_folder</id>
             <goals>
               <goal>add-source</goal>
+              <goal>local-ip</goal>
             </goals>
             <phase>initialize</phase>
             <configuration>
               <sources>
                 <source>${project.build.directory}/generated-sources/raml-jaxrs</source>
                 <source>${project.build.directory}/generated-sources/jooq</source>
+                <localIpProperty>local.ip</localIpProperty>
               </sources>
             </configuration>
           </execution>
