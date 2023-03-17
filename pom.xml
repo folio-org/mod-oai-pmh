@@ -407,14 +407,12 @@
             <id>add_generated_sources_folder</id>
             <goals>
               <goal>add-source</goal>
-              <goal>local-ip</goal>
             </goals>
             <phase>initialize</phase>
             <configuration>
               <sources>
                 <source>${project.build.directory}/generated-sources/raml-jaxrs</source>
                 <source>${project.build.directory}/generated-sources/jooq</source>
-                <localIpProperty>local.ip</localIpProperty>
               </sources>
             </configuration>
           </execution>
