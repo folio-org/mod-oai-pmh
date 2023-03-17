@@ -739,7 +739,7 @@
                     <ports>15432:5432</ports>
                     <wait>
                       <log>database system is ready to accept connections</log>
-                      <time>20000</time>
+                      <time>60000</time>
                     </wait>
                   </run>
                 </image>
