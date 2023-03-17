@@ -736,6 +736,7 @@
                   <name>postgres:12.0</name>
                   <alias>database</alias>
                   <run>
+                    <hostname>localhost</hostname>
                     <ports>15432:5432</ports>
                     <wait>
                       <log>database system is ready to accept connections</log>
