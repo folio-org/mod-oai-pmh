@@ -720,25 +720,34 @@
       </plugin>
 
       <plugin>
-        <groupId>com.gitlab.janecekpetr</groupId>
-        <artifactId>embedded-postgresql-maven-plugin</artifactId>
-        <version>0.1.0</version>
-        <configuration>
-          <pgServerPort>15432</pgServerPort>
-          <dbName>postgres</dbName>
-          <userName>postgres</userName>
-          <password>postgres</password>
-        </configuration>
+        <groupId>io.fabric8</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <version>0.22.1</version>
         <executions>
           <execution>
-            <id>start-pgsql</id>
+            <id>prepare-database</id>
             <phase>initialize</phase>
             <goals>
               <goal>start</goal>
             </goals>
+            <configuration>
+              <images>
+                <image>
+                  <name>postgres:12.0</name>
+                  <alias>database</alias>
+                  <run>
+                    <ports>15432:5432</ports>
+                    <wait>
+                      <log>database system is ready to accept connections</log>
+                      <time>20000</time>
+                    </wait>
+                  </run>
+                </image>
+              </images>
+            </configuration>
           </execution>
           <execution>
-            <id>stop-pgsql</id>
+            <id>stop-database</id>
             <phase>compile</phase>
             <goals>
               <goal>stop</goal>
@@ -746,7 +755,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.liquibase</groupId>
         <artifactId>liquibase-maven-plugin</artifactId>
