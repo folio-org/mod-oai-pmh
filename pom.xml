@@ -160,7 +160,6 @@
     <netty.version>4.1.78.Final</netty.version>
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
     <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
-    <postgres.docker.env.POSTGRES_DB>xxxx</postgres.docker.env.POSTGRES_DB>
   </properties>
 
   <dependencies>
