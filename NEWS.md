@@ -6,7 +6,7 @@ This release contains Postgres version upgrades to 42.5.4
 
 [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.1...v3.11.2)
 
-### Technical tasks
+### Bug fixes
 
 * [MODOAIPMH-481](https://issues.folio.org/browse/MODOAIPMH-481) Postgres 42.5.4
 
