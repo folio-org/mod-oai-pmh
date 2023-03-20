@@ -1,5 +1,15 @@
 ## 3.12.0 - Unreleased
 
+## 3.11.2 (Released)
+
+This release contains Postgres version upgrades to 42.5.4
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.1...v3.11.2)
+
+### Technical tasks
+
+* [MODOAIPMH-481](https://issues.folio.org/browse/MODOAIPMH-481) Postgres 42.5.4
+
 ## 3.11.1 (Released)
 
 This release contains improvements related harvesting instances with holdings
