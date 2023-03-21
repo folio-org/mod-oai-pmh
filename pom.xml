@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.11.2-SNAPSHOT</version>
+  <version>3.11.3-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -151,7 +151,7 @@
     <jooq.version>3.14.11</jooq.version>
     <vertx-jooq.generator.version>6.5.4</vertx-jooq.generator.version>
     <vertx-jooq.classic-reactive.version>6.5.4</vertx-jooq.classic-reactive.version>
-    <postgres.version>42.4.0</postgres.version>
+    <postgres.version>42.5.4</postgres.version>
     <lombok.version>1.18.24</lombok.version>
     <log4j.version>2.19.0</log4j.version>
     <testcontainers.version>1.17.3</testcontainers.version>
