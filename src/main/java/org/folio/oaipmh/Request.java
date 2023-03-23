@@ -64,6 +64,11 @@ public class Request {
    * Defines a total records from Inventory if SRS + Inventory.
    */
   private int inventoryTotalRecords;
+  /**
+   * Defines by how much to decrease offset to retrieve from Inventory when records source is SRS + Inventory.
+   * It matters when number of records returned from SRS is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
+   */
+  private int inventoryOffsetShift;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
    /** The id of the request. */
@@ -217,8 +222,6 @@ public class Request {
   public void setInventoryOffsetShift(int inventoryOffsetShift) {
     this.inventoryOffsetShift = inventoryOffsetShift;
   }
-
-  private int inventoryOffsetShift;
 
   public int getInventoryTotalRecords() {
     return inventoryTotalRecords;
