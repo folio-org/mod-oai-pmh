@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
@@ -26,7 +27,10 @@ import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -49,8 +53,17 @@ public class Request {
   private RequestType restoredOaiRequest;
   /** The result offset used for partitioning. */
   private int offset;
+  /**
+   * Indicates whether records should be retrieved from Inventory
+   * if SRS + Inventory.
+   */
+  private boolean fromInventory;
   /** The previous total number of records used for partitioning. */
   private int totalRecords;
+  /**
+   * Defines a total records from Inventory if SRS + Inventory.
+   */
+  private int inventoryTotalRecords;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
    /** The id of the request. */
@@ -185,6 +198,36 @@ public class Request {
     return offset;
   }
 
+  public void setOffset(int offset) {
+    this.offset = offset;
+  }
+
+  public boolean isFromInventory() {
+    return fromInventory;
+  }
+
+  public void setFromInventory(boolean fromInventory) {
+    this.fromInventory = fromInventory;
+  }
+
+  public int getInventoryOffsetShift() {
+    return inventoryOffsetShift;
+  }
+
+  public void setInventoryOffsetShift(int inventoryOffsetShift) {
+    this.inventoryOffsetShift = inventoryOffsetShift;
+  }
+
+  private int inventoryOffsetShift;
+
+  public int getInventoryTotalRecords() {
+    return inventoryTotalRecords;
+  }
+
+  public void setInventoryTotalRecords(int inventoryTotalRecords) {
+    this.inventoryTotalRecords = inventoryTotalRecords;
+  }
+
   public int getTotalRecords() {
     return totalRecords;
   }
@@ -258,6 +301,9 @@ public class Request {
       this.totalRecords = value == null ? 0 : Integer.parseInt(value);
       this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
       this.requestId = params.get(REQUEST_ID_PARAM);
+      this.fromInventory = Boolean.parseBoolean(params.get(REQUEST_FROM_INVENTORY_PARAM));
+      this.inventoryTotalRecords = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM)).orElse("0"));
+      this.inventoryOffsetShift = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
