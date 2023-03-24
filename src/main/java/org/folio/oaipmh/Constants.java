@@ -69,6 +69,14 @@ public final class Constants {
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
   public static final String REQUEST_ID_PARAM = "requestId";
+  public static final String REQUEST_FROM_INVENTORY_PARAM = "fromInventory";
+  public static final String REQUEST_INVENTORY_TOTAL_RECORDS_PARAM = "inventoryTotalRecords";
+  /**
+   * It is used if SRS + Inventory and serves as reduce offset from Inventory once a number of returned
+   * SRS records is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}, so the rest
+   * should be from Inventory, but with reduced offset by the number of SRS records returned.
+   */
+  public static final String REQUEST_INVENTORY_OFFSET_SHIFT_PARAM = "inventoryOffsetShift";
   public static final String VERB_PARAM = "verb";
 
   public static final String DEFLATE = "deflate";
