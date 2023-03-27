@@ -386,7 +386,7 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(BigInteger.valueOf(request.getOffset() + request.getOldSrsOffset()));
+        .withCursor(BigInteger.valueOf((long)request.getOffset() + request.getOldSrsOffset()));
     }
 
     return null;
