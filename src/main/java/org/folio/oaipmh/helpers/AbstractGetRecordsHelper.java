@@ -299,6 +299,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             if (withInventory) {
               var numOfReturnedSrsRecords = srsRecords.getJsonArray("sourceRecords").size();
               if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
+                request.setOldSrsOffset(request.getOffset());
                 request.setOffset(0);
                 request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
                 request.setFromInventory(true);

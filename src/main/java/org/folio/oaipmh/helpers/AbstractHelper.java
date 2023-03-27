@@ -66,6 +66,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
 import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
@@ -365,6 +366,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(REQUEST_FROM_INVENTORY_PARAM, String.valueOf(request.isFromInventory()));
       extraParams.put(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM, String.valueOf(request.getInventoryTotalRecords()));
       extraParams.put(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM, String.valueOf(request.getInventoryOffsetShift()));
+      extraParams.put(REQUEST_OLD_SRS_OFFSET_PARAM, String.valueOf(request.getOldSrsOffset()));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
@@ -384,7 +386,7 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+        .withCursor(BigInteger.valueOf(request.getOffset() + request.getOldSrsOffset()));
     }
 
     return null;

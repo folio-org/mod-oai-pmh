@@ -31,6 +31,7 @@ import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -69,6 +70,7 @@ public class Request {
    * It matters when number of records returned from SRS is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
    */
   private int inventoryOffsetShift;
+  private int oldSrsOffset;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
    /** The id of the request. */
@@ -231,6 +233,14 @@ public class Request {
     this.inventoryTotalRecords = inventoryTotalRecords;
   }
 
+  public int getOldSrsOffset() {
+    return oldSrsOffset;
+  }
+
+  public void setOldSrsOffset(int oldSrsOffset) {
+    this.oldSrsOffset = oldSrsOffset;
+  }
+
   public int getTotalRecords() {
     return totalRecords;
   }
@@ -307,6 +317,7 @@ public class Request {
       this.fromInventory = Boolean.parseBoolean(params.get(REQUEST_FROM_INVENTORY_PARAM));
       this.inventoryTotalRecords = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM)).orElse("0"));
       this.inventoryOffsetShift = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
+      this.oldSrsOffset = Integer.parseInt(ofNullable(params.get(REQUEST_OLD_SRS_OFFSET_PARAM)).orElse("0"));
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
