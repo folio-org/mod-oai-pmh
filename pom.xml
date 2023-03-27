@@ -732,13 +732,13 @@
         <artifactId>docker-maven-plugin</artifactId>
         <version>0.42.0</version>
         <executions>
-          <execution>
-            <id>stop-previous-database</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>stop</goal>
-            </goals>
-          </execution>
+<!--          <execution>-->
+<!--            <id>stop-previous-database</id>-->
+<!--            <phase>generate-sources</phase>-->
+<!--            <goals>-->
+<!--              <goal>stop</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
           <execution>
             <id>prepare-database</id>
             <phase>generate-sources</phase>
