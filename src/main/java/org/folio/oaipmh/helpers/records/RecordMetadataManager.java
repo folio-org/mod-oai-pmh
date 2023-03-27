@@ -64,6 +64,7 @@ public class RecordMetadataManager {
   public static final String CALL_NUMBER = "callNumber";
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
+  public static final String SUPPRESS_DISCOVERY_CODE = "t";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
@@ -366,7 +367,10 @@ public class RecordMetadataManager {
     JsonObject dataFieldContent = dataField.getJsonObject(tagNumber);
     JsonArray subFields = dataFieldContent.getJsonArray(SUBFIELDS);
     List<Object> subFieldsList = subFields.getList();
-
+    for (var s : subFieldsList) {
+      var subField = (LinkedHashMap<String, Object>)s;
+      if (subField.containsKey(SUPPRESS_DISCOVERY_CODE)) return;
+    }
     Map<String, Object> discoverySuppressedSubField = new LinkedHashMap<>();
     int subFieldValue = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
     discoverySuppressedSubField.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);
