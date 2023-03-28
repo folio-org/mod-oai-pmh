@@ -387,7 +387,7 @@ public abstract class AbstractHelper implements VerbHelper {
       return new ResumptionTokenType()
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
-        .withCompleteListSize(BigInteger.valueOf(instances.size()))
+        .withCompleteListSize(BigInteger.valueOf(totalRecords))
         .withCursor(calculateCursor(request, inventoryOffsetShift, instances.size(), maxRecordsPerResponse));
     }
 
