@@ -70,6 +70,9 @@ public class Request {
    * It matters when number of records returned from SRS is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
    */
   private int inventoryOffsetShift;
+  /**
+   * Saves last offset from SRS to keep offset updated when switching to Inventory.
+   */
   private int oldSrsOffset;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
