@@ -398,6 +398,9 @@ public abstract class AbstractHelper implements VerbHelper {
     if (request.getOffset() == 0) { // Offset resets to 0 when SRS exhausted and switching to Inventory in case of SRS + Inventory.
       cursor += inventoryOffsetShift;
     }
+    if (cursor < 0) {
+      cursor = 0;
+    }
     return BigInteger.valueOf(cursor);
   }
 
