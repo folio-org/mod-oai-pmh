@@ -354,8 +354,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
+    int inventoryOffsetShift = request.getInventoryOffsetShift();
     int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + request.getInventoryOffsetShift();
+      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + inventoryOffsetShift;
     request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
@@ -386,10 +387,18 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(BigInteger.valueOf(request.getOffset() + request.getOldSrsOffset()));
+        .withCursor(calculateCursor(request, inventoryOffsetShift));
     }
 
     return null;
+  }
+
+  private BigInteger calculateCursor(Request request, int inventoryOffsetShift) {
+    var cursor = (long)request.getOffset() + request.getOldSrsOffset();
+    if (request.getOffset() == 0) { // Offset resets to 0 when SRS exhausted and switching to Inventory in case of SRS + Inventory.
+      cursor += inventoryOffsetShift;
+    }
+    return BigInteger.valueOf(cursor);
   }
 
   private JsonObject getAndRemoveLastInstance(JsonArray instances) {
