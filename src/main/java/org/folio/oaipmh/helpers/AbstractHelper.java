@@ -355,8 +355,9 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
     int inventoryOffsetShift = request.getInventoryOffsetShift();
-    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + inventoryOffsetShift;
+    int maxRecordsPerResponse = Integer.parseInt(RepositoryConfigurationUtil.getProperty
+      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + maxRecordsPerResponse + inventoryOffsetShift;
     request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
@@ -387,16 +388,16 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(calculateCursor(request, inventoryOffsetShift));
+        .withCursor(calculateCursor(request, inventoryOffsetShift, instances.size(), maxRecordsPerResponse));
     }
 
     return null;
   }
 
-  private BigInteger calculateCursor(Request request, int inventoryOffsetShift) {
+  private BigInteger calculateCursor(Request request, int inventoryOffsetShift, int instancesSize, int maxRecordsPerResponse) {
     var cursor = (long)request.getOffset() + request.getOldSrsOffset();
-    if (request.getOffset() == 0) { // Offset resets to 0 when SRS exhausted and switching to Inventory in case of SRS + Inventory.
-      cursor += inventoryOffsetShift;
+    if (request.getOffset() == 0 && instancesSize < maxRecordsPerResponse) { // Offset resets to 0 when SRS exhausted and switching to Inventory in case of SRS + Inventory.
+      cursor -= inventoryOffsetShift;
     }
     if (cursor < 0) {
       cursor = 0;
