@@ -759,7 +759,7 @@
         <configuration>
           <changeLogFile>src/main/resources/liquibase/tenant/changelog.xml</changeLogFile>
           <driver>org.postgresql.Driver</driver>
-          <url>jdbc:postgresql://localhost:15432/postgres</url>
+          <url>jdbc:postgresql://${pg.ip}:${pg.port}/postgres</url>
           <username>postgres</username>
           <password>postgres</password>
         </configuration>
@@ -814,7 +814,7 @@
         <configuration>
           <jdbc>
             <driver>org.postgresql.Driver</driver>
-            <url>jdbc:postgresql://localhost:15432/postgres</url>
+            <url>jdbc:postgresql://${pg.ip}:${pg.port}/postgres</url>
             <user>postgres</user>
             <password>postgres</password>
           </jdbc>
