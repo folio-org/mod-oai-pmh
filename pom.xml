@@ -732,7 +732,7 @@
         <artifactId>docker-maven-plugin</artifactId>
         <version>0.42.0</version>
         <configuration>
-          <containerNamePattern>pg-mod-oai-pmh-generate-%i</containerNamePattern>
+<!--          <containerNamePattern>pg-mod-oai-pmh-generate-%i</containerNamePattern>-->
           <images>
             <image>
               <external>
