@@ -82,6 +82,7 @@ public final class Constants {
    * once SRS exhausted.
    */
   public static final String REQUEST_OLD_SRS_OFFSET_PARAM = "oldSrsOffset";
+  public static final String REQUEST_CURSOR_PARAM = "cursor";
   public static final String VERB_PARAM = "verb";
 
   public static final String DEFLATE = "deflate";
