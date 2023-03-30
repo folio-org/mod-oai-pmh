@@ -670,7 +670,7 @@ class OaiPmhImplTest {
     String resumptionTokenValue =
       new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(12)));
+    assertThat(params, is(hasSize(13)));
 
     assertThat(getParamValue(params, METADATA_PREFIX_PARAM), is(equalTo(metadataPrefix.getName())));
     assertThat(getParamValue(params, FROM_PARAM), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
@@ -822,7 +822,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(12)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
@@ -849,7 +849,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(12)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
@@ -875,7 +875,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(11)));
+    assertThat(params, is(hasSize(12)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
@@ -902,7 +902,7 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(12)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
