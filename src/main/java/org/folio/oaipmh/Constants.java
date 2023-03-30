@@ -77,6 +77,11 @@ public final class Constants {
    * should be from Inventory, but with reduced offset by the number of SRS records returned.
    */
   public static final String REQUEST_INVENTORY_OFFSET_SHIFT_PARAM = "inventoryOffsetShift";
+  /**
+   * Intended to keep cursor incremented if offset resets to 0 when switching to Inventory
+   * once SRS exhausted.
+   */
+  public static final String REQUEST_OLD_SRS_OFFSET_PARAM = "oldSrsOffset";
   public static final String VERB_PARAM = "verb";
 
   public static final String DEFLATE = "deflate";
