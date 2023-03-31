@@ -63,6 +63,11 @@ import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.REQUEST_CURSOR_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
@@ -350,14 +355,23 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
+    int inventoryOffsetShift = request.getInventoryOffsetShift();
+    int maxRecordsPerResponse = Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + maxRecordsPerResponse + inventoryOffsetShift;
+    int newCursor = request.getCursor() + instances.size() - 1;
+    request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
-    if (newOffset < totalRecords) {
+    if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
       Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM, String.valueOf(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));
+      extraParams.put(REQUEST_FROM_INVENTORY_PARAM, String.valueOf(request.isFromInventory()));
+      extraParams.put(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM, String.valueOf(request.getInventoryTotalRecords()));
+      extraParams.put(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM, String.valueOf(request.getInventoryOffsetShift()));
+      extraParams.put(REQUEST_OLD_SRS_OFFSET_PARAM, String.valueOf(request.getOldSrsOffset()));
+      extraParams.put(REQUEST_CURSOR_PARAM, String.valueOf(newCursor));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
@@ -377,7 +391,7 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+        .withCursor(BigInteger.valueOf(request.getCursor()));
     }
 
     return null;

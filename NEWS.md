@@ -1,5 +1,15 @@
 ## 3.12.0 - Unreleased
 
+## 3.11.3 (Released)
+
+This release contains bug fix for SRS + Inventory and missed permissions
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.2...v3.11.3)
+
+### Bug fixes
+
+* [MODOAIPMH-487](https://issues.folio.org/browse/MODOAIPMH-487) OAI-PMH returns more records than Max Records settings when Record source = SRS + Inventory
+
 ## 3.11.2 (Released)
 
 This release contains Postgres version upgrades to 42.5.4

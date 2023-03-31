@@ -88,13 +88,16 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
 import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
 import static org.folio.oaipmh.helpers.records.RecordMetadataManager.HOLDINGS;
@@ -206,7 +209,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       updatedBefore,
       null,
       request.getOffset(),
-      batchSize + 1,
+       request.isFromInventory() ? 0 : batchSize + 1,
       getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
 
@@ -294,7 +297,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (isSuccess(response.statusCode())) {
             var srsRecords = response.bodyAsJsonObject();
             if (withInventory) {
-              requestFromInventory(request, limit, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
+              var numOfReturnedSrsRecords = srsRecords.getJsonArray("sourceRecords").size();
+              if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
+                request.setOldSrsOffset(request.getOffset());
+                request.setOffset(0);
+                request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
+                request.setFromInventory(true);
+              }
+              requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
                 handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
             } else {
               processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -351,6 +361,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (nonNull(inventoryRecords)) {
       items.addAll(storageHelper.getItems(inventoryRecords));
       totalRecords += storageHelper.getTotalRecords(inventoryRecords);
+      if (request.isFromInventory()) {
+        request.setInventoryTotalRecords(storageHelper.getTotalRecords(inventoryRecords));
+      }
+    }
+
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    if (recordsSource.equals(SRS_AND_INVENTORY) && request.getTotalRecords() > totalRecords) {
+      totalRecords = request.getTotalRecords();
     }
 
     logger.debug("{} entries retrieved out of {}.", items.size(), totalRecords);
@@ -668,6 +686,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (nonNull(inventoryRecords)) {
       instances.addAll(storageHelper.getItems(inventoryRecords));
       totalRecords += storageHelper.getTotalRecords(inventoryRecords);
+      if (request.isFromInventory()) {
+        request.setInventoryTotalRecords(storageHelper.getTotalRecords(inventoryRecords));
+      }
+    }
+
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    if (recordsSource.equals(SRS_AND_INVENTORY) && request.getTotalRecords() > totalRecords) {
+      totalRecords = request.getTotalRecords();
     }
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
