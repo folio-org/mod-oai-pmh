@@ -372,6 +372,30 @@ public class InstancesDaoImpl implements InstancesDao {
       .map(this::queryResultToInstancesList));
   }
 
+  @Override
+  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId, String source) {
+    if (nonNull(source)) {
+      return getTotalNumberOfRecordsFilteredBySource(requestId, tenantId, source);
+    }
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext ->
+        dslContext.selectCount().from(INSTANCES)
+          .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
+      .map(this::queryResultToInt));
+  }
+
+  private Future<Integer> getTotalNumberOfRecordsFilteredBySource(String requestId, String tenantId, String source) {
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext ->
+        dslContext.selectCount().from(INSTANCES)
+          .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))).and(INSTANCES.SOURCE.eq(source)))
+      .map(this::queryResultToInt));
+  }
+
+  private Integer queryResultToInt(QueryResult queryResult) {
+    return queryResult.get(0, Integer.class);
+  }
+
   private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId, String source) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)

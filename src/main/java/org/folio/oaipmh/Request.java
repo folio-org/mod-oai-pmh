@@ -27,6 +27,7 @@ import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_CURSOR_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
@@ -78,6 +79,7 @@ public class Request {
   private int cursor;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
+  private int completeListSize;
    /** The id of the request. */
   private String requestId;
   /** The PK id of the first record in the next set of results used for partitioning. */
@@ -250,6 +252,14 @@ public class Request {
     return cursor;
   }
 
+  public int getCompleteListSize() {
+    return completeListSize;
+  }
+
+  public void setCompleteListSize(int completeListSize) {
+    this.completeListSize = completeListSize;
+  }
+
   public int getTotalRecords() {
     return totalRecords;
   }
@@ -328,6 +338,7 @@ public class Request {
       this.inventoryOffsetShift = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
       this.oldSrsOffset = Integer.parseInt(ofNullable(params.get(REQUEST_OLD_SRS_OFFSET_PARAM)).orElse("0"));
       this.cursor = Integer.parseInt(ofNullable(params.get(REQUEST_CURSOR_PARAM)).orElse("0"));
+      this.completeListSize = Integer.parseInt(ofNullable(params.get(REQUEST_COMPLETE_LIST_SIZE_PARAM)).orElse("0"));
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
