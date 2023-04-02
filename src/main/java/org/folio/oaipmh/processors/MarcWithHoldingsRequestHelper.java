@@ -479,6 +479,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             request.setNextInstancePkValue(instances.get(batchSize)
               .getId());
           }
+          if (request.getVerb() == VerbType.LIST_IDENTIFIERS) {
+            return Future.succeededFuture(jsonInstances);
+          }
           metricsCollectingService.startMetric(requestId, INSTANCES_PROCESSING);
           return enrichInstances(jsonInstances, request)
                   .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INSTANCES_PROCESSING));
@@ -819,7 +822,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       var future = requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, part), true, true).onComplete(instancesHandler -> {
         if (instancesHandler.succeeded()) {
           var inventoryRecords = instancesHandler.result();
-          generateRecordsOnTheFly(request, inventoryRecords);
+          if (request.getVerb() != VerbType.LIST_IDENTIFIERS) {
+            generateRecordsOnTheFly(request, inventoryRecords);
+          }
           inventoryRecords.getJsonArray("instances").forEach(instance -> {
             var jsonInstance = (JsonObject) instance;
             var externalIdsHolder = new JsonObject();

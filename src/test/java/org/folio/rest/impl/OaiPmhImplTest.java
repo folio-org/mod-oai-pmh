@@ -404,7 +404,7 @@ class OaiPmhImplTest {
     if (recordsSource.equals(SRS_AND_INVENTORY)) {
       // 10 from SRS + 10 from Inventory
       assertEquals(BigInteger.valueOf(20), oaipmh.getListIdentifiers().getResumptionToken().getCompleteListSize());
-      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 19);
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, prefix == MARC21WITHHOLDINGS ? 10 : 19);
       assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(notNullValue()));
     } else {
       assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
