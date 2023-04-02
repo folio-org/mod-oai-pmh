@@ -282,26 +282,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
                 if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
-                  var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
-                  String source = null; // Case when SRS + Inventory.
-                  if (recordsSource.equals(INVENTORY)) {
-                    source = "FOLIO";
-                  } else if (recordsSource.equals(SRS)) {
-                    source = "MARC";
-                  }
-                  instancesService.getTotalNumberOfRecords(requestId, request.getTenant(), source)
-                    .onComplete(handler -> {
-                    if (handler.succeeded()) {
-                      var completeListSize = handler.result();
-                      request.setCompleteListSize(completeListSize);
-                      buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
-                        statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
-                    } else {
-                      logger.error("Complete list size cannot be retrieved: {}", handler.cause());
-                      buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
-                        statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
-                    }
-                  });
+                  processListIdentifiers(request, requestId, lastUpdateDate, firstBatch, nextInstanceId,
+                    deletedRecordSupport, statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
                 } else {
                   buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
                     statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
@@ -313,6 +295,32 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
+  }
+
+  private void processListIdentifiers(Request request, String requestId, OffsetDateTime lastUpdateDate,
+                                      boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport,
+                                      StatisticsHolder statistics, List<JsonObject> instancesWithoutLast,
+                                      Promise<Response> oaiPmhResponsePromise, Map<String, JsonObject> res) {
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    String source = null; // Case when SRS + Inventory.
+    if (recordsSource.equals(INVENTORY)) {
+      source = "FOLIO";
+    } else if (recordsSource.equals(SRS)) {
+      source = "MARC";
+    }
+    instancesService.getTotalNumberOfRecords(requestId, request.getTenant(), source)
+      .onComplete(handler -> {
+        if (handler.succeeded()) {
+          var completeListSize = handler.result();
+          request.setCompleteListSize(completeListSize);
+          buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
+            statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
+        } else {
+          logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
+          buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
+            statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
+        }
+      });
   }
 
   private Future<Response> buildRecordsResponse(Request request, String requestId, OffsetDateTime lastUpdateDate,
@@ -570,7 +578,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
         if (request.getVerb() == VerbType.LIST_IDENTIFIERS) {
-          List<HeaderType> headers = records.stream().map(record -> record.getHeader()).collect(toList());
+          List<HeaderType> headers = records.stream().map(RecordType::getHeader).collect(toList());
           oaipmh.withListIdentifiers(new ListIdentifiersType().withHeaders(headers));
         } else {
           oaipmh.withListRecords(new ListRecordsType().withRecords(records));
