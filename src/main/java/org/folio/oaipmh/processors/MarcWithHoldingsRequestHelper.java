@@ -282,10 +282,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
                 if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
-                  processListIdentifiers(request, requestId, lastUpdateDate, firstBatch, nextInstanceId,
+                  processListIdentifiers(request, lastUpdateDate, firstBatch, nextInstanceId,
                     deletedRecordSupport, statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
                 } else {
-                  buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
+                  buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
                     statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
                 }
               }
@@ -297,7 +297,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     }
   }
 
-  private void processListIdentifiers(Request request, String requestId, OffsetDateTime lastUpdateDate,
+  private void processListIdentifiers(Request request, OffsetDateTime lastUpdateDate,
                                       boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport,
                                       StatisticsHolder statistics, List<JsonObject> instancesWithoutLast,
                                       Promise<Response> oaiPmhResponsePromise, Map<String, JsonObject> res) {
@@ -308,26 +308,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     } else if (recordsSource.equals(SRS)) {
       source = "MARC";
     }
-    instancesService.getTotalNumberOfRecords(requestId, request.getTenant(), source)
+    instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
       .onComplete(handler -> {
         if (handler.succeeded()) {
           var completeListSize = handler.result();
           request.setCompleteListSize(completeListSize);
-          buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
+          buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
             statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
         } else {
           logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
-          buildRecordsResponse(request, requestId, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
+          buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
             statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
         }
       });
   }
 
-  private Future<Response> buildRecordsResponse(Request request, String requestId, OffsetDateTime lastUpdateDate,
+  private Future<Response> buildRecordsResponse(Request request, OffsetDateTime lastUpdateDate,
                                                 boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport,
                                                 StatisticsHolder statistics, List<JsonObject> instancesWithoutLast,
                                                 Promise<Response> oaiPmhResponsePromise, Map<String, JsonObject> res) {
-    return buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+    return buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
       deletedRecordSupport, statistics)
       .onSuccess(oaiPmhResponsePromise::complete)
       .onFailure(e -> handleException(oaiPmhResponsePromise, e));
