@@ -291,11 +291,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                   }
                   instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
                     .onComplete(handler -> {
-                      if (handler.succeeded()) {
-                        request.setCompleteListSize(handler.result());
-                      } else {
-                        logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
-                      }
+                      setCompleteListSize(handler, request);
                       buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                         deletedRecordSupport, statistics)
                         .onSuccess(oaiPmhResponsePromise::complete)
@@ -313,6 +309,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
+    }
+  }
+
+  private void setCompleteListSize(AsyncResult<Integer> handler, Request request) {
+    if (handler.succeeded()) {
+      var completeListSize = handler.result();
+      request.setCompleteListSize(completeListSize);
+    } else {
+      logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
     }
   }
 
