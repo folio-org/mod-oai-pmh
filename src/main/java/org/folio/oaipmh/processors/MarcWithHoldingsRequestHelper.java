@@ -282,11 +282,31 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
                 if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
-                  processListIdentifiers(request, lastUpdateDate, firstBatch, nextInstanceId,
-                    deletedRecordSupport, statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
+                  var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+                  String source = null; // Case when SRS + Inventory.
+                  if (recordsSource.equals(INVENTORY)) {
+                    source = "FOLIO";
+                  } else if (recordsSource.equals(SRS)) {
+                    source = "MARC";
+                  }
+                  instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
+                    .onComplete(handler -> {
+                      if (handler.succeeded()) {
+                        var completeListSize = handler.result();
+                        request.setCompleteListSize(completeListSize);
+                      } else {
+                        logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
+                      }
+                      buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                        deletedRecordSupport, statistics)
+                        .onSuccess(oaiPmhResponsePromise::complete)
+                        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                    });
                 } else {
-                  buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
-                    statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
+                  buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                    deletedRecordSupport, statistics)
+                    .onSuccess(oaiPmhResponsePromise::complete)
+                    .onFailure(e -> handleException(oaiPmhResponsePromise, e));
                 }
               }
             )
@@ -295,42 +315,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
-  }
-
-  private void processListIdentifiers(Request request, OffsetDateTime lastUpdateDate,
-                                      boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport,
-                                      StatisticsHolder statistics, List<JsonObject> instancesWithoutLast,
-                                      Promise<Response> oaiPmhResponsePromise, Map<String, JsonObject> res) {
-    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
-    String source = null; // Case when SRS + Inventory.
-    if (recordsSource.equals(INVENTORY)) {
-      source = "FOLIO";
-    } else if (recordsSource.equals(SRS)) {
-      source = "MARC";
-    }
-    instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
-      .onComplete(handler -> {
-        if (handler.succeeded()) {
-          var completeListSize = handler.result();
-          request.setCompleteListSize(completeListSize);
-          buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
-            statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
-        } else {
-          logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
-          buildRecordsResponse(request, lastUpdateDate, firstBatch, nextInstanceId, deletedRecordSupport,
-            statistics, instancesWithoutLast, oaiPmhResponsePromise, res);
-        }
-      });
-  }
-
-  private Future<Response> buildRecordsResponse(Request request, OffsetDateTime lastUpdateDate,
-                                                boolean firstBatch, String nextInstanceId, boolean deletedRecordSupport,
-                                                StatisticsHolder statistics, List<JsonObject> instancesWithoutLast,
-                                                Promise<Response> oaiPmhResponsePromise, Map<String, JsonObject> res) {
-    return buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
-      deletedRecordSupport, statistics)
-      .onSuccess(oaiPmhResponsePromise::complete)
-      .onFailure(e -> handleException(oaiPmhResponsePromise, e));
   }
 
   private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
