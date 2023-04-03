@@ -194,7 +194,7 @@ public class OkapiMockServer {
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
-  private static final String LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW = "list_identifiers_folio_and_marc_view.json";
+  private static final String LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20 = "list_identifiers_folio_and_marc_view_20.json";
   private static final String LIST_IDENTIFIERS_100_VIEW = "list_identifiers_100_view.json";
   private static final String LIST_IDENTIFIERS_11_VIEW = "list_identifiers_11_view.json";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
@@ -390,7 +390,7 @@ public class OkapiMockServer {
       } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY) || uri.contains(DATE_FOR_INSTANCES_10)) {
         inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_VIEW);
       } else if (uri.contains(DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)) {
-        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW);
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20);
       } else if (uri.contains("2003-01-01")) {
         inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_100_VIEW);
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
