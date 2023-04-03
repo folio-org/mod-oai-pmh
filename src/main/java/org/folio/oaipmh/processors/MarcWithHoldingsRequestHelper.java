@@ -292,18 +292,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                   instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
                     .onComplete(handler -> {
                       if (handler.succeeded()) {
-                        var completeListSize = handler.result();
-                        request.setCompleteListSize(completeListSize);
+                        request.setCompleteListSize(handler.result());
                       } else {
                         logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
                       }
-                      buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                      buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                         deletedRecordSupport, statistics)
                         .onSuccess(oaiPmhResponsePromise::complete)
                         .onFailure(e -> handleException(oaiPmhResponsePromise, e));
                     });
                 } else {
-                  buildRecordsResponse(request, request.getRequestId(), instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                  buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                     deletedRecordSupport, statistics)
                     .onSuccess(oaiPmhResponsePromise::complete)
                     .onFailure(e -> handleException(oaiPmhResponsePromise, e));
