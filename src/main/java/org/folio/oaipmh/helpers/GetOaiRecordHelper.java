@@ -54,7 +54,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
-      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
+      logger.error("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future();
