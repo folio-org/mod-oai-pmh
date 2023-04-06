@@ -49,6 +49,7 @@ class RecordMetadataManagerTest {
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
+  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE = "/metadata-manager/srs_instance_with_electronic_access_with_suppress_value.json";
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
@@ -165,6 +166,18 @@ class RecordMetadataManagerTest {
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD);
       updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldSkipDiscoverySuppressedCodeAddingIfAlreadyExist(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE)));
+      String source = storageHelper.getInstanceRecordSource(record);
+      String updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+      verifyCountOfSuppressedValueField(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
   }
@@ -367,6 +380,23 @@ class RecordMetadataManagerTest {
       .get();
     int subFieldValue = discoverySuppressedSubField.getInteger("t");
     assertEquals(0, subFieldValue);
+  }
+
+  private void verifyCountOfSuppressedValueField(String source, Predicate<JsonObject> predicate, String tagNumber) {
+    JsonObject jsonFromSource = new JsonObject(source);
+    JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
+    JsonObject generalInfoField = fields.stream()
+      .map(jsonObject -> (JsonObject) jsonObject)
+      .filter(predicate)
+      .findFirst()
+      .get();
+
+    JsonObject fieldContent = generalInfoField.getJsonObject(tagNumber);
+    JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
+    var count = subFields.stream()
+      .map(jsonObject -> (JsonObject) jsonObject)
+      .filter(jsonObject -> jsonObject.containsKey("t")).count();
+    assertEquals(1, count);
   }
 
   private int getSuppressedFromDiscoveryValue(List<JsonObject> effectiveLocationFields) {
