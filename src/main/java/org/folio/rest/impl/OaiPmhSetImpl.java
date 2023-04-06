@@ -240,7 +240,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
     try {
       return mapper.writeValueAsString(folioSet);
     } catch (IOException ex) {
-      logger.warn("Cannot transform dto object to json string for entity logging.");
+      logger.error("Cannot transform dto object to json string for entity logging.");
       return folioSet.toString();
     }
   }

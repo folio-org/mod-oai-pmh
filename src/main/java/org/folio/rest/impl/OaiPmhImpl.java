@@ -103,7 +103,7 @@ public class OaiPmhImpl implements Oai {
 
             String targetMetadataPrefix = request.getMetadataPrefix();
 
-            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
+            if((verbType.equals(LIST_RECORDS) || verbType.equals(LIST_IDENTIFIERS)) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
               verbHelper = MarcWithHoldingsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);
@@ -121,7 +121,7 @@ public class OaiPmhImpl implements Oai {
                });
           }
         } catch (Exception e) {
-          logger.warn("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
+          logger.error("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
           RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
           asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
         }
@@ -130,7 +130,7 @@ public class OaiPmhImpl implements Oai {
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
     final Response errorResponse;
-    logger.warn("getOaiRecords::  RequestId {} completed with error {}", request.getRequestId(), t.getMessage());
+    logger.error("getOaiRecords::  RequestId {} completed with error {}", request.getRequestId(), t.getMessage());
     if (t instanceof IllegalArgumentException) {
       final ResponseHelper rh = ResponseHelper.getInstance();
       OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);

@@ -37,6 +37,7 @@ import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
 import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
@@ -49,11 +50,14 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
+import org.openarchives.oai._2.HeaderType;
+import org.openarchives.oai._2.ListIdentifiersType;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
@@ -184,7 +188,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                 if (downloadInstancesResult.succeeded()) {
                   logger.info("handle:: Downloading instances complete for requestId {}", request.getRequestId());
                 } else {
-                  logger.warn("handle:: Downloading instances was canceled for requestId {} due to the error {}", request.getRequestId(), downloadInstancesResult.cause().getMessage());
+                  logger.error("handle:: Downloading instances was canceled for requestId {} due to the error {}", request.getRequestId(), downloadInstancesResult.cause().getMessage());
                   if (!oaipmhResponsePromise.future().isComplete()) {
                     oaipmhResponsePromise.fail(new IllegalStateException(downloadInstancesResult.cause()));
                   }
@@ -218,7 +222,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           connection.getPgConnection().close();
           if (result.failed()) {
             var error = result.cause();
-            logger.warn("updateRequestStreamEnded:: For requestId {} error updating request metadata on instances stream completion {}", requestId,  error);
+            logger.error("updateRequestStreamEnded:: For requestId {} error updating request metadata on instances stream completion {}", requestId,  error);
             promise.fail(error);
           } else {
             logger.info("updateRequestStreamEnded:: For requestId {} updating request metadata on instances stream completion finished", requestId);
@@ -230,7 +234,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   }
 
   private void processBatch(Request request, Context context, Promise<Response> oaiPmhResponsePromise, String requestId,
-      boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
+                            boolean firstBatch, StatisticsHolder statistics, OffsetDateTime lastUpdateDate) {
     try {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
@@ -239,7 +243,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
-            logger.warn("processBatch:: For requestId {} get instances failed: {}", request.getRequestId(), fut.cause()
+            logger.error("processBatch:: For requestId {} get instances failed: {}", request.getRequestId(), fut.cause()
               .getMessage());
             oaiPmhResponsePromise.fail(fut.cause());
             return;
@@ -248,7 +252,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           List<JsonObject> instances = fut.result();
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
-            logger.warn("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
+            logger.error("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
             handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
             return;
           }
@@ -268,9 +272,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             return;
           }
 
-          String nextInstanceId = instances.size() <= batchSize ? null
-              : instances.get(batchSize)
-                .getString(INSTANCE_ID_FIELD_NAME);
+          String nextInstanceId = instances.size() <= batchSize ? null : instances.get(batchSize).getString(INSTANCE_ID_FIELD_NAME);
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
           srsClient = createAndSetupSrsClient(request);
 
@@ -278,14 +280,44 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
-            .onSuccess(res -> buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
-              deletedRecordSupport, statistics)
-              .onSuccess(oaiPmhResponsePromise::complete)
-              .onFailure(e -> handleException(oaiPmhResponsePromise, e)))
+            .onSuccess(res -> {
+                if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
+                  var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+                  String source = null; // Case when SRS + Inventory.
+                  if (recordsSource.equals(INVENTORY)) {
+                    source = "FOLIO";
+                  } else if (recordsSource.equals(SRS)) {
+                    source = "MARC";
+                  }
+                  instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
+                    .onComplete(handler -> {
+                      setCompleteListSize(handler, request);
+                      buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                        deletedRecordSupport, statistics)
+                        .onSuccess(oaiPmhResponsePromise::complete)
+                        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                    });
+                } else {
+                  buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
+                    deletedRecordSupport, statistics)
+                    .onSuccess(oaiPmhResponsePromise::complete)
+                    .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                }
+              }
+            )
             .onFailure(e -> handleException(oaiPmhResponsePromise, e));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
+    }
+  }
+
+  private void setCompleteListSize(AsyncResult<Integer> handler, Request request) {
+    if (handler.succeeded()) {
+      var completeListSize = handler.result();
+      request.setCompleteListSize(completeListSize);
+    } else {
+      logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
     }
   }
 
@@ -357,7 +389,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         if (invalidResponseReceivedAndProcessed) {
           return;
         }
-        logger.warn("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while saving instances. Message: {}", request.getRequestId(), throwable.getMessage(),
+        logger.error("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while saving instances. Message: {}", request.getRequestId(), throwable.getMessage(),
           throwable);
         downloadInstancesPromise.complete(throwable);
         promise.fail(throwable);
@@ -386,7 +418,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         }
       })
       .onFailure(throwable -> {
-        logger.warn("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while reading data from response. Message: {}", request.getRequestId(), throwable.getMessage(),
+        logger.error("setupBatchHttpStream:: For requestId {} error has been occurred at JsonParser while reading data from response. Message: {}", request.getRequestId(), throwable.getMessage(),
           throwable);
         promise.fail(throwable);
       });
@@ -443,6 +475,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             request.setNextInstancePkValue(instances.get(batchSize)
               .getId());
           }
+          if (request.getVerb() == VerbType.LIST_IDENTIFIERS) {
+            return Future.succeededFuture(jsonInstances);
+          }
           metricsCollectingService.startMetric(requestId, INSTANCES_PROCESSING);
           return enrichInstances(jsonInstances, request)
                   .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INSTANCES_PROCESSING));
@@ -452,7 +487,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       })
       .onSuccess(promise::complete)
       .onFailure(throwable -> {
-        logger.warn("getNextInstances:: For requestId {} cannot get batch of instances ids from database: {}", request.getRequestId(), throwable.getMessage());
+        logger.error("getNextInstances:: For requestId {} cannot get batch of instances ids from database: {}", request.getRequestId(), throwable.getMessage());
         promise.fail(throwable);
       });
 
@@ -530,15 +565,23 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       if (records.isEmpty() && nextInstanceId == null && firstBatch) {
         oaipmh.withErrors(createNoRecordsFoundError());
       } else {
-        oaipmh.withListRecords(new ListRecordsType().withRecords(records));
+        if (request.getVerb() == VerbType.LIST_IDENTIFIERS) {
+          List<HeaderType> headers = records.stream().map(RecordType::getHeader).collect(toList());
+          oaipmh.withListIdentifiers(new ListIdentifiersType().withHeaders(headers));
+        } else {
+          oaipmh.withListRecords(new ListRecordsType().withRecords(records));
+        }
       }
       Response response;
       if (oaipmh.getErrors()
         .isEmpty()) {
         if (!firstBatch || nextInstanceId != null) {
           ResumptionTokenType resumptionToken = buildResumptionTokenFromRequest(request, requestId, records.size(), nextInstanceId);
-          oaipmh.getListRecords()
-            .withResumptionToken(resumptionToken);
+          if (request.getVerb() == VerbType.LIST_IDENTIFIERS) {
+            oaipmh.getListIdentifiers().withResumptionToken(resumptionToken);
+          } else {
+            oaipmh.getListRecords().withResumptionToken(resumptionToken);
+          }
         }
         response = responseHelper.buildSuccessResponse(oaipmh);
       } else {
@@ -588,7 +631,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsRecord);
           }
           try {
-            record.withMetadata(buildOaiMetadata(request, source));
+            if (request.getVerb() == VerbType.LIST_RECORDS) {
+              record.withMetadata(buildOaiMetadata(request, source));
+            }
           } catch (Exception e) {
             statistics.addFailedInstancesCounter(1);
             statistics.addFailedInstancesIds(instanceId);
@@ -623,6 +668,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     extraParams.put(REQUEST_ID_PARAM, requestId);
     extraParams.put(NEXT_RECORD_ID_PARAM, nextInstanceId);
     extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM, String.valueOf(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));
+
     if (request.getUntil() == null) {
       extraParams.put(UNTIL_PARAM, getUntilDate(request, request.getFrom()));
     }
@@ -631,12 +677,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       extraParams.put(NEXT_INSTANCE_PK_VALUE, String.valueOf(pk));
     }
 
-    String resumptionToken = request.toResumptionToken(extraParams);
-
-    return new ResumptionTokenType()
-      .withValue(resumptionToken)
+    var resumptionTokenType = new ResumptionTokenType()
       .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
+    if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() > 0) {
+      resumptionTokenType.withCompleteListSize(BigInteger.valueOf(request.getCompleteListSize()));
+      extraParams.put(REQUEST_COMPLETE_LIST_SIZE_PARAM, String.valueOf(request.getCompleteListSize()));
+    }
+    String resumptionToken = request.toResumptionToken(extraParams);
+    resumptionTokenType.withValue(resumptionToken);
+    return resumptionTokenType;
   }
 
   private void logHarvestingCompletion() {
@@ -768,7 +818,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       var future = requestFromInventory(request, limit, getInstanceIdForInventorySearch(request, part), true, true).onComplete(instancesHandler -> {
         if (instancesHandler.succeeded()) {
           var inventoryRecords = instancesHandler.result();
-          generateRecordsOnTheFly(request, inventoryRecords);
+          if (request.getVerb() != VerbType.LIST_IDENTIFIERS) {
+            generateRecordsOnTheFly(request, inventoryRecords);
+          }
           inventoryRecords.getJsonArray("instances").forEach(instance -> {
             var jsonInstance = (JsonObject) instance;
             var externalIdsHolder = new JsonObject();
