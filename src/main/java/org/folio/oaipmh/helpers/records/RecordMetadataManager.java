@@ -369,7 +369,9 @@ public class RecordMetadataManager {
     List<Object> subFieldsList = subFields.getList();
     for (var s : subFieldsList) {
       var subField = (LinkedHashMap<String, Object>)s;
-      if (subField.containsKey(SUPPRESS_DISCOVERY_CODE)) return;
+      if (subField.containsKey(SUPPRESS_DISCOVERY_CODE)) {
+        return;
+      }
     }
     Map<String, Object> discoverySuppressedSubField = new LinkedHashMap<>();
     int subFieldValue = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
