@@ -61,6 +61,6 @@ public interface InstancesService {
    */
   Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source);
 
-  Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId, String source);
+  Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId);
 
 }

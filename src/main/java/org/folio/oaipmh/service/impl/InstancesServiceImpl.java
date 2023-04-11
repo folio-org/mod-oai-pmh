@@ -115,8 +115,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId, String source) {
-    return instancesDao.getTotalNumberOfRecords(requestId, tenantId, source);
+  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId) {
+    return instancesDao.getTotalNumberOfRecords(requestId, tenantId);
   }
 
   @Autowired

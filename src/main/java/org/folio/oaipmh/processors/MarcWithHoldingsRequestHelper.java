@@ -23,6 +23,7 @@ import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Tuple;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -110,6 +111,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
   private static final String ONLY_INSTANCE_UPDATE_DATE = "onlyInstanceUpdateDate";
+  public static final String FOLIO_RECORD_SOURCE = "source";
 
   private static final String START_DATE_PARAM_NAME = "startDate";
   private static final String END_DATE_PARAM_NAME = "endDate";
@@ -282,14 +284,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
                 if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
-                  var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
-                  String source = null; // Case when SRS + Inventory.
-                  if (recordsSource.equals(INVENTORY)) {
-                    source = "FOLIO";
-                  } else if (recordsSource.equals(SRS)) {
-                    source = "MARC";
-                  }
-                  instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant(), source)
+                  instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant())
                     .onComplete(handler -> {
                       setCompleteListSize(handler, request);
                       buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
@@ -438,6 +433,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         String.valueOf(RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId())));
     paramMap.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, String.valueOf(isSkipSuppressed(request)));
     paramMap.put(ONLY_INSTANCE_UPDATE_DATE, "false");
+
+    String source = resolveRequestSource(request);
+    if (StringUtils.isNotEmpty(source)) {
+      paramMap.put(FOLIO_RECORD_SOURCE, source);
+    }
 
     final String params = paramMap.entrySet()
       .stream()
