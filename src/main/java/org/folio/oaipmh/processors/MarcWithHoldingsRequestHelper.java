@@ -519,13 +519,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           source = "MARC";
         }
         if (firstBatch) {
-          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant(), source)
+          return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
               timer -> getNextBatch(requestId, request, true, batchSize, listPromise, retryCount)));
 
         }
         int autoIncrementedId = request.getNextInstancePkValue();
-        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant(), source)
+        return instancesService.getInstancesList(batchSize + 1, requestId, autoIncrementedId, request.getTenant())
           .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
             timer -> getNextBatch(requestId, request, false, batchSize, listPromise, retryCount)));
 

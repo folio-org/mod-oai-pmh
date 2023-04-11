@@ -103,15 +103,15 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
     metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
-    return instancesDao.getInstancesList(limit, requestId, tenantId, source)
+    return instancesDao.getInstancesList(limit, requestId, tenantId)
             .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source) {
-    return instancesDao.getInstancesList(limit, requestId, id, tenantId, source);
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
+    return instancesDao.getInstancesList(limit, requestId, id, tenantId);
   }
 
   @Override

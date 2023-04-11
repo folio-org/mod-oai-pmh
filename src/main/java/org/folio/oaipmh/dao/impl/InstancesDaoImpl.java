@@ -336,7 +336,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source) {
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
@@ -346,10 +346,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source) {
-    if (nonNull(source)) {
-      return getInstancesListFilteredBySource(limit, requestId, id, tenantId, source);
-    }
+  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
@@ -372,11 +369,10 @@ public class InstancesDaoImpl implements InstancesDao {
     return queryResult.get(0, Integer.class);
   }
 
-  private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId, String source) {
+  private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId) {
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .and(INSTANCES.SOURCE.eq(source))
         .and(INSTANCES.ID.greaterOrEqual(id))
         .orderBy(INSTANCES.ID)
         .limit(limit))
