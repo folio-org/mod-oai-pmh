@@ -508,16 +508,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           "The instance list is empty after " + retryCount.get() + " attempts. Stop polling and return fail response."));
       return;
     }
-    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     instancesService.getRequestMetadataByRequestId(requestId, request.getTenant())
       .compose(requestMetadata -> Future.succeededFuture(requestMetadata.getStreamEnded()))
       .compose(streamEnded -> {
-        String source = null;
-        if (recordsSource.equals(INVENTORY)) {
-          source = "FOLIO";
-        } else if (recordsSource.equals(SRS)) {
-          source = "MARC";
-        }
         if (firstBatch) {
           return instancesService.getInstancesList(batchSize + 1, requestId, request.getTenant())
             .onComplete(handleInstancesDbResponse(listPromise, streamEnded, batchSize,
