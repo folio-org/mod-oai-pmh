@@ -369,16 +369,6 @@ public class InstancesDaoImpl implements InstancesDao {
     return queryResult.get(0, Integer.class);
   }
 
-  private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext -> dslContext.selectFrom(INSTANCES)
-        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .and(INSTANCES.ID.greaterOrEqual(id))
-        .orderBy(INSTANCES.ID)
-        .limit(limit))
-      .map(this::queryResultToInstancesList));
-  }
-
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
     return queryResult.stream()
       .map(QueryResult::unwrap)

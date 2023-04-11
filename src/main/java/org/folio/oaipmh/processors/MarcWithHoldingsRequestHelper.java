@@ -742,7 +742,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       .map(JsonEvent::objectValue)
       .map(inst -> new Instances().setInstanceId(UUID.fromString(inst.getString(INSTANCE_ID_FIELD_NAME)))
         .setSuppressFromDiscovery(Boolean.parseBoolean(inst.getString(SUPPRESS_FROM_DISCOVERY)))
-        .setRequestId(requestId).setSource(inst.getString("source")))
+        .setRequestId(requestId).setSource(inst.getString(FOLIO_RECORD_SOURCE)))
       .collect(Collectors.toList());
   }
 
