@@ -71,7 +71,7 @@ public class InstancesDaoImpl implements InstancesDao {
     OffsetDateTime offsetDateTime = ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault())
       .minusSeconds(expirationPeriodInSeconds)
       .toOffsetDateTime();
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(REQUEST_METADATA_LB)
         .where(REQUEST_METADATA_LB.LAST_UPDATED_DATE.lessOrEqual(offsetDateTime)))
       .map(this::mapRequestIdsResultToList));
@@ -79,7 +79,7 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor ->
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor ->
       queryExecutor.findOneRow(dslContext ->
         dslContext.selectFrom(REQUEST_METADATA_LB)
       .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
@@ -102,8 +102,8 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataCollection> getRequestMetadataCollection(int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(REQUEST_METADATA_LB))).compose(recordsCount ->
-      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(REQUEST_METADATA_LB)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(REQUEST_METADATA_LB))).compose(recordsCount ->
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(REQUEST_METADATA_LB)
           .orderBy(REQUEST_METADATA_LB.LAST_UPDATED_DATE.desc())
           .offset(offset)
           .limit(limit))
@@ -113,9 +113,9 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getFailedToSaveInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_TO_SAVE_INSTANCES_IDS)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_TO_SAVE_INSTANCES_IDS)
             .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
-      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_TO_SAVE_INSTANCES_IDS)
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_TO_SAVE_INSTANCES_IDS)
           .where(FAILED_TO_SAVE_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
           .limit(limit))
@@ -125,9 +125,9 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getSkippedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SKIPPED_INSTANCES_IDS)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SKIPPED_INSTANCES_IDS)
             .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
-      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SKIPPED_INSTANCES_IDS)
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SKIPPED_INSTANCES_IDS)
           .where(SKIPPED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
           .limit(limit))
@@ -137,9 +137,9 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getFailedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_INSTANCES_IDS)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(FAILED_INSTANCES_IDS)
             .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
-      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_INSTANCES_IDS)
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(FAILED_INSTANCES_IDS)
           .where(FAILED_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
           .limit(limit))
@@ -149,9 +149,9 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<UuidCollection> getSuppressedInstancesIdsCollection(String requestId, int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
             .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId))))).compose(recordsCount ->
-      getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS)
           .where(SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS.REQUEST_ID.eq(UUID.fromString(requestId)))
           .offset(offset)
           .limit(limit))
@@ -340,7 +340,7 @@ public class InstancesDaoImpl implements InstancesDao {
     if (nonNull(source)) {
       return getInstancesListFilteredBySource(limit, requestId, tenantId, source);
     }
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .orderBy(INSTANCES.ID)
@@ -353,7 +353,7 @@ public class InstancesDaoImpl implements InstancesDao {
     if (nonNull(source)) {
       return getInstancesListFilteredBySource(limit, requestId, id, tenantId, source);
     }
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .and(INSTANCES.ID.greaterOrEqual(id))
@@ -363,7 +363,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, String tenantId, String source) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .and(INSTANCES.SOURCE.eq(source))
@@ -377,7 +377,7 @@ public class InstancesDaoImpl implements InstancesDao {
     if (nonNull(source)) {
       return getTotalNumberOfRecordsFilteredBySource(requestId, tenantId, source);
     }
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext ->
         dslContext.selectCount().from(INSTANCES)
           .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
@@ -385,7 +385,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private Future<Integer> getTotalNumberOfRecordsFilteredBySource(String requestId, String tenantId, String source) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext ->
         dslContext.selectCount().from(INSTANCES)
           .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))).and(INSTANCES.SOURCE.eq(source)))
@@ -397,7 +397,7 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   private Future<List<Instances>> getInstancesListFilteredBySource(int limit, String requestId, int id, String tenantId, String source) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .query(dslContext -> dslContext.selectFrom(INSTANCES)
         .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
         .and(INSTANCES.SOURCE.eq(source))
@@ -438,6 +438,10 @@ public class InstancesDaoImpl implements InstancesDao {
 
   private ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
     return postgresClientFactory.getQueryExecutor(tenantId);
+  }
+
+  private ReactiveClassicGenericQueryExecutor getQueryExecutorReader(String tenantId) {
+    return postgresClientFactory.getQueryExecutorReader(tenantId);
   }
 
   private RequestMetadataCollection queryResultToRequestMetadataCollection(QueryResult queryResult, int totalRecordsCount) {
