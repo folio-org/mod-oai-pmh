@@ -1,5 +1,40 @@
 package org.folio.oaipmh.processors;
 
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
+import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
+import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
+import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
+import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
+import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SRS;
+import static org.folio.oaipmh.Constants.STATUS_CODE;
+import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
+import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
+import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
+
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -15,31 +50,38 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.parsetools.JsonEvent;
+import io.vertx.core.parsetools.JsonParser;
+import io.vertx.core.streams.WriteStream;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.impl.HttpRequestImpl;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.pgclient.PgConnection;
 import io.vertx.sqlclient.Tuple;
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import javax.ws.rs.core.Response;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-import static org.folio.oaipmh.Constants.INVENTORY;
-import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
-
-import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
-import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
-import static org.folio.oaipmh.Constants.SRS;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.service.InstancesService;
@@ -60,52 +102,9 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.ws.rs.core.Response;
-import java.math.BigInteger;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoField;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
-import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
-import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
-import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
-import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.OFFSET_PARAM;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
-import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
-import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
-import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
-import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
-import static org.folio.oaipmh.Constants.STATUS_CODE;
-import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
-import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
-import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
-import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
-
 public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
+  public static final int CHUNK_SIZE = 5000;
   protected final Logger logger = LogManager.getLogger(getClass());
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
@@ -329,19 +328,21 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
                                  Context vertxContext, StatisticsHolder downloadInstancesStatistics) {
 
-    HttpRequestImpl<Buffer> httpRequest = (HttpRequestImpl<Buffer>) buildInventoryQuery(request);
+    HttpRequest<Buffer> httpRequest = buildInventoryQuery(request);
     PostgresClient postgresClient = PostgresClient.getInstance(vertxContext.owner(), request.getTenant());
     setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, downloadInstancesStatistics);
   }
 
-  private void setupBatchHttpStream(Promise<?> promise, HttpRequestImpl<Buffer> inventoryHttpRequest,
+    private void setupBatchHttpStream(Promise<?> promise, HttpRequest<Buffer> inventoryHttpRequest,
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
 
     Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = new OaiPmhJsonParser().objectValueMode();
-    var batch = new ArrayList<JsonEvent>();
+      var jsonWriter = new JsonWriter(jsonParser);
+
+      var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
@@ -367,6 +368,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         var size = batch.size();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
           .onComplete(result -> {
+            jsonWriter.chunkSent(size);
             if (result.succeeded()) {
               downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
             } else {
@@ -396,7 +398,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       })
     );
 
-    inventoryHttpRequest.as(BodyCodec.jsonStream(jsonParser))
+    inventoryHttpRequest.as(BodyCodec.pipe(jsonWriter, true))
       .send()
       .onSuccess(resp -> {
         switch (resp.statusCode()) {
@@ -921,4 +923,73 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     this.instancesService = instancesService;
   }
 
+  private static class JsonWriter implements WriteStream<Buffer> {
+    private final JsonParser parser;
+    private final AtomicInteger currentQueueSize = new AtomicInteger(0);
+    private final int loadBottomGreenLine = CHUNK_SIZE;
+    private int maxQueueSize = CHUNK_SIZE * 2;
+    private Handler<Void> drainHandler;
+
+
+    private JsonWriter(JsonParser parser) {
+      this.parser = parser;
+    }
+    @Override
+    public WriteStream<Buffer> exceptionHandler(Handler<Throwable> handler) {
+      parser.exceptionHandler(handler);
+      return this;
+    }
+
+    @Override
+    public Future<Void> write(Buffer buffer) {
+      Promise<Void> promise = Promise.promise();
+      write(buffer, promise);
+      return promise.future();
+    }
+
+    @Override
+    public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
+      parser.handle(data);
+      currentQueueSize.incrementAndGet();
+      if (handler != null) {
+        handler.handle(Future.succeededFuture());
+      }
+    }
+
+    @Override
+    public void end(Handler<AsyncResult<Void>> handler) {
+      parser.end();
+      if (handler != null) {
+        handler.handle(Future.succeededFuture());
+      }
+    }
+
+    @Override
+    public WriteStream<Buffer> setWriteQueueMaxSize(int maxQueueSize) {
+      this.maxQueueSize = maxQueueSize + CHUNK_SIZE;
+
+      return this;
+    }
+
+    @Override
+    public boolean writeQueueFull() {
+      return currentQueueSize.get() >= maxQueueSize;
+    }
+
+    @Override
+    public WriteStream<Buffer> drainHandler(Handler<Void> drainHandler) {
+      this.drainHandler = drainHandler;
+      return this;
+    }
+
+    public void chunkSent(int chunkSize) {
+      var current = currentQueueSize.addAndGet(-chunkSize);
+      if (current < loadBottomGreenLine) {
+        var handler = drainHandler;
+        if (handler != null) {
+          handler.handle(null);
+        }
+      }
+    }
+  }
 }
