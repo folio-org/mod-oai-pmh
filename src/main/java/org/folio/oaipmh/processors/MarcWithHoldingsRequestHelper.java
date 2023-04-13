@@ -104,7 +104,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
-  public static final int CHUNK_SIZE = 5000;
   protected final Logger logger = LogManager.getLogger(getClass());
 
   private static final String DELETED_RECORD_SUPPORT_PARAM_NAME = "deletedRecordSupport";
@@ -337,18 +336,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
+    var chunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
 
     Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = new OaiPmhJsonParser().objectValueMode();
-      var jsonWriter = new JsonWriter(jsonParser);
+    var jsonWriter = new JsonWriter(jsonParser, chunkSize);
 
       var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
-      var chunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
       if (size >= chunkSize) {
-        jsonParser.pause();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
@@ -359,7 +357,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }
           batch.clear();
-          jsonParser.resume();
+          jsonWriter.chunkSent(size);
         });
       }
     });
@@ -368,7 +366,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         var size = batch.size();
         saveInstancesIds(new ArrayList<>(batch), tenant, requestId, postgresClient)
           .onComplete(result -> {
-            jsonWriter.chunkSent(size);
             if (result.succeeded()) {
               downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
             } else {
@@ -378,6 +375,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
             batch.clear();
+//            jsonWriter.chunkSent(size);
           }).onComplete(vVoid -> {
             logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch size was: {}", requestId, size);
             downloadInstancesPromise.complete();
@@ -926,13 +924,15 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static class JsonWriter implements WriteStream<Buffer> {
     private final JsonParser parser;
     private final AtomicInteger currentQueueSize = new AtomicInteger(0);
-    private final int loadBottomGreenLine = CHUNK_SIZE;
-    private int maxQueueSize = CHUNK_SIZE * 2;
+    private int loadBottomGreenLine;
+    private int maxQueueSize;
     private Handler<Void> drainHandler;
 
 
-    private JsonWriter(JsonParser parser) {
+    private JsonWriter(JsonParser parser, int chunkSize) {
       this.parser = parser;
+      this.loadBottomGreenLine = chunkSize + 1;
+      this.maxQueueSize = chunkSize * 3;
     }
     @Override
     public WriteStream<Buffer> exceptionHandler(Handler<Throwable> handler) {
@@ -966,8 +966,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
     @Override
     public WriteStream<Buffer> setWriteQueueMaxSize(int maxQueueSize) {
-      this.maxQueueSize = maxQueueSize + CHUNK_SIZE;
-
+      /*NO OPS*/
       return this;
     }
 
@@ -984,7 +983,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
     public void chunkSent(int chunkSize) {
       var current = currentQueueSize.addAndGet(-chunkSize);
-      if (current < loadBottomGreenLine) {
+      if (current <= loadBottomGreenLine) {
         var handler = drainHandler;
         if (handler != null) {
           handler.handle(null);
