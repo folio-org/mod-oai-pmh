@@ -2536,6 +2536,7 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
       Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      Optional<SubfieldatafieldType> optCopyNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "n");
       Optional<SubfieldatafieldType> optDiscoverySuppressed = findSubfieldByFiledTagAndSubfieldCode(r, "952", "t");
       Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
       Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
@@ -2545,6 +2546,7 @@ class OaiPmhImplTest {
       assertTrue(optLibraryName.isPresent());
       assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
+      assertTrue(optCopyNumber.isPresent());
       assertTrue(optDiscoverySuppressed.isPresent());
       assertThat(optDiscoverySuppressed.get().getValue(), equalTo("0"));
       assertTrue(optHoldingsUrlField.isPresent());
