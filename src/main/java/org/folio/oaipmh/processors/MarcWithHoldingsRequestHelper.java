@@ -119,8 +119,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final int REREQUEST_SRS_DELAY = 2000;
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
-//  private static final int MAX_POLLING_ATTEMPTS = 10;
-  private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
+  private static final int MAX_POLLING_ATTEMPTS = 10;
+//  private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
   private static final int MAX_RECORDS_PER_REQUEST_FROM_INVENTORY = 50;
 
