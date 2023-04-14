@@ -1,5 +1,38 @@
 package org.folio.rest.impl;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.junit5.VertxTestContext;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -24,35 +57,8 @@ import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper.FOLIO_RECORD_SOURCE;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.junit5.VertxTestContext;
 
 public class OkapiMockServer {
 
@@ -334,6 +340,7 @@ public class OkapiMockServer {
   private void handleStreamingInventoryInstanceIdsResponse(RoutingContext ctx) {
     String uri = ctx.request()
       .absoluteURI();
+    String source = ctx.request().getParam(FOLIO_RECORD_SOURCE);
     if (Objects.nonNull(uri)) {
       if (uri.contains(SUPPRESSED_RECORDS_DATE)) {
         boolean shouldProcessSuppressedRecords = Boolean.parseBoolean(ctx.request().getParam(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS));
@@ -390,7 +397,7 @@ public class OkapiMockServer {
       } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY) || uri.contains(DATE_FOR_INSTANCES_10)) {
         inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_VIEW);
       } else if (uri.contains(DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)) {
-        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20);
+        inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20, source);
       } else if (uri.contains("2003-01-01")) {
         inventoryViewSuccessResponse(ctx, LIST_IDENTIFIERS_100_VIEW);
       } else if (uri.contains(THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)) {
@@ -695,6 +702,30 @@ public class OkapiMockServer {
     Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
     logger.debug("Ending response for instance ids with buffer: {}", buffer.toString());
     routingContext.response().setStatusCode(200).end(buffer);
+  }
+
+  private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName, String source) {
+    String path = INVENTORY_VIEW_PATH + jsonFileName;
+    logger.debug("Path value: {}", path);
+    Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
+    StringBuilder response = new StringBuilder();
+    var mapper = new ObjectMapper();
+    try {
+      JsonFactory factory = new JsonFactory();
+      JsonParser parser  = factory.createParser(buffer.toString());
+      MappingIterator<InventoryUpdatedInstanceIds> iterator = mapper.readValues(parser, new TypeReference<>() {
+      });
+      while (iterator.hasNextValue()) {
+        var updatedInstancesIds = iterator.next();
+        if (StringUtils.isEmpty(source) || updatedInstancesIds.getSource().equals(source)) {
+          response.append(mapper.writeValueAsString(updatedInstancesIds));
+        }
+      }
+      logger.debug("Ending response for instance ids with buffer: {}", response);
+      routingContext.response().setStatusCode(200).end(response.toString());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, JsonArray instanceIds) {
