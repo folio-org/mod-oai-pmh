@@ -53,6 +53,7 @@ import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.ISO_DATE_TIME_PATTERN;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
@@ -61,17 +62,21 @@ import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.REQUEST_CURSOR_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
+import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -354,8 +359,11 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
-      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + request.getInventoryOffsetShift();
+    int inventoryOffsetShift = request.getInventoryOffsetShift();
+    int maxRecordsPerResponse = Integer.parseInt(RepositoryConfigurationUtil.getProperty
+      (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + maxRecordsPerResponse + inventoryOffsetShift;
+    int newCursor = request.getCursor() + instances.size() - 1;
     request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
     if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
@@ -367,6 +375,7 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM, String.valueOf(request.getInventoryTotalRecords()));
       extraParams.put(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM, String.valueOf(request.getInventoryOffsetShift()));
       extraParams.put(REQUEST_OLD_SRS_OFFSET_PARAM, String.valueOf(request.getOldSrsOffset()));
+      extraParams.put(REQUEST_CURSOR_PARAM, String.valueOf(newCursor));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
@@ -386,7 +395,7 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(BigInteger.valueOf((long)request.getOffset() + request.getOldSrsOffset()));
+        .withCursor(BigInteger.valueOf(request.getCursor()));
     }
 
     return null;
@@ -490,6 +499,23 @@ public abstract class AbstractHelper implements VerbHelper {
     Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
     metadata.setAny(record);
     return metadata;
+  }
+
+  /**
+   * This method determines source from request
+   * @param request instances source
+   * @return FOLIO if records source is 'Inventory records source', MARC if records source is 'Source record storage',
+   * null if records source is 'SRS + Inventory'
+   */
+  protected String resolveRequestSource(Request request) {
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    String source = null; // Case when SRS + Inventory.
+    if (recordsSource.equals(INVENTORY)) {
+      source = "FOLIO";
+    } else if (recordsSource.equals(SRS)) {
+      source = "MARC";
+    }
+    return source;
   }
 
 }
