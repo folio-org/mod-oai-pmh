@@ -50,8 +50,6 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.parsetools.JsonEvent;
-import io.vertx.core.parsetools.JsonParser;
-import io.vertx.core.streams.WriteStream;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -119,8 +117,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final int REREQUEST_SRS_DELAY = 2000;
   private static final int POLLING_TIME_INTERVAL = 500;
   private static final int MAX_WAIT_UNTIL_TIMEOUT = 1000 * 60 * 20;
-  private static final int MAX_POLLING_ATTEMPTS = 10;
-//  private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
+  private static final int MAX_POLLING_ATTEMPTS = MAX_WAIT_UNTIL_TIMEOUT / POLLING_TIME_INTERVAL;
   private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
   private static final int MAX_RECORDS_PER_REQUEST_FROM_INVENTORY = 50;
 
@@ -377,7 +374,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
               downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
             batch.clear();
-//            jsonWriter.chunkSent(size);
           }).onComplete(vVoid -> {
             logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch size was: {}", requestId, size);
             downloadInstancesPromise.complete();
@@ -923,74 +919,4 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     this.instancesService = instancesService;
   }
 
-  private static class JsonWriter implements WriteStream<Buffer> {
-    private final JsonParser parser;
-    private final AtomicInteger currentQueueSize = new AtomicInteger(0);
-    private int loadBottomGreenLine;
-    private int maxQueueSize;
-    private Handler<Void> drainHandler;
-
-
-    private JsonWriter(JsonParser parser, int chunkSize) {
-      this.parser = parser;
-      this.loadBottomGreenLine = chunkSize + 1;
-      this.maxQueueSize = chunkSize * 3;
-    }
-    @Override
-    public WriteStream<Buffer> exceptionHandler(Handler<Throwable> handler) {
-      parser.exceptionHandler(handler);
-      return this;
-    }
-
-    @Override
-    public Future<Void> write(Buffer buffer) {
-      Promise<Void> promise = Promise.promise();
-      write(buffer, promise);
-      return promise.future();
-    }
-
-    @Override
-    public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
-      parser.handle(data);
-      currentQueueSize.incrementAndGet();
-      if (handler != null) {
-        handler.handle(Future.succeededFuture());
-      }
-    }
-
-    @Override
-    public void end(Handler<AsyncResult<Void>> handler) {
-      parser.end();
-      if (handler != null) {
-        handler.handle(Future.succeededFuture());
-      }
-    }
-
-    @Override
-    public WriteStream<Buffer> setWriteQueueMaxSize(int maxQueueSize) {
-      /*NO OPS*/
-      return this;
-    }
-
-    @Override
-    public boolean writeQueueFull() {
-      return currentQueueSize.get() >= maxQueueSize;
-    }
-
-    @Override
-    public WriteStream<Buffer> drainHandler(Handler<Void> drainHandler) {
-      this.drainHandler = drainHandler;
-      return this;
-    }
-
-    public void chunkSent(int chunkSize) {
-      var current = currentQueueSize.addAndGet(-chunkSize);
-      if (current <= loadBottomGreenLine) {
-        var handler = drainHandler;
-        if (handler != null) {
-          handler.handle(null);
-        }
-      }
-    }
-  }
 }
