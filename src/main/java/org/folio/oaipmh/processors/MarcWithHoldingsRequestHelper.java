@@ -338,20 +338,20 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
     Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = new OaiPmhJsonParser().objectValueMode();
-    var jsonWriter = new JsonWriter(jsonParser, chunkSize);
 
+    var jsonWriter = new JsonWriter(jsonParser, chunkSize);
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
       if (size >= chunkSize) {
-        var localChunk = new ArrayList<>(batch);
-        saveInstancesIds(localChunk, tenant, requestId, postgresClient).onComplete(result -> {
+        var chunk = new ArrayList<>(batch);
+        saveInstancesIds(chunk, tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
           } else {
             downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
-            var ids = localChunk.stream()
+            var ids = chunk.stream()
                     .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
             downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }

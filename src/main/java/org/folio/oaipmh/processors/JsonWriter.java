@@ -11,6 +11,8 @@ import io.vertx.core.streams.WriteStream;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Objects.nonNull;
+
 public class JsonWriter implements WriteStream<Buffer> {
   private final JsonParser parser;
   private final AtomicInteger currentQueueSize = new AtomicInteger(0);
@@ -22,6 +24,7 @@ public class JsonWriter implements WriteStream<Buffer> {
   public JsonWriter(JsonParser parser, int chunkSize) {
     this.parser = parser;
     this.loadBottomGreenLine = chunkSize + 1;
+    setWriteQueueMaxSize(chunkSize);
     this.maxQueueSize = chunkSize * 3;
   }
   @Override
@@ -41,7 +44,7 @@ public class JsonWriter implements WriteStream<Buffer> {
   public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
     parser.handle(data);
     currentQueueSize.incrementAndGet();
-    if (handler != null) {
+    if (Objects.nonNull(handler)) {
       handler.handle(Future.succeededFuture());
     }
   }
@@ -49,7 +52,7 @@ public class JsonWriter implements WriteStream<Buffer> {
   @Override
   public void end(Handler<AsyncResult<Void>> handler) {
     parser.end();
-    if (Objects.nonNull(handler)) {
+    if (nonNull(handler)) {
       handler.handle(Future.succeededFuture());
     }
   }
@@ -71,10 +74,9 @@ public class JsonWriter implements WriteStream<Buffer> {
   }
 
   public void chunkSent(int chunkSize) {
-    var current = currentQueueSize.addAndGet(-chunkSize);
-    if (current <= loadBottomGreenLine) {
+    if (currentQueueSize.addAndGet(-chunkSize) <= loadBottomGreenLine) {
       var handler = drainHandler;
-      if (Objects.nonNull(handler)) {
+      if (nonNull(handler)) {
         handler.handle(null);
       }
     }
