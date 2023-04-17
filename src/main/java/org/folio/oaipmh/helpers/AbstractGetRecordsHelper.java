@@ -120,6 +120,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String CODE = "code";
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ID = "id";
+  private static final String COPY_NUMBER = "copyNumber";
 
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
@@ -760,6 +761,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         locationItemJson.put(LOCATION, effectiveLocationJson);
         itemJson.put(LOCATION, locationItemJson);
         itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, Boolean.valueOf(holdingJson.getString(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD)));
+        itemJson.put(COPY_NUMBER, holdingJson.getString(COPY_NUMBER));
         itemsJson.add(itemJson);
       }
     }
