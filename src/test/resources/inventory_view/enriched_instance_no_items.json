@@ -14,6 +14,7 @@
           "institutionName": "Københavns Universitet"
         }
       },
+      "copyNumber":"copy number",
       "callNumber": {
         "callNumber": "some-callnumber"
       },
