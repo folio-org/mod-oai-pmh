@@ -228,7 +228,7 @@ class OaiPmhImplTest {
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
-  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&source=MARC&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
@@ -2500,6 +2500,7 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
       Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      Optional<SubfieldatafieldType> optCopyNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "n");
       Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
       Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
       Optional<SubfieldatafieldType> optHoldingsUrlNote = findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
@@ -2508,6 +2509,7 @@ class OaiPmhImplTest {
       assertTrue(optLibraryName.isPresent());
       assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
+      assertTrue(optCopyNumber.isPresent());
       assertTrue(optHoldingsUrlField.isPresent());
       assertTrue(optHoldingsType.isPresent());
       assertTrue(optHoldingsUrlNote.isPresent());
@@ -2534,6 +2536,7 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
       Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      Optional<SubfieldatafieldType> optCopyNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "n");
       Optional<SubfieldatafieldType> optDiscoverySuppressed = findSubfieldByFiledTagAndSubfieldCode(r, "952", "t");
       Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
       Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
@@ -2543,6 +2546,7 @@ class OaiPmhImplTest {
       assertTrue(optLibraryName.isPresent());
       assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
+      assertTrue(optCopyNumber.isPresent());
       assertTrue(optDiscoverySuppressed.isPresent());
       assertThat(optDiscoverySuppressed.get().getValue(), equalTo("0"));
       assertTrue(optHoldingsUrlField.isPresent());
