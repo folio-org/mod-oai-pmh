@@ -2,9 +2,6 @@ package org.folio.oaipmh.processors;
 
 import static java.util.Objects.nonNull;
 
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -12,6 +9,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,9 +25,8 @@ public class JsonWriter implements WriteStream<Buffer> {
 
   public JsonWriter(JsonParser parser, int chunkSize) {
     this.parser = parser;
-    this.loadBottomGreenLine = chunkSize + 1;
-    setWriteQueueMaxSize(chunkSize);
-    this.maxQueueSize = chunkSize * 3;
+    this.loadBottomGreenLine = (int) (chunkSize * 512 * 1.15);
+    this.maxQueueSize = chunkSize * 3 * 512;
   }
   @Override
   public WriteStream<Buffer> exceptionHandler(Handler<Throwable> handler) {
