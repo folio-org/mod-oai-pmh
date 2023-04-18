@@ -342,12 +342,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     var batch = new ArrayList<JsonEvent>();
     AtomicInteger chunkSize = new AtomicInteger(0);
     jsonParser.handler(event -> {
+      logger.info("chunkSize: " + chunkSize.addAndGet(Objects.nonNull(event) ? event.objectValue().toString().length() : 0));
       batch.add(event);
       var size = batch.size();
-      chunkSize.addAndGet(Objects.nonNull(event) ? event.objectValue().toString().length() : 0);
       if (chunkSize.get() >= maxChunkSize) {
         var chunk = new ArrayList<>(batch);
         saveInstancesIds(chunk, tenant, requestId, postgresClient).onComplete(result -> {
+          logger.info("Writed chunk size: " + chunkSize);
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
           } else {
@@ -364,20 +365,19 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     });
     jsonParser.endHandler(e -> {
       if (!batch.isEmpty()) {
-        var size = batch.size();
         saveInstancesIds(batch, tenant, requestId, postgresClient)
           .onComplete(result -> {
             if (result.succeeded()) {
-              downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
+              downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(batch.size());
             } else {
-              downloadInstancesStatistics.addFailedToSaveInstancesCounter(size);
+              downloadInstancesStatistics.addFailedToSaveInstancesCounter(batch.size());
               var ids = batch.stream()
                       .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
               downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
             }
             batch.clear();
           }).onComplete(vVoid -> {
-            logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch size was: {}", requestId, size);
+            logger.info("setupBatchHttpStream:: Completing batch processing for requestId: {}. Last batch size was: {}", requestId, batch.size());
             downloadInstancesPromise.complete();
           });
       } else {

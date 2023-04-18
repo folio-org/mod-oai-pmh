@@ -12,8 +12,11 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class JsonWriter implements WriteStream<Buffer> {
+  protected final Logger logger = LogManager.getLogger(getClass());
   private final JsonParser parser;
   private final AtomicInteger currentQueueSize = new AtomicInteger(0);
   private final int loadBottomGreenLine;
@@ -42,8 +45,8 @@ public class JsonWriter implements WriteStream<Buffer> {
 
   @Override
   public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
+    logger.info("CurrentQueueSize size: " + currentQueueSize.addAndGet(data.toString().length()));
     parser.handle(data);
-    currentQueueSize.addAndGet(data.toString().length());
     if (Objects.nonNull(handler)) {
       handler.handle(Future.succeededFuture());
     }
