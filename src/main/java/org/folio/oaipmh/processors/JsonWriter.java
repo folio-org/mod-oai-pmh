@@ -43,7 +43,7 @@ public class JsonWriter implements WriteStream<Buffer> {
   @Override
   public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
     parser.handle(data);
-    currentQueueSize.incrementAndGet();
+    currentQueueSize.addAndGet(data.toString().length());
     if (Objects.nonNull(handler)) {
       handler.handle(Future.succeededFuture());
     }
