@@ -345,7 +345,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       var size = batch.size();
       if (size >= chunkSize) {
         var chunk = new ArrayList<>(batch);
-        jsonParser.pause();
         saveInstancesIds(chunk, tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
             downloadInstancesStatistics.addDownloadedAndSavedInstancesCounter(size);
@@ -356,9 +355,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }
           jsonWriter.chunkSent(size);
-          jsonParser.resume();
+          batch.clear();
         });
-        batch.clear();
       }
     });
     jsonParser.endHandler(e -> {
