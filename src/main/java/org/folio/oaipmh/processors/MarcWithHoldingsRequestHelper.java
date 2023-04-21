@@ -337,7 +337,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     var jsonWriter = new JsonWriter(jsonParser, maxChunkSize);
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
-      logger.info("chunkSize: " + (Objects.nonNull(event) ? event.objectValue().toString().length() : 0));
       batch.add(event);
       var size = batch.size();
       if (size >= maxChunkSize) {
@@ -352,7 +351,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }
           var chunkSize = chunk.stream().mapToInt(e -> nonNull(e) ? e.objectValue().toString().length() : 0).sum();
-          logger.info("Written chunk size: " + chunkSize);
           jsonWriter.chunkSent(chunkSize);
         });
         batch.clear();
