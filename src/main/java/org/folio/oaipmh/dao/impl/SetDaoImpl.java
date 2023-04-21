@@ -47,7 +47,7 @@ public class SetDaoImpl implements SetDao {
 
   @Override
   public Future<FolioSet> getSetById(String id, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(txQE -> {
+    return getQueryExecutorReader(tenantId).transaction(txQE -> {
       Condition condition = SET_LB.ID.eq(UUID.fromString(id));
       return txQE.findOneRow(dslContext -> dslContext.selectFrom(SET_LB)
         .where(condition)
@@ -120,8 +120,8 @@ public class SetDaoImpl implements SetDao {
 
   @Override
   public Future<FolioSetCollection> getSetList(int offset, int limit, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SET_LB))).compose(recordsCount ->
-        getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectCount().from(SET_LB))).compose(recordsCount ->
+      getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
         .orderBy(SET_LB.UPDATED_DATE.desc())
         .offset(offset)
         .limit(limit))
@@ -185,6 +185,10 @@ public class SetDaoImpl implements SetDao {
 
   private ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
     return postgresClientFactory.getQueryExecutor(tenantId);
+  }
+
+  private ReactiveClassicGenericQueryExecutor getQueryExecutorReader(String tenantId) {
+    return postgresClientFactory.getQueryExecutorReader(tenantId);
   }
 
   private Optional<FolioSet> toOptionalSet(Row row) {
