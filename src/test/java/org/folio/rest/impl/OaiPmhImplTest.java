@@ -2793,14 +2793,14 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldReturn200_whenInvalidJsonRespondedFromInventoryView() {
+  void shouldReturn500_whenInvalidJsonRespondedFromInventoryView() {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INVALID_INSTANCE_IDS_JSON_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    verify200WithXml(request, LIST_RECORDS);
+    verify500(request);
   }
 
   @ParameterizedTest

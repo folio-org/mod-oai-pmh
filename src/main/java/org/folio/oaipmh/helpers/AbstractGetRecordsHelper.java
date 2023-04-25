@@ -122,7 +122,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String ID = "id";
   private static final String COPY_NUMBER = "copyNumber";
 
-  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s ";
+  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
   private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE = "Cannot get instance by id %s. Status code: %s; status message: %s .";
   private static final String GET_INSTANCES_INVALID_RESPONSE = "Cannot get instances. Status code: %s; status message: %s .";
