@@ -122,7 +122,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String ID = "id";
   private static final String COPY_NUMBER = "copyNumber";
 
-  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
+  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s ";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
   private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE = "Cannot get instance by id %s. Status code: %s; status message: %s .";
   private static final String GET_INSTANCES_INVALID_RESPONSE = "Cannot get instances. Status code: %s; status message: %s .";
@@ -646,11 +646,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             responseChecked.complete(true);
             break;
           }
-          default: {
+          case 500:
             String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
-            String errorMessage = errorFromStorageMessage + response.statusCode();
-            logger.error(errorMessage);
+              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage(), response.statusCode());
+            logger.error(errorFromStorageMessage);
+            responseChecked.complete(true);
+            break;
+          default: {
+            errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
+              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage(), response.statusCode());
+            logger.error(errorFromStorageMessage);
             promise.fail(new IllegalStateException(errorFromStorageMessage));
             responseChecked.complete(true);
           }
@@ -782,6 +787,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
     return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
+  }
+
+  protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage, int statusCode) {
+    return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage) + statusCode;
   }
 
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
