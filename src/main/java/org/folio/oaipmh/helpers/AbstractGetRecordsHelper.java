@@ -228,9 +228,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.error("requestAndProcessInventoryRecords:: {} response from Inventory for requestId {}", verbName, request.getRequestId());
           throw new IllegalStateException(handler.cause());
         }
-      } catch (DecodeException ex) {
-        logger.error("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
-        promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
       } catch (Exception ex) {
         logger.error("requestAndProcessInventoryRecords:: Exception getting {} for requestId {}, errors message {}", request.getVerb()
           .value(), request.getRequestId(), ex.getMessage());
@@ -573,7 +570,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.send().onSuccess(response -> {
         if (response.statusCode() == 200) {
-          promise.complete(response.bodyAsJsonObject());
+          try {
+            promise.complete(response.bodyAsJsonObject());
+          } catch (DecodeException ex) {
+            logger.error("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
+            promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
+          }
         } else {
           String errorMsg = nonNull(String.join(", ", listOfIds)) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
