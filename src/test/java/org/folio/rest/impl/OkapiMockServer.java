@@ -131,7 +131,7 @@ public class OkapiMockServer {
 
   public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
   public static final String INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE = "2012-11-22";
-
+  public static final String INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE = "2013-01-02";
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
   private static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
   // Instance UUID
@@ -144,6 +144,7 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_BY_TIMEOUT = "d93c7b03-6343-4956-bfbc-2981b3741830";
   private static final String INSTANCE_ID_TO_FAIL_ENRICHED_INSTANCES_REQUEST = "22200000-0000-4000-a000-000000000000";
   private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_JSON = "210f0f47-e0f8-4d01-83f3-2b51cf369699";
+  private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_CALL_NUMBER_TYPE_ID_JSON = "310f0f47-e0f8-4d01-83f3-2b51cf369699";
   private static final String INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS = "3a6a47ac-597d-4abe-916d-e35c72340000";
 
   // Paths to json files
@@ -173,8 +174,8 @@ public class OkapiMockServer {
 
   private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
-  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
-  private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
+  private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
+  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
   public static final String ERROR_TENANT = "error";
   public static final String INVALID_CONFIG_TENANT = "invalid_config_value_tenant";
@@ -227,6 +228,7 @@ public class OkapiMockServer {
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
   private static final String INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON = "instance_id_invalid_enriched_instance.json";
+  private static final String INSTANCE_ID_INVALID_CALL_NUMBER_TYPE_ENRICHED_INSTANCE_JSON = "instance_id_invalid_call_number_type_enriched_instance.json";
   private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON = "inventory_instance_mock_forbidden_response.json";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON = "inventory_instance_mock_500_response.json";
@@ -330,9 +332,9 @@ public class OkapiMockServer {
     //related to MarcWithHoldingsRequestHelper
     router.post(SOURCE_STORAGE_RESULT_URI)
       .handler(this::handleRecordStorageResultPostResponse);
-    router.post(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
+    router.post(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)
       .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
-    router.get(STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT)
+    router.get(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
       .handler(this::handleStreamingInventoryInstanceIdsResponse);
     return router;
   }
@@ -378,6 +380,8 @@ public class OkapiMockServer {
         inventoryViewSuccessResponse(ctx, INVALID_JSON);
       } else if (uri.contains(INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON);
+      } else if (uri.contains(INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_ID_INVALID_CALL_NUMBER_TYPE_ENRICHED_INSTANCE_JSON);
       } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON);
       } else if (uri.contains(INSTANCE_WITHOUT_SRS_RECORD_DATE)) {
@@ -428,6 +432,8 @@ public class OkapiMockServer {
       failureResponseWithForbidden(ctx);
     } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_JSON)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + INVALID_JSON));
+    } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_INVALID_CALL_NUMBER_TYPE_ID_JSON)) {
+      failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
     } else if (instanceIds.isEmpty()) {
       successResponse(ctx, "");
     } else if (instanceIds.contains(INSTANCE_ID_RELATED_ENRICHED_INSTANCE_HAS_NO_ITEMS)) {
