@@ -228,6 +228,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.error("requestAndProcessInventoryRecords:: {} response from Inventory for requestId {}", verbName, request.getRequestId());
           throw new IllegalStateException(handler.cause());
         }
+      } catch (DecodeException ex) {
+        logger.error("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
+        promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
       } catch (Exception ex) {
         logger.error("requestAndProcessInventoryRecords:: Exception getting {} for requestId {}, errors message {}", request.getVerb()
           .value(), request.getRequestId(), ex.getMessage());
@@ -570,12 +573,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
     httpRequest.send().onSuccess(response -> {
         if (response.statusCode() == 200) {
-          try {
-            promise.complete(response.bodyAsJsonObject());
-          } catch (DecodeException ex) {
-            logger.error("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
-            promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
-          }
+          promise.complete(response.bodyAsJsonObject());
         } else {
           String errorMsg = nonNull(String.join(", ", listOfIds)) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
@@ -648,17 +646,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             responseChecked.complete(true);
             break;
           }
-          case 500:
-            String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage(), response.statusCode());
-            logger.error(errorFromStorageMessage);
-            responseChecked.complete(true);
-            break;
           default: {
-            errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage(), response.statusCode());
-            logger.error(errorFromStorageMessage);
-            promise.fail(new IllegalStateException(errorFromStorageMessage));
+            String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
+              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
+            String errorMessage = errorFromStorageMessage + response.statusCode();
+            logger.error(errorMessage);
             responseChecked.complete(true);
           }
         }
@@ -789,10 +781,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
     return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
-  }
-
-  protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage, int statusCode) {
-    return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage) + statusCode;
   }
 
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
