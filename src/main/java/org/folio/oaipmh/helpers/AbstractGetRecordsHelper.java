@@ -649,8 +649,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           default: {
             String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
-            String errorMessage = errorFromStorageMessage + response.statusCode();
-            logger.error(errorMessage);
+            logger.error(errorFromStorageMessage + response.statusCode());
             responseChecked.complete(true);
           }
         }
