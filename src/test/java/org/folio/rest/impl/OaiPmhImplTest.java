@@ -145,6 +145,7 @@ import static org.folio.rest.impl.OkapiMockServer.ENRICH_INSTANCES_FORBIDDEN_RES
 import static org.folio.rest.impl.OkapiMockServer.GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE;
 import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_FORBIDDEN_RESPONSE_DATE;
 import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE;
+import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_WITHOUT_SRS_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
@@ -2852,6 +2853,17 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     verify500(request);
+  }
+
+  @Test
+  void shouldReturn200andNotToStopHarvest_whenInvalidCallNumberTypeIdFromEnrichedInstances() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    verify200WithXml(request, LIST_RECORDS);
   }
 
   @ParameterizedTest
