@@ -74,6 +74,8 @@ public class RecordMetadataManager {
     indicatorsMap.put("Resource", "4,0");
     indicatorsMap.put("Version of resource", "4,1");
     indicatorsMap.put("No information provided", DEFAULT_INDICATORS);
+    indicatorsMap.put("Component part(s) of resource", "4,3");
+    indicatorsMap.put("Version of component part(s) of resource", "4,4");
 
     generalInfoFieldPredicate = jsonObject -> {
       if (jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER)) {

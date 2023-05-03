@@ -64,6 +64,8 @@ class RecordMetadataManagerTest {
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE = "/metadata-manager/electronic_access-resource.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_resource.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP = "/metadata-manager/electronic_access-new_relationship.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-component_parts_of_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_component_parts_of_resource.json";
 
   private static final String ITEM_BOTH_LOAN_TYPES = "/metadata-manager/item_both_loan_types.json";
   private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE = "/metadata-manager/item_only_permanent_loan_type.json";
@@ -251,6 +253,8 @@ class RecordMetadataManagerTest {
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE, Arrays.asList("4", "0"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE, Arrays.asList("4", "1"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP, Arrays.asList("4", " "))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE, Arrays.asList("4", "3"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE, Arrays.asList("4", "4"))));
     return builder.build();
   }
 
