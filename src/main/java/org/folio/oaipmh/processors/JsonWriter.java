@@ -12,6 +12,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
+import org.folio.rest.persist.PgUtil;
+import org.folio.rest.tools.utils.Envs;
 
 public class JsonWriter implements WriteStream<Buffer> {
 
@@ -20,9 +22,9 @@ public class JsonWriter implements WriteStream<Buffer> {
   private final int loadBottomGreenLine;
   private final int maxQueueSize;
   private Handler<Void> drainHandler;
-  private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 1.15;
-  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 3;
-  public static final int CHUNK_SIZE_MULTIPLIER = 512;
+  private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 0.75;
+  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 1;
+  public static final int CHUNK_SIZE_MULTIPLIER = 256;
 
   public JsonWriter(JsonParser parser, int chunkSize) {
     this.parser = parser;
