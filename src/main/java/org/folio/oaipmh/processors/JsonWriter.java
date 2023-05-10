@@ -23,7 +23,7 @@ public class JsonWriter implements WriteStream<Buffer> {
   private final int maxQueueSize;
   private Handler<Void> drainHandler;
   private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 0.5;
-  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 1;
+  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 2;
   public static final int CHUNK_SIZE_MULTIPLIER = 256;
 
   public JsonWriter(JsonParser parser, int chunkSize) {
