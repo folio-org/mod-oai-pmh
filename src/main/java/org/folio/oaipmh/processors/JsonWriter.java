@@ -22,9 +22,9 @@ public class JsonWriter implements WriteStream<Buffer> {
   private final int loadBottomGreenLine;
   private final int maxQueueSize;
   private Handler<Void> drainHandler;
-  private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 2.1;
-  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 5;
-  public static final int CHUNK_SIZE_MULTIPLIER = 300;
+  private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 1.15;
+  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 3;
+  public static final int CHUNK_SIZE_MULTIPLIER = 512;
 
   public JsonWriter(JsonParser parser, int chunkSize) {
     this.parser = parser;
