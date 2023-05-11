@@ -1936,7 +1936,10 @@
           "parameters": {
             "Resource": "0",
             "Version of resource": "1",
-            "Related resource": "2"
+            "Related resource": "2",
+            "Component part(s) of resource": "3",
+            "Version of component part(s) of resource": "4",
+            "No display constant generated": "8"
           }
         }
       }
