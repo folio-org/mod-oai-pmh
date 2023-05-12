@@ -12,13 +12,13 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
-import org.folio.rest.persist.PgUtil;
-import org.folio.rest.tools.utils.Envs;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class JsonWriter implements WriteStream<Buffer> {
 
   private final JsonParser parser;
-  private final AtomicInteger currentQueueSize = new AtomicInteger(0);
+  private final AtomicInteger queueSize = new AtomicInteger(0);
   private final int loadBottomGreenLine;
   private final int maxQueueSize;
   private Handler<Void> drainHandler;
@@ -47,11 +47,14 @@ public class JsonWriter implements WriteStream<Buffer> {
 
   @Override
   public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
-    currentQueueSize.addAndGet(data.getBytes().length);
+    log.debug("Queue size before writing: " + queueSize.get());
+    queueSize.addAndGet(data.getBytes().length);
     parser.handle(data);
     if (Objects.nonNull(handler)) {
+      log.debug("Handler is working");
       handler.handle(Future.succeededFuture());
     }
+    log.debug("Queue size after writing: " + queueSize.get());
   }
 
   @Override
@@ -69,7 +72,9 @@ public class JsonWriter implements WriteStream<Buffer> {
 
   @Override
   public boolean writeQueueFull() {
-    return currentQueueSize.get() >= maxQueueSize;
+    var writeQueueFull = queueSize.get() >= maxQueueSize;
+    log.debug("Queue is full: " + writeQueueFull);
+    return writeQueueFull;
   }
 
   @Override
@@ -79,11 +84,16 @@ public class JsonWriter implements WriteStream<Buffer> {
   }
 
   public void chunkSent(int chunkSize) {
-    if (currentQueueSize.addAndGet(-chunkSize) <= loadBottomGreenLine) {
+    log.debug("Chunk received, queue size: " + queueSize.get());
+    if (queueSize.addAndGet(-chunkSize) <= loadBottomGreenLine) {
       var handler = drainHandler;
       if (nonNull(handler)) {
+        log.debug("Drain handler is working");
         handler.handle(null);
       }
+    } else {
+      log.debug("Drain handler isn't executed");
     }
+    log.debug("Chunk saved, queue size: " + queueSize.get());
   }
 }
