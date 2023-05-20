@@ -1,9 +1,7 @@
 package org.folio.oaipmh.processors;
 
+import static java.lang.String.format;
 import static java.util.Objects.nonNull;
-
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -12,22 +10,21 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 public class JsonWriter implements WriteStream<Buffer> {
-
   private final JsonParser parser;
-  private final AtomicInteger currentQueueSize = new AtomicInteger(0);
-  private final int loadBottomGreenLine;
-  private final int maxQueueSize;
+  private final AtomicInteger utilizationTracker;
+  private final int trackerLimit;
   private Handler<Void> drainHandler;
-  private static final double BOTTOM_GREEN_LINE_MULTIPLIER = 1.15;
-  private static final int MAX_QUEUE_SIZE_MULTIPLIER  = 3;
-  public static final int CHUNK_SIZE_MULTIPLIER = 512;
 
-  public JsonWriter(JsonParser parser, int chunkSize) {
+  public JsonWriter(JsonParser parser, int trackerLimit) {
     this.parser = parser;
-    this.loadBottomGreenLine = (int) (chunkSize * CHUNK_SIZE_MULTIPLIER * BOTTOM_GREEN_LINE_MULTIPLIER);
-    this.maxQueueSize = chunkSize * MAX_QUEUE_SIZE_MULTIPLIER * CHUNK_SIZE_MULTIPLIER;
+    this.trackerLimit = trackerLimit;
+    this.utilizationTracker = new AtomicInteger(0);
   }
 
   @Override
@@ -66,7 +63,7 @@ public class JsonWriter implements WriteStream<Buffer> {
 
   @Override
   public boolean writeQueueFull() {
-    return currentQueueSize.get() >= maxQueueSize;
+    return utilizationTracker.get() >= trackerLimit;
   }
 
   @Override
@@ -75,8 +72,15 @@ public class JsonWriter implements WriteStream<Buffer> {
     return this;
   }
 
-  public void chunkSent(int chunkSize) {
-    if (currentQueueSize.addAndGet(-chunkSize) <= loadBottomGreenLine) {
+  public void chunkReceived() {
+    var trackedValue = utilizationTracker.incrementAndGet();
+    log.debug(format("Utilization tracker size: %s", trackedValue));
+  }
+
+  public void chunkSent() {
+    var trackedValue = utilizationTracker.decrementAndGet();
+    log.debug(format("Utilization tracker size: %s", trackedValue));
+    if (trackedValue < trackerLimit) {
       var handler = drainHandler;
       if (nonNull(handler)) {
         handler.handle(null);
