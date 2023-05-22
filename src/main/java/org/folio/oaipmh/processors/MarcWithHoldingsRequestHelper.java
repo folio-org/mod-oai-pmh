@@ -123,6 +123,8 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
   private static final int MAX_RECORDS_PER_REQUEST_FROM_INVENTORY = 50;
 
+  public static final int TRACKER_LIMIT = 15;
+
   public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
 
   private final Vertx vertx;
@@ -334,12 +336,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     Promise<Boolean> responseChecked = Promise.promise();
     var jsonParser = new OaiPmhJsonParser().objectValueMode();
 
-    var jsonWriter = new JsonWriter(jsonParser, maxChunkSize);
+    var jsonWriter = new JsonWriter(jsonParser, TRACKER_LIMIT);
     var batch = new ArrayList<JsonEvent>();
     jsonParser.handler(event -> {
       batch.add(event);
       var size = batch.size();
       if (size >= maxChunkSize) {
+        jsonWriter.chunkReceived();
         var chunk = new ArrayList<>(batch);
         saveInstancesIds(chunk, tenant, requestId, postgresClient).onComplete(result -> {
           if (result.succeeded()) {
@@ -350,8 +353,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                     .map(instance -> instance.objectValue().getString(INSTANCE_ID_FIELD_NAME)).collect(toList());
             downloadInstancesStatistics.addFailedToSaveInstancesIds(ids);
           }
-          var chunkSize = chunk.stream().mapToInt(e -> nonNull(e) ? e.objectValue().toString().length() : 0).sum();
-          jsonWriter.chunkSent(chunkSize);
+          jsonWriter.chunkSent();
         });
         batch.clear();
       }
