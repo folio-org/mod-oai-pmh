@@ -772,7 +772,7 @@
           </execution>
           <execution>
             <id>stop-pgsql</id>
-            <phase>compile</phase>
+            <phase>post-integration-test</phase>
             <goals>
               <goal>stop</goal>
               <goal>remove</goal>
