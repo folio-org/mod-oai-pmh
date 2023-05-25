@@ -22,6 +22,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
+@Deprecated
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
   private static final Logger logger = LogManager.getLogger(GetOaiRecordsHelper.class);

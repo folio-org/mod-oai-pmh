@@ -57,7 +57,7 @@ import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
-import static org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper.FOLIO_RECORD_SOURCE;
+import static org.folio.oaipmh.processors.GetListRecordsRequestHelper.FOLIO_RECORD_SOURCE;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {

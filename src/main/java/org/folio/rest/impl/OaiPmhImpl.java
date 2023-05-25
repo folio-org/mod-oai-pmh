@@ -8,7 +8,7 @@ import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.helpers.*;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
+import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.folio.spring.SpringContextUtil;
@@ -46,7 +46,6 @@ public class OaiPmhImpl implements Oai {
   public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
     HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
-    HELPERS.put(LIST_RECORDS, new GetOaiRecordsHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     HELPERS.put(GET_RECORD, new GetOaiRecordHelper());
@@ -100,11 +99,9 @@ public class OaiPmhImpl implements Oai {
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-
             String targetMetadataPrefix = request.getMetadataPrefix();
-
-            if((verbType.equals(LIST_RECORDS) || verbType.equals(LIST_IDENTIFIERS)) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
-              verbHelper = MarcWithHoldingsRequestHelper.getInstance();
+            if(verbType.equals(LIST_RECORDS) || (verbType.equals(LIST_IDENTIFIERS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix))) {
+              verbHelper = GetListRecordsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);
             }

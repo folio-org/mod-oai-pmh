@@ -19,6 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
@@ -590,9 +591,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {
+    Promise<List<JsonObject>> promise = Promise.promise();
+    String targetMetadataPrefix = request.getMetadataPrefix();
+    if (!MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
+      promise.complete(instances);
+      return promise.future();
+    }
     Map<String, JsonObject> instancesMap = instances.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
-    Promise<List<JsonObject>> promise = Promise.promise();
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
     if (request.getOkapiUrl()

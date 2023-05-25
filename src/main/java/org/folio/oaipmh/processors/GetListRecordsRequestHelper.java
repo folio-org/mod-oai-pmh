@@ -101,7 +101,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
+public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
@@ -125,7 +125,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   public static final int TRACKER_LIMIT = 15;
 
-  public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
+  public static final GetListRecordsRequestHelper INSTANCE = new GetListRecordsRequestHelper();
 
   private final Vertx vertx;
   private final WorkerExecutor saveInstancesExecutor;
@@ -138,11 +138,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private SourceStorageSourceRecordsClientWrapper srsClient;
 
-  public static MarcWithHoldingsRequestHelper getInstance() {
+  public static GetListRecordsRequestHelper getInstance() {
     return INSTANCE;
   }
 
-  private MarcWithHoldingsRequestHelper() {
+  private GetListRecordsRequestHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
     var vertxOptions = new VertxOptions();
     vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
