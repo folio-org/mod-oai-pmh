@@ -315,7 +315,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
             logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
-            throw new IllegalStateException(response.statusMessage());
+            var errorMessage = String.format("SRS didn't respond with expected status code: %s: %s", statusMessage, statusCode);
+            promise.fail(new IllegalStateException(errorMessage));
           }
         } else {
           logger.error("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());

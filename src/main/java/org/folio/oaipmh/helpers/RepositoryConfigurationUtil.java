@@ -54,13 +54,12 @@ public class RepositoryConfigurationUtil {
         try {
           if (result.succeeded()) {
             HttpResponse<Buffer> response = result.result();
-            JsonObject body = response.bodyAsJsonObject();
             if (response.statusCode() != 200) {
-              logger.error("Error getting configuration for {} tenant. Expected status code 200 but was {}: {}.", tenant, response.statusCode(), body);
-              promise.complete(null);
-              return;
+              var errorMessage = String.format("mod-configuration didn't respond for %s tenant with status 200. Status code was %s", tenant, response.statusCode());
+              logger.error(errorMessage);
+              promise.fail(new IllegalStateException(errorMessage));
             }
-
+            JsonObject body = response.bodyAsJsonObject();
             JsonObject config = new JsonObject();
             body.getJsonArray(CONFIGS)
               .stream()
