@@ -107,6 +107,7 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.SERVICE_UNAVAILABLE;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -121,6 +122,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ID = "id";
   private static final String COPY_NUMBER = "copyNumber";
+
+  private static final String MOD_INVENTORY_STORAGE_ERROR_PREFIX = "mod-inventory-storage didn't respond";
+  protected static final String MOD_INVENTORY_STORAGE_ERROR = MOD_INVENTORY_STORAGE_ERROR_PREFIX + " for %s tenant with status 200. Status code was %s";
 
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
@@ -315,7 +319,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
             logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
-            var errorMessage = String.format("SRS didn't respond with expected status code: %s: %s", statusMessage, statusCode);
+            var errorMessage = String.format("mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s", request.getTenant(), statusCode);
             promise.fail(new IllegalStateException(errorMessage));
           }
         } else {
@@ -401,7 +405,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         response = buildResponse(oaipmh, request);
       }
       oaiResponsePromise.complete(response);
-    }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request)));
+    }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage())));
     return oaiResponsePromise.future();
   }
 
@@ -450,6 +454,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 .onFailure(throwable -> {
                   String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
                   logger.error(errorMsg, throwable);
+                  recordsPromise.fail(new IllegalStateException(throwable.getMessage()));
                 });
           futures.add(enrichRecordFuture);
         });
@@ -491,6 +496,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
+    if (errorMessage.contains(MOD_INVENTORY_STORAGE_ERROR_PREFIX)) {
+      oaipmh.withErrors(new OAIPMHerrorType().withCode(SERVICE_UNAVAILABLE).withValue(errorMessage));
+    } else {
+      oaipmh.withErrors(createNoRecordsFoundError());
+    }
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
@@ -579,6 +593,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           String errorMsg = nonNull(String.join(", ", listOfIds)) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
+          logger.error(errorMsg);
+          errorMsg = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), response.statusCode());
           promise.fail(new IllegalStateException(errorMsg));
         }
       })

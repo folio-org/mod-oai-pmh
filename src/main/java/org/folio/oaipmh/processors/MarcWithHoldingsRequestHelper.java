@@ -404,10 +404,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             promise.fail(new IllegalStateException(errorMsg));
             responseChecked.complete(true);
             break;
-          }
-          default: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
-            promise.fail(new IllegalStateException(errorMsg));
+          } default: {
+            String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
+            logger.error(errorMessage);
+            errorMessage = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
+            promise.fail(new IllegalStateException(errorMessage));
             responseChecked.complete(true);
           }
         }
@@ -852,7 +853,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       logger.debug("Error has been occurred while requesting SRS.");
     }
     if (attemptsCount.decrementAndGet() <= 0) {
-      String errorMessage = "SRS didn't respond with expected status code after " + Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS))
+      String errorMessage = "mod-source-record-storage didn't respond with expected status code after " + Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS))
           + " attempts. Canceling further request processing.";
       handleException(promise, new IllegalStateException(errorMessage));
       return;
