@@ -26,6 +26,7 @@ public class RepositoryConfigurationUtil {
 
   private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
 
+  private static final String MOD_CONFIGURATION_ERROR = "mod-configuration didn't respond for %s tenant with status 200. Status code was %s";
   private static final String QUERY = "module==OAIPMH";
   private static Map<String, JsonObject> configsMap = new HashMap<>();
   private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
@@ -55,7 +56,7 @@ public class RepositoryConfigurationUtil {
           if (result.succeeded()) {
             HttpResponse<Buffer> response = result.result();
             if (response.statusCode() != 200) {
-              var errorMessage = String.format("mod-configuration didn't respond for %s tenant with status 200. Status code was %s", tenant, response.statusCode());
+              var errorMessage = String.format(MOD_CONFIGURATION_ERROR, tenant, response.statusCode());
               logger.error(errorMessage);
               promise.fail(new IllegalStateException(errorMessage));
             }

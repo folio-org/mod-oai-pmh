@@ -276,6 +276,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
           srsClient = createAndSetupSrsClient(request);
 
+          var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
@@ -288,17 +289,17 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                       buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                         deletedRecordSupport, statistics)
                         .onSuccess(oaiPmhResponsePromise::complete)
-                        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                        .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
                     });
                 } else {
                   buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                     deletedRecordSupport, statistics)
                     .onSuccess(oaiPmhResponsePromise::complete)
-                    .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                    .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
                 }
               }
             )
-            .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+            .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
@@ -327,8 +328,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, downloadInstancesStatistics);
   }
 
-    private void setupBatchHttpStream(Promise<?> promise, HttpRequest<Buffer> inventoryHttpRequest,
+    private void setupBatchHttpStream(Promise<Response> promise, HttpRequest<Buffer> inventoryHttpRequest,
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
+    var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
     var maxChunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
@@ -399,16 +401,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             responseChecked.complete(false);
             break;
           case 403: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
+            String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
+            logger.error(errorMessage);
+            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
             break;
           } default: {
             String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
             logger.error(errorMessage);
             errorMessage = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
-            promise.fail(new IllegalStateException(errorMessage));
+            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
           }
         }

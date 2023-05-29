@@ -17,6 +17,7 @@ import io.vertx.ext.web.codec.BodyCodec;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -107,7 +108,8 @@ import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.SERVICE_UNAVAILABLE;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
@@ -123,9 +125,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String ID = "id";
   private static final String COPY_NUMBER = "copyNumber";
 
-  private static final String MOD_INVENTORY_STORAGE_ERROR_PREFIX = "mod-inventory-storage didn't respond";
-  protected static final String MOD_INVENTORY_STORAGE_ERROR = MOD_INVENTORY_STORAGE_ERROR_PREFIX + " for %s tenant with status 200. Status code was %s";
-
+  protected static final String MOD_INVENTORY_STORAGE_ERROR = "mod-inventory-storage didn't respond for %s tenant with status 200. Status code was %s";
+  private static  final String MOD_SOURCE_RECORD_STORAGE_ERROR = "mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s";
   private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
   private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
   private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE = "Cannot get instance by id %s. Status code: %s; status message: %s .";
@@ -178,7 +179,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
     } else {
       logger.error("Request from inventory has been failed.", handler.cause());
-      promise.fail(handler.cause());
+      var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
+      promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, handler.cause().getMessage()));
     }
   }
 
@@ -319,8 +321,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
             logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
-            var errorMessage = String.format("mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s", request.getTenant(), statusCode);
-            promise.fail(new IllegalStateException(errorMessage));
+            var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
+            var errorMessage = String.format(MOD_SOURCE_RECORD_STORAGE_ERROR, request.getTenant(), statusCode);
+            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
           }
         } else {
           logger.error("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());
@@ -494,14 +497,19 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return record;
   }
 
-  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+  protected Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
-  private Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
-    if (errorMessage.contains(MOD_INVENTORY_STORAGE_ERROR_PREFIX)) {
-      oaipmh.withErrors(new OAIPMHerrorType().withCode(SERVICE_UNAVAILABLE).withValue(errorMessage));
+  protected Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
+    if (StringUtils.isNotEmpty(errorMessage)) {
+      var verb = request.getVerb();
+      if (verb == VerbType.GET_RECORD) {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(errorMessage));
+      } else if (verb == VerbType.LIST_RECORDS) {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(errorMessage));
+      }
     } else {
       oaipmh.withErrors(createNoRecordsFoundError());
     }
