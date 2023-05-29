@@ -507,7 +507,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       var verb = request.getVerb();
       if (verb == VerbType.GET_RECORD) {
         oaipmh.withErrors(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(errorMessage));
-      } else if (verb == VerbType.LIST_RECORDS) {
+      } else if (verb == VerbType.LIST_RECORDS || verb == VerbType.LIST_IDENTIFIERS) {
         oaipmh.withErrors(new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(errorMessage));
       }
     } else {
