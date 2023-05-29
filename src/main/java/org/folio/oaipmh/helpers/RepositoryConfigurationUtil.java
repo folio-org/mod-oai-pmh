@@ -58,7 +58,7 @@ public class RepositoryConfigurationUtil {
             if (response.statusCode() != 200) {
               var errorMessage = String.format(MOD_CONFIGURATION_ERROR, tenant, response.statusCode());
               logger.error(errorMessage);
-              promise.fail(new IllegalStateException(errorMessage));
+              throw new IllegalStateException(errorMessage);
             }
             JsonObject body = response.bodyAsJsonObject();
             JsonObject config = new JsonObject();

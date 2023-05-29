@@ -161,6 +161,9 @@ public class Request {
     return restoredOaiRequest != null ? restoredOaiRequest.getIdentifier() : oaiRequest.getIdentifier();
   }
 
+  public void setIdentifier(String identifier) {
+    oaiRequest.setIdentifier(identifier);
+  }
 
   public String getFrom() {
     return restoredOaiRequest != null ? restoredOaiRequest.getFrom() : oaiRequest.getFrom();

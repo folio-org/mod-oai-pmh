@@ -497,24 +497,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return record;
   }
 
-  protected Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
-    oaipmh.withErrors(createNoRecordsFoundError());
-    return getResponseHelper().buildFailureResponse(oaipmh, request);
-  }
 
-  protected Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
-    if (StringUtils.isNotEmpty(errorMessage)) {
-      var verb = request.getVerb();
-      if (verb == VerbType.GET_RECORD) {
-        oaipmh.withErrors(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(errorMessage));
-      } else if (verb == VerbType.LIST_RECORDS || verb == VerbType.LIST_IDENTIFIERS) {
-        oaipmh.withErrors(new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(errorMessage));
-      }
-    } else {
-      oaipmh.withErrors(createNoRecordsFoundError());
-    }
-    return getResponseHelper().buildFailureResponse(oaipmh, request);
-  }
 
   protected javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
     if (!oai.getErrors().isEmpty()) {
