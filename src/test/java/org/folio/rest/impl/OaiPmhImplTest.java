@@ -2794,6 +2794,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
 
+    //ToDo
     verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     testContext.completeNow();

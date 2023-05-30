@@ -12,6 +12,7 @@ import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
@@ -34,6 +35,8 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
@@ -239,7 +242,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
         .parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
+      var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
@@ -253,14 +256,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
             logger.error("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
-            handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
+            oaiPmhResponsePromise.complete(buildBadResumptionTokenOaiResponse(oaipmhResponse, request,"Specified resumption token doesn't exists." ));
             return;
           }
 
           if (!firstBatch && (CollectionUtils.isNotEmpty(instances) && !instances.get(0)
             .getString(INSTANCE_ID_FIELD_NAME)
             .equals(request.getNextRecordId()))) {
-            handleException(oaiPmhResponsePromise, new IllegalArgumentException("Stale resumption token."));
+            oaiPmhResponsePromise.complete(buildBadResumptionTokenOaiResponse(oaipmhResponse, request,"Stale resumption token." ));
             return;
           }
 
@@ -276,7 +279,6 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
           srsClient = createAndSetupSrsClient(request);
 
-          var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
 
@@ -304,6 +306,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
+  }
+
+  private Response buildBadResumptionTokenOaiResponse(OAIPMH oaipmh, Request request, String message) {
+    oaipmh.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(NO_RECORD_FOUND_ERROR));
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
   private void setCompleteListSize(AsyncResult<Integer> handler, Request request) {
