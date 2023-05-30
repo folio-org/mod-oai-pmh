@@ -309,7 +309,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
   }
 
   private Response buildBadResumptionTokenOaiResponse(OAIPMH oaipmh, Request request, String message) {
-    oaipmh.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(NO_RECORD_FOUND_ERROR));
+    oaipmh.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(message));
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
