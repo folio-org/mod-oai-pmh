@@ -63,7 +63,6 @@ public class OaiPmhImpl implements Oai {
     Request.Builder requestBuilder = Request.builder()
       .okapiHeaders(okapiHeaders)
       .verb(getVerb(verb))
-      .baseURL(getProperty(generatedRequestId, REPOSITORY_BASE_URL))
       .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
     Request request = requestBuilder.build();
     var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
@@ -72,6 +71,7 @@ public class OaiPmhImpl implements Oai {
       .onSuccess(v -> {
         String requestId = generatedRequestId;
         try {
+          request.setBaseUrl((getProperty(generatedRequestId, REPOSITORY_BASE_URL)));
           if (StringUtils.isNotEmpty(identifier)) {
             request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
           }
