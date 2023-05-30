@@ -107,7 +107,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
 
-  public static Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }

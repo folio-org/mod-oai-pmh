@@ -95,6 +95,12 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
     }
   }
 
+  @Override
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
   private OAIPMHerrorType createNoRecordFoundError() {
     return new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(RECORD_NOT_FOUND_ERROR);
   }
