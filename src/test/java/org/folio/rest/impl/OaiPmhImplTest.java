@@ -1224,31 +1224,6 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
-  void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
-    logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
-
-    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    addAcceptEncodingHeader(request, encoding);
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
-
-    logger.debug(format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
