@@ -546,7 +546,7 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
+    if (metadataPrefix == MARC21WITHHOLDINGS || metadataPrefix == MARC21XML || metadataPrefix == DC) {
       request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
     }
 
@@ -555,11 +555,8 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
 
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
-      verifyListResponse(oaipmh, LIST_RECORDS, 10); // Not 20 for SRS+Inventory because of duplicates.
-    } else {
-      verifyListResponse(oaipmh, LIST_RECORDS, recordsSource.equals(SRS_AND_INVENTORY) ? 20 : 10);
-    }
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
 
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
