@@ -76,6 +76,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.domain.StatisticsHolder;
@@ -278,10 +279,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
-
+          String targetMetadataPrefix = request.getMetadataPrefix();
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
-                if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
+                if ((request.getVerb().equals(VerbType.LIST_IDENTIFIERS)
+                  || MetadataPrefix.MARC21XML.getName().equals(targetMetadataPrefix)
+                  || MetadataPrefix.DC.getName().equals(targetMetadataPrefix)
+                ) && request.getCompleteListSize() == 0) {
                   instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant())
                     .onComplete(handler -> {
                       setCompleteListSize(handler, request);
@@ -673,7 +677,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     var resumptionTokenType = new ResumptionTokenType()
       .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
-    if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() > 0) {
+    String targetMetadataPrefix = request.getMetadataPrefix();
+    if ((request.getVerb().equals(VerbType.LIST_IDENTIFIERS)
+      || MetadataPrefix.MARC21XML.getName().equals(targetMetadataPrefix)
+      || MetadataPrefix.DC.getName().equals(targetMetadataPrefix)) && request.getCompleteListSize() > 0) {
       resumptionTokenType.withCompleteListSize(BigInteger.valueOf(request.getCompleteListSize()));
       extraParams.put(REQUEST_COMPLETE_LIST_SIZE_PARAM, String.valueOf(request.getCompleteListSize()));
     }

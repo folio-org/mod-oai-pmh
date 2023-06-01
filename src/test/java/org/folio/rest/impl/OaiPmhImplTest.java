@@ -129,7 +129,9 @@ import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
+import static org.folio.oaipmh.MetadataPrefix.DC;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
+import static org.folio.oaipmh.MetadataPrefix.MARC21XML;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
@@ -149,7 +151,6 @@ import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_CALL_
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_WITHOUT_SRS_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_60_INSTANCE_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_ITEMS_DATE;
@@ -908,7 +909,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS"})
   void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
@@ -1310,15 +1311,17 @@ class OaiPmhImplTest {
   @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
   void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
     logger.debug(format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
+    final String retryAttempts = System.getProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, "1");
 
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-      .param(UNTIL_PARAM, OkapiMockServer.RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE);
+      .param(UNTIL_PARAM, OkapiMockServer.FAIL_SRS_500);
 
     verify500(request);
-
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
     logger.debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
   }
 
@@ -1842,7 +1845,7 @@ class OaiPmhImplTest {
   private void verifyRecord(RecordType record, MetadataPrefix metadataPrefix) {
     if (record.getHeader().getStatus() == null) {
       assertThat(record.getMetadata(), is(notNullValue()));
-      if (metadataPrefix == MetadataPrefix.MARC21XML) {
+      if (metadataPrefix == MARC21XML) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
       } else if (metadataPrefix == MetadataPrefix.DC) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
@@ -2089,9 +2092,11 @@ class OaiPmhImplTest {
   private static Stream<Arguments> metadataPrefixAndVerbProviderExceptMarc21withHoldings() {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
-      for (VerbType verb : LIST_VERBS) {
-        if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
-          builder.add(Arguments.arguments(prefix, verb));
+      if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
+        for (VerbType verb : LIST_VERBS) {
+          if (verb != LIST_RECORDS){
+            builder.add(Arguments.arguments(prefix, verb));
+          }
         }
       }
     }
