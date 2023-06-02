@@ -12,6 +12,7 @@ import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
+import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
@@ -34,6 +35,8 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanPro
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
@@ -239,7 +242,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
       int batchSize = Integer
         .parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-
+      var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
           if (fut.failed()) {
@@ -253,14 +256,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           logger.debug("Processing instances: {}.", instances.size());
           if (CollectionUtils.isEmpty(instances) && !firstBatch) {
             logger.error("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
-            handleException(oaiPmhResponsePromise, new IllegalArgumentException("Specified resumption token doesn't exists."));
+            oaiPmhResponsePromise.complete(buildBadResumptionTokenOaiResponse(oaipmhResponse, request,"Specified resumption token doesn't exists." ));
             return;
           }
 
           if (!firstBatch && (CollectionUtils.isNotEmpty(instances) && !instances.get(0)
             .getString(INSTANCE_ID_FIELD_NAME)
             .equals(request.getNextRecordId()))) {
-            handleException(oaiPmhResponsePromise, new IllegalArgumentException("Stale resumption token."));
+            oaiPmhResponsePromise.complete(buildBadResumptionTokenOaiResponse(oaipmhResponse, request,"Stale resumption token." ));
             return;
           }
 
@@ -288,21 +291,26 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
                       buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                         deletedRecordSupport, statistics)
                         .onSuccess(oaiPmhResponsePromise::complete)
-                        .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                        .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
                     });
                 } else {
                   buildRecordsResponse(request, requestId, instancesWithoutLast, lastUpdateDate, res, firstBatch, nextInstanceId,
                     deletedRecordSupport, statistics)
                     .onSuccess(oaiPmhResponsePromise::complete)
-                    .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+                    .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
                 }
               }
             )
-            .onFailure(e -> handleException(oaiPmhResponsePromise, e));
+            .onFailure(e -> oaiPmhResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage())));
         });
     } catch (Exception e) {
       handleException(oaiPmhResponsePromise, e);
     }
+  }
+
+  private Response buildBadResumptionTokenOaiResponse(OAIPMH oaipmh, Request request, String message) {
+    oaipmh.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(message));
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
   private void setCompleteListSize(AsyncResult<Integer> handler, Request request) {
@@ -327,8 +335,9 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     setupBatchHttpStream(oaiPmhResponsePromise, httpRequest, request, postgresClient, downloadInstancesPromise, downloadInstancesStatistics);
   }
 
-    private void setupBatchHttpStream(Promise<?> promise, HttpRequest<Buffer> inventoryHttpRequest,
+    private void setupBatchHttpStream(Promise<Response> promise, HttpRequest<Buffer> inventoryHttpRequest,
                                     Request request, PostgresClient postgresClient, Promise<Object> downloadInstancesPromise, StatisticsHolder downloadInstancesStatistics) {
+    var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
     String tenant = request.getTenant();
     String requestId = request.getRequestId();
     var maxChunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
@@ -399,15 +408,16 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
             responseChecked.complete(false);
             break;
           case 403: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
+            String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + inventoryHttpRequest.uri(), DOWNLOAD_INSTANCES_MISSED_PERMISSION);
+            logger.error(errorMessage);
+            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
             break;
-          }
-          default: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
-            promise.fail(new IllegalStateException(errorMsg));
+          } default: {
+            String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
+            logger.error(errorMessage);
+            errorMessage = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
+            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
           }
         }
@@ -852,7 +862,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       logger.debug("Error has been occurred while requesting SRS.");
     }
     if (attemptsCount.decrementAndGet() <= 0) {
-      String errorMessage = "SRS didn't respond with expected status code after " + Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS))
+      String errorMessage = "mod-source-record-storage didn't respond with expected status code after " + Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS))
           + " attempts. Canceling further request processing.";
       handleException(promise, new IllegalStateException(errorMessage));
       return;

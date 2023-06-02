@@ -60,21 +60,21 @@ public class OaiPmhImpl implements Oai {
     logger.info("getOaiRecords:: parameters verb: {}, identifier: {}, resumptionToken: {}, from: {}, until: {}, set: {}, metadataPrefix: {}",
       verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
+    Request.Builder requestBuilder = Request.builder()
+      .okapiHeaders(okapiHeaders)
+      .verb(getVerb(verb))
+      .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
+    Request request = requestBuilder.build();
+    var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
+
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
       .onSuccess(v -> {
         String requestId = generatedRequestId;
         try {
-          Request.Builder requestBuilder = Request.builder()
-            .okapiHeaders(okapiHeaders)
-            .verb(getVerb(verb))
-            .baseURL(getProperty(generatedRequestId, REPOSITORY_BASE_URL))
-            .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
+          request.setBaseUrl((getProperty(generatedRequestId, REPOSITORY_BASE_URL)));
           if (StringUtils.isNotEmpty(identifier)) {
-            requestBuilder.identifier(URLDecoder.decode(identifier, "UTF-8"));
+            request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
           }
-
-          Request request = requestBuilder.build();
-
           if (!getBooleanProperty(generatedRequestId, REPOSITORY_ENABLE_OAI_SERVICE)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.SERVICE_UNAVAILABLE, "OAI-PMH service is disabled");
@@ -115,17 +115,22 @@ public class OaiPmhImpl implements Oai {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
-              }).onFailure(t-> {
+              }).onFailure(e -> {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
-                asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
+                var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+                asyncResultHandler.handle(succeededFuture(responseWithErrors));
                });
           }
         } catch (Exception e) {
           logger.error("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
           RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
-          asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
+          var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+          asyncResultHandler.handle(succeededFuture(responseWithErrors));
         }
-      }).onFailure(throwable -> asyncResultHandler.handle(getFutureWithErrorResponse(throwable.getMessage())));
+      }).onFailure(e -> {
+        var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+        asyncResultHandler.handle(succeededFuture(responseWithErrors));
+      });
   }
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
