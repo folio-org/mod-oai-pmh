@@ -436,7 +436,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
                 if (source != null && recordType.getHeader().getStatus() == null) {
-                  source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord, request);
+                  source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord);
                   try {
                     recordType.withMetadata(buildOaiMetadata(request, source));
                   } catch (Exception e) {
@@ -473,12 +473,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   private String enrichSource(String source, boolean suppressedRecordsProcessingEnabled,
-                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request) {
+                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord) {
     if (suppressedRecordsProcessingEnabled) {
       source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-      if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-        source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
-      }
+      return metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
     }
     return source;
   }
