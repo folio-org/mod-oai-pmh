@@ -84,7 +84,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
     if (!records.isEmpty()) {
       oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
     } else {
-      oaipmh.withErrors(createNoRecordsFoundError());
+      oaipmh.withErrors(createNoRecordFoundError());
     }
   }
 
@@ -96,7 +96,12 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected OAIPMHerrorType createNoRecordsFoundError() {
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  private OAIPMHerrorType createNoRecordFoundError() {
     return new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(RECORD_NOT_FOUND_ERROR);
   }
 

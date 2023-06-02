@@ -49,6 +49,7 @@ class RecordMetadataManagerTest {
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
+  private static final String SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/srs_instance_with_two_electronic_accesses.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE = "/metadata-manager/srs_instance_with_electronic_access_with_suppress_value.json";
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
@@ -162,7 +163,7 @@ class RecordMetadataManagerTest {
   void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
       String source = storageHelper.getInstanceRecordSource(record);
       String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD);
@@ -377,13 +378,11 @@ class RecordMetadataManagerTest {
 
     JsonObject fieldContent = generalInfoFiled.getJsonObject(tagNumber);
     JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
-    JsonObject discoverySuppressedSubField = subFields.stream()
+    assertTrue(subFields.stream()
       .map(jsonObject -> (JsonObject) jsonObject)
       .filter(jsonObject -> jsonObject.containsKey("t"))
-      .findFirst()
-      .get();
-    int subFieldValue = discoverySuppressedSubField.getInteger("t");
-    assertEquals(0, subFieldValue);
+      .map(json -> json.getInteger("t"))
+      .allMatch(i -> i == 0));
   }
 
   private void verifyCountOfSuppressedValueField(String source, Predicate<JsonObject> predicate, String tagNumber) {

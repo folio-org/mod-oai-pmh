@@ -24,6 +24,7 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.VerbType;
 
 import javax.ws.rs.core.Response;
 import java.math.BigInteger;
@@ -81,6 +82,7 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedReco
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 /**
@@ -98,12 +100,39 @@ public abstract class AbstractHelper implements VerbHelper {
     ISO_DATE_TIME_PATTERN
   };
 
-  private ResponseHelper responseHelper = ResponseHelper.getInstance();
+  private static ResponseHelper responseHelper = ResponseHelper.getInstance();
 
   /**
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
+
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordsFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  public static Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
+    if (StringUtils.isNotEmpty(errorMessage)) {
+      var verb = request.getVerb();
+      if (verb == VerbType.GET_RECORD) {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(errorMessage));
+      } else {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(errorMessage));
+      }
+    } else {
+      oaipmh.withErrors(createNoRecordsFoundError());
+    }
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  protected static OAIPMHerrorType createNoRecordsFoundError() {
+    return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
+  }
+
+  public static ResponseHelper getResponseHelper() {
+    return responseHelper;
+  }
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -266,10 +295,6 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected boolean validateIdentifier(Request request) {
     return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
-  }
-
-  protected OAIPMHerrorType createNoRecordsFoundError() {
-    return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
   }
 
   protected List<SetType> getSupportedSetTypes() {
@@ -476,9 +501,6 @@ public abstract class AbstractHelper implements VerbHelper {
       .collect(Collectors.toList());
   }
 
-  protected ResponseHelper getResponseHelper() {
-    return responseHelper;
-  }
 
   protected Future<Response> buildResponseWithErrors(Request request, Promise<Response> promise, List<OAIPMHerrorType> errors) {
     OAIPMH oai;

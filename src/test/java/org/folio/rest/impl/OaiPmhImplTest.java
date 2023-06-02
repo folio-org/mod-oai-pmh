@@ -229,7 +229,7 @@ class OaiPmhImplTest {
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
-  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&source=MARC&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Cannot download instances due to lack of permission, permission required";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
@@ -1287,21 +1287,21 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(UNTIL_PARAM, OkapiMockServer.FAIL_SRS_500);
 
-    verify500(request);
+    verify404(request);
     System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
     logger.debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
   }
 
   @ParameterizedTest
   @MethodSource("allMetadataPrefixesAndListVerbsProvider")
-  void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
+  void shouldReturn404WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
       .param(FROM_PARAM, SRS_RECORD_WITH_INVALID_JSON_STRUCTURE);
 
-    verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
+    verify404WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
   }
 
   @ParameterizedTest
@@ -1378,7 +1378,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
       .param(UNTIL_PARAM, OkapiMockServer.ERROR_UNTIL_DATE);
 
-    verify500(request);
+    verify404(request);
   }
 
   @ParameterizedTest
@@ -1590,7 +1590,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_METADATA_FORMATS.value())
       .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
 
-    verify500(request);
+    verify404(request);
 
     testContext.completeNow();
   }
@@ -1667,7 +1667,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, IDENTIFY.value());
 
     try {
-      verify500(request);
+      verify404(request);
     } finally {
       System.setProperty(propKey, prop);
     }
@@ -1752,13 +1752,30 @@ class OaiPmhImplTest {
     assertThat(response, equalTo(message));
   }
 
-  private void verify404WithErrorMessage(RequestSpecification request) {
+  private void verify404WithErrorMessage(RequestSpecification request, String message) {
     String response = request
       .when()
       .get()
       .then()
       .statusCode(404)
-      .contentType("text/xml")
+      .contentType(ContentType.XML)
+      .log().all()
+      .extract()
+      .body()
+      .asString();
+
+    assertThat(response, is(notNullValue()));
+    assertThat(response, containsString(message));
+  }
+
+
+  private void verify404(RequestSpecification request) {
+    String response = request
+      .when()
+      .get()
+      .then()
+      .statusCode(404)
+      .contentType(ContentType.XML)
       .log().all()
       .extract()
       .body()
@@ -2643,7 +2660,7 @@ class OaiPmhImplTest {
     String body = request.when()
       .get()
       .then()
-      .statusCode(500)
+      .statusCode(404)
       .extract()
       .asString();
     String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
@@ -2693,10 +2710,10 @@ class OaiPmhImplTest {
     String body = request.when()
       .get()
       .then()
-      .statusCode(500)
+      .statusCode(404)
       .extract()
       .asString();
-    String expectedMessage = "SRS didn't respond with expected status code after 1 attempts. Canceling further request processing.";
+    String expectedMessage = "mod-source-record-storage didn't respond with expected status code after 1 attempts. Canceling further request processing.";
     assertTrue(body.contains(expectedMessage));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
@@ -2716,7 +2733,7 @@ class OaiPmhImplTest {
     String body = request.when()
       .get()
       .then()
-      .statusCode(500)
+      .statusCode(404)
       .extract()
       .asString();
     String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
@@ -2750,6 +2767,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
 
+    //ToDo
     verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     testContext.completeNow();
@@ -2767,7 +2785,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingInstancesIds(String encoding) {
+  void shouldReturn404WithMessage_whenUserHasNotPermissionsForGettingInstancesIds(String encoding) {
     String metadataPrefix = MARC21WITHHOLDINGS.getName();
     String set = "all";
 
@@ -2783,13 +2801,13 @@ class OaiPmhImplTest {
 
     addAcceptEncodingHeader(request, encoding);
 
-    verify500WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+    verify404WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500_whenGetInstancesIdsReturnedInternalServerError(String encoding) {
+  void shouldReturn404_whenGetInstancesIdsReturnedInternalServerError(String encoding) {
     String metadataPrefix = MARC21WITHHOLDINGS.getName();
     String set = "all";
 
@@ -2802,18 +2820,18 @@ class OaiPmhImplTest {
 
     addAcceptEncodingHeader(request, encoding);
 
-    verify500(request);
+    verify404(request);
   }
 
   @Test
-  void shouldReturn500_whenInvalidJsonRespondedFromEnrichedInstances() {
+  void shouldReturn404_whenInvalidJsonRespondedFromEnrichedInstances() {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    verify500(request);
+    verify404(request);
   }
 
   @Test
@@ -2829,7 +2847,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingEnrichedInstances(String encoding) {
+  void shouldReturn404WithMessage_whenUserHasNotPermissionsForGettingEnrichedInstances(String encoding) {
     String metadataPrefix = MARC21WITHHOLDINGS.getName();
     String set = "all";
 
@@ -2842,12 +2860,12 @@ class OaiPmhImplTest {
 
     addAcceptEncodingHeader(request, encoding);
 
-    verify500WithErrorMessage(request, CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
+    verify404WithErrorMessage(request, CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500_whenGetEnrichedInstancesReturnedInternalServerError(String encoding) {
+  void shouldReturn404_whenGetEnrichedInstancesReturnedInternalServerError(String encoding) {
     String metadataPrefix = MARC21WITHHOLDINGS.getName();
     String set = "all";
 
@@ -2860,7 +2878,7 @@ class OaiPmhImplTest {
 
     addAcceptEncodingHeader(request, encoding);
 
-    verify500(request);
+    verify404(request);
   }
 
   @Test
