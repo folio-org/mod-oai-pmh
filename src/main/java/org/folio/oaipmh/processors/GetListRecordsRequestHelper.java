@@ -12,7 +12,6 @@ import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
@@ -36,7 +35,6 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
