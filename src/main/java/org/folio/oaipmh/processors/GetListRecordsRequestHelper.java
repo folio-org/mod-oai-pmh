@@ -622,14 +622,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       .forEach(instance -> {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
         final JsonObject srsRecord = srsResponse.get(instanceId);
-        RecordType record = createRecord(request, srsRecord, instanceId);
+        RecordType instanceRecord = createRecord(request, srsRecord, instanceId);
 
         JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecord, instance,
             suppressedRecordsProcessing);
         JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
           suppressedRecordsProcessing);
         String source = storageHelper.getInstanceRecordSource(updatedSrsRecord);
-        if (source != null && record.getHeader()
+        if (source != null && instanceRecord.getHeader()
           .getStatus() == null) {
           if (suppressedRecordsProcessing) {
             source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsRecord);
@@ -637,7 +637,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           }
           try {
             if (request.getVerb() == VerbType.LIST_RECORDS) {
-              record.withMetadata(buildOaiMetadata(request, source));
+              instanceRecord.withMetadata(buildOaiMetadata(request, source));
             }
           } catch (Exception e) {
             statistics.addFailedInstancesCounter(1);
@@ -650,7 +650,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         }
         if (filterInstance(request, srsRecord)) {
           statistics.addReturnedInstancesCounter(1);
-          records.add(record);
+          records.add(instanceRecord);
         } else {
           statistics.addSuppressedInstancesCounter(1);
           statistics.addSuppressedInstancesIds(instanceId);
