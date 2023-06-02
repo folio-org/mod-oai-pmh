@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -93,7 +94,7 @@ public class RecordMetadataManager {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotBlank(secondIndicator);
+        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
       }
       return false;
     };
@@ -340,8 +341,7 @@ public class RecordMetadataManager {
   public String updateElectronicAccessFieldWithDiscoverySuppressedData(String metadataSource, JsonObject metadataSourceOwner) {
     JsonObject content = new JsonObject(metadataSource);
     JsonArray fields = content.getJsonArray(FIELDS);
-    Optional<JsonObject> electronicAccessField = getElectronicAccessField(fields);
-    electronicAccessField.ifPresent(jsonObject ->
+    getElectronicAccessFields(fields).forEach(jsonObject ->
       updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, ELECTRONIC_ACCESS_FILED_TAG_NUMBER));
     return content.encode();
   }
@@ -354,11 +354,11 @@ public class RecordMetadataManager {
       .findFirst();
   }
 
-  private Optional<JsonObject> getElectronicAccessField(JsonArray fields) {
+  private List<JsonObject> getElectronicAccessFields(JsonArray fields) {
     return fields.stream()
       .map(obj -> (JsonObject) obj)
       .filter(electronicAccessPredicate)
-      .findFirst();
+      .collect(Collectors.toList());
   }
 
   @SuppressWarnings("unchecked")

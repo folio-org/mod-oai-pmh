@@ -471,9 +471,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                                       RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord, Request request) {
     if (suppressedRecordsProcessingEnabled) {
       source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-      if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-        source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
-      }
+      return metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
     }
     return source;
   }
