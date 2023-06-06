@@ -13,6 +13,7 @@ import io.vertx.sqlclient.PoolOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
+import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.rest.persist.PostgresClient;
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -47,7 +48,7 @@ public class PostgresClientFactory {
 
   /**
    * Such field is temporary solution which is used to allow resetting the pool in tests.
-   * In future the {@link org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper#getNextBatch(String, Request, int, Promise, Context, Long)}
+   * In future the {@link GetListRecordsRequestHelper#getNextBatch(String, Request, int, Promise, Context, Long)}
    * should be canceled when response with failure already responded.
    */
   private static boolean shouldResetPool = false;

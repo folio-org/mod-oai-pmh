@@ -12,7 +12,6 @@ import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
-import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
@@ -36,7 +35,6 @@ import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 
 import com.google.common.collect.Maps;
 import io.vertx.core.AsyncResult;
@@ -79,6 +77,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.domain.StatisticsHolder;
@@ -104,7 +103,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
+public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
@@ -128,7 +127,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   public static final int TRACKER_LIMIT = 15;
 
-  public static final MarcWithHoldingsRequestHelper INSTANCE = new MarcWithHoldingsRequestHelper();
+  public static final GetListRecordsRequestHelper INSTANCE = new GetListRecordsRequestHelper();
 
   private final Vertx vertx;
   private final WorkerExecutor saveInstancesExecutor;
@@ -141,11 +140,11 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
   private SourceStorageSourceRecordsClientWrapper srsClient;
 
-  public static MarcWithHoldingsRequestHelper getInstance() {
+  public static GetListRecordsRequestHelper getInstance() {
     return INSTANCE;
   }
 
-  private MarcWithHoldingsRequestHelper() {
+  private GetListRecordsRequestHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
     var vertxOptions = new VertxOptions();
     vertxOptions.setMaxEventLoopExecuteTime(MAX_EVENT_LOOP_EXECUTE_TIME_NS);
@@ -281,10 +280,13 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
 
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
-
+          String targetMetadataPrefix = request.getMetadataPrefix();
           requestSRSByIdentifiers(context.owner(), instancesWithoutLast, deletedRecordSupport, retryAttempts, request)
             .onSuccess(res -> {
-                if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() == 0) {
+                if ((request.getVerb().equals(VerbType.LIST_IDENTIFIERS)
+                  || MetadataPrefix.MARC21XML.getName().equals(targetMetadataPrefix)
+                  || MetadataPrefix.DC.getName().equals(targetMetadataPrefix)
+                ) && request.getCompleteListSize() == 0) {
                   instancesService.getTotalNumberOfRecords(request.getRequestId(), request.getTenant())
                     .onComplete(handler -> {
                       setCompleteListSize(handler, request);
@@ -620,14 +622,14 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
       .forEach(instance -> {
         final String instanceId = instance.getString(INSTANCE_ID_FIELD_NAME);
         final JsonObject srsRecord = srsResponse.get(instanceId);
-        RecordType record = createRecord(request, srsRecord, instanceId);
+        RecordType instanceRecord = createRecord(request, srsRecord, instanceId);
 
         JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecord, instance,
             suppressedRecordsProcessing);
         JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
           suppressedRecordsProcessing);
         String source = storageHelper.getInstanceRecordSource(updatedSrsRecord);
-        if (source != null && record.getHeader()
+        if (source != null && instanceRecord.getHeader()
           .getStatus() == null) {
           if (suppressedRecordsProcessing) {
             source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsRecord);
@@ -635,7 +637,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
           }
           try {
             if (request.getVerb() == VerbType.LIST_RECORDS) {
-              record.withMetadata(buildOaiMetadata(request, source));
+              instanceRecord.withMetadata(buildOaiMetadata(request, source));
             }
           } catch (Exception e) {
             statistics.addFailedInstancesCounter(1);
@@ -648,7 +650,7 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
         }
         if (filterInstance(request, srsRecord)) {
           statistics.addReturnedInstancesCounter(1);
-          records.add(record);
+          records.add(instanceRecord);
         } else {
           statistics.addSuppressedInstancesCounter(1);
           statistics.addSuppressedInstancesIds(instanceId);
@@ -683,7 +685,10 @@ public class MarcWithHoldingsRequestHelper extends AbstractGetRecordsHelper {
     var resumptionTokenType = new ResumptionTokenType()
       .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
       .withCursor(BigInteger.valueOf(cursor));
-    if (request.getVerb().equals(VerbType.LIST_IDENTIFIERS) && request.getCompleteListSize() > 0) {
+    String targetMetadataPrefix = request.getMetadataPrefix();
+    if ((request.getVerb().equals(VerbType.LIST_IDENTIFIERS)
+      || MetadataPrefix.MARC21XML.getName().equals(targetMetadataPrefix)
+      || MetadataPrefix.DC.getName().equals(targetMetadataPrefix)) && request.getCompleteListSize() > 0) {
       resumptionTokenType.withCompleteListSize(BigInteger.valueOf(request.getCompleteListSize()));
       extraParams.put(REQUEST_COMPLETE_LIST_SIZE_PARAM, String.valueOf(request.getCompleteListSize()));
     }

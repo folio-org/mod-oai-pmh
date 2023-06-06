@@ -130,6 +130,7 @@ import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
+import static org.folio.oaipmh.MetadataPrefix.MARC21XML;
 import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
@@ -544,20 +545,16 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
-      request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
-    }
+
+    request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
 
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
-      verifyListResponse(oaipmh, LIST_RECORDS, 10); // Not 20 for SRS+Inventory because of duplicates.
-    } else {
-      verifyListResponse(oaipmh, LIST_RECORDS, recordsSource.equals(SRS_AND_INVENTORY) ? 20 : 10);
-    }
+
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
 
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
@@ -646,7 +643,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStarted(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -800,7 +797,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateAndTimeGranularity(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -827,7 +824,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularity(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -854,7 +851,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithoutFromParamAndGranularitySettingIsFull(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -880,7 +877,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularityAndGranularitySettingIsDateOnly(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD.value());
@@ -907,21 +904,18 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS"})
   void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
     // base64 encoded string:
     // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
     // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46&expirationDate=2030-10-01T00:00:00Z
-    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9M" +
-      "jAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4O" +
-      "WEwMS1mM2NkLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDYmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     String resumptionTokenListIdentifiers = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMF" +
       "omdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0w" +
       "MDAwMDAwMC0wMDAwLTQwMDAtYTAwMC0wMDAwMDAwMDAwMDAmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, verb == VerbType.LIST_RECORDS ? resumptionToken : resumptionTokenListIdentifiers);
+      .param(RESUMPTION_TOKEN_PARAM, resumptionTokenListIdentifiers);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -940,7 +934,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     String set = "all";
     RequestSpecification request = createBaseRequest()
@@ -968,7 +962,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithFromAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -995,7 +989,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithFromAndUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1023,7 +1017,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1222,31 +1216,6 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
-  void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
-    logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
-
-    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    addAcceptEncodingHeader(request, encoding);
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
-
-    logger.debug(format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -1309,15 +1278,17 @@ class OaiPmhImplTest {
   @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
   void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
     logger.debug(format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
+    final String retryAttempts = System.getProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, "1");
 
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-      .param(UNTIL_PARAM, OkapiMockServer.RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE);
+      .param(UNTIL_PARAM, OkapiMockServer.FAIL_SRS_500);
 
     verify404(request);
-
+    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
     logger.debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
   }
 
@@ -1858,7 +1829,7 @@ class OaiPmhImplTest {
   private void verifyRecord(RecordType record, MetadataPrefix metadataPrefix) {
     if (record.getHeader().getStatus() == null) {
       assertThat(record.getMetadata(), is(notNullValue()));
-      if (metadataPrefix == MetadataPrefix.MARC21XML) {
+      if (metadataPrefix == MARC21XML) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
       } else if (metadataPrefix == MetadataPrefix.DC) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
@@ -2102,12 +2073,14 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
-  private static Stream<Arguments> metadataPrefixAndVerbProviderExceptMarc21withHoldings() {
+  private static Stream<Arguments> metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords() {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
-      for (VerbType verb : LIST_VERBS) {
-        if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
-          builder.add(Arguments.arguments(prefix, verb));
+      if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
+        for (VerbType verb : LIST_VERBS) {
+          if (verb != LIST_RECORDS){
+            builder.add(Arguments.arguments(prefix, verb));
+          }
         }
       }
     }
@@ -2208,7 +2181,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2230,7 +2203,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2252,7 +2225,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2274,7 +2247,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2296,7 +2269,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2318,7 +2291,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2347,7 +2320,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2369,7 +2342,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2400,7 +2373,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2422,7 +2395,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2449,7 +2422,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2920,7 +2893,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void verifyResumptionTokenFlowForMarc21AndOaiDcMetadataPrefixes(MetadataPrefix prefix, VerbType verb) {
     String maxRecordsPerResponse = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");

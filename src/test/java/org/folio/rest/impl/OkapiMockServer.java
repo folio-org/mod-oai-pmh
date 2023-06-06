@@ -57,7 +57,7 @@ import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
-import static org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper.FOLIO_RECORD_SOURCE;
+import static org.folio.oaipmh.processors.GetListRecordsRequestHelper.FOLIO_RECORD_SOURCE;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
@@ -81,6 +81,8 @@ public class OkapiMockServer {
   private static final String ID_PARAM = "instanceId";
 
   // Dates
+  static final String FAIL_SRS_500 = "2222-12-22";
+  static final String FAIL_SRS_500_END_DATE = "2222-12-23";
   static final String NO_RECORDS_DATE = "2011-11-11T11:11:11Z";
   private static final String NO_RECORDS_DATE_STORAGE = "2011-11-11T11:11:11";
   static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01";
@@ -135,6 +137,7 @@ public class OkapiMockServer {
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
   private static final String NEW_METADATA_DATE_FORMAT = "2020-09-03T07:47:40.097";
   // Instance UUID
+  private static final String INSTANCE_ID_FAIL_SRS_500 = "12345678-1234-4111-a000-000000000000";
   private static final String NOT_FOUND_RECORD_INSTANCE_ID = "04489a01-f3cd-4f9e-9be4-d9c198703f45";
   private static final String INVALID_SRS_RECORD_INSTANCE_ID = "68aaeff5-6c78-4498-9cdc-66cdc0f834b2";
   private static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML_INSTANCE_ID = "7b6d9a58-ab67-414b-a33f-7db11ea16178";
@@ -206,6 +209,8 @@ public class OkapiMockServer {
   private static final String LIST_IDENTIFIERS_11_VIEW = "list_identifiers_11_view.json";
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
+  private static final String INSTANCE_IDS_NO_DATA = "instance_ids_no_data.json";
+  private static final String INSTANCE_IDS_FAIL_SRS_500 = "instance_ids_fail_srs_500.json";
   private static final String INSTANCE_IDS_3_AND_1_DELETED_JSON = "instance_3_and_1_deleted.json";
   private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
   private static final String INSTANCE_IDS_60_JSON = "60_instances_ids.json";
@@ -356,6 +361,10 @@ public class OkapiMockServer {
         failureResponseWithForbidden(ctx);
       } else if (uri.contains(DATE_INVENTORY_10_INSTANCE_IDS)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
+      } else if (uri.contains(NO_RECORDS_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_NO_DATA);
+      } else if (uri.contains(FAIL_SRS_500_END_DATE)) {
+        inventoryViewSuccessResponse(ctx, INSTANCE_IDS_FAIL_SRS_500);
       } else if (uri.contains(INVENTORY_27_INSTANCES_IDS_DATE)) {
         inventoryViewSuccessResponse(ctx, ALL_INSTANCES_IDS_JSON);
       } else if (uri.contains(INVENTORY_60_INSTANCE_IDS_DATE)) {
@@ -525,6 +534,7 @@ public class OkapiMockServer {
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
     JsonArray instanceIds = ctx.getBody()
       .toJsonArray();
+
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponseWithForbidden(ctx);
     } else if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500)) {
@@ -555,6 +565,8 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + TWO_RECORDS_WITH_CYRILLIC_DATA_JSON));
     } else if (instanceIds.contains(INSTANCE_ID_WITHOUT_SRS_RECORD)) {
       successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_0));
+    } else if (instanceIds.contains(INSTANCE_ID_FAIL_SRS_500)) {
+      failureResponse(ctx, 500, "Internal server error");
     } else {
       String mockSrsResponse = generateSrsPostResponseForInstanceIds(instanceIds);
       successResponse(ctx, mockSrsResponse);
