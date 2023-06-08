@@ -26,7 +26,6 @@ import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.processors.OaiPmhJsonParser;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -66,7 +65,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +74,6 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -84,7 +81,6 @@ import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
-import static org.folio.oaipmh.Constants.LOCATION;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
@@ -97,31 +93,21 @@ import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
 import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
+import static org.folio.oaipmh.helpers.ItemsHoldingInventoryRequestFactory.INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.CALL_NUMBER;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.HOLDINGS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS;
-import static org.folio.oaipmh.helpers.records.RecordMetadataManager.NAME;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
-  private static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
+
   private static final String INSTANCES_STORAGE_ENDPOINT = "/instance-storage/instances";
 
-  private static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
-  private static final String TEMPORARY_LOCATION = "temporaryLocation";
-  private static final String PERMANENT_LOCATION = "permanentLocation";
-  private static final String EFFECTIVE_LOCATION = "effectiveLocation";
-  private static final String CODE = "code";
-  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
-  private static final String ID = "id";
-  private static final String COPY_NUMBER = "copyNumber";
+  static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
+
 
   protected static final String MOD_INVENTORY_STORAGE_ERROR = "mod-inventory-storage didn't respond for %s tenant with status 200. Status code was %s";
   private static  final String MOD_SOURCE_RECORD_STORAGE_ERROR = "mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s";
@@ -601,68 +587,37 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
     Map<String, JsonObject> instancesMap = instances.stream()
       .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
-    var webClient = WebClientProvider.getWebClient();
-    var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
-    if (request.getOkapiUrl()
-      .contains(HTTPS)) {
-      httpRequest.ssl(true);
-    }
-    httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
-    httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.putHeader(CONTENT_TYPE, APPLICATION_JSON);
 
+    var httpRequest = ItemsHoldingInventoryRequestFactory.getItemsHoldingsInventoryRequest(request);
     JsonObject entries = new JsonObject();
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instancesMap.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser()
-      .objectValueMode();
-    jsonParser.handler(event -> {
-      JsonObject itemsAndHoldingsFields = event.objectValue();
-      String instanceId = itemsAndHoldingsFields.getString(INSTANCE_ID_FIELD_NAME);
-      JsonObject instance = instancesMap.get(instanceId);
-      if (instance != null) {
-        enrichDiscoverySuppressed(itemsAndHoldingsFields, instance);
-        instance.put(RecordMetadataManager.ITEMS_AND_HOLDINGS_FIELDS, itemsAndHoldingsFields);
-        updateItems(instance);
-        addEffectiveLocationCallNumberFromHoldingsWithoutItems(instance);
-      } else {
-        logger.info("enrichInstances:: For requestId {} instance with instanceId {} wasn't in the request", request.getRequestId(), instanceId);
-      }
-    });
-    jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
-        if (invalidResponseReceivedAndProcessed) {
-          return;
-        }
-        logger.error("enrichInstances:: For requestId {} error has been occurred at JsonParser for items-and-holdings response, errors {}", request.getRequestId(),  throwable.getMessage());
-        promise.fail(throwable);
-      })
-    );
+    var oaiPmhJsonFactory = new ItemsHoldingsEnrichment(instancesMap, request);
+    var jsonParser = oaiPmhJsonFactory.getJsonParser();
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
       .sendBuffer(entries.toBuffer())
       .onSuccess(response -> {
         switch (response.statusCode()) {
           case 200:
-            responseChecked.complete(false);
+            promise.complete(new ArrayList<>(instancesMap.values()));
             break;
           case 403: {
             String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, ENRICH_INSTANCES_MISSED_PERMISSION);
             logger.error(errorMsg);
             promise.fail(new IllegalStateException(errorMsg));
-            responseChecked.complete(true);
             break;
           }
           default: {
             String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
             logger.error("{}, status {}", errorFromStorageMessage, response.statusCode());
-            responseChecked.complete(true);
+            var errorResolver = new ItemsHoldingsErrorResponseResolver(oaiPmhJsonFactory,
+              isSkipSuppressed(request));
+            errorResolver.processAfterErrors(promise);
           }
         }
-        promise.complete(new ArrayList<>(instancesMap.values()));
       })
       .onFailure(e -> {
         logger.error(e.getMessage());
@@ -731,60 +686,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       return oaipmh;
     }
     return responseHelper.buildOaipmhResponseWithErrors(request, createNoRecordsFoundError());
-  }
-
-  private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY)))
-      for (Object item : itemsandholdingsfields.getJsonArray("items")) {
-        if (item instanceof JsonObject) {
-          JsonObject itemJson = (JsonObject) item;
-          itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, true);
-        }
-      }
-  }
-
-  private void addEffectiveLocationCallNumberFromHoldingsWithoutItems(JsonObject instance) {
-    JsonArray holdingsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(HOLDINGS);
-    JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(ITEMS);
-    var excludeHoldingsIds = new HashSet<String>();
-    for (Object item : itemsJson) {
-      JsonObject itemJson = (JsonObject) item;
-      excludeHoldingsIds.add(itemJson.getString(HOLDINGS_RECORD_ID));
-    }
-    for (Object holding : holdingsJson) {
-      if (holding instanceof JsonObject) {
-        JsonObject holdingJson = (JsonObject) holding;
-        if (excludeHoldingsIds.contains(holdingJson.getString(ID))) continue;
-        JsonObject callNumberJson = holdingJson.getJsonObject(CALL_NUMBER);
-        JsonObject locationJson = holdingJson.getJsonObject(LOCATION);
-        JsonObject effectiveLocationJson = locationJson.getJsonObject(EFFECTIVE_LOCATION);
-        JsonObject itemJson = new JsonObject();
-        itemJson.put(CALL_NUMBER, callNumberJson);
-        JsonObject locationItemJson = new JsonObject();
-        locationItemJson.put(NAME, effectiveLocationJson.getString(NAME));
-        effectiveLocationJson.remove(NAME);
-        locationItemJson.put(LOCATION, effectiveLocationJson);
-        itemJson.put(LOCATION, locationItemJson);
-        itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, Boolean.valueOf(holdingJson.getString(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD)));
-        itemJson.put(COPY_NUMBER, holdingJson.getString(COPY_NUMBER));
-        itemsJson.add(itemJson);
-      }
-    }
-  }
-
-  private void updateItems(JsonObject instance) {
-    JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
-      .getJsonArray(ITEMS);
-    for (Object item: itemsJson) {
-      JsonObject itemJson = (JsonObject) item;
-      itemJson.getJsonObject(LOCATION).put(NAME, itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).getString(NAME));
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(NAME);
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(CODE);
-      itemJson.getJsonObject(LOCATION).remove(TEMPORARY_LOCATION);
-      itemJson.getJsonObject(LOCATION).remove(PERMANENT_LOCATION);
-    }
   }
 
   protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
