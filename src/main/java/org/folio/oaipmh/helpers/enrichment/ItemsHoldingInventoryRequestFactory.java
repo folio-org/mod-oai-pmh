@@ -1,4 +1,4 @@
-package org.folio.oaipmh.helpers;
+package org.folio.oaipmh.helpers.enrichment;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;

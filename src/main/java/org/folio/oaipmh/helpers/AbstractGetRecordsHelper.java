@@ -22,6 +22,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
@@ -93,7 +96,7 @@ import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
 import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
-import static org.folio.oaipmh.helpers.ItemsHoldingInventoryRequestFactory.INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT;
+import static org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory.INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
@@ -106,7 +109,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private static final String INSTANCES_STORAGE_ENDPOINT = "/instance-storage/instances";
 
-  static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
+  public static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
 
 
   protected static final String MOD_INVENTORY_STORAGE_ERROR = "mod-inventory-storage didn't respond for %s tenant with status 200. Status code was %s";

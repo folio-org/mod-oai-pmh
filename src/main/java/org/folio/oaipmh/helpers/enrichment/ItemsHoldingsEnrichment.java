@@ -1,4 +1,4 @@
-package org.folio.oaipmh.helpers;
+package org.folio.oaipmh.helpers.enrichment;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;

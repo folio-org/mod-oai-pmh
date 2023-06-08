@@ -1,4 +1,4 @@
-package org.folio.oaipmh.helpers;
+package org.folio.oaipmh.helpers.enrichment;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -33,7 +33,6 @@ public class ItemsHoldingsExecutorWithDelay {
   }
 
   public void execute(long delay, String instanceId, Promise<List<JsonObject>> enrichInstancesPromise) {
-
     vertx.setTimer(delay, id -> {
       var httpRequest = ItemsHoldingInventoryRequestFactory.getItemsHoldingsInventoryRequest(itemsHoldingsEnrichment.getRequest());
       JsonObject entries = new JsonObject();
