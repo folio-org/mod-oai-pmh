@@ -180,6 +180,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
@@ -572,7 +573,14 @@ class OaiPmhImplTest {
       .param(FROM_PARAM, DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA )
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    verify200WithXml(request, LIST_RECORDS);
+    var response = verify200WithXml(request, LIST_RECORDS);
+
+    // check data from inventoryItemsAndHoldingEndpoint
+    var records = response.getListRecords();
+    Optional<SubfieldatafieldType> optHoldingsTypeOfInstanceWithError = findSubfieldByFiledTagAndSubfieldCode(records.getRecords().get(0), "856", "3");
+    assertFalse(optHoldingsTypeOfInstanceWithError.isPresent());
+    Optional<SubfieldatafieldType> optHoldingsTypeOfInstanceWithoutError = findSubfieldByFiledTagAndSubfieldCode(records.getRecords().get(1), "856", "3");
+    assertTrue(optHoldingsTypeOfInstanceWithoutError.isPresent());
   }
 
   @ParameterizedTest
@@ -2518,6 +2526,7 @@ class OaiPmhImplTest {
     });
   }
 
+  //ToDo
   @Test
   void getOaiRecordsMarc21WithHoldingsWhenNoItemsWithSuppressedRecordsProcessing() {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -2779,7 +2788,6 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(RESUMPTION_TOKEN_PARAM, resumptionToken.getValue());
 
-    //ToDo
     verifyResponseWithErrors(resumptionTokenRequest, LIST_RECORDS, 400, 1);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     testContext.completeNow();
