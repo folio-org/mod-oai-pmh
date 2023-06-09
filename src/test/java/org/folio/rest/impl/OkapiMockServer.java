@@ -126,6 +126,7 @@ public class OkapiMockServer {
   static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   static final String NO_ITEMS_DATE = "2020-01-29";
+  static final String DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA = "2000-01-10";
   static final String GET_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-10";
   static final String ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-11";
   static final String GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE = "2020-01-12";
@@ -210,6 +211,7 @@ public class OkapiMockServer {
   private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
   private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
   private static final String INSTANCE_IDS_NO_DATA = "instance_ids_no_data.json";
+  private static final String INSTANCE_IDS_ONE_WITH_BAD_DATA = "instance_ids_one_with_bad_data.json";
   private static final String INSTANCE_IDS_FAIL_SRS_500 = "instance_ids_fail_srs_500.json";
   private static final String INSTANCE_IDS_3_AND_1_DELETED_JSON = "instance_3_and_1_deleted.json";
   private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
@@ -257,7 +259,8 @@ public class OkapiMockServer {
   private static final int LIMIT_VALUE_FOR_LAST_TWO_RECORDS_IN_JSON = 2;
   private static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
   private static final String INSTANCE_ID_NOT_FOUND_RESPONSE = "fb3e23e5-eb7f-4b8b-b531-40e74ec9c6e9";
-
+  private static final List<String> INSTANCES_ONE_RETURN_500_FOR_INVENTORY_ITEMS_AND_HOLDINGS_RESPONSE =
+    List.of("00000000-1111-4000-a000-000000000000", "10000000-2222-4000-a000-000000000000");
 
   private static int srsRerequestAttemptsCount = 4;
   private static int totalSrsRerequestCallsNumber = 0;
@@ -359,6 +362,8 @@ public class OkapiMockServer {
       }
       if (uri.contains(DATE_INVENTORY_STORAGE_ERROR_RESPONSE)) {
         failureResponseWithForbidden(ctx);
+      } else if (uri.contains(DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA)) {
+         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_ONE_WITH_BAD_DATA );
       } else if (uri.contains(DATE_INVENTORY_10_INSTANCE_IDS)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_IDS_10_JSON);
       } else if (uri.contains(NO_RECORDS_DATE)) {
@@ -453,6 +458,11 @@ public class OkapiMockServer {
       failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
     } else if (instanceIds.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
+    } else if(instanceIds.contains(INSTANCES_ONE_RETURN_500_FOR_INVENTORY_ITEMS_AND_HOLDINGS_RESPONSE.get(0))
+      && instanceIds.contains(INSTANCES_ONE_RETURN_500_FOR_INVENTORY_ITEMS_AND_HOLDINGS_RESPONSE.get(1))) {
+      failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
+    } else if (instanceIds.contains(INSTANCES_ONE_RETURN_500_FOR_INVENTORY_ITEMS_AND_HOLDINGS_RESPONSE.get(0))) {
+      failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
     }

@@ -135,6 +135,7 @@ import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTA
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_FOLIO_AND_MARC_10;
+import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
@@ -561,6 +562,17 @@ class OaiPmhImplTest {
     logger.debug("==== getOaiRecordsWithDifferentRecordsSource() successfully completed ====");
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
+  @Test
+  void shouldBuildListRecordsIfOneInstanceReturn500FromInventoryItemsAndHoldingsEndpoint() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA )
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    verify200WithXml(request, LIST_RECORDS);
   }
 
   @ParameterizedTest
