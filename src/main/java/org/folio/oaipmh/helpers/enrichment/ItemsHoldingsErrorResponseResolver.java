@@ -11,16 +11,14 @@ public class ItemsHoldingsErrorResponseResolver {
   private static final long DELAY_STEP_FOR_ITEM_HOLDING_INVENTORY_REQUEST = 30L;
 
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
-  private final boolean isSkipSuppressed;
+  private final ItemsHoldingsRequestWithDelayExecutor executor;
 
-  public ItemsHoldingsErrorResponseResolver(ItemsHoldingsEnrichment itemsHoldingsEnrichment,
-                                            boolean isSkipSuppressed) {
+  public ItemsHoldingsErrorResponseResolver(ItemsHoldingsEnrichment itemsHoldingsEnrichment) {
     this.itemsHoldingsEnrichment = itemsHoldingsEnrichment;
-    this.isSkipSuppressed = isSkipSuppressed;
+    this.executor = new ItemsHoldingsRequestWithDelayExecutor(itemsHoldingsEnrichment);
   }
 
   public void processAfterErrors(Promise<List<JsonObject>> enrichInstancesPromise) {
-    var executor = new ItemsHoldingsExecutorWithDelay(isSkipSuppressed, itemsHoldingsEnrichment);
     long delay = 1L;
     for (String instanceId : itemsHoldingsEnrichment.getInstancesMap().keySet()) {
       executor.execute(delay, instanceId, enrichInstancesPromise);

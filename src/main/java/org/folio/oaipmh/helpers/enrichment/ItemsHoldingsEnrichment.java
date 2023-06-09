@@ -34,12 +34,14 @@ public class ItemsHoldingsEnrichment {
 
   private final Map<String, JsonObject> instancesMap;
   private final Request request;
+  private final boolean isSkipSuppressed;
 
   private static final Logger logger = LogManager.getLogger(ItemsHoldingsEnrichment.class);
 
-  public ItemsHoldingsEnrichment(Map<String, JsonObject> instancesMap, Request request) {
+  public ItemsHoldingsEnrichment(Map<String, JsonObject> instancesMap, Request request, boolean isSkipSuppressed) {
     this.instancesMap = instancesMap;
     this.request = request;
+    this.isSkipSuppressed = isSkipSuppressed;
   }
 
   public JsonParser getJsonParser() {
@@ -71,9 +73,13 @@ public class ItemsHoldingsEnrichment {
     return request;
   }
 
-  private void enrichDiscoverySuppressed(JsonObject itemsandholdingsfields, JsonObject instance) {
+  public boolean isSkipSuppressed() {
+    return isSkipSuppressed;
+  }
+
+  private void enrichDiscoverySuppressed(JsonObject itemsAndHoldingsFields, JsonObject instance) {
     if (Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY)))
-      for (Object item : itemsandholdingsfields.getJsonArray("items")) {
+      for (Object item : itemsAndHoldingsFields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
           itemJson.put(RecordMetadataManager.INVENTORY_SUPPRESS_DISCOVERY_FIELD, true);

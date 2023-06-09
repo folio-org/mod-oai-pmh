@@ -16,18 +16,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.helpers.AbstractGetRecordsHelper.INSTANCE_IDS_ENRICH_PARAM_NAME;
 
-public class ItemsHoldingsExecutorWithDelay {
+public class ItemsHoldingsRequestWithDelayExecutor {
 
-  private static final Logger logger = LogManager.getLogger(ItemsHoldingsExecutorWithDelay.class);
+  private static final Logger logger = LogManager.getLogger(ItemsHoldingsRequestWithDelayExecutor.class);
 
   private final Vertx vertx = Vertx.vertx();
-  private final boolean isSkipSuppressed;
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
   private final AtomicInteger inc = new AtomicInteger(0);
   private final int size;
 
-  public ItemsHoldingsExecutorWithDelay(boolean isSkipSuppressed, ItemsHoldingsEnrichment itemsHoldingsEnrichment) {
-    this.isSkipSuppressed = isSkipSuppressed;
+  public ItemsHoldingsRequestWithDelayExecutor(ItemsHoldingsEnrichment itemsHoldingsEnrichment) {
     this.itemsHoldingsEnrichment = itemsHoldingsEnrichment;
     this.size = itemsHoldingsEnrichment.getInstancesMap().size() - 1;
   }
@@ -37,7 +35,7 @@ public class ItemsHoldingsExecutorWithDelay {
       var httpRequest = ItemsHoldingInventoryRequestFactory.getItemsHoldingsInventoryRequest(itemsHoldingsEnrichment.getRequest());
       JsonObject entries = new JsonObject();
       entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(List.of(instanceId)));
-      entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed);
+      entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, itemsHoldingsEnrichment.isSkipSuppressed());
       var jsonParser = itemsHoldingsEnrichment.getJsonParser();
       httpRequest.as(BodyCodec.jsonStream(jsonParser))
         .sendBuffer(entries.toBuffer())

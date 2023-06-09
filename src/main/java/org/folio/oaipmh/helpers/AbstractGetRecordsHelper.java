@@ -596,7 +596,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instancesMap.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request);
+    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request, isSkipSuppressed(request));
     var jsonParser = itemsHoldingsEnrichment.getJsonParser();
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
@@ -616,8 +616,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
             logger.error("{}, status {}", errorFromStorageMessage, response.statusCode());
-            var errorResolver = new ItemsHoldingsErrorResponseResolver(itemsHoldingsEnrichment,
-              isSkipSuppressed(request));
+            var errorResolver = new ItemsHoldingsErrorResponseResolver(itemsHoldingsEnrichment);
             errorResolver.processAfterErrors(promise);
           }
         }
