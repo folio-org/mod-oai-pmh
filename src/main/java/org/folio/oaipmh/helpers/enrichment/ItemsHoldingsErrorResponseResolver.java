@@ -13,9 +13,9 @@ public class ItemsHoldingsErrorResponseResolver {
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
   private final boolean isSkipSuppressed;
 
-  public ItemsHoldingsErrorResponseResolver(ItemsHoldingsEnrichment oaiPmhJsonParserFactory,
+  public ItemsHoldingsErrorResponseResolver(ItemsHoldingsEnrichment itemsHoldingsEnrichment,
                                             boolean isSkipSuppressed) {
-    this.itemsHoldingsEnrichment = oaiPmhJsonParserFactory;
+    this.itemsHoldingsEnrichment = itemsHoldingsEnrichment;
     this.isSkipSuppressed = isSkipSuppressed;
   }
 
