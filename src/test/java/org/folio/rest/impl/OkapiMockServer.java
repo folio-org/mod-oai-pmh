@@ -388,7 +388,7 @@ public class OkapiMockServer {
       } else if (uri.contains(INVALID_INSTANCE_IDS_JSON_DATE)) {
         inventoryViewSuccessResponse(ctx, INVALID_JSON);
       } else if (uri.contains(INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)) {
-        inventoryViewSuccessResponse(ctx, INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON);
+        failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
       } else if (uri.contains(INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE)) {
         inventoryViewSuccessResponse(ctx, INSTANCE_ID_INVALID_CALL_NUMBER_TYPE_ENRICHED_INSTANCE_JSON);
       } else if (uri.contains(SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)) {
