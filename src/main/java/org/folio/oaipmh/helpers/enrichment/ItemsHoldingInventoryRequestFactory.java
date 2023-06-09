@@ -16,6 +16,8 @@ import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 public class ItemsHoldingInventoryRequestFactory {
   public static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
 
+  private ItemsHoldingInventoryRequestFactory() {}
+
   public static HttpRequest<Buffer> getItemsHoldingsInventoryRequest(Request request) {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
