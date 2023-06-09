@@ -2526,7 +2526,6 @@ class OaiPmhImplTest {
     });
   }
 
-  //ToDo
   @Test
   void getOaiRecordsMarc21WithHoldingsWhenNoItemsWithSuppressedRecordsProcessing() {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
