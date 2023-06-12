@@ -20,7 +20,7 @@ public class ItemsHoldingsRequestWithDelayExecutor {
 
   private static final Logger logger = LogManager.getLogger(ItemsHoldingsRequestWithDelayExecutor.class);
 
-  private final Vertx vertx = Vertx.vertx();
+  private final Vertx vertx = Vertx.currentContext().owner();
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
   private final AtomicInteger inc = new AtomicInteger(0);
   private final int size;
