@@ -7,6 +7,8 @@ import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.service.ErrorService;
 
 public class OaiPmhJsonParser extends JsonParserImpl {
 
@@ -14,8 +16,13 @@ public class OaiPmhJsonParser extends JsonParserImpl {
 
   private Handler<Throwable> oaiPmhExceptionalHandler;
 
-  public OaiPmhJsonParser() {
+  private ErrorService errorService;
+  private Request request;
+
+  public OaiPmhJsonParser(ErrorService errorService, Request request) {
     super(null);
+    this.errorService = errorService;
+    this.request = request;
   }
 
   @Override
@@ -34,6 +41,7 @@ public class OaiPmhJsonParser extends JsonParserImpl {
       logger.error(e.getLocalizedMessage());
       logger.error("Error position at error part of json is {}", errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
+      errorService.logLocally(request.getTenant(), request.getRequestId(), "unknown", e.getLocalizedMessage());
       if (oaiPmhExceptionalHandler != null) {
         oaiPmhExceptionalHandler.handle(e);
         return;

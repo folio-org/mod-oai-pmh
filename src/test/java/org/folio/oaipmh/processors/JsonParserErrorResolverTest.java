@@ -1,6 +1,9 @@
 package org.folio.oaipmh.processors;
 
 import io.vertx.core.buffer.Buffer;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.service.ErrorService;
+import org.folio.oaipmh.service.impl.ErrorServiceImpl;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -24,7 +27,10 @@ class JsonParserErrorResolverTest {
     int errorPositionByParser = 180;
     var errors = new ArrayList<String>();
 
-    var jsonParser = new OaiPmhJsonParser()
+    ErrorService errorService = new ErrorServiceImpl();
+    Request request = Request.builder().build();
+
+    var jsonParser = new OaiPmhJsonParser(errorService, request)
       .objectValueMode().exceptionHandler(e -> errors.add(e.getLocalizedMessage()));
     jsonParser.write(Buffer.buffer(json)).end();
 

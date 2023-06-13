@@ -51,6 +51,7 @@ import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -443,6 +444,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   } catch (Exception e) {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
                     logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
+                    errorService.logLocally(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
                     return;
                   }
                 } else {
@@ -454,6 +456,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               })
                 .onFailure(throwable -> {
                   String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
+                  errorService.logLocally(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
                   logger.error(errorMsg, throwable);
                   recordsPromise.fail(new IllegalStateException(throwable.getMessage()));
                 });
@@ -617,7 +620,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser()
+    var jsonParser = new OaiPmhJsonParser(errorService, request)
       .objectValueMode();
     jsonParser.handler(event -> {
       JsonObject itemsAndHoldingsFields = event.objectValue();

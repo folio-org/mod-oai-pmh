@@ -16,6 +16,7 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.oaipmh.service.ErrorService;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.MetadataType;
@@ -25,6 +26,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
 import java.math.BigInteger;
@@ -106,6 +108,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
+
+  protected ErrorService errorService;
 
   public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
@@ -538,6 +542,11 @@ public abstract class AbstractHelper implements VerbHelper {
       source = "MARC";
     }
     return source;
+  }
+
+  @Autowired
+  public void setErrorService(ErrorService errorService) {
+    this.errorService = errorService;
   }
 
 }

@@ -85,6 +85,7 @@ import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.service.ErrorService;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
@@ -140,6 +141,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private SourceStorageSourceRecordsClientWrapper srsClient;
 
+  private ErrorService errorService;
+
   public static GetListRecordsRequestHelper getInstance() {
     return INSTANCE;
   }
@@ -174,7 +177,12 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null) {
         requestMetadata.setRequestId(UUID.fromString(requestId));
-        updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
+        if (request.getCursor() == 0) {
+          requestMetadata.setStartedDate(lastUpdateDate);
+          updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
+        } else {
+          updateRequestMetadataFuture = errorService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), requestId, requestMetadata);
+        }
       } else {
         updateRequestMetadataFuture = Future.succeededFuture();
       }
@@ -345,7 +353,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     var maxChunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser().objectValueMode();
+    var jsonParser = new OaiPmhJsonParser(errorService, request).objectValueMode();
 
     var jsonWriter = new JsonWriter(jsonParser, TRACKER_LIMIT);
     var batch = new ArrayList<JsonEvent>();
@@ -418,7 +426,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } default: {
             String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
             logger.error(errorMessage);
-            errorMessage = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
+            errorService.saveErrorsAndUpdateRequestMetadata(tenant, requestId, null);
+            errorMessage = format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
             promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
           }
@@ -927,6 +936,11 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   @Autowired
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
+  }
+
+  @Autowired
+  public void setErrorService(ErrorService errorService) {
+    this.errorService = errorService;
   }
 
 }

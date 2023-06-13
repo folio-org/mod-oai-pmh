@@ -2,6 +2,7 @@ package org.folio.oaipmh.dao.impl;
 
 import static java.util.Objects.nonNull;
 import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jooq.tables.SuppressedFromDiscoveryInstancesIds.SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS;
 import static org.folio.rest.jooq.tables.FailedInstancesIds.FAILED_INSTANCES_IDS;
@@ -299,7 +300,8 @@ public class InstancesDaoImpl implements InstancesDao {
   private Record toDatabaseRecord(RequestMetadataLb requestMetadata) {
     return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
       .setLastUpdatedDate(requestMetadata.getLastUpdatedDate())
-      .setStreamEnded(requestMetadata.getStreamEnded());
+      .setStreamEnded(requestMetadata.getStreamEnded()).setLinkToErrorFile(requestMetadata.getLinkToErrorFile())
+      .setStartedDate(requestMetadata.getStartedDate());
   }
 
   @Override
@@ -363,6 +365,16 @@ public class InstancesDaoImpl implements InstancesDao {
         dslContext.selectCount().from(INSTANCES)
           .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(this::queryResultToInt));
+  }
+
+  @Override
+  public Future<Void> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile) {
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+      .execute(dslContext ->
+        dslContext.update(REQUEST_METADATA_LB)
+          .set(REQUEST_METADATA_LB.LINK_TO_ERROR_FILE, linkToErrorFile)
+          .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
+      .map(rows -> null));
   }
 
   private Integer queryResultToInt(QueryResult queryResult) {
@@ -437,6 +449,9 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
+    ofNullable(pojo.getLinkToErrorFile()).ifPresent(requestMetadata::withLinkToErrorFile);
+    of(pojo.getStartedDate())
+      .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));
 
     return requestMetadata;
   }

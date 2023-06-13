@@ -2,6 +2,9 @@ package org.folio.oaipmh.processors;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonEvent;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.service.ErrorService;
+import org.folio.oaipmh.service.impl.ErrorServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,7 +22,10 @@ class OaiPmhJsonParserTest {
     var errors = new ArrayList<>();
     var events = new ArrayList<JsonEvent>();
 
-    var jsonParser = new OaiPmhJsonParser()
+    ErrorService errorService = new ErrorServiceImpl();
+    Request request = Request.builder().build();
+
+    var jsonParser = new OaiPmhJsonParser(errorService, request)
       .objectValueMode()
       .handler(events::add)
       .exceptionHandler(errors::add);
@@ -37,7 +43,10 @@ class OaiPmhJsonParserTest {
     var errors = new ArrayList<>();
     var events = new ArrayList<JsonEvent>();
 
-    var jsonParser = new OaiPmhJsonParser()
+    ErrorService errorService = new ErrorServiceImpl();
+    Request request = Request.builder().build();
+
+    var jsonParser = new OaiPmhJsonParser(errorService, request)
       .objectValueMode()
       .handler(events::add)
       .exceptionHandler(errors::add);
