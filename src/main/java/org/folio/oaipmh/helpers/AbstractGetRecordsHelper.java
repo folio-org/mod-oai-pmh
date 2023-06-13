@@ -14,7 +14,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -22,9 +21,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
+import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.OaiPmhJsonParser;
 import org.folio.oaipmh.service.MetricsCollectingService;
@@ -43,15 +42,14 @@ import org.folio.spring.SpringContextUtil;
 import org.folio.writer.RecordWriter;
 import org.folio.writer.impl.JsonRecordWriter;
 import org.openarchives.oai._2.ListIdentifiersType;
+import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
-import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -83,6 +81,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.LOCATION;
@@ -96,7 +95,6 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
-import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
@@ -620,7 +618,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser(errorService, request)
+    var jsonParser = new OaiPmhJsonParser()
       .objectValueMode();
     jsonParser.handler(event -> {
       JsonObject itemsAndHoldingsFields = event.objectValue();

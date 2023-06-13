@@ -41,6 +41,7 @@ public class ErrorServiceImpl implements ErrorService {
   private FolioS3Client folioS3Client;
   private ErrorsDao errorsDao;
   private InstancesService instancesService;
+  @SuppressWarnings("rawtypes")
   private static final Map<String, List<Future>> allSavedErrorsByRequestId = new ConcurrentHashMap<>();
 
   @Override
@@ -51,7 +52,7 @@ public class ErrorServiceImpl implements ErrorService {
     }
     Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceFdd(instanceId)
       .setErrorMsg(errorMsg);
-    Future savedError = errorsDao.saveErrors(errors, tenantId)
+    var savedError = errorsDao.saveErrors(errors, tenantId)
       .onComplete(h -> logger.debug("Error {} saved into DB. Instance id {}, request id {}.", errorMsg, instanceId, requestId));
     allSavedErrorsByRequestId.computeIfAbsent(requestId, list -> new ArrayList<>()).add(savedError);
   }
@@ -63,7 +64,7 @@ public class ErrorServiceImpl implements ErrorService {
         .compose(handler -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
       .compose(handler -> {
         allSavedErrorsByRequestId.remove(requestId);
-        logger.info("error saved into S3: {}", handler.getRequestId());
+        logger.info("Error saved into S3 with request id = {}", handler.getRequestId());
         return Future.succeededFuture();
       });
   }
@@ -72,7 +73,7 @@ public class ErrorServiceImpl implements ErrorService {
     return errorsDao.getErrorsList(requestId, tenantId).onComplete(listErrorsHandler -> {
       if (listErrorsHandler.succeeded()) {
         var listErrors = listErrorsHandler.result();
-        logger.info("List of errors received from DB: " + listErrors.size());
+        logger.debug("Number of errors received from DB: {}", listErrors.size());
         listErrors.forEach(error -> {
           var errorRow = error.getRequestId() + "," + error.getInstanceFdd() + "," + error.getErrorMsg();
           try {
@@ -81,12 +82,10 @@ public class ErrorServiceImpl implements ErrorService {
             Files.write(Path.of(LOCAL_ERROR_STORAGE_DIR + File.separator + requestId + "-error.csv"),
               errorRow.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
           } catch (IOException e) {
-            e.printStackTrace();
             logger.error(LOCAL_ERROR_FILE_SAVE_FAILED, e.getMessage());
           }
         });
       } else {
-        listErrorsHandler.cause().printStackTrace();
         logger.error(LOCAL_ERROR_FILE_GET_FAILED, listErrorsHandler.cause().getMessage());
       }
     }).compose(errors -> Future.succeededFuture());
@@ -95,8 +94,7 @@ public class ErrorServiceImpl implements ErrorService {
   private Future<RequestMetadataLb> saveErrorFileToS3(String requestId, String tenantId, RequestMetadataLb requestMetadata) {
     var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
     try {
-      try {
-        var errorPaths = Files.list(localErrorDirPath);
+      try (var errorPaths = Files.list(localErrorDirPath)) {
         var errorPathOpt = errorPaths.filter(path -> path.toString().contains(requestId)).findFirst();
         if (errorPathOpt.isPresent()) {
           var errorPath = errorPathOpt.get();
@@ -112,7 +110,6 @@ public class ErrorServiceImpl implements ErrorService {
         }
       } catch (IOException e) {
         logger.info(S3_ERROR_FILE_SAVE_FAILED, e.getMessage());
-        e.printStackTrace();
       }
       return instancesService.saveRequestMetadata(requestMetadata, tenantId);
     } finally {
@@ -121,8 +118,8 @@ public class ErrorServiceImpl implements ErrorService {
   }
 
   private void deleteLocalErrorStorage(Path localErrorDirPath) {
-    try {
-      Files.list(localErrorDirPath).forEach(file -> {
+    try (var listErrors = Files.list(localErrorDirPath)) {
+      listErrors.forEach(file -> {
         try {
           Files.deleteIfExists(file);
         } catch (IOException e) {

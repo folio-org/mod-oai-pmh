@@ -10,13 +10,11 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.rest.jooq.tables.pojos.Errors;
 import org.springframework.stereotype.Repository;
 
-import javax.ws.rs.NotFoundException;
 import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jooq.tables.Errors.ERRORS;
-import static org.folio.rest.jooq.tables.RequestMetadataLb.REQUEST_METADATA_LB;
 
 @Repository
 public class ErrorsDaoImpl implements ErrorsDao {

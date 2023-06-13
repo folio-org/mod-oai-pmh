@@ -141,8 +141,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private SourceStorageSourceRecordsClientWrapper srsClient;
 
-  private ErrorService errorService;
-
   public static GetListRecordsRequestHelper getInstance() {
     return INSTANCE;
   }
@@ -353,7 +351,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     var maxChunkSize = Integer.parseInt(getProperty(requestId, REPOSITORY_FETCHING_CHUNK_SIZE));
 
     Promise<Boolean> responseChecked = Promise.promise();
-    var jsonParser = new OaiPmhJsonParser(errorService, request).objectValueMode();
+    var jsonParser = new OaiPmhJsonParser().objectValueMode();
 
     var jsonWriter = new JsonWriter(jsonParser, TRACKER_LIMIT);
     var batch = new ArrayList<JsonEvent>();
@@ -936,11 +934,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   @Autowired
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
-  }
-
-  @Autowired
-  public void setErrorService(ErrorService errorService) {
-    this.errorService = errorService;
   }
 
 }
