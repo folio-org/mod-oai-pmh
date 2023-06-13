@@ -35,7 +35,7 @@ import io.vertx.junit5.VertxTestContext;
 class ModTenantAPITest {
 
   private static final String TABLES_QUERY = "select * from pg_tables where schemaname='" + PostgresClient.convertToPsqlStandard(OAI_TEST_TENANT) + "'";
-  private static final List<String> EXPECTED_TABLES = List.of("set_lb", "instances", "request_metadata_lb", "databasechangelog", "databasechangeloglock");
+  private static final List<String> EXPECTED_TABLES = List.of("set_lb", "instances", "request_metadata_lb", "databasechangelog", "databasechangeloglock", "errors");
 
   private int okapiPort = -1;
   private ModTenantAPI modTenantAPI;
@@ -106,7 +106,7 @@ class ModTenantAPITest {
     modTenantAPI.loadData(tenantAttributes, OAI_TEST_TENANT, headers(), vertx.getOrCreateContext())
       .compose(v -> PostgresClient.getInstance(vertx, OAI_TEST_TENANT).select(TABLES_QUERY))
       .onSuccess(rows -> {
-        assertEquals(9, rows.size());
+        assertEquals(10, rows.size());
         List<String> tables = new ArrayList<>();
         rows.forEach(row -> tables.add(row.getString("tablename")));
         assertTrue(tables.containsAll(EXPECTED_TABLES));

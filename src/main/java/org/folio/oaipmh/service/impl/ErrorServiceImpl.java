@@ -45,24 +45,27 @@ public class ErrorServiceImpl implements ErrorService {
 
   @Override
   public void logLocally(String tenantId, String requestId, String instanceId, String errorMsg) {
-      Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceFdd(instanceId)
-          .setErrorMsg(errorMsg);
-      Future savedError = errorsDao.saveErrors(errors, tenantId)
-        .onComplete(h -> logger.debug("Error {} saved into DB. Instance id {}, request id {}.", errorMsg, instanceId, requestId));
-      allSavedErrorsByRequestId.computeIfAbsent(requestId, list -> new ArrayList<>()).add(savedError);
+    if (isNull(requestId)) {
+      logger.error("Request id cannot be null while saving the error: {}. Error was not saved.", errorMsg);
+      return;
+    }
+    Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceFdd(instanceId)
+      .setErrorMsg(errorMsg);
+    Future savedError = errorsDao.saveErrors(errors, tenantId)
+      .onComplete(h -> logger.debug("Error {} saved into DB. Instance id {}, request id {}.", errorMsg, instanceId, requestId));
+    allSavedErrorsByRequestId.computeIfAbsent(requestId, list -> new ArrayList<>()).add(savedError);
   }
 
   @Override
   public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId, RequestMetadataLb requestMetadata) {
-    return
-      CompositeFuture.all(allSavedErrorsByRequestId.get(requestId)).compose(h ->
-          getErrorsAndSaveToLocalFile(requestId, tenantId)
-            .compose(handler -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
-        .compose(handler -> {
-          allSavedErrorsByRequestId.remove(requestId);
-          logger.info("error saved into S3: {}", handler.getRequestId());
-          return Future.succeededFuture();
-        });
+    return CompositeFuture.all(allSavedErrorsByRequestId.get(requestId)).compose(h ->
+      getErrorsAndSaveToLocalFile(requestId, tenantId)
+        .compose(handler -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
+      .compose(handler -> {
+        allSavedErrorsByRequestId.remove(requestId);
+        logger.info("error saved into S3: {}", handler.getRequestId());
+        return Future.succeededFuture();
+      });
   }
 
   private Future<Void> getErrorsAndSaveToLocalFile(String requestId, String tenantId) {

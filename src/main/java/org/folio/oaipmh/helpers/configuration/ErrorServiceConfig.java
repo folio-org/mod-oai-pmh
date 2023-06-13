@@ -19,7 +19,7 @@ public class ErrorServiceConfig {
   @Value("${S3_REGION:minio}")
   private String region;
 
-  @Value("${S3_BUCKET:folio_concorde}")
+  @Value("${S3_BUCKET:folioconcorde}")
   private String bucket;
 
   @Value("${S3_ACCESS_KEY_ID:minioadmin}")

@@ -107,6 +107,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(id);
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb.getRequestId());

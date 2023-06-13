@@ -47,12 +47,15 @@ public abstract class AbstractInstancesTest {
 
   protected static final RequestMetadataLb expiredRequestMetadata = new RequestMetadataLb()
     .setRequestId(UUID.fromString(EXPIRED_REQUEST_ID))
-    .setLastUpdatedDate(expiredDate);
+    .setLastUpdatedDate(expiredDate)
+    .setStartedDate(expiredDate);
   protected static final RequestMetadataLb requestMetadata = new RequestMetadataLb().setRequestId(UUID.fromString(REQUEST_ID))
-    .setLastUpdatedDate(notExpiredDate);
+    .setLastUpdatedDate(notExpiredDate)
+    .setStartedDate(notExpiredDate);
   protected static final RequestMetadataLb nonExistentRequestMetadata = new RequestMetadataLb()
     .setRequestId(UUID.fromString(NON_EXISTENT_REQUEST_ID))
-    .setLastUpdatedDate(notExpiredDate);
+    .setLastUpdatedDate(notExpiredDate)
+    .setStartedDate(notExpiredDate);
 
   protected static final Instances instance_1 = new Instances().setInstanceId(UUID.fromString(EXPIRED_INSTANCE_ID))
     .setSuppressFromDiscovery(false)
