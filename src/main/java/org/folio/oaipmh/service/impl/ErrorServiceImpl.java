@@ -59,12 +59,12 @@ public class ErrorServiceImpl implements ErrorService {
 
   @Override
   public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId, RequestMetadataLb requestMetadata) {
-    return CompositeFuture.all(allSavedErrorsByRequestId.get(requestId)).compose(h ->
-      getErrorsAndSaveToLocalFile(requestId, tenantId)
-        .compose(handler -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
-      .compose(handler -> {
+    return CompositeFuture.all(allSavedErrorsByRequestId.getOrDefault(requestId, List.of(Future.succeededFuture())))
+      .compose(savedErrorsToDbCompleted -> getErrorsAndSaveToLocalFile(requestId, tenantId)
+        .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
+      .compose(savedErrorsToS3Completed -> {
         allSavedErrorsByRequestId.remove(requestId);
-        logger.info("Error saved into S3 with request id = {}", handler.getRequestId());
+        logger.info("Error saved into S3 with request id = {}", savedErrorsToS3Completed.getRequestId());
         return Future.succeededFuture();
       });
   }
