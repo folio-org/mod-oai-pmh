@@ -13,23 +13,23 @@ import org.springframework.context.annotation.Configuration;
 @Log4j2
 public class ErrorServiceConfig {
 
-  @Value("${S3_URL:localhost}")
+  @Value("${minio.endpoint}")
   private String endpoint;
 
-  @Value("${S3_REGION:minio}")
+  @Value("${minio.accessKey}")
   private String region;
 
-  @Value("${S3_BUCKET:folioconcorde}")
+  @Value("${minio.secretKey}")
   private String bucket;
 
-  @Value("${S3_ACCESS_KEY_ID:minioadmin}")
+  @Value("${minio.bucket}")
   private String accessKey;
 
-  @Value("${S3_SECRET_ACCESS_KEY:minioadmin}")
+  @Value("${minio.region}")
   private String secretKey;
 
-  @Value("${S3_IS_AWS:false}")
-  private Boolean awsSdk;
+  @Value("#{ T(Boolean).parseBoolean('${minio.awsSdk}')}")
+  private boolean awsSdk;
 
   @Bean
   public FolioS3Client folioS3Client() {

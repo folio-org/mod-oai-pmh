@@ -17,6 +17,7 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,11 @@ class OaiPmhJsonParserTest {
     Context context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     SpringContextUtil.autowireDependencies(this, context);
+  }
+
+  @AfterAll
+  static void tearDownClass() {
+    PostgresClientFactory.closeAll();
   }
 
   @Test
