@@ -38,9 +38,14 @@ public class ErrorsServiceImpl implements ErrorsService {
   private static final Logger logger = LogManager.getLogger(ErrorsServiceImpl.class);
   private static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
 
-  private FolioS3Client folioS3Client = null;
-  private ErrorsDao errorsDao = null;
-  private InstancesService instancesService = null;
+  @Autowired
+  private FolioS3Client folioS3Client;
+
+  @Autowired
+  private ErrorsDao errorsDao;
+
+  @Autowired
+  private InstancesService instancesService;
 
   @SuppressWarnings("rawtypes")
   private static final Map<String, List<Future>> allSavedErrorsByRequestId = new ConcurrentHashMap<>();
@@ -138,20 +143,5 @@ public class ErrorsServiceImpl implements ErrorsService {
         logger.error(LOCAL_ERROR_DIRECTORY_DELETE_FAILED, e.getCause().toString());
       }
     }
-  }
-
-  @Autowired
-  public void setFolioS3Client(FolioS3Client folioS3Client) {
-    this.folioS3Client = folioS3Client;
-  }
-
-  @Autowired
-  public void setErrorsDao(ErrorsDao errorsDao) {
-    this.errorsDao = errorsDao;
-  }
-
-  @Autowired
-  public void setInstancesService(InstancesService instancesService) {
-    this.instancesService = instancesService;
   }
 }
