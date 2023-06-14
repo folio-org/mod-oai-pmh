@@ -22,7 +22,7 @@ public class ItemsHoldingsRequestWithDelayExecutor {
 
   private final Vertx vertx = Vertx.currentContext().owner();
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
-  private final AtomicInteger inc = new AtomicInteger(0);
+  private final AtomicInteger inc = new AtomicInteger();
   private final int size;
 
   public ItemsHoldingsRequestWithDelayExecutor(ItemsHoldingsEnrichment itemsHoldingsEnrichment) {
