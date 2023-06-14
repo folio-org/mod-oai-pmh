@@ -107,7 +107,7 @@ public final class Constants {
   public static final String LOCAL_ERROR_FILE_NOT_FOUND = "No errors found by request id: {}";
   public static final String S3_ERROR_FILE_SAVE_FAILED = "Cannot save error to S3: {}";
   public static final String LOCAL_ERROR_FILE_DELETE_FAILED = "Cannot delete local file {}: {}";
-  public static final String LOCAL_ERROR_DIRECTORY_DELETE_FAILED = "Cannot delete local directory {}: {}";
+  public static final String LOCAL_ERROR_DIRECTORY_DELETE_FAILED = "Cannot delete local directory: {}";
 
   public static final String SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be empty or null";
 

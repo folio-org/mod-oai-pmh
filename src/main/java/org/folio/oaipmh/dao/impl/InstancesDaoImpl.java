@@ -168,6 +168,11 @@ public class InstancesDaoImpl implements InstancesDao {
       return Future
         .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
     }
+    var startedDate = requestMetadata.getStartedDate();
+    if (Objects.isNull(startedDate) || StringUtils.isEmpty(startedDate.toString())) {
+      return Future
+        .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain startedDate"));
+    }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
         .set(toDatabaseRecord(requestMetadata)))
@@ -368,13 +373,20 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<Void> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile) {
+  public Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile) {
     return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
-      .execute(dslContext ->
+      .executeAny(dslContext ->
         dslContext.update(REQUEST_METADATA_LB)
           .set(REQUEST_METADATA_LB.LINK_TO_ERROR_FILE, linkToErrorFile)
-          .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId))))
-      .map(rows -> null));
+          .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      }));
   }
 
   private Integer queryResultToInt(QueryResult queryResult) {

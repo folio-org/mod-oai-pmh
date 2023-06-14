@@ -31,8 +31,8 @@ public class ErrorsDaoImpl implements ErrorsDao {
   public Future<Errors> saveErrors(Errors errors, String tenantId) {
     return postgresClientFactory.getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor.execute(dslContext -> {
         var insertValues = dslContext.insertInto(ERRORS, ERRORS.REQUEST_ID,
-          ERRORS.INSTANCE_FDD, ERRORS.ERROR_MSG);
-        insertValues.values(errors.getRequestId(), errors.getInstanceFdd(), errors.getErrorMsg());
+          ERRORS.INSTANCE_ID, ERRORS.ERROR_MSG);
+        insertValues.values(errors.getRequestId(), errors.getInstanceId(), errors.getErrorMsg());
         return insertValues;
       })
       .map(rows -> null));
@@ -69,7 +69,7 @@ public class ErrorsDaoImpl implements ErrorsDao {
       .map(Row.class::cast)
       .map(row -> {
         Errors pojo = new Errors();
-        pojo.setInstanceFdd(row.getString(ERRORS.INSTANCE_FDD.getName()));
+        pojo.setInstanceId(row.getString(ERRORS.INSTANCE_ID.getName()));
         pojo.setRequestId(row.getUUID(ERRORS.REQUEST_ID.getName()));
         pojo.setErrorMsg(row.getString(ERRORS.ERROR_MSG.getName()));
         pojo.setId(row.getLong(ERRORS.ID.getName()));

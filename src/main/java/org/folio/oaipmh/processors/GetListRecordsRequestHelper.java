@@ -85,7 +85,6 @@ import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.service.ErrorService;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
@@ -179,7 +178,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           requestMetadata.setStartedDate(lastUpdateDate);
           updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
         } else {
-          updateRequestMetadataFuture = errorService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), requestId, requestMetadata);
+          updateRequestMetadataFuture = errorsService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), requestId, requestMetadata);
         }
       } else {
         updateRequestMetadataFuture = Future.succeededFuture();
@@ -424,7 +423,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } default: {
             String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
             logger.error(errorMessage);
-            errorService.saveErrorsAndUpdateRequestMetadata(tenant, requestId, null);
+            errorsService.saveErrorsAndUpdateRequestMetadata(tenant, requestId, null);
             errorMessage = format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
             promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);

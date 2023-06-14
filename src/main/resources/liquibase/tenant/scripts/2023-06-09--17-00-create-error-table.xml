@@ -12,7 +12,7 @@
       <column name="request_id" type="uuid">
         <constraints nullable="false"/>
       </column>
-      <column name="instance_fdd" type="varchar(500)">
+      <column name="instance_id" type="varchar(500)">
         <constraints nullable="false"/>
       </column>
       <column name="error_msg" type="varchar(5000)">

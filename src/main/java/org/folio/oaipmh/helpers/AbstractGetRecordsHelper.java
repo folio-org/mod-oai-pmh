@@ -442,7 +442,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   } catch (Exception e) {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
                     logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
-                    errorService.logLocally(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
+                    errorsService.logLocally(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
                     return;
                   }
                 } else {
@@ -454,7 +454,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               })
                 .onFailure(throwable -> {
                   String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
-                  errorService.logLocally(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
+                  errorsService.logLocally(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
                   logger.error(errorMsg, throwable);
                   recordsPromise.fail(new IllegalStateException(throwable.getMessage()));
                 });

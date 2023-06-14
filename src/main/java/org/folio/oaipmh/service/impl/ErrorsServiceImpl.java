@@ -5,7 +5,7 @@ import io.vertx.core.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.ErrorsDao;
-import org.folio.oaipmh.service.ErrorService;
+import org.folio.oaipmh.service.ErrorsService;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.rest.jooq.tables.pojos.Errors;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
@@ -33,24 +33,26 @@ import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_SAVE_FAILED;
 import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 
 @Service
-public class ErrorServiceImpl implements ErrorService {
+public class ErrorsServiceImpl implements ErrorsService {
 
-  private static final Logger logger = LogManager.getLogger(ErrorServiceImpl.class);
+  private static final Logger logger = LogManager.getLogger(ErrorsServiceImpl.class);
   private static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
 
   private FolioS3Client folioS3Client;
   private ErrorsDao errorsDao;
   private InstancesService instancesService;
+
   @SuppressWarnings("rawtypes")
   private static final Map<String, List<Future>> allSavedErrorsByRequestId = new ConcurrentHashMap<>();
 
   @Override
   public void logLocally(String tenantId, String requestId, String instanceId, String errorMsg) {
-    if (isNull(requestId)) {
-      logger.error("Request id cannot be null while saving the error: {}. Error was not saved.", errorMsg);
+    if (isNull(requestId) || isNull(tenantId) || isNull(instanceId) || isNull(errorMsg)) {
+      logger.error("requestId ({}), or tenantId ({}), or instanceId ({}), or errorMsg ({}) cannot be null while saving the error: error was not saved.",
+        requestId, tenantId, instanceId, errorMsg);
       return;
     }
-    Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceFdd(instanceId)
+    Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceId(instanceId)
       .setErrorMsg(errorMsg);
     var savedError = errorsDao.saveErrors(errors, tenantId)
       .onComplete(h -> logger.debug("Error {} saved into DB. Instance id {}, request id {}.", errorMsg, instanceId, requestId));
@@ -64,8 +66,8 @@ public class ErrorServiceImpl implements ErrorService {
         .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
       .compose(savedErrorsToS3Completed -> {
         allSavedErrorsByRequestId.remove(requestId);
-        logger.info("Error saved into S3 with request id = {}", savedErrorsToS3Completed.getRequestId());
-        return Future.succeededFuture();
+        logger.info("Processed RequestMetadataLb with request id = {}", savedErrorsToS3Completed.getRequestId());
+        return Future.succeededFuture(savedErrorsToS3Completed);
       });
   }
 
@@ -75,7 +77,7 @@ public class ErrorServiceImpl implements ErrorService {
         var listErrors = listErrorsHandler.result();
         logger.debug("Number of errors received from DB: {}", listErrors.size());
         listErrors.forEach(error -> {
-          var errorRow = error.getRequestId() + "," + error.getInstanceFdd() + "," + error.getErrorMsg();
+          var errorRow = error.getRequestId() + "," + error.getInstanceId() + "," + error.getErrorMsg() + System.lineSeparator();
           try {
             var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
             Files.createDirectories(localErrorDirPath);
@@ -86,7 +88,7 @@ public class ErrorServiceImpl implements ErrorService {
           }
         });
       } else {
-        logger.error(LOCAL_ERROR_FILE_GET_FAILED, listErrorsHandler.cause().getMessage());
+        logger.error(LOCAL_ERROR_FILE_GET_FAILED, listErrorsHandler.cause().toString());
       }
     }).compose(errors -> Future.succeededFuture());
   }
@@ -94,41 +96,47 @@ public class ErrorServiceImpl implements ErrorService {
   private Future<RequestMetadataLb> saveErrorFileToS3(String requestId, String tenantId, RequestMetadataLb requestMetadata) {
     var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
     try {
-      try (var errorPaths = Files.list(localErrorDirPath)) {
-        var errorPathOpt = errorPaths.filter(path -> path.toString().contains(requestId)).findFirst();
-        if (errorPathOpt.isPresent()) {
-          var errorPath = errorPathOpt.get();
-          var fileName = folioS3Client.write(errorPath.getFileName().toString(), Files.newInputStream(errorPath));
-          var link = folioS3Client.getPresignedUrl(fileName);
-          if (isNull(requestMetadata)) {
-            return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, link).compose(res -> Future.succeededFuture());
+      if (Files.exists(localErrorDirPath)) {
+        try (var errorPaths = Files.list(localErrorDirPath)) {
+          var errorPathOpt = errorPaths.filter(path -> path.toString().contains(requestId)).findFirst();
+          if (errorPathOpt.isPresent()) {
+            var errorPath = errorPathOpt.get();
+            var fileName = folioS3Client.write(errorPath.getFileName().toString(), Files.newInputStream(errorPath));
+            var link = folioS3Client.getPresignedUrl(fileName);
+            if (isNull(requestMetadata)) {
+              return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, link);
+            } else {
+              requestMetadata.setLinkToErrorFile(link);
+            }
           } else {
-            requestMetadata.setLinkToErrorFile(link);
+            logger.warn(LOCAL_ERROR_FILE_NOT_FOUND, requestId);
           }
-        } else {
-          logger.info(LOCAL_ERROR_FILE_NOT_FOUND);
+        } catch (IOException e) {
+          logger.error(S3_ERROR_FILE_SAVE_FAILED, e.toString());
         }
-      } catch (IOException e) {
-        logger.info(S3_ERROR_FILE_SAVE_FAILED, e.getMessage());
       }
-      return instancesService.saveRequestMetadata(requestMetadata, tenantId);
+      return isNull(requestMetadata) ?
+        instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, null) :
+        instancesService.saveRequestMetadata(requestMetadata, tenantId);
     } finally {
       deleteLocalErrorStorage(localErrorDirPath);
     }
   }
 
   private void deleteLocalErrorStorage(Path localErrorDirPath) {
-    try (var listErrors = Files.list(localErrorDirPath)) {
-      listErrors.forEach(file -> {
-        try {
-          Files.deleteIfExists(file);
-        } catch (IOException e) {
-          logger.error(LOCAL_ERROR_FILE_DELETE_FAILED, file, e.getMessage());
-        }
-      });
-      Files.deleteIfExists(localErrorDirPath);
-    } catch (IOException e) {
-      logger.error(LOCAL_ERROR_DIRECTORY_DELETE_FAILED, localErrorDirPath, e.getCause().getMessage());
+    if (Files.exists(localErrorDirPath)) {
+      try (var listErrors = Files.list(localErrorDirPath)) {
+        listErrors.forEach(file -> {
+          try {
+            Files.deleteIfExists(file);
+          } catch (IOException e) {
+            logger.error(LOCAL_ERROR_FILE_DELETE_FAILED, e.toString());
+          }
+        });
+        Files.deleteIfExists(localErrorDirPath);
+      } catch (IOException e) {
+        logger.error(LOCAL_ERROR_DIRECTORY_DELETE_FAILED, e.getCause().toString());
+      }
     }
   }
 

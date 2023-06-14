@@ -3,7 +3,7 @@ package org.folio.oaipmh.service;
 import io.vertx.core.Future;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 
-public interface ErrorService {
+public interface ErrorsService {
 
   void logLocally(String tenantId, String requestId, String instanceId, String errorMsg);
 

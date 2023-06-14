@@ -16,16 +16,16 @@ public class ErrorServiceConfig {
   @Value("${minio.endpoint}")
   private String endpoint;
 
-  @Value("${minio.accessKey}")
+  @Value("${minio.region}")
   private String region;
 
-  @Value("${minio.secretKey}")
+  @Value("${minio.bucket}")
   private String bucket;
 
-  @Value("${minio.bucket}")
+  @Value("${minio.accessKey}")
   private String accessKey;
 
-  @Value("${minio.region}")
+  @Value("${minio.secretKey}")
   private String secretKey;
 
   @Value("#{ T(Boolean).parseBoolean('${minio.awsSdk}')}")

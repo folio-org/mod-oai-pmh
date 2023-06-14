@@ -169,7 +169,19 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now());
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now()).setStartedDate(OffsetDateTime.now());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof IllegalStateException);
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenSaveRequestMetadataWithoutStartedDate(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now())
+        .setRequestId(UUID.randomUUID());
       instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof IllegalStateException);
         testContext.completeNow();

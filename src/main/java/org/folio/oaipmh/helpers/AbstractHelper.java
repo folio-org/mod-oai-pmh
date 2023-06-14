@@ -16,7 +16,7 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
-import org.folio.oaipmh.service.ErrorService;
+import org.folio.oaipmh.service.ErrorsService;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.MetadataType;
@@ -109,7 +109,7 @@ public abstract class AbstractHelper implements VerbHelper {
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
 
-  protected ErrorService errorService;
+  protected ErrorsService errorsService;
 
   public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
@@ -545,8 +545,8 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   @Autowired
-  public void setErrorService(ErrorService errorService) {
-    this.errorService = errorService;
+  public void setErrorService(ErrorsService errorsService) {
+    this.errorsService = errorsService;
   }
 
 }
