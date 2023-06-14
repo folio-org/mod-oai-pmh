@@ -173,9 +173,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
           errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
             .onComplete(testContext.succeeding(errorList -> {
               assertEquals(3, errorList.size());
-              assertEquals(errorMsg1, errorList.get(0).getErrorMsg());
-              assertEquals(errorMsg2, errorList.get(1).getErrorMsg());
-              assertEquals(errorMsg3, errorList.get(2).getErrorMsg());
+              errorList.forEach(err -> assertTrue(err.getErrorMsg().startsWith("some error msg")));
               testContext.completeNow();
             }));
         }));

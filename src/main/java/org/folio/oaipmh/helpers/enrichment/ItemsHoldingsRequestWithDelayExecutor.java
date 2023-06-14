@@ -15,7 +15,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.helpers.AbstractGetRecordsHelper.INSTANCE_IDS_ENRICH_PARAM_NAME;
+import org.folio.oaipmh.service.ErrorsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ItemsHoldingsRequestWithDelayExecutor {
 
   private static final Logger logger = LogManager.getLogger(ItemsHoldingsRequestWithDelayExecutor.class);
@@ -24,6 +28,9 @@ public class ItemsHoldingsRequestWithDelayExecutor {
   private final ItemsHoldingsEnrichment itemsHoldingsEnrichment;
   private final AtomicInteger inc = new AtomicInteger();
   private final int size;
+
+  @Autowired
+  private ErrorsService errorsService;
 
   public ItemsHoldingsRequestWithDelayExecutor(ItemsHoldingsEnrichment itemsHoldingsEnrichment) {
     this.itemsHoldingsEnrichment = itemsHoldingsEnrichment;
@@ -42,7 +49,12 @@ public class ItemsHoldingsRequestWithDelayExecutor {
         .onSuccess(response -> {
           if (response.statusCode() != 200) {
             var errors = ((OaiPmhJsonParser)jsonParser).getErrors();
-            errors.forEach(error -> logger.error("Error for requestId {} and instanceId {}  with message {}", itemsHoldingsEnrichment.getRequest().getRequestId(), instanceId, error));
+            errors.forEach(error -> {
+              errorsService.logLocally(itemsHoldingsEnrichment.getRequest().getTenant(), itemsHoldingsEnrichment.getRequest().getRequestId(),
+                instanceId, error);
+              logger.error("Error for requestId {} and instanceId {}  with message {}",
+                itemsHoldingsEnrichment.getRequest().getRequestId(), instanceId, error);
+            });
           }
           if (inc.get() < size) {
             inc.incrementAndGet();
