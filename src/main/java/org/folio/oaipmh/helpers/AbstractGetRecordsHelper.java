@@ -634,7 +634,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
     });
     jsonParser.exceptionHandler(throwable -> responseChecked.future().onSuccess(invalidResponseReceivedAndProcessed -> {
-        if (invalidResponseReceivedAndProcessed) {
+        if (Boolean.TRUE.equals(invalidResponseReceivedAndProcessed)) {
           return;
         }
         logger.error("enrichInstances:: For requestId {} error has been occurred at JsonParser for items-and-holdings response, errors {}", request.getRequestId(),  throwable.getMessage());
