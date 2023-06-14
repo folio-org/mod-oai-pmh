@@ -19,7 +19,7 @@ import static org.folio.rest.jooq.tables.Errors.ERRORS;
 @Repository
 public class ErrorsDaoImpl implements ErrorsDao {
 
-  protected final Logger logger = LogManager.getLogger(getClass());
+  protected static final Logger logger = LogManager.getLogger(ErrorsDaoImpl.class);
 
   private PostgresClientFactory postgresClientFactory;
 
