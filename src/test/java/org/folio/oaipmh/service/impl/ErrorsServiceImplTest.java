@@ -26,6 +26,7 @@ import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,9 +41,12 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
 import java.util.UUID;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -149,13 +153,13 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId1, errorMsg1);
       errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId2, errorMsg2);
       errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId3, errorMsg3);
-      StringBuilder errorCsvFileContent = new StringBuilder();
-      errorCsvFileContent.append(requestId).append(",")
-        .append(instanceId1).append(",").append(errorMsg1).append(System.lineSeparator());
-      errorCsvFileContent.append(requestId).append(",")
-        .append(instanceId2).append(",").append(errorMsg2).append(System.lineSeparator());
-      errorCsvFileContent.append(requestId).append(",")
-        .append(instanceId3).append(",").append(errorMsg3).append(System.lineSeparator());
+      List<String> csvErrorLines = new ArrayList<>();
+      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
+        .append(instanceId1).append(",").append(errorMsg1).toString());
+      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
+        .append(instanceId2).append(",").append(errorMsg2).toString());
+      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
+        .append(instanceId3).append(",").append(errorMsg3).toString());
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
@@ -165,7 +169,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
           assertNotNull(requestMetadataLb);
           var linkToErrorFile = requestMetadata.getLinkToErrorFile();
           assertNotNull(linkToErrorFile);
-          verityErrorCSVFile(linkToErrorFile, errorCsvFileContent.toString());
+          verifyErrorCSVFile(linkToErrorFile, csvErrorLines);
           errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
             .onComplete(testContext.succeeding(errorList -> {
               assertEquals(3, errorList.size());
@@ -185,9 +189,9 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     var errorMsg = "some error msg";
     testContext.verify(() -> {
       errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId, errorMsg);
-      StringBuilder errorCsvFileContent = new StringBuilder();
-      errorCsvFileContent.append(requestId).append(",")
-        .append(instanceId).append(",").append(errorMsg).append(System.lineSeparator());
+      List<String> csvErrorLines = new ArrayList<>();
+      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
+        .append(instanceId).append(",").append(errorMsg).toString());
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
@@ -199,7 +203,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
               assertNotNull(requestMetadataUpdated);
               var linkToErrorFile = requestMetadataUpdated.getLinkToErrorFile();
               assertNotNull(linkToErrorFile);
-              verityErrorCSVFile(linkToErrorFile, errorCsvFileContent.toString());
+              verifyErrorCSVFile(linkToErrorFile, csvErrorLines);
               errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
                 .onComplete(testContext.succeeding(errorList -> {
                   assertEquals(1, errorList.size());
@@ -235,10 +239,17 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     });
   }
 
-  private void verityErrorCSVFile(String linkToError, String initErrorFileContent) {
-    try (InputStream inputStream = new URL(linkToError).openStream()) {
-      var errorCSVContent = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-      assertEquals(initErrorFileContent, errorCSVContent);
+  private void verifyErrorCSVFile(String linkToError, List<String> initErrorFileContent) {
+    try (InputStream inputStream = new URL(linkToError).openStream();
+    Scanner scanner = new Scanner(inputStream)) {
+      List<String> listCsvLines = new ArrayList<>();
+      while (scanner.hasNextLine()) {
+        var csvLine = scanner.nextLine();
+        listCsvLines.add(csvLine);
+      }
+      Collections.sort(listCsvLines);
+      Collections.sort(initErrorFileContent);
+      assertIterableEquals(initErrorFileContent, listCsvLines);
     } catch (Exception e) {
       fail(e);
     }
