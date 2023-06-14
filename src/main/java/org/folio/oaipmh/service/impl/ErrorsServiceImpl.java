@@ -38,9 +38,9 @@ public class ErrorsServiceImpl implements ErrorsService {
   private static final Logger logger = LogManager.getLogger(ErrorsServiceImpl.class);
   private static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
 
-  private FolioS3Client folioS3Client;
-  private ErrorsDao errorsDao;
-  private InstancesService instancesService;
+  private FolioS3Client folioS3Client = null;
+  private ErrorsDao errorsDao = null;
+  private InstancesService instancesService = null;
 
   @SuppressWarnings("rawtypes")
   private static final Map<String, List<Future>> allSavedErrorsByRequestId = new ConcurrentHashMap<>();
