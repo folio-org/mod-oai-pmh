@@ -76,6 +76,11 @@ public class ErrorsServiceImpl implements ErrorsService {
       });
   }
 
+  @Override
+  public Future<Boolean> deleteErrorsByRequestId(String tenantId, String requestId) {
+    return errorsDao.deleteErrorsByRequestId(requestId, tenantId);
+  }
+
   private Future<Void> getErrorsAndSaveToLocalFile(String requestId, String tenantId) {
     return errorsDao.getErrorsList(requestId, tenantId).onComplete(listErrorsHandler -> {
       if (listErrorsHandler.succeeded()) {

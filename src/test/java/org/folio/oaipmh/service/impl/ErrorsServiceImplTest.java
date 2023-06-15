@@ -237,6 +237,42 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     });
   }
 
+  @Test
+  void shouldDeleteErrorsByRequestId_whenErrorFound(VertxTestContext testContext) {
+    var requestId = UUID.randomUUID().toString();
+    var instanceId = UUID.randomUUID().toString();
+    var errorMsg = "some error msg";
+    testContext.verify(() -> {
+      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+      List<String> csvErrorLines = new ArrayList<>();
+      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
+        .append(instanceId).append(",").append(errorMsg).toString());
+      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      requestMetadata.setRequestId(UUID.fromString(requestId));
+      requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
+      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
+        .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString(), null)
+            .onComplete(testContext.succeeding(requestMetadataUpdated -> {
+              errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
+                .onComplete(testContext.succeeding(errorList -> {
+                  assertEquals(1, errorList.size());
+                  errorsService.deleteErrorsByRequestId(TEST_TENANT_ID, requestId)
+                    .onComplete(testContext.succeeding(errorDeleted -> {
+                      assertTrue(errorDeleted);
+                      errorsDao.getErrorsList(requestId, TEST_TENANT_ID)
+                        .onComplete(testContext.succeeding(errorListAfterDeleted -> {
+                          assertEquals(0, errorListAfterDeleted.size());
+                          testContext.completeNow();
+                          }));
+                    }));
+                }));
+            }));
+        }));
+    });
+  }
+
   private void verifyErrorCSVFile(String linkToError, List<String> initErrorFileContent) {
     try (InputStream inputStream = new URL(linkToError).openStream();
     Scanner scanner = new Scanner(inputStream)) {

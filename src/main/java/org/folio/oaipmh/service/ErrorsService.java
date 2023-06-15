@@ -8,4 +8,6 @@ public interface ErrorsService {
   void logLocally(String tenantId, String requestId, String instanceId, String errorMsg);
 
   Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId, RequestMetadataLb requestMetadata);
+
+  Future<Boolean> deleteErrorsByRequestId(String tenantId, String requestId);
 }
