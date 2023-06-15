@@ -14,7 +14,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -25,10 +24,11 @@ import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
-import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.referencedata.ReferenceData;
+import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.processors.TranslationsFunctionHolder;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -37,7 +37,6 @@ import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
 import org.folio.processor.rule.Rule;
-import org.folio.processor.translations.TranslationsFunctionHolder;
 import org.folio.reader.EntityReader;
 import org.folio.reader.JPathSyntaxEntityReader;
 import org.folio.rest.tools.utils.TenantTool;
@@ -45,12 +44,12 @@ import org.folio.spring.SpringContextUtil;
 import org.folio.writer.RecordWriter;
 import org.folio.writer.impl.JsonRecordWriter;
 import org.openarchives.oai._2.ListIdentifiersType;
+import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.StatusType;
-import org.openarchives.oai._2.ListRecordsType;
 import org.openarchives.oai._2.VerbType;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -82,6 +81,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
+import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -94,12 +94,11 @@ import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
-import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
-import static org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory.INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
+import static org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory.INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -242,8 +241,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ReferenceData referenceData = referenceDataProvider.get(request);
       ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
       List<Rule> rules = getDefaultRulesFromFile();
-      String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException ->
-        logger.error("generateRecordsOnTheFly:: Exception occurred for requestId {} while mapping, exception: {}, inventory instance: {}", request.getRequestId(), translationException.getCause(), instance)));
+      String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException -> {
+        errorsService.log(request.getTenant(), request.getRequestId(), ((JsonObject) item).getString("id"), translationException.getMessage());
+        logger.error("generateRecordsOnTheFly:: Exception occurred for requestId {} while mapping, exception: {}, inventory instance: {}", request.getRequestId(), translationException.getCause(), instance);
+      }));
       enrichWithParsedRecord((JsonObject) item, processedRecord);
     });
   }
@@ -334,7 +335,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
       // or verb is ListRecords (see MODOAIPMH-138).
-      if (srsRecords.getJsonArray("sourceRecords").isEmpty() || request.getVerb() == VerbType.LIST_RECORDS) {
+      if ((srsRecords.getJsonArray("sourceRecords").isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
+      && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
         generateRecordsOnTheFly(request, inventoryRecords);
       }
       processRecords(ctx, request, srsRecords, inventoryRecords)
@@ -432,7 +434,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   } catch (Exception e) {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
                     logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
-                    errorsService.logLocally(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
+                    errorsService.log(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
                     return;
                   }
                 } else {
@@ -444,7 +446,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               })
                 .onFailure(throwable -> {
                   String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
-                  errorsService.logLocally(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
+                  errorsService.log(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
                   logger.error(errorMsg, throwable);
                   recordsPromise.fail(new IllegalStateException(throwable.getMessage()));
                 });
@@ -572,6 +574,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           logger.error(errorMsg);
+          errorsService.log(request.getTenant(), request.getRequestId(), "", errorMsg);
           errorMsg = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), response.statusCode());
           promise.fail(new IllegalStateException(errorMsg));
         }
@@ -579,6 +582,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       .onFailure(throwable -> {
         logger.error(nonNull(String.join(", ", listOfIds)) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
           CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
+        errorsService.log(request.getTenant(), request.getRequestId(), "", CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds));
         promise.fail(throwable);
       });
   }

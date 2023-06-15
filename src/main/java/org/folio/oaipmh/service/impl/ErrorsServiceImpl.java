@@ -51,7 +51,7 @@ public class ErrorsServiceImpl implements ErrorsService {
   private static final Map<String, List<Future>> allSavedErrorsByRequestId = new ConcurrentHashMap<>();
 
   @Override
-  public void logLocally(String tenantId, String requestId, String instanceId, String errorMsg) {
+  public void log(String tenantId, String requestId, String instanceId, String errorMsg) {
     if (isNull(requestId) || isNull(tenantId) || isNull(instanceId) || isNull(errorMsg)) {
       logger.error("requestId ({}), or tenantId ({}), or instanceId ({}), or errorMsg ({}) cannot be null while saving the error: error was not saved.",
         requestId, tenantId, instanceId, errorMsg);
@@ -65,15 +65,15 @@ public class ErrorsServiceImpl implements ErrorsService {
   }
 
   @Override
-  public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId, RequestMetadataLb requestMetadata) {
+  public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId) {
     return CompositeFuture.all(allSavedErrorsByRequestId.getOrDefault(requestId, List.of(Future.succeededFuture())))
       .compose(savedErrorsToDbCompleted -> getErrorsAndSaveToLocalFile(requestId, tenantId)
-        .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId, requestMetadata)))
-      .compose(savedErrorsToS3Completed -> {
-        allSavedErrorsByRequestId.remove(requestId);
-        logger.info("Processed RequestMetadataLb with request id = {}", savedErrorsToS3Completed.getRequestId());
-        return Future.succeededFuture(savedErrorsToS3Completed);
-      });
+        .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId))
+        .compose(savedErrorsToS3Completed -> {
+          allSavedErrorsByRequestId.remove(requestId);
+          logger.debug("Updated RequestMetadataLb with request id = {}", savedErrorsToS3Completed.getRequestId());
+          return Future.succeededFuture(savedErrorsToS3Completed);
+        }));
   }
 
   @Override
@@ -86,24 +86,36 @@ public class ErrorsServiceImpl implements ErrorsService {
       if (listErrorsHandler.succeeded()) {
         var listErrors = listErrorsHandler.result();
         logger.debug("Number of errors received from DB: {}", listErrors.size());
-        listErrors.forEach(error -> {
-          var errorRow = error.getRequestId() + "," + error.getInstanceId() + "," + error.getErrorMsg() + System.lineSeparator();
+        if (!listErrors.isEmpty()) {
+          var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
           try {
-            var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
             Files.createDirectories(localErrorDirPath);
-            Files.write(Path.of(LOCAL_ERROR_STORAGE_DIR + File.separator + requestId + "-error.csv"),
-              errorRow.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
           } catch (IOException e) {
-            logger.error(LOCAL_ERROR_FILE_SAVE_FAILED, e.getMessage());
+            logger.error("{} was not created: {}", localErrorDirPath, e.toString());
           }
-        });
+          var pathToErrorFile = Path.of(LOCAL_ERROR_STORAGE_DIR + File.separator + requestId + "-error.csv");
+          var headers = "Request ID,Instance ID,Error message" + System.lineSeparator();
+          try {
+            Files.write(pathToErrorFile, headers.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+          } catch (IOException e) {
+            logger.error("CSV headers were not written: {}", e.toString());
+          }
+          listErrors.forEach(error -> {
+            var errorRow = error.getRequestId() + "," + error.getInstanceId() + "," + error.getErrorMsg() + System.lineSeparator();
+            try {
+              Files.write(pathToErrorFile, errorRow.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (IOException e) {
+              logger.error(LOCAL_ERROR_FILE_SAVE_FAILED, e.getMessage());
+            }
+          });
+        }
       } else {
         logger.error(LOCAL_ERROR_FILE_GET_FAILED, listErrorsHandler.cause().toString());
       }
     }).compose(errors -> Future.succeededFuture());
   }
 
-  private Future<RequestMetadataLb> saveErrorFileToS3(String requestId, String tenantId, RequestMetadataLb requestMetadata) {
+  private Future<RequestMetadataLb> saveErrorFileToS3(String requestId, String tenantId) {
     var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
     try {
       if (Files.exists(localErrorDirPath)) {
@@ -113,21 +125,18 @@ public class ErrorsServiceImpl implements ErrorsService {
             var errorPath = errorPathOpt.get();
             var fileName = folioS3Client.write(errorPath.getFileName().toString(), Files.newInputStream(errorPath));
             var link = folioS3Client.getPresignedUrl(fileName);
-            if (isNull(requestMetadata)) {
-              return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, link);
-            } else {
-              requestMetadata.setLinkToErrorFile(link);
-            }
+            logger.debug("Link to error file: {}", link);
+            return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, link);
           } else {
             logger.warn(LOCAL_ERROR_FILE_NOT_FOUND, requestId);
           }
         } catch (IOException e) {
           logger.error(S3_ERROR_FILE_SAVE_FAILED, e.toString());
         }
+      } else {
+        logger.info("No errors found.");
       }
-      return isNull(requestMetadata) ?
-        instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, null) :
-        instancesService.saveRequestMetadata(requestMetadata, tenantId);
+      return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, null);
     } finally {
       deleteLocalErrorStorage(localErrorDirPath);
     }

@@ -461,7 +461,7 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
-    ofNullable(pojo.getLinkToErrorFile()).ifPresent(requestMetadata::withLinkToErrorFile);
+    ofNullable(pojo.getLinkToErrorFile()).ifPresentOrElse(requestMetadata::withLinkToErrorFile, () -> requestMetadata.setLinkToErrorFile(""));
     of(pojo.getStartedDate())
       .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));
 

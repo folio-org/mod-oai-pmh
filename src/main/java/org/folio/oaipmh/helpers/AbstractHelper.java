@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -542,6 +543,21 @@ public abstract class AbstractHelper implements VerbHelper {
       source = "MARC";
     }
     return source;
+  }
+
+  protected void saveErrorsIfExist(Request request) {
+    errorsService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), request.getRequestId())
+      .onComplete(requestMetadataLbAsyncResult -> {
+        if (requestMetadataLbAsyncResult.succeeded()) {
+          var linkToErrorFile = requestMetadataLbAsyncResult.result().getLinkToErrorFile();
+          if (!isBlank(linkToErrorFile)) {
+            logger.info("Errors saved successfully for requestId {}", request.getRequestId());
+          }
+        } else {
+          logger.error("Error occurred during the update of RequestMetadataLb: {}",
+            requestMetadataLbAsyncResult.cause().toString());
+        }
+      });
   }
 
   @Autowired

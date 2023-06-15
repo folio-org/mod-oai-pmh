@@ -5,9 +5,9 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 
 public interface ErrorsService {
 
-  void logLocally(String tenantId, String requestId, String instanceId, String errorMsg);
+  void log(String tenantId, String requestId, String instanceId, String errorMsg);
 
-  Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId, RequestMetadataLb requestMetadata);
+  Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId, String requestId);
 
   Future<Boolean> deleteErrorsByRequestId(String tenantId, String requestId);
 }

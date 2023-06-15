@@ -5,7 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import static java.lang.String.format;
-import org.apache.commons.io.IOUtils;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -122,12 +122,12 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
   void shouldNotSaveErrorAndSaveRequestMetadataLb_whenRequestIdIsNull(VertxTestContext testContext) {
     var requestId = UUID.randomUUID().toString();
     testContext.verify(() -> {
-      errorsService.logLocally(TEST_TENANT_ID, NULL_REQUEST_ID, INSTANCE_ID, "some error msg");
+      errorsService.log(TEST_TENANT_ID, NULL_REQUEST_ID, INSTANCE_ID, "some error msg");
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
-      errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestId, requestMetadata)
+      errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestId)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb); // RequestMetadataLb must be saved regardless of the fact that there is no link to error.
           assertNull(requestMetadata.getLinkToErrorFile()); // No link to error file cause error was not saved.
@@ -150,9 +150,9 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     var errorMsg2 = "some error msg 2";
     var errorMsg3 = "some error msg 3";
     testContext.verify(() -> {
-      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId1, errorMsg1);
-      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId2, errorMsg2);
-      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId3, errorMsg3);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId1, errorMsg1);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId2, errorMsg2);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId3, errorMsg3);
       List<String> csvErrorLines = new ArrayList<>();
       csvErrorLines.add(new StringBuilder().append(requestId).append(",")
         .append(instanceId1).append(",").append(errorMsg1).toString());
@@ -164,7 +164,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
-      errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestId, requestMetadata)
+      errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestId)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb);
           var linkToErrorFile = requestMetadata.getLinkToErrorFile();
@@ -186,7 +186,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     var instanceId = UUID.randomUUID().toString();
     var errorMsg = "some error msg";
     testContext.verify(() -> {
-      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
       List<String> csvErrorLines = new ArrayList<>();
       csvErrorLines.add(new StringBuilder().append(requestId).append(",")
         .append(instanceId).append(",").append(errorMsg).toString());
@@ -196,7 +196,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
         .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
-          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString(), null)
+          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString())
             .onComplete(testContext.succeeding(requestMetadataUpdated -> {
               assertNotNull(requestMetadataUpdated);
               var linkToErrorFile = requestMetadataUpdated.getLinkToErrorFile();
@@ -223,7 +223,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
         .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
-          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString(), null)
+          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString())
             .onComplete(testContext.succeeding(requestMetadataUpdated -> {
               assertNotNull(requestMetadataUpdated);
               assertNull(requestMetadataUpdated.getLinkToErrorFile());
@@ -243,7 +243,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     var instanceId = UUID.randomUUID().toString();
     var errorMsg = "some error msg";
     testContext.verify(() -> {
-      errorsService.logLocally(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
       List<String> csvErrorLines = new ArrayList<>();
       csvErrorLines.add(new StringBuilder().append(requestId).append(",")
         .append(instanceId).append(",").append(errorMsg).toString());
@@ -253,7 +253,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
         .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
-          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString(), null)
+          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestMetadataLbSaved.getRequestId().toString())
             .onComplete(testContext.succeeding(requestMetadataUpdated -> {
               errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
                 .onComplete(testContext.succeeding(errorList -> {

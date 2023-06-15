@@ -43,7 +43,7 @@ public class ItemsHoldingsRequestWithDelayExecutor {
           if (response.statusCode() != 200) {
             var errors = ((OaiPmhJsonParser)jsonParser).getErrors();
             errors.forEach(error -> {
-              errorsService.logLocally(itemsHoldingsEnrichment.getRequest().getTenant(), itemsHoldingsEnrichment.getRequest().getRequestId(),
+              errorsService.log(itemsHoldingsEnrichment.getRequest().getTenant(), itemsHoldingsEnrichment.getRequest().getRequestId(),
                 instanceId, error);
               logger.error("Error for requestId {} and instanceId {}  with message {}",
                 itemsHoldingsEnrichment.getRequest().getRequestId(), instanceId, error);

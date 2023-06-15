@@ -351,7 +351,7 @@
       { "name": "S3_REGION", "value": ""},
       { "name": "S3_BUCKET", "value": "test-bucket2"},
       { "name": "S3_ACCESS_KEY_ID", "value": "AKIAIOSFODNN7EXAMPLE"},
-      { "name": "S3_SECRET_ACCESS_KEY", "value": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
+      { "name": "S3_SECRET_ACCESS_KEY", "value": ""},
       { "name": "S3_IS_AWS", "value": false}
     ]
   }
