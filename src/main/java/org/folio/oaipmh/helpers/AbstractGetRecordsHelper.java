@@ -619,7 +619,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
             logger.error("{}, status {}", errorFromStorageMessage, response.statusCode());
             var errorResolver = new ItemsHoldingsErrorResponseResolver(itemsHoldingsEnrichment);
-            errorResolver.processAfterErrors(promise);
+            errorResolver.processAfterErrors(promise, errorsService);
           }
         }
       })
