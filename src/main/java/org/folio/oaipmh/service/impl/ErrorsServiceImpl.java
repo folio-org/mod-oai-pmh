@@ -123,10 +123,9 @@ public class ErrorsServiceImpl implements ErrorsService {
           var errorPathOpt = errorPaths.filter(path -> path.toString().contains(requestId)).findFirst();
           if (errorPathOpt.isPresent()) {
             var errorPath = errorPathOpt.get();
-            var fileName = folioS3Client.write(errorPath.getFileName().toString(), Files.newInputStream(errorPath));
-            var link = folioS3Client.getPresignedUrl(fileName);
-            logger.debug("Link to error file: {}", link);
-            return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, link);
+            var pathToErrorFileInS3 = folioS3Client.write(errorPath.getFileName().toString(), Files.newInputStream(errorPath));
+            logger.debug("Path to error file in S3: {}", pathToErrorFileInS3);
+            return instancesService.updateRequestMetadataByPathToError(requestId, tenantId, pathToErrorFileInS3);
           } else {
             logger.warn(LOCAL_ERROR_FILE_NOT_FOUND, requestId);
           }
@@ -136,7 +135,7 @@ public class ErrorsServiceImpl implements ErrorsService {
       } else {
         logger.info("No errors found.");
       }
-      return instancesService.updateRequestMetadataByLinkToError(requestId, tenantId, null);
+      return instancesService.updateRequestMetadataByPathToError(requestId, tenantId, null);
     } finally {
       deleteLocalErrorStorage(localErrorDirPath);
     }

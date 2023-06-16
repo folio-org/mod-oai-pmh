@@ -44,8 +44,10 @@ import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.folio.rest.jooq.tables.records.SkippedInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.SuppressedFromDiscoveryInstancesIdsRecord;
+import org.folio.s3.client.FolioS3Client;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
@@ -66,6 +68,9 @@ public class InstancesDaoImpl implements InstancesDao {
   public InstancesDaoImpl(PostgresClientFactory postgresClientFactory) {
     this.postgresClientFactory = postgresClientFactory;
   }
+
+  @Autowired
+  private FolioS3Client folioS3Client;
 
   @Override
   public Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds) {
@@ -373,11 +378,11 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile) {
+  public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
     return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext ->
         dslContext.update(REQUEST_METADATA_LB)
-          .set(REQUEST_METADATA_LB.LINK_TO_ERROR_FILE, linkToErrorFile)
+          .set(REQUEST_METADATA_LB.PATH_TO_ERROR_FILE_IN_S3, pathToErrorFile)
           .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
           .returning())
       .map(this::toOptionalRequestMetadata)
@@ -461,7 +466,10 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
-    ofNullable(pojo.getLinkToErrorFile()).ifPresentOrElse(requestMetadata::withLinkToErrorFile, () -> requestMetadata.setLinkToErrorFile(""));
+    ofNullable(pojo.getPathToErrorFileInS3()).ifPresentOrElse(pathToError -> {
+      var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
+      requestMetadata.withLinkToErrorFile(regeneratedLink);
+    }, () -> requestMetadata.setLinkToErrorFile(""));
     of(pojo.getStartedDate())
       .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));
 

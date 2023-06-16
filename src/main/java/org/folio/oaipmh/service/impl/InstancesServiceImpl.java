@@ -120,8 +120,8 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile) {
-    return instancesDao.updateRequestMetadataByLinkToError(requestId, tenantId, linkToErrorFile);
+  public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
+    return instancesDao.updateRequestMetadataByPathToError(requestId, tenantId, pathToErrorFile);
   }
 
   @Autowired

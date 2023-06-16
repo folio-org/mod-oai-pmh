@@ -144,8 +144,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_LOAN_TYPE() {
+
+    // NOSONAR
     @Override
     public String apply(String id, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(id, referenceData, LOAN_TYPES);
@@ -158,8 +159,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_MATERIAL_TYPE() {
+
+    // NOSONAR
     @Override
     public String apply(String materialTypeId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(materialTypeId, referenceData, MATERIAL_TYPES);
@@ -318,8 +320,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_MODE_OF_ISSUANCE_ID() {
+
+    // NOSONAR
     @Override
     public String apply(String modeOfIssuanceId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(modeOfIssuanceId, referenceData, MODE_OF_ISSUANCES);
@@ -332,8 +335,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_CALL_NUMBER_TYPE_ID() {
+
+    // NOSONAR
     @Override
     public String apply(String typeId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(typeId, referenceData, CALL_NUMBER_TYPES);
@@ -346,8 +350,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_LOCATION() {
+
+    // NOSONAR
     @Override
     public String apply(String locationId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(locationId, referenceData, LOCATIONS);
@@ -376,8 +381,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
-  // NOSONAR
   SET_HOLDINGS_PERMANENT_LOCATION() {
+
+    // NOSONAR
     @Override
     public String apply(String locationId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) throws ParseException {
       List<String> temporaryLocationId = (List<String>) metadata.getData().get("temporaryLocationId").getData();

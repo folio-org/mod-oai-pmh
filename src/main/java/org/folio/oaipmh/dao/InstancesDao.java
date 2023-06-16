@@ -77,6 +77,6 @@ public interface InstancesDao {
 
   Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId);
 
-  Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToErrorFile);
+  Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile);
 
 }
