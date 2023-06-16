@@ -34,7 +34,7 @@
       },
       "copyNumber": "copy number",
       "holdingsType": "Electronic",
-      "electronicAccess": [],
+      "electronicAccess": ["f5d0068e-6272-458e-8a81-b85e7b9a14aa"],
       "statisticalCodes": [{
         "id": "INVALID",
         "code": "vidstream",
@@ -103,6 +103,14 @@
           "linkText": "Resource Link text",
           "publicNote": "Resource URL public note",
           "relationshipId": "INVALID",
+          "materialsSpecification": "Resource Materials specified"
+        },
+        {
+          "uri": "Resource URI 2",
+          "name": "Resource 2",
+          "linkText": "Resource Link text",
+          "publicNote": "Resource URL public note",
+          "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
           "materialsSpecification": "Resource Materials specified"
         }
       ],

@@ -143,6 +143,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       return StringUtils.EMPTY;
     }
   },
+
+  // NOSONAR
   SET_LOAN_TYPE() {
     @Override
     public String apply(String id, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
@@ -155,6 +157,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       }
     }
   },
+
+  // NOSONAR
   SET_MATERIAL_TYPE() {
     @Override
     public String apply(String materialTypeId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
@@ -314,6 +318,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
+  // NOSONAR
   SET_MODE_OF_ISSUANCE_ID() {
     @Override
     public String apply(String modeOfIssuanceId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
@@ -327,6 +332,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
+  // NOSONAR
   SET_CALL_NUMBER_TYPE_ID() {
     @Override
     public String apply(String typeId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
@@ -340,6 +346,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
+  // NOSONAR
   SET_LOCATION() {
     @Override
     public String apply(String locationId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
@@ -369,6 +376,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     }
   },
 
+  // NOSONAR
   SET_HOLDINGS_PERMANENT_LOCATION() {
     @Override
     public String apply(String locationId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) throws ParseException {

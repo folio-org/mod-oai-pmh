@@ -31,6 +31,7 @@
           "identifierTypeId": "7e591197-f335-4afb-bc6d-a6d76ca3bace"
         }
       ],
+      "modeOfIssuanceId" : "INVALID",
       "contributors": [
         {
           "name": "Mbah, Emmanuel M",
@@ -38,7 +39,7 @@
         }
       ],
       "instanceFormatIds": [
-        "INVALID"
+        "INVALID", "7fde4e21-00b5-4de4-a90a-08a84a601aeb"
       ],
       "subjects": [
         "Fula (African people)--Cameroon--Bamenda Highlands",
