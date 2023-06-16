@@ -66,7 +66,6 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
    */
   @Override
   protected javax.ws.rs.core.Response buildResponse(OAIPMH oai, Request request) {
-//    saveErrorsIfExist(request); // FIXME ? question 2
     if (oai.getListIdentifiers() == null) {
       return getResponseHelper().buildFailureResponse(oai, request);
     } else {
