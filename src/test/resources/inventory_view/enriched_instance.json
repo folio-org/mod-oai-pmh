@@ -201,7 +201,7 @@
       "copyNumber": "Copy number",
       "enumeration": "Enumeration",
       "yearCaption": [],
-      "materialType": "book",
+      "materialType": "INVALID",
       "missingPieces": "Missing pieces",
       "itemIdentifier": "Item identifier",
       "numberOfPieces": "Number of pieces",
