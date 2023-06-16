@@ -129,7 +129,8 @@
       **/SourceStorageSourceRecordsClient.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java,
       **/ModTenantAPI.java,
-      **/SourceStorageSourceRecordsClient.java
+      **/SourceStorageSourceRecordsClient.java,
+      **/TranslationsFunctionHolder.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>
