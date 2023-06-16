@@ -150,13 +150,19 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
             .onComplete(testContext.succeeding(requestMetadataUpdated -> {
               assertNotNull(requestMetadataUpdated);
               var linkToErrorFile = requestMetadataUpdated.getLinkToErrorFile();
-              assertNotNull(linkToErrorFile);
-              verifyErrorCSVFile(linkToErrorFile, csvErrorLines);
-              errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
-                .onComplete(testContext.succeeding(errorList -> {
-                  assertEquals(3, errorList.size());
-                  errorList.forEach(err -> assertTrue(err.getErrorMsg().startsWith("some error msg")));
-                  testContext.completeNow();
+              assertNull(linkToErrorFile); // At the moment, only path to error file has been saved.
+              instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
+                .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
+                  var generatedLinkToErrorFile = requestMetadataWithGeneratedLink.getRequestMetadataCollection()
+                    .get(0).getLinkToErrorFile();
+                  assertNotNull(generatedLinkToErrorFile);
+                  verifyErrorCSVFile(generatedLinkToErrorFile, csvErrorLines);
+                  errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
+                    .onComplete(testContext.succeeding(errorList -> {
+                      assertEquals(3, errorList.size());
+                      errorList.forEach(err -> assertTrue(err.getErrorMsg().startsWith("some error msg")));
+                      testContext.completeNow();
+                    }));
                 }));
             }));
         }));
@@ -185,13 +191,19 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
             .onComplete(testContext.succeeding(requestMetadataUpdated -> {
               assertNotNull(requestMetadataUpdated);
               var linkToErrorFile = requestMetadataUpdated.getLinkToErrorFile();
-              assertNotNull(linkToErrorFile);
-              verifyErrorCSVFile(linkToErrorFile, csvErrorLines);
-              errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
-                .onComplete(testContext.succeeding(errorList -> {
-                  assertEquals(1, errorList.size());
-                  assertEquals(errorMsg, errorList.get(0).getErrorMsg());
-                  testContext.completeNow();
+              assertNull(linkToErrorFile); // At the moment, only path to error file has been saved.
+              instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
+                .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
+                  var generatedLinkToErrorFile = requestMetadataWithGeneratedLink.getRequestMetadataCollection()
+                    .get(0).getLinkToErrorFile();
+                  assertNotNull(generatedLinkToErrorFile);
+                  verifyErrorCSVFile(generatedLinkToErrorFile, csvErrorLines);
+                  errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
+                    .onComplete(testContext.succeeding(errorList -> {
+                      assertEquals(1, errorList.size());
+                      assertEquals(errorMsg, errorList.get(0).getErrorMsg());
+                      testContext.completeNow();
+                    }));
                 }));
             }));
         }));
