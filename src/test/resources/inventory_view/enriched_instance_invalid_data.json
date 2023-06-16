@@ -2,7 +2,7 @@
   "instanceId": "12345000-0000-4000-a000-000000000111",
   "source": "FOLIO",
   "modeOfIssuance": "INVALID",
-  "natureOfContent": ["INVALID"],
+  "natureOfContent": ["INVALID", "96879b60-098b-453b-bf9a-c47866f1ab2a"],
   "holdings": [
     {
       "id": "6bd89306-c546-4d3e-9597-d5d41dd1e463",
@@ -170,6 +170,7 @@
       "status": "Available",
       "volume": "Volume",
       "barcode": " Barcode",
+      "relatedIdentifierTypes": ["INVALID"],
       "location": {
         "location": {
           "code": "INVALID",
@@ -208,11 +209,11 @@
       "enumeration": "Enumeration",
       "yearCaption": [],
       "materialType": {
-        "id" : "INVALID",
-        "name" : "dvd"
+        "id" : "615b8413-82d5-4203-aa6e-e37984cb5ac3",
+        "name" : "electronic resource"
       },
       "missingPieces": "Missing pieces",
-      "itemIdentifier": "Item identifier",
+      "itemIdentifier": "INVALID",
       "numberOfPieces": "Number of pieces",
       "itemLevelCallNumberTypeId" : "INVALID",
       "accessionNumber": "Accession number",
@@ -243,8 +244,8 @@
         "name" : "Can circulate"
       },
       "temporaryLoanType": {
-        "id" : "INVALID",
-        "name" : "Can circulate"
+        "id" : "e8b311a6-3b21-43f2-a269-dd9310cb2d0e",
+        "name" : "Course reserves"
       },
       "descriptionOfPieces": "Description of pieces",
       "itemDamagedStatusDate": "2022-06-29",
