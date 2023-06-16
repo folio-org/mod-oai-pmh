@@ -33,8 +33,8 @@ public class ErrorServiceConfig {
 
   @Bean
   public FolioS3Client folioS3Client() {
-    log.info("Folio S3 client for error storage: endpoint {}, region {}, bucket {}, accessKey {}, secretKey {}, awsSdk {}",
-      endpoint, region, bucket, "<secret>", secretKey, awsSdk);
+    log.debug("Folio S3 client for error storage: endpoint {}, region {}, bucket {}, accessKey {}, secretKey {}, awsSdk {}",
+      endpoint, region, bucket, "<secret>", "<secret>", awsSdk);
     var client = S3ClientFactory.getS3Client(S3ClientProperties.builder()
       .endpoint(endpoint)
       .secretKey(secretKey)

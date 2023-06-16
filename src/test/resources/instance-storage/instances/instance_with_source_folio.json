@@ -94,6 +94,7 @@
       ],
       "statisticalCodes": [],
       "discoverySuppress": false,
+      "natureOfContentTermIds": ["INVALID"],
       "metadata": {
         "createdDate": "2018-09-19T02:52:18.018+0000",
         "createdByUserId": "50b42bbf-7071-5106-95d6-1d25bf7324ff",
