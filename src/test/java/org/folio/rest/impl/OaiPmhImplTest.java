@@ -1484,6 +1484,24 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
   }
 
+  @Test
+  void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsInventoryAndInvalidData() {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY_INVALID_DATA;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("12345000-0000-4000-a000-000000000111"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
   @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsSRSAndInventory(MetadataPrefix metadataPrefix) {

@@ -1,8 +1,8 @@
 {
-  "instanceId": "00000000-0000-4a89-a2f9-78ce3145e4fc",
-  "source": "MARC",
-  "modeOfIssuance": "single unit",
-  "natureOfContent": [],
+  "instanceId": "12345000-0000-4000-a000-000000000111",
+  "source": "FOLIO",
+  "modeOfIssuance": "INVALID",
+  "natureOfContent": ["INVALID"],
   "holdings": [
     {
       "id": "6bd89306-c546-4d3e-9597-d5d41dd1e463",
@@ -15,8 +15,14 @@
           "libraryName": "Online",
           "institutionName": "Københavns Universitet"
         },
-        "permanentLocation": {},
-        "temporaryLocation": {}
+        "permanentLocation": {
+          "id" : "INVALID",
+          "name" : "Annex"
+        },
+        "temporaryLocation": {
+          "id" : "INVALID",
+          "name" : "INV"
+        }
       },
       "formerIds": [],
       "callNumber": {
@@ -30,14 +36,14 @@
       "holdingsType": "Electronic",
       "electronicAccess": [],
       "statisticalCodes": [{
-        "id": "6d584d0e-3dbc-46c4-a1bd-e9238dd9a6be",
+        "id": "INVALID",
         "code": "vidstream",
         "name": "Streaming video (vidstream)",
         "source": "folio",
         "statisticalCodeType": "DISC (Discovery)"
       }
       ],
-      "holdingsStatements": [],
+      "holdingsStatements": ["INVALID"],
       "suppressFromDiscovery": false,
       "holdingsStatementsForIndexes": [],
       "holdingsStatementsForSupplements": []
@@ -74,13 +80,13 @@
         }
       },
       "formerIds": [
-        "Former holdings ID"
+        "INVALID"
       ],
       "illPolicy": "Limited lending policy",
       "callNumber": {
         "prefix": "Call number prefix",
         "suffix": "Call number suffix",
-        "typeId": "03dd64d0-5626-4ecd-8ece-4531e0069f35",
+        "typeId": "INVALID",
         "typeName": "Dewey Decimal classification",
         "callNumber": "Call number"
       },
@@ -96,7 +102,7 @@
           "name": "Resource",
           "linkText": "Resource Link text",
           "publicNote": "Resource URL public note",
-          "relationshipId": "f5d0068e-6272-458e-8a81-b85e7b9a14aa",
+          "relationshipId": "INVALID",
           "materialsSpecification": "Resource Materials specified"
         }
       ],
@@ -110,7 +116,7 @@
       },
       "statisticalCodes": [
         {
-          "id": "9d8abbe2-1a94-4866-8731-4d12ac09f7a8",
+          "id": "INVALID",
           "code": "ebooks",
           "name": "Books, electronic (ebooks)",
           "source": "folio",
@@ -166,7 +172,7 @@
       "barcode": " Barcode",
       "location": {
         "location": {
-          "code": "KU/CC/DI/M",
+          "code": "INVALID",
           "name": "Main Library",
           "campusName": "City Campus",
           "libraryName": "Datalogisk Institut",
@@ -188,12 +194,12 @@
         }
       },
       "formerIds": [
-        "Former identifier"
+        "INVALID"
       ],
       "callNumber": {
         "prefix": "item Call number prefix",
         "suffix": "item Call number suffix",
-        "typeId": "512173a7-bd09-490e-b773-17d83f2b63fe",
+        "typeId": "INVALID",
         "typeName": "LC Modified",
         "callNumber": "item Call number"
       },
@@ -201,10 +207,14 @@
       "copyNumber": "Copy number",
       "enumeration": "Enumeration",
       "yearCaption": [],
-      "materialType": "INVALID",
+      "materialType": {
+        "id" : "INVALID",
+        "name" : "dvd"
+      },
       "missingPieces": "Missing pieces",
       "itemIdentifier": "Item identifier",
       "numberOfPieces": "Number of pieces",
+      "itemLevelCallNumberTypeId" : "INVALID",
       "accessionNumber": "Accession number",
       "electronicAccess": [
         {
@@ -212,14 +222,14 @@
           "name": "Related resource",
           "linkText": "item related resource Link text",
           "publicNote": "item related resource URL public note",
-          "relationshipId": "5bfe1b7b-f151-4501-8cfa-23b321d5cd1e",
+          "relationshipId": "INVALID",
           "materialsSpecification": "item related resource Materials specified"
         }
       ],
       "holdingsRecordId": "afd19b0d-e649-43c5-abb2-f201549d05ff",
       "statisticalCodes": [
         {
-          "id": "bb76b1c1-c9df-445c-8deb-68bb3580edc2",
+          "id": "INVALID",
           "code": "compfiles",
           "name": "Computer files, CDs, etc (compfiles)",
           "source": "folio",
@@ -228,8 +238,14 @@
       ],
       "itemDamagedStatus": "Damaged",
       "missingPiecesDate": "2022-06-22",
-      "permanentLoanType": "INVALID",
-      "temporaryLoanType": "INVALID",
+      "permanentLoanType": {
+        "id" : "INVALID",
+        "name" : "Can circulate"
+      },
+      "temporaryLoanType": {
+        "id" : "INVALID",
+        "name" : "Can circulate"
+      },
       "descriptionOfPieces": "Description of pieces",
       "itemDamagedStatusDate": "2022-06-29",
       "numberOfMissingPieces": "Number of missing pieces",
