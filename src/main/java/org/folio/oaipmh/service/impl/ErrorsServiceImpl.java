@@ -37,6 +37,7 @@ import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 public class ErrorsServiceImpl implements ErrorsService {
 
   private static final Logger logger = LogManager.getLogger(ErrorsServiceImpl.class);
+  private static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
 
   @Autowired
   private FolioS3Client folioS3Client;
