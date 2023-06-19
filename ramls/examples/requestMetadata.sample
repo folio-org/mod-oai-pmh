@@ -9,5 +9,6 @@
     "skippedInstancesCounter" : 0,
     "failedInstancesCounter" : 1,
     "suppressedInstancesCounter" : 0,
-    "linkToErrorFile" : "link_to_S3"
+    "linkToErrorFile" : "link_to_file_in_S3",
+    "pathToErrorFile" : "path_to_file_in_S3"
 }

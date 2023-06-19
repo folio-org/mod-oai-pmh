@@ -50,6 +50,10 @@
     "linkToErrorFile": {
       "description": "link to error file in S3",
       "type": "string"
+    },
+    "pathToErrorFile": {
+      "description": "path to error file in S3",
+      "type": "string"
     }
   }
 }
