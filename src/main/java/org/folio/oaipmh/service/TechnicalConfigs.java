@@ -7,8 +7,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.exception.CleanUpErrorLogsException;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
@@ -33,8 +31,6 @@ import static org.folio.oaipmh.Constants.OKAPI_URL;
 
 @Service
 public class TechnicalConfigs {
-  protected final Logger logger = LogManager.getLogger(getClass());
-
   @Autowired
   private ConfigurationHelper configurationHelper;
 
@@ -43,7 +39,7 @@ public class TechnicalConfigs {
   private static final String CONFIG_PATH_KEY = "configPath";
   private static final String CONFIG_DIR_PATH = "config";
   private static final int CONFIG_JSON_BODY = 0;
-  private static final String Load_Tech_Configs_Error_Message = "fail due loadTechnicalConfigs";
+  private static final String LOAD_TECH_CONFIGS_ERROR_MESSAGE = "fail due loadTechnicalConfigs";
 
   public Future<String> loadConfigs(Map<String, String> headers) {
     try {
@@ -65,7 +61,7 @@ public class TechnicalConfigs {
           HttpResponse<Buffer> response = result.result();
 
           if (response.statusCode() != 200) {
-            throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
+            throw new CleanUpErrorLogsException(LOAD_TECH_CONFIGS_ERROR_MESSAGE);
           }
           JsonObject body = response.bodyAsJsonObject();
           JsonArray configs = body.getJsonArray(CONFIGS);
@@ -94,16 +90,16 @@ public class TechnicalConfigs {
 
               client.postConfigurationsEntries(null, config, resultEntries -> {
                 if (resultEntries.failed()) {
-                  throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
+                  throw new CleanUpErrorLogsException(LOAD_TECH_CONFIGS_ERROR_MESSAGE);
                 }
                 HttpResponse<Buffer> httpResponse = resultEntries.result();
                 if (httpResponse.statusCode() != 201) {
-                  throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
+                  throw new CleanUpErrorLogsException(LOAD_TECH_CONFIGS_ERROR_MESSAGE);
                 }
                 promise.complete();
               });
             } catch (Exception e) {
-              throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
+              throw new CleanUpErrorLogsException(LOAD_TECH_CONFIGS_ERROR_MESSAGE);
             }
           } else {
             JsonObject configBody = body.getJsonArray(CONFIGS)
@@ -114,7 +110,7 @@ public class TechnicalConfigs {
             promise.complete();
           }
         } else {
-          throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
+          throw new CleanUpErrorLogsException(LOAD_TECH_CONFIGS_ERROR_MESSAGE);
         }
       });
 
