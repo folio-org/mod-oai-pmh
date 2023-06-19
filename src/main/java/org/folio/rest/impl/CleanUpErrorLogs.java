@@ -70,7 +70,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
   private static final String CONFIG_PATH_KEY = "configPath";
   private static final String CONFIG_DIR_PATH = "config";
   private static final int CONFIG_JSON_BODY = 0;
-  private static final String loadTechConfigsErrorMessage = "fail due loadTechnicalConfigs";
+  private static final String Load_Tech_Configs_Error_Message = "fail due loadTechnicalConfigs";
 
   public CleanUpErrorLogs() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -81,9 +81,8 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
     logger.debug("Running cleaning up error logs");
     final long[] cleanInterval = {30};
 
-    loadTechnicalConfigs(okapiHeaders).onComplete(asyncResult -> {
-      cleanInterval[0] = Long.parseLong(getProperty("", REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
-    });
+    loadTechnicalConfigs(okapiHeaders).onComplete(asyncResult -> cleanInterval[0] =
+      Long.parseLong(getProperty("", REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL)));
 
     OffsetDateTime offsetDateTime = ZonedDateTime
       .ofInstant(Instant.now(), ZoneId.systemDefault())
@@ -92,7 +91,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
 
     var tenant = okapiHeaders.get(OKAPI_TENANT);
 
-    vertxContext.runOnContext(v -> {
+    vertxContext.runOnContext(v ->
       instancesService.getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(tenant, offsetDateTime)
         .onComplete(result -> {
           if (result.succeeded()) {
@@ -129,8 +128,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
         .map(OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond204())
         .map(Response.class::cast)
         .otherwise(throwable -> respond500WithTextPlain(throwable.getMessage()))
-        .onComplete(asyncResultHandler);
-    });
+        .onComplete(asyncResultHandler));
   }
 
   private Future<String> loadTechnicalConfigs(Map<String, String> headers) {
@@ -153,7 +151,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
           HttpResponse<Buffer> response = result.result();
 
           if (response.statusCode() != 200) {
-            throw new CleanUpErrorLogsException(loadTechConfigsErrorMessage);
+            throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
           }
           JsonObject body = response.bodyAsJsonObject();
           JsonArray configs = body.getJsonArray(CONFIGS);
@@ -182,16 +180,16 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
 
               client.postConfigurationsEntries(null, config, resultEntries -> {
                 if (resultEntries.failed()) {
-                  throw new CleanUpErrorLogsException(loadTechConfigsErrorMessage);
+                  throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
                 }
                 HttpResponse<Buffer> httpResponse = resultEntries.result();
                 if (httpResponse.statusCode() != 201) {
-                  throw new CleanUpErrorLogsException(loadTechConfigsErrorMessage);
+                  throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
                 }
                 promise.complete();
               });
             } catch (Exception e) {
-              throw new CleanUpErrorLogsException(loadTechConfigsErrorMessage);
+              throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
             }
           } else {
             JsonObject configBody = body.getJsonArray(CONFIGS)
@@ -202,7 +200,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
             promise.complete();
           }
         } else {
-          throw new CleanUpErrorLogsException(loadTechConfigsErrorMessage);
+          throw new CleanUpErrorLogsException(Load_Tech_Configs_Error_Message);
         }
       });
 
