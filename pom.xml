@@ -129,7 +129,8 @@
       **/SourceStorageSourceRecordsClient.java</sonar.exclusions>
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java,
       **/ModTenantAPI.java,
-      **/SourceStorageSourceRecordsClient.java
+      **/SourceStorageSourceRecordsClient.java,
+      **/TranslationsFunctionHolder.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>
@@ -161,6 +162,7 @@
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
     <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
+    <folio-s3-client.version>1.1.0-SNAPSHOT</folio-s3-client.version>
 
   </properties>
 
@@ -356,6 +358,11 @@
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
       <version>3.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-s3-client</artifactId>
+      <version>${folio-s3-client.version}</version>
     </dependency>
   </dependencies>
 
@@ -638,6 +645,9 @@
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>**/Log4j2Plugins.dat</exclude>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
                   </excludes>
                 </filter>
               </filters>

@@ -102,6 +102,12 @@ public final class Constants {
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
   public static final String EXPIRED_RESUMPTION_TOKEN = "The value of the resumptionToken argument is expired";
+  public static final String LOCAL_ERROR_FILE_SAVE_FAILED = "Cannot save error to the local file: {}";
+  public static final String LOCAL_ERROR_FILE_GET_FAILED = "Cannot get error local file: {}";
+  public static final String LOCAL_ERROR_FILE_NOT_FOUND = "No errors found by request id: {}";
+  public static final String S3_ERROR_FILE_SAVE_FAILED = "Cannot save error to S3: {}";
+  public static final String LOCAL_ERROR_FILE_DELETE_FAILED = "Cannot delete local file {}: {}";
+  public static final String LOCAL_ERROR_DIRECTORY_DELETE_FAILED = "Cannot delete local directory: {}";
 
   public static final String SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be empty or null";
 

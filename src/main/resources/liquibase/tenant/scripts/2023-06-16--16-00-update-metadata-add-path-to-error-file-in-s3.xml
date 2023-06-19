@@ -1,0 +1,13 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+  <changeSet id="2023-06-16--16-00-update-metadata-add-path-to-error-file-to-s3" author="Oleksandr Bozhko">
+    <addColumn tableName="request_metadata_lb">
+      <column name="path_to_error_file_in_s3" type="varchar(1000)"/>
+    </addColumn>
+  </changeSet>
+
+</databaseChangeLog>

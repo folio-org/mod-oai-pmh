@@ -99,6 +99,21 @@ Suppressed from discovery instances UUIDs| GET /oai/request-metadata/{requestId}
 A typical API usage should be performed with the following approach. The user requests a collection of Request Metadata. Finds the necessary request metadata by the harvesting start time. Request Metadata contains the `requestId` 
 and counters of the corresponding events. Next, the user can call the necessary endpoints using `requestId` to get a list of UUIDs.
 
+### Environment variables
+This module uses S3 storage for files. AWS S3 and Minio Server are supported for files storage.
+It is also necessary to specify variable S3_IS_AWS to determine if AWS S3 is used as files storage. By default,
+this variable is `false` and means that MinIO server is used as storage.
+This value should be `true` if AWS S3 is used.
+
+| Name                         | Default value          | Description                                 |
+|:-----------------------------|:-----------------------|:--------------------------------------------|
+| S3_URL                       | http://127.0.0.1:9000/ | S3 url                                      |
+| S3_REGION                    | -                      | S3 region                                   |
+| S3_BUCKET                    | -                      | S3 bucket                                   |
+| S3_ACCESS_KEY_ID             | -                      | S3 access key                               |
+| S3_SECRET_ACCESS_KEY         | -                      | S3 secret key                               |
+| S3_IS_AWS                    | false                  | Specify if AWS S3 is used as files storage  |
+
 ### Issue tracker
 
 See project [MODOAIPMH](https://issues.folio.org/browse/MODOAIPMH)

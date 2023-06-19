@@ -119,6 +119,11 @@ public class InstancesServiceImpl implements InstancesService {
     return instancesDao.getTotalNumberOfRecords(requestId, tenantId);
   }
 
+  @Override
+  public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
+    return instancesDao.updateRequestMetadataByPathToError(requestId, tenantId, pathToErrorFile);
+  }
+
   @Autowired
   public InstancesDao setInstancesDao() {
     return instancesDao;

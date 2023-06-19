@@ -16,6 +16,7 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.oaipmh.service.ErrorsService;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.MetadataType;
@@ -25,6 +26,7 @@ import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
 import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
 import java.math.BigInteger;
@@ -48,6 +50,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
@@ -106,6 +109,8 @@ public abstract class AbstractHelper implements VerbHelper {
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
+
+  protected ErrorsService errorsService;
 
   public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
@@ -538,6 +543,26 @@ public abstract class AbstractHelper implements VerbHelper {
       source = "MARC";
     }
     return source;
+  }
+
+  protected void saveErrorsIfExist(Request request) {
+    errorsService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), request.getRequestId())
+      .onComplete(requestMetadataLbAsyncResult -> {
+        if (requestMetadataLbAsyncResult.succeeded()) {
+          var linkToErrorFile = requestMetadataLbAsyncResult.result().getLinkToErrorFile();
+          if (!isBlank(linkToErrorFile)) {
+            logger.info("Errors saved successfully for requestId {}", request.getRequestId());
+          }
+        } else {
+          logger.error("Error occurred during the update of RequestMetadataLb: {}",
+            requestMetadataLbAsyncResult.cause().toString());
+        }
+      });
+  }
+
+  @Autowired
+  public void setErrorService(ErrorsService errorsService) {
+    this.errorsService = errorsService;
   }
 
 }

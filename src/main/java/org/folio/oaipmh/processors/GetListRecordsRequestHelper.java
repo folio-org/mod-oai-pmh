@@ -174,6 +174,9 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       Future<RequestMetadataLb> updateRequestMetadataFuture;
       if (resumptionToken == null) {
         requestMetadata.setRequestId(UUID.fromString(requestId));
+        if (request.getCursor() == 0) {
+          requestMetadata.setStartedDate(lastUpdateDate);
+        }
         updateRequestMetadataFuture = instancesService.saveRequestMetadata(requestMetadata, request.getTenant());
       } else {
         updateRequestMetadataFuture = Future.succeededFuture();
@@ -418,7 +421,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } default: {
             String errorMessage = getErrorFromStorageMessage(INVENTORY_STORAGE, inventoryHttpRequest.uri(), "Invalid response: " + resp.statusMessage() + " " + resp.bodyAsString());
             logger.error(errorMessage);
-            errorMessage = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
+            errorMessage = format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), resp.statusCode());
             promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
             responseChecked.complete(true);
           }
@@ -587,6 +590,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } else {
             oaipmh.getListRecords().withResumptionToken(resumptionToken);
           }
+        } else {
+          saveErrorsIfExist(request); // End of single harvest (no resumption token).
         }
         response = responseHelper.buildSuccessResponse(oaipmh);
       } else {
@@ -664,6 +669,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     long cursor = request.getOffset();
     if (nextInstanceId == null) {
       logHarvestingCompletion();
+      saveErrorsIfExist(request); // End of sequential harvest.
       return new ResumptionTokenType()
         .withValue("")
         .withCursor(BigInteger.valueOf(cursor));

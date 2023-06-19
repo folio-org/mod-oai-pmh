@@ -16,4 +16,8 @@ xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
   <include file="scripts/2022-04-12--18-00-update-request-metadata-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2022-05-12--15-00-add-saved-instances-counter-request-metadata-table.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2022-05-18--16-00-add-extended-statistics-tables.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2023-06-08--12-00-update-metadata-add-link-to-error.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2023-06-09--17-00-create-error-table.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2023-06-13--12-00-update-metadata-add-started-date.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2023-06-16--16-00-update-metadata-add-path-to-error-file-in-s3.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

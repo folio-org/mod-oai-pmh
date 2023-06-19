@@ -2,6 +2,7 @@ package org.folio.oaipmh.dao.impl;
 
 import static java.util.Objects.nonNull;
 import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static org.folio.rest.jooq.tables.SuppressedFromDiscoveryInstancesIds.SUPPRESSED_FROM_DISCOVERY_INSTANCES_IDS;
 import static org.folio.rest.jooq.tables.FailedInstancesIds.FAILED_INSTANCES_IDS;
@@ -43,8 +44,10 @@ import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.folio.rest.jooq.tables.records.SkippedInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.SuppressedFromDiscoveryInstancesIdsRecord;
+import org.folio.s3.client.FolioS3Client;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
@@ -65,6 +68,9 @@ public class InstancesDaoImpl implements InstancesDao {
   public InstancesDaoImpl(PostgresClientFactory postgresClientFactory) {
     this.postgresClientFactory = postgresClientFactory;
   }
+
+  @Autowired
+  private FolioS3Client folioS3Client;
 
   @Override
   public Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds) {
@@ -166,6 +172,11 @@ public class InstancesDaoImpl implements InstancesDao {
     if (Objects.isNull(uuid) || StringUtils.isEmpty(uuid.toString())) {
       return Future
         .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain requestId"));
+    }
+    var startedDate = requestMetadata.getStartedDate();
+    if (Objects.isNull(startedDate) || StringUtils.isEmpty(startedDate.toString())) {
+      return Future
+        .failedFuture(new IllegalStateException("Cannot save request metadata, request metadata entity must contain startedDate"));
     }
     return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext -> dslContext.insertInto(REQUEST_METADATA_LB)
@@ -299,7 +310,8 @@ public class InstancesDaoImpl implements InstancesDao {
   private Record toDatabaseRecord(RequestMetadataLb requestMetadata) {
     return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
       .setLastUpdatedDate(requestMetadata.getLastUpdatedDate())
-      .setStreamEnded(requestMetadata.getStreamEnded());
+      .setStreamEnded(requestMetadata.getStreamEnded()).setLinkToErrorFile(requestMetadata.getLinkToErrorFile())
+      .setStartedDate(requestMetadata.getStartedDate());
   }
 
   @Override
@@ -363,6 +375,23 @@ public class InstancesDaoImpl implements InstancesDao {
         dslContext.selectCount().from(INSTANCES)
           .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(this::queryResultToInt));
+  }
+
+  @Override
+  public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext ->
+        dslContext.update(REQUEST_METADATA_LB)
+          .set(REQUEST_METADATA_LB.PATH_TO_ERROR_FILE_IN_S3, pathToErrorFile)
+          .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      }));
   }
 
   private Integer queryResultToInt(QueryResult queryResult) {
@@ -437,6 +466,12 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getFailedInstancesCounter()).ifPresent(requestMetadata::withFailedInstancesCounter);
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
+    ofNullable(pojo.getPathToErrorFileInS3()).ifPresentOrElse(pathToError -> {
+      var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
+      requestMetadata.withLinkToErrorFile(regeneratedLink);
+    }, () -> requestMetadata.setLinkToErrorFile(""));
+    of(pojo.getStartedDate())
+      .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));
 
     return requestMetadata;
   }

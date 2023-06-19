@@ -107,6 +107,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(id);
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb.getRequestId());
@@ -168,7 +169,19 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now());
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now()).setStartedDate(OffsetDateTime.now());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof IllegalStateException);
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenSaveRequestMetadataWithoutStartedDate(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now())
+        .setRequestId(UUID.randomUUID());
       instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof IllegalStateException);
         testContext.completeNow();
