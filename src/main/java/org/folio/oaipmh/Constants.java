@@ -39,6 +39,7 @@ public final class Constants {
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
   public static final String REPOSITORY_FETCHING_CHUNK_SIZE = "repository.fetchingChunkSize";
   public static final String REPOSITORY_RECORDS_SOURCE = "repository.recordsSource";
+  public static final String REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL = "repository.cleanErrorsInterval";
 
   public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
   public static final String INVENTORY = "Inventory";

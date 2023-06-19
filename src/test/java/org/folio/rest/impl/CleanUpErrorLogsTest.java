@@ -98,7 +98,7 @@ class CleanUpErrorLogsTest {
     System.setProperty("minio.accessKey", S3_ACCESS_KEY);
     System.setProperty("minio.secretKey", S3_SECRET_KEY);
     System.setProperty("minio.endpoint", MINIO_ENDPOINT);
-    System.setProperty("clean.interval", "1");
+    System.setProperty("clean.interval", "30");
 
     RestAssured.baseURI = "http://localhost:" + okapiPort;
     RestAssured.port = okapiPort;
