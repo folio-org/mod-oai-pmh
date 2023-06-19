@@ -30,13 +30,13 @@ import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_DELETE_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_GET_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_NOT_FOUND;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_SAVE_FAILED;
+import static org.folio.oaipmh.Constants.LOCAL_ERROR_STORAGE_DIR;
 import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 
 @Service
 public class ErrorsServiceImpl implements ErrorsService {
 
   private static final Logger logger = LogManager.getLogger(ErrorsServiceImpl.class);
-  private static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
 
   @Autowired
   private FolioS3Client folioS3Client;
