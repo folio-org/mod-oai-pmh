@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.service.ErrorsService;
 import org.folio.oaipmh.service.InstancesService;
-import org.folio.oaipmh.service.TechnicalConfigs;
 import org.folio.rest.jaxrs.resource.OaiPmhCleanUpErrorLogs;
 import org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances;
 import org.folio.s3.client.FolioS3Client;
@@ -21,11 +20,12 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond500WithTextPlain;
 
 public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
@@ -41,9 +41,6 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
   @Autowired
   private ErrorsService errorsService;
 
-  @Autowired
-  private TechnicalConfigs loadTechnicalConfigs;
-
   public CleanUpErrorLogs() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
@@ -53,8 +50,20 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
     logger.debug("Running cleaning up error logs");
     final long[] cleanInterval = {30};
 
-    loadTechnicalConfigs.loadConfigs(okapiHeaders).onComplete(asyncResult -> cleanInterval[0] =
-      Long.parseLong(getProperty("", REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL)));
+    ModTenantAPI api = new ModTenantAPI();
+    List<String> configsSet = Arrays.asList("technical");
+
+    api.loadConfigurationData(okapiHeaders, configsSet).onComplete(asyncResult -> {
+      if (asyncResult.succeeded()) {
+        try {
+          cleanInterval[0] = Long.parseLong(System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
+        } catch (Exception ex) {
+          logger.error("cannot retrieve config from system properties");
+        }
+      } else {
+        logger.error("loading configuration data failed");
+      }
+    });
 
     OffsetDateTime offsetDateTime = ZonedDateTime
       .ofInstant(Instant.now(), ZoneId.systemDefault())

@@ -131,7 +131,6 @@
       **/ModTenantAPI.java,
       **/SourceStorageSourceRecordsClient.java,
       **/TranslationsFunctionHolder.java,
-      **/TechnicalConfigs.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>
