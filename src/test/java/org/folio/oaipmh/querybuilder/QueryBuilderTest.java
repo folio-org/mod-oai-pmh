@@ -1,6 +1,6 @@
 package org.folio.oaipmh.querybuilder;
 
-import static org.folio.oaipmh.Constants.DATE_FORMAT;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import org.folio.querybuilder.QueryBuilder;
 import org.folio.querybuilder.QueryException;
 import org.folio.querybuilder.RecordsSource;
@@ -64,7 +64,7 @@ class QueryBuilderTest {
     var from = new Date();
     var query = QueryBuilder.build(testTenant, null, from, null,
       RecordsSource.FOLIO, false, false, 1);
-    var fromFormatted = DATE_FORMAT.format(from);
+    var fromFormatted = ISO_UTC_DATE_TIME.format(from.toInstant());
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
@@ -109,7 +109,7 @@ class QueryBuilderTest {
     var until = new Date();
     var query = QueryBuilder.build(testTenant, null, null, until,
       RecordsSource.FOLIO, false, false, 1);
-    var untilFormatted = DATE_FORMAT.format(until);
+    var untilFormatted = ISO_UTC_DATE_TIME.format(until.toInstant());
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +

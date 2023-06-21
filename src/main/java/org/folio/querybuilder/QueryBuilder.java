@@ -6,7 +6,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import static org.folio.oaipmh.Constants.DATE_FORMAT;
+import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 
 import java.util.Date;
 import java.util.UUID;
@@ -27,6 +27,7 @@ public class QueryBuilder {
 
   private static final String AND_DATE_OR_MAX = "AND %s_mod_inventory_storage.dateOrMax(%s)";
   private static final String BETWEEN_DATE_OR_MIN = "BETWEEN %s_mod_inventory_storage.dateOrMin(%s)";
+  private static final String INDENT = "                         ";
 
   private static final String DELETED = "   %s EXISTS (SELECT 1\n" +
     "              FROM %s_mod_oai_pmh.get_holdings holdings_record\n" +
@@ -42,20 +43,20 @@ public class QueryBuilder {
     "                                    holdings_record.id\n" +
     "              WHERE instance_id = holdings_record.instanceid\n" +
     "                AND (%s_mod_inventory_storage.strToTimestamp(holdings_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
-    "                         " + AND_DATE_OR_MAX + "\n" +
+    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
+    INDENT + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(item_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
-    "                         " + AND_DATE_OR_MAX + "\n" +
+    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
+    INDENT + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_holdings_record.jsonb ->> 'createdDate')\n" +
-    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
-    "                         " + AND_DATE_OR_MAX + "\n" +
+    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
+    INDENT + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record.jsonb ->> 'createdDate')\n" +
-    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
-    "                         " + AND_DATE_OR_MAX + "\n" +
+    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
+    INDENT + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record_deleted.jsonb ->> 'createdDate')\n" +
-    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
-    "                         " + AND_DATE_OR_MAX + "\n" +
+    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
+    INDENT + AND_DATE_OR_MAX + "\n" +
     "                  ))\n";
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
@@ -98,12 +99,12 @@ public class QueryBuilder {
 
   private static String buildDateFrom(String tenant, Date from, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return nonNull(from) ? format(DATE_FROM, whereOrAnd, tenant, DATE_FORMAT.format(from)) : EMPTY;
+    return nonNull(from) ? format(DATE_FROM, whereOrAnd, tenant, ISO_UTC_DATE_TIME.format(from.toInstant())) : EMPTY;
   }
 
   private static String buildDateUntil(String tenant, Date until, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, DATE_FORMAT.format(until)) : EMPTY;
+    return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, ISO_UTC_DATE_TIME.format(until.toInstant())) : EMPTY;
   }
 
   private static String buildSource(String tenant, RecordsSource source, boolean where) {
@@ -128,6 +129,6 @@ public class QueryBuilder {
   }
 
   private static String buildDate(Date date) {
-    return isNull(date) ? null : format("timestamptz '%s'", DATE_FORMAT.format(date));
+    return isNull(date) ? null : format("timestamptz '%s'", ISO_UTC_DATE_TIME.format(date.toInstant()));
   }
 }
