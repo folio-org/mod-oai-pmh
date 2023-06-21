@@ -8,6 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.UUID;
 
@@ -99,12 +101,12 @@ public class QueryBuilder {
 
   private static String buildDateFrom(String tenant, Date from, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return nonNull(from) ? format(DATE_FROM, whereOrAnd, tenant, ISO_UTC_DATE_TIME.format(from.toInstant())) : EMPTY;
+    return nonNull(from) ? format(DATE_FROM, whereOrAnd, tenant, ISO_UTC_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC)).format(from.toInstant())) : EMPTY;
   }
 
   private static String buildDateUntil(String tenant, Date until, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, ISO_UTC_DATE_TIME.format(until.toInstant())) : EMPTY;
+    return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, ISO_UTC_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC)).format(until.toInstant())) : EMPTY;
   }
 
   private static String buildSource(String tenant, RecordsSource source, boolean where) {
@@ -129,6 +131,6 @@ public class QueryBuilder {
   }
 
   private static String buildDate(Date date) {
-    return isNull(date) ? null : format("timestamptz '%s'", ISO_UTC_DATE_TIME.format(date.toInstant()));
+    return isNull(date) ? null : format("timestamptz '%s'", ISO_UTC_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC)).format(date.toInstant()));
   }
 }

@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.UUID;
 
@@ -64,7 +66,7 @@ class QueryBuilderTest {
     var from = new Date();
     var query = QueryBuilder.build(testTenant, null, from, null,
       RecordsSource.FOLIO, false, false, 1);
-    var fromFormatted = ISO_UTC_DATE_TIME.format(from.toInstant());
+    var fromFormatted = ISO_UTC_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC)).format(from.toInstant());
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
@@ -109,7 +111,7 @@ class QueryBuilderTest {
     var until = new Date();
     var query = QueryBuilder.build(testTenant, null, null, until,
       RecordsSource.FOLIO, false, false, 1);
-    var untilFormatted = ISO_UTC_DATE_TIME.format(until.toInstant());
+    var untilFormatted = ISO_UTC_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC)).format(until.toInstant());
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
