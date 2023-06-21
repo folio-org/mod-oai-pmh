@@ -1,7 +1,5 @@
 package org.folio.oaipmh;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 
 public final class Constants {
