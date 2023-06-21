@@ -1,23 +1,19 @@
 package org.folio.querybuilder;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.UUID;
-
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import static org.folio.oaipmh.Constants.ISO_DATE_TIME_PATTERN;
+import static org.folio.oaipmh.Constants.DATE_FORMAT;
+
+import java.util.Date;
+import java.util.UUID;
 
 public class QueryBuilder {
 
   private static final Logger logger = LogManager.getLogger(QueryBuilder.class);
-
-  public static final DateFormat DATE_FORMAT = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
   private static final String QUERY = "SELECT * FROM %s_mod_oai_pmh.%s inst\n" +
     "%s" + // last instance id
@@ -28,6 +24,9 @@ public class QueryBuilder {
     "%s" + // deleted
     "ORDER BY instance_id\n" +
     "LIMIT %d;";
+
+  private static final String AND_DATE_OR_MAX = "AND %s_mod_inventory_storage.dateOrMax(%s)";
+  private static final String BETWEEN_DATE_OR_MIN = "BETWEEN %s_mod_inventory_storage.dateOrMin(%s)";
 
   private static final String DELETED = "   %s EXISTS (SELECT 1\n" +
     "              FROM %s_mod_oai_pmh.get_holdings holdings_record\n" +
@@ -43,20 +42,20 @@ public class QueryBuilder {
     "                                    holdings_record.id\n" +
     "              WHERE instance_id = holdings_record.instanceid\n" +
     "                AND (%s_mod_inventory_storage.strToTimestamp(holdings_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    "                         BETWEEN %s_mod_inventory_storage.dateOrMin(%s)\n" +
-    "                         AND %s_mod_inventory_storage.dateOrMax(%s)\n" +
+    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
+    "                         " + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(item_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    "                         BETWEEN %s_mod_inventory_storage.dateOrMin(%s)\n" +
-    "                         AND %s_mod_inventory_storage.dateOrMax(%s)\n" +
+    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
+    "                         " + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_holdings_record.jsonb ->> 'createdDate')\n" +
-    "                         BETWEEN %s_mod_inventory_storage.dateOrMin(%s)\n" +
-    "                         AND %s_mod_inventory_storage.dateOrMax(%s)\n" +
+    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
+    "                         " + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record.jsonb ->> 'createdDate')\n" +
-    "                         BETWEEN %s_mod_inventory_storage.dateOrMin(%s)\n" +
-    "                         AND %s_mod_inventory_storage.dateOrMax(%s)\n" +
+    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
+    "                         " + AND_DATE_OR_MAX + "\n" +
     "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record_deleted.jsonb ->> 'createdDate')\n" +
-    "                         BETWEEN %s_mod_inventory_storage.dateOrMin(%s)\n" +
-    "                         AND %s_mod_inventory_storage.dateOrMax(%s)\n" +
+    "                         " + BETWEEN_DATE_OR_MIN + "\n" +
+    "                         " + AND_DATE_OR_MAX + "\n" +
     "                  ))\n";
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
@@ -65,6 +64,10 @@ public class QueryBuilder {
   private static final String DISCOVERY_SUPPRESS = "   %s coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
+
+  private static final String WHERE = " WHERE";
+
+  private QueryBuilder() {}
 
   public static String build(String tenant, UUID lastInstanceId, Date from, Date until, RecordsSource source,
                              boolean discoverySuppress, boolean deletedRecords, int limit) throws QueryException {
@@ -90,27 +93,32 @@ public class QueryBuilder {
   }
 
   private static String buildLastInstanceId(UUID lastInstanceId) {
-    return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, " WHERE", lastInstanceId) : EMPTY;
+    return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, WHERE, lastInstanceId) : EMPTY;
   }
 
   private static String buildDateFrom(String tenant, Date from, boolean where) {
-    return nonNull(from) ? format(DATE_FROM, where ? " WHERE" : " AND", tenant, DATE_FORMAT.format(from)) : EMPTY;
+    var whereOrAnd = where ? WHERE : " AND";
+    return nonNull(from) ? format(DATE_FROM, whereOrAnd, tenant, DATE_FORMAT.format(from)) : EMPTY;
   }
 
   private static String buildDateUntil(String tenant, Date until, boolean where) {
-    return nonNull(until) ? format(DATE_UNTIL, where ? " WHERE" : " AND", tenant, DATE_FORMAT.format(until)) : EMPTY;
+    var whereOrAnd = where ? WHERE : " AND";
+    return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, DATE_FORMAT.format(until)) : EMPTY;
   }
 
   private static String buildSource(String tenant, RecordsSource source, boolean where) {
-    return nonNull(source) ? format(SOURCE, where ? " WHERE" : " AND", tenant, source) : EMPTY;
+    var whereOrAnd = where ? WHERE : " AND";
+    return nonNull(source) ? format(SOURCE, whereOrAnd, tenant, source) : EMPTY;
   }
 
   private static String buildSuppressFromDiscovery(boolean discoverySuppress, boolean where) {
-    return !discoverySuppress ? format(DISCOVERY_SUPPRESS, where ? " WHERE" : " AND") : EMPTY;
+    var whereOrAnd = where ? WHERE : " AND";
+    return !discoverySuppress ? format(DISCOVERY_SUPPRESS, whereOrAnd) : EMPTY;
   }
 
   private static String buildDeleted(String tenant, Date from, Date until, boolean where) {
-    return nonNull(from) || nonNull(until) ? format(DELETED, where ? " WHERE" : " AND",
+    var whereOrAnd = where ? WHERE : " AND";
+    return nonNull(from) || nonNull(until) ? format(DELETED, whereOrAnd,
       tenant, tenant, tenant, tenant, tenant,
       tenant, tenant, buildDate(from), tenant, buildDate(until),
       tenant, tenant, buildDate(from), tenant, buildDate(until),

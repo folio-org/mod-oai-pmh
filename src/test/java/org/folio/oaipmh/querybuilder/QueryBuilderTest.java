@@ -1,5 +1,6 @@
 package org.folio.oaipmh.querybuilder;
 
+import static org.folio.oaipmh.Constants.DATE_FORMAT;
 import org.folio.querybuilder.QueryBuilder;
 import org.folio.querybuilder.QueryException;
 import org.folio.querybuilder.RecordsSource;
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Date;
 import java.util.UUID;
 
-public class QueryBuilderTest {
+class QueryBuilderTest {
 
   private final String testTenant = "test_tenant";
 
@@ -63,7 +64,7 @@ public class QueryBuilderTest {
     var from = new Date();
     var query = QueryBuilder.build(testTenant, null, from, null,
       RecordsSource.FOLIO, false, false, 1);
-    var fromFormatted = QueryBuilder.DATE_FORMAT.format(from);
+    var fromFormatted = DATE_FORMAT.format(from);
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
@@ -108,7 +109,7 @@ public class QueryBuilderTest {
     var until = new Date();
     var query = QueryBuilder.build(testTenant, null, null, until,
       RecordsSource.FOLIO, false, false, 1);
-    var untilFormatted = QueryBuilder.DATE_FORMAT.format(until);
+    var untilFormatted = DATE_FORMAT.format(until);
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +

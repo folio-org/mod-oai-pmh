@@ -1,5 +1,7 @@
 package org.folio.oaipmh;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 
 public final class Constants {
@@ -17,6 +19,7 @@ public final class Constants {
   public static final String ISO_DATE_ONLY_PATTERN = "yyyy-MM-dd";
   public static final DateTimeFormatter ISO_UTC_DATE_TIME = DateTimeFormatter.ofPattern(ISO_DATE_TIME_PATTERN);
   public static final DateTimeFormatter ISO_UTC_DATE_ONLY = DateTimeFormatter.ofPattern(ISO_DATE_ONLY_PATTERN);
+  public static final DateFormat DATE_FORMAT = new SimpleDateFormat(ISO_DATE_TIME_PATTERN);
 
   public static final String OKAPI_URL = "X-Okapi-Url";
   public static final String OKAPI_TENANT = "X-Okapi-Tenant";
