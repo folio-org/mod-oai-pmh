@@ -279,7 +279,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
           String nextInstanceId = instances.size() <= batchSize ? null : instances.get(batchSize).getString(INSTANCE_ID_FIELD_NAME);
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
-          srsClient = createAndSetupSrsClient(request);
+          srsClient = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
 
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
@@ -325,11 +325,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     } else {
       logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
     }
-  }
-
-  private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
-    return new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
-        WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,

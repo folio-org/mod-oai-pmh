@@ -171,8 +171,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise, boolean withInventory) {
-    final var srsClient = new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(),
-      request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
+    final var srsClient = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
 
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
