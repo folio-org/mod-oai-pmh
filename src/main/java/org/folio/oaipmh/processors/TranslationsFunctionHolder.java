@@ -5,6 +5,9 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
+import org.folio.processor.error.RecordInfo;
+import org.folio.processor.error.RecordType;
+import org.folio.processor.error.TranslationException;
 import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.rule.Metadata;
@@ -56,7 +59,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(id, referenceData, NATURE_OF_CONTENT_TERMS);
       if (entry.isEmpty()) {
         LOGGER.error("Nature of content term is not found by the given id: {}", id);
-        throw new GenOnTheFlyTranslationException(null, null, "Nature of content term is not found by the given id: " + id);
+        RecordInfo recordInfo = new RecordInfo(id, RecordType.INSTANCE);
+        throw new TranslationException(recordInfo, new Exception("Nature of content term is not found by the given id: " + id));
       } else {
         return entry.getAsString(NAME);
       }
@@ -149,8 +153,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     public String apply(String id, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(id, referenceData, LOAN_TYPES);
       if (entry.isEmpty()) {
+        RecordInfo recordInfo = new RecordInfo(id, RecordType.ITEM);
         LOGGER.error("Loan Type is not found by the given id: {}", id);
-        throw new GenOnTheFlyTranslationException(null, null, "Loan type is not found by the given id: " + id);
+        throw new TranslationException(recordInfo, new Exception("Loan type is not found by the given id: " + id));
       } else {
         return entry.getAsString(NAME);
       }
@@ -162,8 +167,9 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
     public String apply(String materialTypeId, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
       JSONObject entry = convertToJson(materialTypeId, referenceData, MATERIAL_TYPES);
       if (entry.isEmpty()) {
+        RecordInfo recordInfo = new RecordInfo(materialTypeId, RecordType.ITEM);
         LOGGER.error("Material type is not found by the given id: {}", materialTypeId);
-        throw new GenOnTheFlyTranslationException(null, null, "Material type is not found by the given id: " + materialTypeId);
+        throw new TranslationException(recordInfo, new Exception("Material type is not found by the given id: " + materialTypeId));
       } else {
         return entry.getAsString(NAME);
       }
@@ -266,7 +272,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(instanceTypeId, referenceData, INSTANCE_TYPES);
       if (entry.isEmpty()) {
         LOGGER.error("Instance type id is not found by the given id: {}", instanceTypeId);
-        throw new GenOnTheFlyTranslationException(null, null, "Instance type id is not found by the given id: " + instanceTypeId);
+        RecordInfo recordInfo = new RecordInfo(instanceTypeId, RecordType.INSTANCE);
+        throw new TranslationException(recordInfo, new Exception("Instance type id is not found by the given id: " + instanceTypeId));
       } else {
         return entry.getAsString(NAME);
       }
@@ -281,7 +288,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(instanceFormatId, referenceData, INSTANCE_FORMATS);
       if (entry.isEmpty()) {
         LOGGER.error("Instance format is not found by the given id: {}", instanceFormatId);
-        throw new GenOnTheFlyTranslationException(null, null, "Instance format is not found by the given id: " + instanceFormatId);
+        RecordInfo recordInfo = new RecordInfo(instanceFormatId, RecordType.INSTANCE);
+        throw new TranslationException(recordInfo, new Exception("Instance format is not found by the given id: " + instanceFormatId));
       } else {
         String instanceFormatIdValue = entry.getAsString(NAME);
         String[] instanceFormatsResult = instanceFormatIdValue.split(REGEX);
@@ -322,7 +330,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(modeOfIssuanceId, referenceData, MODE_OF_ISSUANCES);
       if (entry.isEmpty()) {
         LOGGER.error("Mode of issuance is not found by the given id: {}", modeOfIssuanceId);
-        throw new GenOnTheFlyTranslationException(null, null, "ode of issuance is not found by the given id: " + modeOfIssuanceId);
+        RecordInfo recordInfo = new RecordInfo(modeOfIssuanceId, RecordType.INSTANCE);
+        throw new TranslationException(recordInfo, new Exception("Mode of issuance is not found by the given id: " + modeOfIssuanceId));
       } else {
         return entry.getAsString(NAME);
       }
@@ -335,7 +344,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(typeId, referenceData, CALL_NUMBER_TYPES);
       if (entry.isEmpty()) {
         LOGGER.error("Call number type is not found by the given id: {}", typeId);
-        throw new GenOnTheFlyTranslationException(null, null, "Call number type is not found by the given id: " + typeId);
+        RecordInfo recordInfo = new RecordInfo(typeId, RecordType.ITEM);
+        throw new TranslationException(recordInfo, new Exception("Call number type is not found by the given id: " + typeId));
       } else {
         return entry.getAsString(NAME);
       }
@@ -348,7 +358,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       JSONObject entry = convertToJson(locationId, referenceData, LOCATIONS);
       if (entry.isEmpty()) {
         LOGGER.error("Location is not found by the given id: {}", locationId);
-        throw new GenOnTheFlyTranslationException(null, null, "Location is not found by the given id: " + locationId);
+        RecordInfo recordInfo = new RecordInfo(locationId, RecordType.INSTANCE);
+        throw new TranslationException(recordInfo, new Exception("Location is not found by the given id: " + locationId));
       } else {
         String relatedReferenceData = translation.getParameter("referenceData");
         String referenceDataIdField = translation.getParameter("referenceDataIdField");
@@ -357,9 +368,10 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           String referenceDataIdValue = entry.getAsString(referenceDataIdField);
           JSONObject relatedEntry = convertToJson(referenceDataIdValue, referenceData, relatedReferenceData);
           if (relatedEntry.isEmpty()) {
+            RecordInfo recordInfo = new RecordInfo(locationId, RecordType.INSTANCE);
             LOGGER.error("Data related for location is not found {} by the given id: {}", relatedReferenceData, referenceDataIdValue);
-            throw new GenOnTheFlyTranslationException(null, null, String.format("Data related for location is not found %s by the given id: %s",
-              relatedReferenceData, referenceDataIdValue));
+            throw new TranslationException(recordInfo, new Exception(String.format("Data related for location is not found %s by the given id: %s",
+              relatedReferenceData, referenceDataIdValue)));
           } else {
             return relatedEntry.getAsString(field);
           }
@@ -381,7 +393,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         JSONObject entry = convertToJson(locationId, referenceData, LOCATIONS);
         if (entry.isEmpty()) {
           LOGGER.error("Location is not found by the given id: {}", locationId);
-          throw new GenOnTheFlyTranslationException(null, null, "Location is not found by the given id: " + locationId);
+          RecordInfo recordInfo = new RecordInfo(locationId, RecordType.HOLDING);
+          throw new TranslationException(recordInfo, new Exception("Location is not found by the given id: " + locationId));
         } else {
           return entry.getAsString(NAME);
         }
