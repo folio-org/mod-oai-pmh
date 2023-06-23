@@ -66,7 +66,7 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
     });
 
     OffsetDateTime offsetDateTime = ZonedDateTime
-      .ofInstant(Instant.now(), ZoneId.systemDefault())
+      .ofInstant(Instant.now(), ZoneId.of("UTC"))
       .minusDays(cleanInterval[0])
       .toOffsetDateTime();
 
