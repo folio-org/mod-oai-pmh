@@ -61,7 +61,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Nature of content term is not found by the given id: {}", id);
         RecordInfo recordInfo = new RecordInfo(id, RecordType.INSTANCE);
         recordInfo.setFieldValue(NATURE_OF_CONTENT_TERMS);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(id);
         throw new TranslationException(recordInfo, new Exception("Nature of content term is not found by the given id: " + id));
       } else {
         return entry.getAsString(NAME);
@@ -157,7 +157,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       if (entry.isEmpty()) {
         RecordInfo recordInfo = new RecordInfo(id, RecordType.ITEM);
         recordInfo.setFieldValue(LOAN_TYPES);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(id);
         LOGGER.error("Loan Type is not found by the given id: {}", id);
         throw new TranslationException(recordInfo, new Exception("Loan type is not found by the given id: " + id));
       } else {
@@ -173,7 +173,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
       if (entry.isEmpty()) {
         RecordInfo recordInfo = new RecordInfo(materialTypeId, RecordType.ITEM);
         recordInfo.setFieldValue(MATERIAL_TYPES);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(materialTypeId);
         LOGGER.error("Material type is not found by the given id: {}", materialTypeId);
         throw new TranslationException(recordInfo, new Exception("Material type is not found by the given id: " + materialTypeId));
       } else {
@@ -280,7 +280,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Instance type id is not found by the given id: {}", instanceTypeId);
         RecordInfo recordInfo = new RecordInfo(instanceTypeId, RecordType.INSTANCE);
         recordInfo.setFieldValue(INSTANCE_TYPES);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(instanceTypeId);
         throw new TranslationException(recordInfo, new Exception("Instance type id is not found by the given id: " + instanceTypeId));
       } else {
         return entry.getAsString(NAME);
@@ -298,7 +298,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Instance format is not found by the given id: {}", instanceFormatId);
         RecordInfo recordInfo = new RecordInfo(instanceFormatId, RecordType.INSTANCE);
         recordInfo.setFieldValue(INSTANCE_FORMATS);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(instanceFormatId);
         throw new TranslationException(recordInfo, new Exception("Instance format is not found by the given id: " + instanceFormatId));
       } else {
         String instanceFormatIdValue = entry.getAsString(NAME);
@@ -342,7 +342,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Mode of issuance is not found by the given id: {}", modeOfIssuanceId);
         RecordInfo recordInfo = new RecordInfo(modeOfIssuanceId, RecordType.INSTANCE);
         recordInfo.setFieldValue(MODE_OF_ISSUANCES);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(modeOfIssuanceId);
         throw new TranslationException(recordInfo, new Exception("Mode of issuance is not found by the given id: " + modeOfIssuanceId));
       } else {
         return entry.getAsString(NAME);
@@ -358,7 +358,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Call number type is not found by the given id: {}", typeId);
         RecordInfo recordInfo = new RecordInfo(typeId, RecordType.ITEM);
         recordInfo.setFieldValue(CALL_NUMBER_TYPES);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(typeId);
         throw new TranslationException(recordInfo, new Exception("Call number type is not found by the given id: " + typeId));
       } else {
         return entry.getAsString(NAME);
@@ -374,7 +374,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
         LOGGER.error("Location is not found by the given id: {}", locationId);
         RecordInfo recordInfo = new RecordInfo(locationId, RecordType.INSTANCE);
         recordInfo.setFieldValue(LOCATIONS);
-        recordInfo.setFieldValue("");
+        recordInfo.setFieldValue(locationId);
         throw new TranslationException(recordInfo, new Exception("Location is not found by the given id: " + locationId));
       } else {
         String relatedReferenceData = translation.getParameter("referenceData");
@@ -386,7 +386,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           if (relatedEntry.isEmpty()) {
             RecordInfo recordInfo = new RecordInfo(locationId, RecordType.INSTANCE);
             recordInfo.setFieldValue(LOCATIONS);
-            recordInfo.setFieldValue("");
+            recordInfo.setFieldValue(locationId);
             LOGGER.error("Data related for location is not found {} by the given id: {}", relatedReferenceData, referenceDataIdValue);
             throw new TranslationException(recordInfo, new Exception(String.format("Data related for location is not found %s by the given id: %s",
               relatedReferenceData, referenceDataIdValue)));
@@ -413,7 +413,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           LOGGER.error("Location is not found by the given id: {}", locationId);
           RecordInfo recordInfo = new RecordInfo(locationId, RecordType.HOLDING);
           recordInfo.setFieldValue(LOCATIONS);
-          recordInfo.setFieldValue("");
+          recordInfo.setFieldValue(locationId);
           throw new TranslationException(recordInfo, new Exception("Location is not found by the given id: " + locationId));
         } else {
           return entry.getAsString(NAME);
