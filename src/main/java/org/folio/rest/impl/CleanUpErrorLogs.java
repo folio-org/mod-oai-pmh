@@ -1,5 +1,9 @@
 package org.folio.rest.impl;
 
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL;
+import static org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond500WithTextPlain;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
@@ -23,10 +27,6 @@ import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL;
-import static org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond500WithTextPlain;
 
 public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
 
