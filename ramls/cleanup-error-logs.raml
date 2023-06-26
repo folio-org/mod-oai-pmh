@@ -1,0 +1,33 @@
+#%RAML 1.0
+title: OAI-PMH API
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v3
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: OAI-PMH Error Logs Cleaning API
+    content: provides endpoint for triggering clean up process of old error logs.
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+
+/oai-pmh/clean-up-error-logs:
+  displayName: Clean up old error logs
+  description: API to start clean up mechanism of old error logs
+  post:
+    is: [validate]
+    responses:
+      204:
+      400:
+        description: "Bad request"
+        body:
+          text/plain:
+            example: "Bad request"
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"
