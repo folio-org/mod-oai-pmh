@@ -164,6 +164,7 @@
     <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
     <folio-s3-client.version>1.1.0-SNAPSHOT</folio-s3-client.version>
+    <aws.sdk.version>2.19.2</aws.sdk.version>
 
   </properties>
 
@@ -258,11 +259,11 @@
       <artifactId>vertx-jooq-classic-reactive</artifactId>
       <version>${vertx-jooq.classic-reactive.version}</version>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>software.amazon.awssdk</groupId>-->
-<!--      <artifactId>aws-sdk-java</artifactId>-->
-<!--      <version>2.19.2</version>-->
-<!--    </dependency>-->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>${aws.sdk.version}</version>
+    </dependency>
 
     <!-- logging see http://www.slf4j.org/legacy.html -->
     <!-- The RMB runtime defines usage of log4j2 for for vert.x logging interface -->

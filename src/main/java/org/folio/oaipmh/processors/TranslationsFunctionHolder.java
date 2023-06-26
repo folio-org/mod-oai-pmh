@@ -88,22 +88,24 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
   SET_RELATED_IDENTIFIER() {
     @Override
     public String apply(String identifierValue, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
-      Object metadataIdentifierTypeIds = metadata.getData().get(IDENTIFIER_TYPE_METADATA).getData();
-      if (metadataIdentifierTypeIds != null) {
-        List<Map<String, String>> identifierTypes = (List<Map<String, String>>) metadataIdentifierTypeIds;
-        if (identifierTypes.size() > currentIndex) {
-          Map<String, String> currentIdentifierType = identifierTypes.get(currentIndex);
-          JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM), referenceData, IDENTIFIER_TYPES);
-          List<String> relatedIdentifierTypes = Splitter.on(",").splitToList(translation.getParameter(RELATED_IDENTIFIER_TYPES_PARAM));
-          for (String relatedIdentifierType : relatedIdentifierTypes) {
-            if (currentIdentifierTypeReferenceData.getAsString(NAME).equalsIgnoreCase(relatedIdentifierType)) {
-              String actualIdentifierTypeName = translation.getParameter(TYPE_PARAM);
-              for (JsonObjectWrapper wrapper : referenceData.get(IDENTIFIER_TYPES).values()) {
-                JSONObject referenceDataEntry = new JSONObject(wrapper == null ? Collections.emptyMap() : wrapper.getMap());
-                if (referenceDataEntry.getAsString(NAME).equalsIgnoreCase(actualIdentifierTypeName)) {
-                  for (Map<String, String> identifierType : identifierTypes) {
-                    if (identifierType.get(IDENTIFIER_TYPE_ID_PARAM).equalsIgnoreCase(referenceDataEntry.getAsString(ID_PARAM))) {
-                      return identifierType.get(VALUE_PARAM);
+      try {
+        Object metadataIdentifierTypeIds = metadata.getData().get(IDENTIFIER_TYPE_METADATA).getData();
+        if (metadataIdentifierTypeIds != null) {
+          List<Map<String, String>> identifierTypes = (List<Map<String, String>>) metadataIdentifierTypeIds;
+          if (identifierTypes.size() > currentIndex) {
+            Map<String, String> currentIdentifierType = identifierTypes.get(currentIndex);
+            JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM), referenceData, IDENTIFIER_TYPES);
+            List<String> relatedIdentifierTypes = Splitter.on(",").splitToList(translation.getParameter(RELATED_IDENTIFIER_TYPES_PARAM));
+            for (String relatedIdentifierType : relatedIdentifierTypes) {
+              if (currentIdentifierTypeReferenceData.getAsString(NAME).equalsIgnoreCase(relatedIdentifierType)) {
+                String actualIdentifierTypeName = translation.getParameter(TYPE_PARAM);
+                for (JsonObjectWrapper wrapper : referenceData.get(IDENTIFIER_TYPES).values()) {
+                  JSONObject referenceDataEntry = new JSONObject(wrapper == null ? Collections.emptyMap() : wrapper.getMap());
+                  if (referenceDataEntry.getAsString(NAME).equalsIgnoreCase(actualIdentifierTypeName)) {
+                    for (Map<String, String> identifierType : identifierTypes) {
+                      if (identifierType.get(IDENTIFIER_TYPE_ID_PARAM).equalsIgnoreCase(referenceDataEntry.getAsString(ID_PARAM))) {
+                        return identifierType.get(VALUE_PARAM);
+                      }
                     }
                   }
                 }
@@ -111,6 +113,12 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
             }
           }
         }
+      } catch (Exception exc) {
+        LOGGER.error("Related identifier type is not found by the given id: {}", identifierValue);
+        RecordInfo recordInfo = new RecordInfo(identifierValue, RecordType.INSTANCE);
+        recordInfo.setFieldValue(IDENTIFIER_TYPES);
+        recordInfo.setFieldValue(identifierValue);
+        throw new TranslationException(recordInfo, new Exception("Related identifier type is not found by the given id:  " + identifierValue));
       }
       return StringUtils.EMPTY;
     }
