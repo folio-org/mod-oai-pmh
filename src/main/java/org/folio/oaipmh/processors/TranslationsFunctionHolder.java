@@ -95,7 +95,8 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           List<Map<String, String>> identifierTypes = (List<Map<String, String>>) metadataIdentifierTypeIds;
           if (identifierTypes.size() > currentIndex) {
             Map<String, String> currentIdentifierType = identifierTypes.get(currentIndex);
-            JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierTypeId = currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM), referenceData, IDENTIFIER_TYPES);
+            currentIdentifierTypeId = currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM);
+            JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierTypeId, referenceData, IDENTIFIER_TYPES);
             List<String> relatedIdentifierTypes = Splitter.on(",").splitToList(translation.getParameter(RELATED_IDENTIFIER_TYPES_PARAM));
             for (String relatedIdentifierType : relatedIdentifierTypes) {
               if (currentIdentifierTypeReferenceData.getAsString(NAME).equalsIgnoreCase(relatedIdentifierType)) {
