@@ -124,6 +124,16 @@ public class InstancesServiceImpl implements InstancesService {
     return instancesDao.updateRequestMetadataByPathToError(requestId, tenantId, pathToErrorFile);
   }
 
+  @Override
+  public Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError) {
+    return instancesDao.updateRequestMetadataByLinkToError(requestId, tenantId, linkToError);
+  }
+
+  @Override
+  public Future<List<String>> getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(String tenantId, OffsetDateTime date) {
+    return instancesDao.getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(tenantId, date);
+  }
+
   @Autowired
   public InstancesDao setInstancesDao() {
     return instancesDao;

@@ -61,6 +61,7 @@ OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50`| Property is used in m
 OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20` | The idle timeout for requests to SRS.
 OAI-PMH | `repository.fetchingChunkSize` | `5000` | The chunk size in batch processing.
 OAI-PMH | `repository.recordsSource` | `Source record storage` | Indicates from where instance records are retrieved. Other possible values: Inventory, Source record storage and Inventory.
+OAI-PMH | `repository.cleanErrorsInterval` | `30` | The interval for cleaning up old error logs.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>
