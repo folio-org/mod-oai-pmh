@@ -88,13 +88,14 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
   SET_RELATED_IDENTIFIER() {
     @Override
     public String apply(String identifierValue, int currentIndex, Translation translation, ReferenceDataWrapper referenceData, Metadata metadata) {
+      String currentIdentifierTypeId = null;
       try {
         Object metadataIdentifierTypeIds = metadata.getData().get(IDENTIFIER_TYPE_METADATA).getData();
         if (metadataIdentifierTypeIds != null) {
           List<Map<String, String>> identifierTypes = (List<Map<String, String>>) metadataIdentifierTypeIds;
           if (identifierTypes.size() > currentIndex) {
             Map<String, String> currentIdentifierType = identifierTypes.get(currentIndex);
-            JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM), referenceData, IDENTIFIER_TYPES);
+            JSONObject currentIdentifierTypeReferenceData = convertToJson(currentIdentifierTypeId = currentIdentifierType.get(IDENTIFIER_TYPE_ID_PARAM), referenceData, IDENTIFIER_TYPES);
             List<String> relatedIdentifierTypes = Splitter.on(",").splitToList(translation.getParameter(RELATED_IDENTIFIER_TYPES_PARAM));
             for (String relatedIdentifierType : relatedIdentifierTypes) {
               if (currentIdentifierTypeReferenceData.getAsString(NAME).equalsIgnoreCase(relatedIdentifierType)) {
@@ -114,11 +115,11 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           }
         }
       } catch (Exception exc) {
-        LOGGER.error("Related identifier type is not found by the given id: {}", identifierValue);
+        LOGGER.error("Related identifier type is not found by the given id: {}", currentIdentifierTypeId);
         RecordInfo recordInfo = new RecordInfo(identifierValue, RecordType.INSTANCE);
         recordInfo.setFieldValue(IDENTIFIER_TYPES);
-        recordInfo.setFieldValue(identifierValue);
-        throw new TranslationException(recordInfo, new Exception("Related identifier type is not found by the given id:  " + identifierValue));
+        recordInfo.setFieldValue(currentIdentifierTypeId);
+        throw new TranslationException(recordInfo, new Exception("Related identifier type is not found by the given id:  " + currentIdentifierTypeId));
       }
       return StringUtils.EMPTY;
     }

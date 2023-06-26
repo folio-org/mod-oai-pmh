@@ -242,7 +242,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
       List<Rule> rules = getDefaultRulesFromFile();
       String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException -> {
-        translationException.printStackTrace();
         errorsService.log(request.getTenant(), request.getRequestId(), ((JsonObject) item).getString("id"), translationException.getMessage());
         logger.error("generateRecordsOnTheFly:: Exception occurred for requestId {} while mapping, exception: {}, inventory instance: {}", request.getRequestId(), translationException.getCause(), instance);
       }));
