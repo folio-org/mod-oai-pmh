@@ -30,6 +30,7 @@ import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_DELETE_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_GET_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_NOT_FOUND;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_SAVE_FAILED;
+import static org.folio.oaipmh.Constants.LOCAL_ERROR_STORAGE_DIR;
 import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 
 @Service
