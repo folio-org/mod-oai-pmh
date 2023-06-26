@@ -213,8 +213,7 @@ public final class RuleProcessor {
 
   private boolean wasExceptionAlreadyThrown(TranslationException transExc1) {
     return usedTranslationExceptions.stream()
-      .filter(transExc2 -> exceptionsEqual(transExc1, transExc2))
-      .findFirst().isPresent();
+      .anyMatch(transExc2 -> exceptionsEqual(transExc1, transExc2));
   }
 
   private boolean exceptionsEqual(TranslationException transExc1, TranslationException transExc2) {

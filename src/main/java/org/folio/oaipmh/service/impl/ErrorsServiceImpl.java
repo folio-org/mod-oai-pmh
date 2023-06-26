@@ -86,7 +86,7 @@ public class ErrorsServiceImpl implements ErrorsService {
     return errorsDao.getErrorsList(requestId, tenantId).onComplete(listErrorsHandler -> {
       if (listErrorsHandler.succeeded()) {
         var listErrors = listErrorsHandler.result();
-        logger.debug("Number of errors received from DB: {}", listErrors.size());
+        logger.info("Number of errors received from DB: {}", listErrors.size());
         if (!listErrors.isEmpty()) {
           var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
           try {
