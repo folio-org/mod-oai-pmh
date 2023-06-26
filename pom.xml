@@ -258,11 +258,11 @@
       <artifactId>vertx-jooq-classic-reactive</artifactId>
       <version>${vertx-jooq.classic-reactive.version}</version>
     </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>aws-sdk-java</artifactId>
-      <version>2.19.2</version>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>software.amazon.awssdk</groupId>-->
+<!--      <artifactId>aws-sdk-java</artifactId>-->
+<!--      <version>2.19.2</version>-->
+<!--    </dependency>-->
 
     <!-- logging see http://www.slf4j.org/legacy.html -->
     <!-- The RMB runtime defines usage of log4j2 for for vert.x logging interface -->
