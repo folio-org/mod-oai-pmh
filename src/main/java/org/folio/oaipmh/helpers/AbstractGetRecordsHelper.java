@@ -32,7 +32,7 @@ import org.folio.oaipmh.processors.TranslationsFunctionHolder;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.processor.RuleProcessor;
+import org.folio.oaipmh.processors.RuleProcessor;
 import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
