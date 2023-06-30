@@ -77,7 +77,6 @@ import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.SRS;
-import static org.folio.oaipmh.Constants.TENANT_ID;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
@@ -407,7 +406,6 @@ public abstract class AbstractHelper implements VerbHelper {
       extraParams.put(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM, String.valueOf(request.getInventoryOffsetShift()));
       extraParams.put(REQUEST_OLD_SRS_OFFSET_PARAM, String.valueOf(request.getOldSrsOffset()));
       extraParams.put(REQUEST_CURSOR_PARAM, String.valueOf(newCursor));
-      extraParams.put(TENANT_ID, request.getTenant());
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));

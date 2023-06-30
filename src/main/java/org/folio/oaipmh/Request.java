@@ -35,6 +35,7 @@ import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.TENANT_ID;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
@@ -393,6 +394,7 @@ public class Request {
     appendParam(builder, FROM_PARAM, getFrom());
     appendParam(builder, UNTIL_PARAM, getUntil());
     appendParam(builder, SET_PARAM, getSet());
+    appendParam(builder, TENANT_ID, getTenant());
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
