@@ -32,7 +32,7 @@ import org.folio.oaipmh.processors.TranslationsFunctionHolder;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.processor.RuleProcessor;
+import org.folio.oaipmh.processors.RuleProcessor;
 import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
@@ -193,9 +193,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       null,
       null,
       "MARC_BIB",
-      //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-      //2. use suppressed from discovery filtering only when deleted record support is enabled
-      deletedRecordsSupport ? null : suppressedRecordsSupport,
+      // NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+      suppressedRecordsSupport ? null : false,
       deletedRecordsSupport,
       null,
       updatedAfter,
@@ -530,7 +529,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
                                                     boolean ignoreOffset) {
-    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     final Date updatedAfter = request.getFrom() == null || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
@@ -545,9 +543,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var queryUntil = nonNull(updatedBefore) ?
       " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
-    var discoverySuppress = nonNull(deletedRecordsSupport ? null : suppressedRecordsSupport);
-    var querySuppressFromDiscovery = discoverySuppress ? " and discoverySuppress==" + suppressedRecordsSupport :
-      EMPTY;
+    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : " and discoverySuppress==false";
     String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + "&query=" +
       URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
