@@ -1,9 +1,6 @@
 package org.folio.oaipmh.querybuilder;
 
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
-import org.folio.querybuilder.QueryBuilder;
-import org.folio.querybuilder.QueryException;
-import org.folio.querybuilder.RecordsSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
@@ -39,7 +36,7 @@ class QueryBuilderTest {
         RecordsSource.FOLIO, false, false, 1);
     var expected =
       "SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
-      "    WHERE inst.source = 'test_tenant'\n" +
+      "    WHERE inst.source = 'FOLIO'\n" +
       "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
       "ORDER BY instance_id\n" +
       "LIMIT 1;";
@@ -54,7 +51,7 @@ class QueryBuilderTest {
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         " WHERE inst.instance_id > '%s'::uuid\n" +
-        "    AND inst.source = 'test_tenant'\n" +
+        "    AND inst.source = 'FOLIO'\n" +
         "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "ORDER BY instance_id\n" +
         "LIMIT 1;", lastInstanceId);
@@ -70,7 +67,7 @@ class QueryBuilderTest {
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "    AND inst.source = 'test_tenant'\n" +
+        "    AND inst.source = 'FOLIO'\n" +
         "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "    AND EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
@@ -115,7 +112,7 @@ class QueryBuilderTest {
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "    AND inst.source = 'test_tenant'\n" +
+        "    AND inst.source = 'FOLIO'\n" +
         "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "    AND EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +

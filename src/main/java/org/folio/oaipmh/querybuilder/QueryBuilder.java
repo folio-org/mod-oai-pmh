@@ -1,4 +1,4 @@
-package org.folio.querybuilder;
+package org.folio.oaipmh.querybuilder;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
@@ -111,7 +111,7 @@ public class QueryBuilder {
 
   private static String buildSource(String tenant, RecordsSource source, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return nonNull(source) ? format(SOURCE, whereOrAnd, tenant, source) : EMPTY;
+    return nonNull(source) ? format(SOURCE, whereOrAnd, source) : EMPTY;
   }
 
   private static String buildSuppressFromDiscovery(boolean discoverySuppress, boolean where) {
