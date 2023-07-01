@@ -1,4 +1,8 @@
-CREATE SCHEMA oaitest_mod_inventory_storage;
+CREATE ROLE oaiTest_mod_oai_pmh PASSWORD 'oaiTest' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+GRANT oaiTest_mod_oai_pmh TO CURRENT_USER;
+CREATE SCHEMA oaiTest_mod_inventory_storage AUTHORIZATION oaiTest_mod_oai_pmh;
+ALTER ROLE oaiTest_mod_oai_pmh SET search_path = "$user";
+SET search_path TO oaiTest_mod_oai_pmh;
 
 CREATE TABLE oaitest_mod_inventory_storage.instance (
     id uuid NOT NULL,
@@ -97,27 +101,7 @@ AS $BODY$
 SELECT $1::timestamptz
 $BODY$;
 
-CREATE TABLE oaitest_mod_oai_pmh.request_metadata_lb (
-    request_id uuid NOT NULL,
-    last_updated_date timestamp with time zone NOT NULL,
-    stream_ended boolean DEFAULT true NOT NULL,
-    returned_instances_counter integer DEFAULT 0,
-    skipped_instances_counter integer DEFAULT 0,
-    failed_instances_counter integer DEFAULT 0,
-    suppressed_instances_counter integer DEFAULT 0,
-    downloaded_and_saved_instances_counter integer DEFAULT 0,
-    failed_to_save_instances_counter integer DEFAULT 0
-);
-
 CREATE TABLE oaitest_mod_oai_pmh.rmb_internal (
     id integer NOT NULL,
     jsonb jsonb NOT NULL
 );
-
-CREATE ROLE oaitest_mod_oai_pmh WITH
-  LOGIN
-  NOSUPERUSER
-  INHERIT
-  NOCREATEDB
-  NOCREATEROLE
-  NOREPLICATION;
