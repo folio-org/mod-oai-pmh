@@ -396,8 +396,8 @@ public abstract class AbstractHelper implements VerbHelper {
     int newCursor = request.getCursor() + instances.size() - 1;
     request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
+    Map<String, String> extraParams = new HashMap<>();
     if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
-      Map<String, String> extraParams = new HashMap<>();
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM, String.valueOf(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));

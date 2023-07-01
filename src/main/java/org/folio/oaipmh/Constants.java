@@ -141,6 +141,7 @@ public final class Constants {
 
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
   public static final String INSTANCE_ID_FIELD_NAME = "instanceId";
+  public static final String SOURCE = "source";
   public static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   public static final String INVENTORY_STORAGE = "inventory-storage";
 
