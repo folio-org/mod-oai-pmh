@@ -23,24 +23,24 @@ CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_deleted_items AS
 SELECT * FROM ${myuniversity}_mod_inventory_storage.audit_item;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records AS
-SELECT instance_record.id                                                                                      instance_id,
-      marc_record.content                                                                                      marc_record,
-      instance_record.jsonb                                                                                    instance_record,
-      instance_record.jsonb ->> 'source'                                                                       source,
+SELECT instance_record.id                                                                                         instance_id,
+      marc_record.content                                                                                         marc_record,
+      instance_record.jsonb                                                                                       instance_record,
+      instance_record.jsonb ->> 'source'                                                                          source,
       ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') instance_updated_date,
-      COALESCE(record_lb.suppress_discovery, false)                                                            suppress_from_discovery_srs,
-      COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                   suppress_from_discovery_inventory,
-      false                                                                                                    deleted
+      COALESCE(record_lb.suppress_discovery, false)                                                               suppress_from_discovery_srs,
+      COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                      suppress_from_discovery_inventory,
+      false                                                                                                       deleted
       FROM ${myuniversity}_${mymodule}.get_instances_from_inventory instance_record
       LEFT JOIN ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
       ON record_lb.external_id = instance_record.id
       LEFT JOIN ${myuniversity}_${mymodule}.get_marc_records marc_record ON marc_record.id = record_lb.id;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
-SELECT instance_record.id                                                                                         instance_id,
+SELECT jsonb -> 'record' ->> 'id'                                                                                 instance_id,
       marc_record.content                                                                                         marc_record,
       instance_record.jsonb                                                                                       instance_record,
-      instance_record.jsonb ->> 'source'                                                                          source,
+      instance_record.jsonb -> 'record' ->> 'source'                                                                          source,
       ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') instance_updated_date,
       COALESCE(record_lb.suppress_discovery, false)                                                               suppress_from_discovery_srs,
       COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                      suppress_from_discovery_inventory,

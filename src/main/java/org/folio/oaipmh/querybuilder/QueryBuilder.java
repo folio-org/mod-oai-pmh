@@ -64,7 +64,7 @@ public class QueryBuilder {
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
   private static final String DATE_UNTIL = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
   private static final String DATE_FROM = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
-  private static final String DISCOVERY_SUPPRESS = "   %s coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n";
+  private static final String DISCOVERY_SUPPRESS = "   %s coalesce(inst.suppress_from_discovery_srs, false) = false AND coalesce(inst.suppress_from_discovery_inventory, false) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
 
@@ -73,7 +73,7 @@ public class QueryBuilder {
   private QueryBuilder() {}
 
   public static String build(String tenant, UUID lastInstanceId, Date from, Date until, RecordsSource source,
-                             boolean discoverySuppress, boolean deletedRecords, int limit) throws QueryException {
+                             boolean skipSuppressedFromDiscovery, boolean deletedRecords, int limit) throws QueryException {
     if (isNull(tenant)) {
       var errorMsg = "tenant parameter cannot be null";
       logger.error(errorMsg);
@@ -90,8 +90,8 @@ public class QueryBuilder {
       buildDateFrom(tenant, from, isNull(lastInstanceId)),
       buildDateUntil(tenant, until, isNull(lastInstanceId) && isNull(from)),
       buildSource(tenant, source, isNull(lastInstanceId) && isNull(from) && isNull(until)),
-      buildSuppressFromDiscovery(discoverySuppress, isNull(lastInstanceId) && isNull(from) && isNull(until) && isNull(source)),
-      buildDeleted(tenant, from, until, isNull(lastInstanceId) && isNull(from) && isNull(until) && isNull(source) && !discoverySuppress),
+      buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId) && isNull(from) && isNull(until) && isNull(source)),
+      buildDeleted(tenant, from, until, isNull(lastInstanceId) && isNull(from) && isNull(until) && isNull(source) && !skipSuppressedFromDiscovery),
       limit);
   }
 
@@ -114,9 +114,9 @@ public class QueryBuilder {
     return nonNull(source) ? format(SOURCE, whereOrAnd, source) : EMPTY;
   }
 
-  private static String buildSuppressFromDiscovery(boolean discoverySuppress, boolean where) {
+  private static String buildSuppressFromDiscovery(boolean skipSuppressedFromDiscovery, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
-    return !discoverySuppress ? format(DISCOVERY_SUPPRESS, whereOrAnd) : EMPTY;
+    return skipSuppressedFromDiscovery ? format(DISCOVERY_SUPPRESS, whereOrAnd) : EMPTY;
   }
 
   private static String buildDeleted(String tenant, Date from, Date until, boolean where) {
