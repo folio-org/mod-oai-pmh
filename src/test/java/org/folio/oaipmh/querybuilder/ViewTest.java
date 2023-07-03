@@ -32,6 +32,12 @@ public class ViewTest {
   private static final Path EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_folio_non_deleted_instance_ids.csv");
   private static final Path EXPECTED_MARC_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_deleted_instance_ids.csv");
   private static final Path EXPECTED_MARC_NON_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_non_deleted_instance_ids.csv");
+  private static final Path EXPECTED_ALL_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_all_non_discovery_suppressed_instance_ids.csv");
+  private static final Path EXPECTED_ALL_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_all_discovery_suppressed_instance_ids.csv");
+  private static final Path EXPECTED_FOLIO_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_folio_discovery_suppressed_instance_ids.csv");
+  private static final Path EXPECTED_MARC_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_discovery_suppressed_instance_ids.csv");
+  private static final Path EXPECTED_MARC_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_non_discovery_suppressed_instance_ids.csv");
+  private static final Path EXPECTED_FOLIO_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_folio_non_discovery_suppressed_instance_ids.csv");
 
   private static final Network network = Network.newNetwork();
 
@@ -103,6 +109,101 @@ public class ViewTest {
     LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnAllDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, null,
+      false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_ALL_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnAllNonDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, null,
+      true, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_ALL_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnFolioDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.FOLIO,
+      false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_FOLIO_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnFolioNonDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.FOLIO,
+      true, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_FOLIO_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnMarcDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
+      false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_MARC_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnMarcNonDiscoverySuppressedInstances() {
+    var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
+      true, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_MARC_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnAllFolioInstancesIfLastUpdate_2023_04_16() {
+    var query = QueryBuilder.build("oaitest", null, "2023-04-16T00:00:00Z", "2023-04-16T23:59:59Z",
+      null, false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnAllMarcInstancesIfLastUpdate_2023_06_30() {
+    var query = QueryBuilder.build("oaitest", null, "2023-06-30T00:00:00.00Z", "2023-06-30T23:59:59Z",
+      null, false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals(Files.readString(EXPECTED_MARC_NON_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnOnlyOneFolioInstanceWhoseItemHas_2023_04_18_LastUpdate() {
+    var query = QueryBuilder.build("oaitest", null, "2023-04-18T00:00:00.00Z", "2023-04-18T23:59:59Z",
+      null, false, false, 200);
+    LOGGER.info("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals("a89eccf0-57a6-495e-898d-32b9b2210f2f", actualResponse.trim());
+    // If using source=MARC, should return nothing cause a89eccf0-57a6-495e-898d-32b9b2210f2f is FOLIO instance.
+    query = QueryBuilder.build("oaitest", null, "2023-04-18T00:00:00.00Z", "2023-04-18T23:59:59Z",
+      RecordsSource.MARC, false, false, 200);
+    actualResponse = doQuery(query, "instance_id");
+    assertEquals("", actualResponse.trim());
   }
 
   private String doQuery(String query, String... columns) throws SQLException {
