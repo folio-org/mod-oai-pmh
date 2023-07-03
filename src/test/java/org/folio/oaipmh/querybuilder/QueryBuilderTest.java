@@ -37,7 +37,6 @@ class QueryBuilderTest {
     var expected =
       "SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
       "    WHERE inst.source = 'FOLIO'\n" +
-      "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
       "ORDER BY instance_id\n" +
       "LIMIT 1;";
     assertEquals(expected, query);
@@ -52,7 +51,6 @@ class QueryBuilderTest {
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         " WHERE inst.instance_id > '%s'::uuid\n" +
         "    AND inst.source = 'FOLIO'\n" +
-        "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "ORDER BY instance_id\n" +
         "LIMIT 1;", lastInstanceId);
     assertEquals(expected, query);
@@ -68,7 +66,6 @@ class QueryBuilderTest {
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
         "    AND inst.source = 'FOLIO'\n" +
-        "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "    AND EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
         "                       LEFT JOIN test_tenant_mod_oai_pmh.get_items item_record\n" +
@@ -113,7 +110,6 @@ class QueryBuilderTest {
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
         "    AND inst.source = 'FOLIO'\n" +
-        "    AND coalesce(inst.suppress_from_discovery_srs, inst.suppress_from_discovery_inventory) = false\n" +
         "    AND EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
         "                       LEFT JOIN test_tenant_mod_oai_pmh.get_items item_record\n" +
