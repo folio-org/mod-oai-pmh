@@ -37,7 +37,7 @@ SELECT instance_record.id                                                       
       LEFT JOIN ${myuniversity}_${mymodule}.get_marc_records marc_record ON marc_record.id = record_lb.id;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
-SELECT jsonb -> 'record' ->> 'id'                                                                                 instance_id,
+SELECT (jsonb -> 'record' ->> 'id')::uuid                                                                                 instance_id,
       marc_record.content                                                                                         marc_record,
       instance_record.jsonb                                                                                       instance_record,
       instance_record.jsonb -> 'record' ->> 'source'                                                                          source,

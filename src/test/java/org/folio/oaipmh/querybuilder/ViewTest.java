@@ -18,11 +18,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Testcontainers
-public class ViewTest {
+class ViewTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ViewTest.class);
 
@@ -116,7 +117,7 @@ public class ViewTest {
   void shouldReturnAllDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, null,
       false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_ALL_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -126,7 +127,7 @@ public class ViewTest {
   void shouldReturnAllNonDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, null,
       true, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_ALL_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -136,7 +137,7 @@ public class ViewTest {
   void shouldReturnFolioDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.FOLIO,
       false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_FOLIO_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -146,7 +147,7 @@ public class ViewTest {
   void shouldReturnFolioNonDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.FOLIO,
       true, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_FOLIO_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -156,7 +157,7 @@ public class ViewTest {
   void shouldReturnMarcDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
       false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -166,7 +167,7 @@ public class ViewTest {
   void shouldReturnMarcNonDiscoverySuppressedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
       true, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -176,7 +177,7 @@ public class ViewTest {
   void shouldReturnAllFolioInstancesIfLastUpdate_2023_04_16() {
     var query = QueryBuilder.build("oaitest", null, "2023-04-16T00:00:00Z", "2023-04-16T23:59:59Z",
       null, false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -186,7 +187,7 @@ public class ViewTest {
   void shouldReturnAllMarcInstancesIfLastUpdate_2023_06_30() {
     var query = QueryBuilder.build("oaitest", null, "2023-06-30T00:00:00.00Z", "2023-06-30T23:59:59Z",
       null, false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_NON_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
@@ -196,7 +197,7 @@ public class ViewTest {
   void shouldReturnOnlyOneFolioInstanceWhoseItemHas_2023_04_18_LastUpdate() {
     var query = QueryBuilder.build("oaitest", null, "2023-04-18T00:00:00.00Z", "2023-04-18T23:59:59Z",
       null, false, false, 200);
-    LOGGER.info("\n" + query);
+    LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals("a89eccf0-57a6-495e-898d-32b9b2210f2f", actualResponse.trim());
     // If using source=MARC, should return nothing cause a89eccf0-57a6-495e-898d-32b9b2210f2f is FOLIO instance.
@@ -204,6 +205,72 @@ public class ViewTest {
       RecordsSource.MARC, false, false, 200);
     actualResponse = doQuery(query, "instance_id");
     assertEquals("", actualResponse.trim());
+    // If using source=FOLIO, should return instance because it has FOLIO source.
+    query = QueryBuilder.build("oaitest", null, "2023-04-18T00:00:00.00Z", "2023-04-18T23:59:59Z",
+      RecordsSource.FOLIO, false, false, 200);
+    actualResponse = doQuery(query, "instance_id");
+    assertEquals("a89eccf0-57a6-495e-898d-32b9b2210f2f", actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void shouldReturnOnlyOneFolioInstanceWhoseHoldingHas_2023_04_20_LastUpdate() {
+    var query = QueryBuilder.build("oaitest", null, "2023-04-20T00:00:00.00Z", "2023-04-20T23:59:59Z",
+      null, false, false, 200);
+    LOGGER.debug("\n" + query);
+    var actualResponse = doQuery(query, "instance_id");
+    assertEquals("bbd4a5e1-c9f3-44b9-bfdf-d184e04f0ba0", actualResponse.trim());
+    // If using source=MARC, should return nothing because bbd4a5e1-c9f3-44b9-bfdf-d184e04f0ba0 is FOLIO instance.
+    query = QueryBuilder.build("oaitest", null, "2023-04-20T00:00:00.00Z", "2023-04-20T23:59:59Z",
+      RecordsSource.MARC, false, false, 200);
+    actualResponse = doQuery(query, "instance_id");
+    assertEquals("", actualResponse.trim());
+    // If using source=FOLIO, should return instance because it has FOLIO source.
+    query = QueryBuilder.build("oaitest", null, "2023-04-20T00:00:00.00Z", "2023-04-20T23:59:59Z",
+      RecordsSource.FOLIO, false, false, 200);
+    actualResponse = doQuery(query, "instance_id");
+    assertEquals("bbd4a5e1-c9f3-44b9-bfdf-d184e04f0ba0", actualResponse.trim());
+  }
+
+  @SneakyThrows
+  @Test
+  void emulateFullHarvest() {
+    final int max_records_per_response = 10;
+    UUID lastInstanceId = null;
+    String actualResponse = "";
+    boolean fromDeleted = false;
+    int limit = max_records_per_response;
+    String lastId = "";
+    int cursor = 0;
+    do {
+      cursor += limit;
+      String query = QueryBuilder.build("oaitest", lastInstanceId, null, null, null,
+        false, fromDeleted, limit);
+      LOGGER.debug("query:\n{}", query);
+      actualResponse = doQuery(query, "instance_id").trim();
+      LOGGER.debug("actualResponse:\n{}", actualResponse);
+      var ids = actualResponse.split("\n");
+      var numOfRecords = ids.length;
+      if (cursor == 100) {
+        assertEquals(9, numOfRecords); // when non-deleted exhausted (< max_records_per_response)
+      } else if (cursor == 110) {
+        assertEquals(1, numOfRecords); // first 1 deleted to complete 9 + 1
+      } else if (cursor == 111) {
+        assertEquals(2, numOfRecords); // last 2 deleted
+      }
+      limit = max_records_per_response;
+      lastId = ids[ids.length - 1];
+      if (!lastId.isEmpty()) {
+        lastInstanceId = UUID.fromString(lastId);
+        if (numOfRecords < limit && !fromDeleted) {
+          fromDeleted = true;
+          lastInstanceId = null;
+          limit = max_records_per_response - numOfRecords;
+        }
+      }
+      LOGGER.info("numOfRecords: {}, lastInstanceId: {}, cursor: {}", numOfRecords, lastInstanceId, cursor);
+    } while (!lastId.isEmpty());
+    assertEquals(121, cursor);
   }
 
   private String doQuery(String query, String... columns) throws SQLException {

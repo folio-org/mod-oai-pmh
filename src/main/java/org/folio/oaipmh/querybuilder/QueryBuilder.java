@@ -86,7 +86,7 @@ public class QueryBuilder {
       !deletedRecords ? BASE_QUERY_NON_DELETED_TEMPLATE : BASE_QUERY_DELETED_TEMPLATE,
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
-      buildSource(tenant, source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
+      buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
       buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source)),
       buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from)),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from) && isNull(until) ),
@@ -111,7 +111,7 @@ public class QueryBuilder {
     return nonNull(until) ? format(DATE_UNTIL, whereOrAnd, tenant, until) : EMPTY;
   }
 
-  private static String buildSource(String tenant, RecordsSource source, boolean where) {
+  private static String buildSource(RecordsSource source, boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
     return nonNull(source) ? format(SOURCE, whereOrAnd, source) : EMPTY;
   }
