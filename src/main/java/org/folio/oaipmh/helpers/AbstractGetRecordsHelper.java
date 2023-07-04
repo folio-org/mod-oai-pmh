@@ -246,7 +246,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .map(map -> ((JsonObject) map))
         .reduce((e1, e2) -> {
           var result = e1.mergeIn(e2);
-          return result.put("totalRecords", result.getJsonArray("sourceRecords").size());
+          try {
+            return result.put("totalRecords", Integer.parseInt(result.getString("totalRecords")));
+          } catch (Exception exc) {
+            logger.error("totalRecords is invalid: {}", exc.getMessage());
+            return result.put("totalRecords", result.getJsonArray("sourceRecords").size());
+          }
         }).get()
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
