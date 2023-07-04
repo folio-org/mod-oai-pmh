@@ -53,7 +53,8 @@ class ModTenantAPIIT {
     .withExposedPorts(5432)
     .withUsername("username")
     .withPassword("password")
-    .withDatabaseName("postgres");
+    .withDatabaseName("postgres")
+    .withInitScript("sql/init_database.sql");
 
   @Container
   private static final MockServerContainer okapi =
