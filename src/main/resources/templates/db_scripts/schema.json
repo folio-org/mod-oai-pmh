@@ -1,1 +1,9 @@
-{}
+{
+  "scripts": [
+    {
+      "run": "after",
+      "snippetPath": "create_views.sql",
+      "fromModuleVersion": "mod-oai-pmh-3.12.0"
+    }
+  ]
+}
