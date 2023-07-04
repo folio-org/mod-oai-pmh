@@ -69,7 +69,8 @@ public class ModTenantAPI extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        loadConfigurationData(headers).onComplete(asyncResult -> {
+        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+        loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
           if (asyncResult.succeeded()) {
             handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
           } else {
@@ -91,9 +92,7 @@ public class ModTenantAPI extends TenantAPI {
     });
   }
 
-  private Future<String> loadConfigurationData(Map<String, String> headers) {
-    List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-
+  public Future<String> loadConfigurationData(Map<String, String> headers, List<String> configsSet) {
     String okapiUrl = headers.get(OKAPI_URL);
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);

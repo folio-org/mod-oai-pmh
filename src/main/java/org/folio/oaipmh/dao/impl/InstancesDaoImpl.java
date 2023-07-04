@@ -394,6 +394,42 @@ public class InstancesDaoImpl implements InstancesDao {
       }));
   }
 
+  @Override
+  public Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError) {
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+      .executeAny(dslContext ->
+        dslContext.update(REQUEST_METADATA_LB)
+          .set(REQUEST_METADATA_LB.LINK_TO_ERROR_FILE, linkToError)
+          .where(REQUEST_METADATA_LB.REQUEST_ID.eq(UUID.fromString(requestId)))
+          .returning())
+      .map(this::toOptionalRequestMetadata)
+      .map(optional -> {
+        if (optional.isPresent()) {
+          return optional.get();
+        }
+        throw new NotFoundException(String.format(REQUEST_METADATA_WITH_ID_DOES_NOT_EXIST, requestId));
+      }));
+  }
+
+  @Override
+  public Future<List<String>> getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(String tenantId, OffsetDateTime date) {
+    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+      .query(dslContext -> dslContext
+        .selectFrom(REQUEST_METADATA_LB)
+        .where(REQUEST_METADATA_LB.PATH_TO_ERROR_FILE_IN_S3.isNotNull())
+        .and(REQUEST_METADATA_LB.PATH_TO_ERROR_FILE_IN_S3.ne(""))))
+      .map(queryResult -> queryResultToRequestMetadataListWithProperStartedDate(queryResult, date));
+  }
+
+  private List<String> queryResultToRequestMetadataListWithProperStartedDate(QueryResult queryResult, OffsetDateTime date) {
+    return queryResult.stream()
+      .map(QueryResult::unwrap)
+      .map(Row.class::cast)
+      .filter(row -> row.getOffsetDateTime(REQUEST_METADATA_LB.STARTED_DATE.getName()).isBefore(date))
+    .map(row -> row.getUUID(REQUEST_METADATA_LB.REQUEST_ID.getName()).toString())
+      .collect(toList());
+  }
+
   private Integer queryResultToInt(QueryResult queryResult) {
     return queryResult.get(0, Integer.class);
   }

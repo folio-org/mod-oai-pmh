@@ -79,4 +79,7 @@ public interface InstancesDao {
 
   Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile);
 
+  Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError);
+
+  Future<List<String>> getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(String tenantId, OffsetDateTime date);
 }

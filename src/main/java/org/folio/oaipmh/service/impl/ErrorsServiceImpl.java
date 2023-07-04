@@ -30,6 +30,7 @@ import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_DELETE_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_GET_FAILED;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_NOT_FOUND;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_SAVE_FAILED;
+import static org.folio.oaipmh.Constants.LOCAL_ERROR_STORAGE_DIR;
 import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 
 @Service
@@ -85,7 +86,7 @@ public class ErrorsServiceImpl implements ErrorsService {
     return errorsDao.getErrorsList(requestId, tenantId).onComplete(listErrorsHandler -> {
       if (listErrorsHandler.succeeded()) {
         var listErrors = listErrorsHandler.result();
-        logger.debug("Number of errors received from DB: {}", listErrors.size());
+        logger.info("Number of errors received from DB: {}", listErrors.size());
         if (!listErrors.isEmpty()) {
           var localErrorDirPath = Path.of(LOCAL_ERROR_STORAGE_DIR);
           try {

@@ -39,6 +39,7 @@ public final class Constants {
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
   public static final String REPOSITORY_FETCHING_CHUNK_SIZE = "repository.fetchingChunkSize";
   public static final String REPOSITORY_RECORDS_SOURCE = "repository.recordsSource";
+  public static final String REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL = "repository.cleanErrorsInterval";
 
   public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
   public static final String INVENTORY = "Inventory";
@@ -102,6 +103,7 @@ public final class Constants {
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
   public static final String EXPIRED_RESUMPTION_TOKEN = "The value of the resumptionToken argument is expired";
+  public static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
   public static final String LOCAL_ERROR_FILE_SAVE_FAILED = "Cannot save error to the local file: {}";
   public static final String LOCAL_ERROR_FILE_GET_FAILED = "Cannot get error local file: {}";
   public static final String LOCAL_ERROR_FILE_NOT_FOUND = "No errors found by request id: {}";
