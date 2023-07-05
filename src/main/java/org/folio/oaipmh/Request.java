@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;

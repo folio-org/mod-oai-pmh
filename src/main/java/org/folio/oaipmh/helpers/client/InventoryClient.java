@@ -118,12 +118,7 @@ public class InventoryClient {
   private Map<String, JsonObject> get(Request request, String endpoint, String key) {
     Map<String, JsonObject> map = new HashMap<>();
     endpoint = format(ENDPOINT_PATTERN, request.getOkapiUrl(), endpoint, REFERENCE_DATA_LIMIT);
-    HttpGet httpGet = new HttpGet();
-    httpGet.setHeader(OKAPI_HEADER_TOKEN, request.getOkapiToken());
-    httpGet.setHeader(OKAPI_HEADER_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
-    httpGet.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-    httpGet.setHeader((HttpHeaders.ACCEPT), MediaType.APPLICATION_JSON);
-    httpGet.setURI(URI.create(endpoint));
+    HttpGet httpGet = httpGet(request, endpoint);
     logger.info("Calling GET {}", endpoint);
     try (CloseableHttpResponse response = HttpClients.createDefault().execute(httpGet)) {
       var jsonObject = getResponseEntity(response);
@@ -135,7 +130,17 @@ public class InventoryClient {
     return map;
   }
 
-  private static JsonObject getResponseEntity(CloseableHttpResponse response) throws IOException {
+  protected HttpGet httpGet(Request request, String endpoint) {
+    HttpGet httpGet = new HttpGet();
+    httpGet.setHeader(OKAPI_HEADER_TOKEN, request.getOkapiToken());
+    httpGet.setHeader(OKAPI_HEADER_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
+    httpGet.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    httpGet.setHeader((HttpHeaders.ACCEPT), MediaType.APPLICATION_JSON);
+    httpGet.setURI(URI.create(endpoint));
+    return httpGet;
+  }
+
+  protected static JsonObject getResponseEntity(CloseableHttpResponse response) throws IOException {
     HttpEntity entity = response.getEntity();
     if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK && entity != null) {
       try {

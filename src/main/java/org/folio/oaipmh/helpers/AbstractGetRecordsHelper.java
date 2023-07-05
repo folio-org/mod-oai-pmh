@@ -95,8 +95,10 @@ import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SOURCE_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
@@ -190,7 +192,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<JsonObject> local = Promise.promise();
     Promise<JsonObject> central = Promise.promise();
 
-    var centralTenantId = consortiaService.getCentralTenantId();
+    var centralTenantId = consortiaService.getCentralTenantId(request);
 
     if (StringUtils.isNotEmpty(centralTenantId)) {
       SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId)).getSourceStorageSourceRecords(
@@ -243,14 +245,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     CompositeFuture.join(local.future(), central.future())
       .map(CompositeFuture::list)
       .map(results -> results.stream()
-        .map(map -> ((JsonObject) map))
+        .map(JsonObject.class::cast)
         .reduce((e1, e2) -> {
           var result = e1.mergeIn(e2);
           try {
-            return result.put("totalRecords", Integer.parseInt(result.getString("totalRecords")));
+            return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
             logger.error("totalRecords is invalid: {}", exc.getMessage());
-            return result.put("totalRecords", result.getJsonArray("sourceRecords").size());
+            return result.put(TOTAL_RECORDS_PARAM, result.getJsonArray(TOTAL_RECORDS_PARAM).size());
           }
         }).get()
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
@@ -372,7 +374,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         } else {
           var srsRecords = asyncResult.result();
           if (withInventory) {
-            var numOfReturnedSrsRecords = srsRecords.getJsonArray("sourceRecords").size();
+            var numOfReturnedSrsRecords = srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).size();
             if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
               request.setOldSrsOffset(request.getOffset());
               request.setOffset(0);
@@ -400,7 +402,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
       // or verb is ListRecords (see MODOAIPMH-138).
-      if ((srsRecords.getJsonArray("sourceRecords").isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
+      if ((srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
       && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
         generateRecordsOnTheFly(request, inventoryRecords);
       }
