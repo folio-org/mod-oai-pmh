@@ -27,7 +27,7 @@ public class ConsortiaClient extends InventoryClient {
     try (CloseableHttpResponse response = HttpClients.createDefault().execute(httpGet)) {
       var jsonObject = getResponseEntity(response);
       var jsonArray = jsonObject.getJsonArray("userTenants");
-      jsonArray.stream().map(item -> (JsonObject)item)
+      jsonArray.stream().map(JsonObject.class::cast)
         .forEach(itemJson -> result.add(itemJson.getString("centralTenantId")));
     } catch (Exception exception) {
       logger.error("Exception while calling {}", httpGet.getURI(), exception);

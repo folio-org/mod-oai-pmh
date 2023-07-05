@@ -24,7 +24,7 @@ public class ConsortiaServiceImpl implements ConsortiaService {
     } else if (centralTenantIds.size() > 1) {
       return request.getTenant();
     }
-    logger.error("No central tenant found");
-    return null;
+    logger.info("No central tenant found");
+    return "";
   }
 }
