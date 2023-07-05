@@ -19,10 +19,8 @@ public class ConsortiaServiceImpl implements ConsortiaService {
   @Override
   public String getCentralTenantId(Request request) {
     var centralTenantIds = consortiaClient.getUserTenants(request);
-    if (centralTenantIds.size() == 1) {
+    if (!centralTenantIds.isEmpty()) {
       return centralTenantIds.get(0);
-    } else if (centralTenantIds.size() > 1) {
-      return request.getTenant();
     }
     logger.info("No central tenant found");
     return "";

@@ -17,11 +17,11 @@ public class ConsortiaClient extends InventoryClient {
 
   private static final Logger logger = LogManager.getLogger(ConsortiaClient.class);
 
-  private static final String CENTRAL_TENANT_ID_ENDPOINT = "/user-tenants";
+  private static final String USER_TENANTS_ENDPOINT = "/user-tenants";
 
   public List<String> getUserTenants(Request request) {
     List<String> result = new ArrayList<>();
-    var endpoint = request.getOkapiUrl() + CENTRAL_TENANT_ID_ENDPOINT;
+    var endpoint = request.getOkapiUrl() + USER_TENANTS_ENDPOINT;
     HttpGet httpGet = httpGet(request, endpoint);
     logger.info("Calling GET {}", endpoint);
     try (CloseableHttpResponse response = HttpClients.createDefault().execute(httpGet)) {
