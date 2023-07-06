@@ -25,6 +25,7 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SOURCE;
 import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.STATUS_CODE;
 import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
@@ -85,6 +86,7 @@ import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.records.RecordMetadataManager;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.service.ConsortiaService;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
@@ -138,7 +140,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private InstancesService instancesService;
 
-  private SourceStorageSourceRecordsClientWrapper srsClient;
+  private ConsortiaService consortiaService;
 
   public static GetListRecordsRequestHelper getInstance() {
     return INSTANCE;
@@ -247,6 +249,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
       getNextInstances(request, batchSize, requestId, firstBatch).future()
         .onComplete(fut -> {
+          ////
           if (fut.failed()) {
             logger.error("processBatch:: For requestId {} get instances failed: {}", request.getRequestId(), fut.cause()
               .getMessage());
@@ -279,7 +282,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
           String nextInstanceId = instances.size() <= batchSize ? null : instances.get(batchSize).getString(INSTANCE_ID_FIELD_NAME);
           List<JsonObject> instancesWithoutLast = nextInstanceId != null ? instances.subList(0, batchSize) : instances;
-          srsClient = createAndSetupSrsClient(request);
 
           int retryAttempts = Integer
             .parseInt(getProperty(request.getRequestId(), REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS));
@@ -325,11 +327,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     } else {
       logger.error("Complete list size cannot be retrieved: {}", handler.cause().getMessage(), handler.cause());
     }
-  }
-
-  private SourceStorageSourceRecordsClientWrapper createAndSetupSrsClient(Request request) {
-    return new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
-        WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
   }
 
   private void downloadInstances(Request request, Promise<Response> oaiPmhResponsePromise, Promise<Object> downloadInstancesPromise,
@@ -769,13 +766,31 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private Future<Map<String, JsonObject>> requestSRSByIdentifiers(Vertx vertx, List<JsonObject> batch, boolean deletedRecordSupport,
                                                                   int retryAttempts, Request request) {
-    final List<String> listOfIds = extractListOfIdsForSRSRequest(batch);
-    logger.debug("Request to SRS, list id size: {}.", listOfIds.size());
+    final List<String> sharedInstancesIds = extractIdsForSrsRequest(batch, true);
+    final List<String> localInstancesIds = extractIdsForSrsRequest(batch, false);
+    logger.debug("Request to SRS, shared list id size: {}, local list size: {}", sharedInstancesIds.size(), localInstancesIds.size());
     AtomicInteger attemptsCount = new AtomicInteger(retryAttempts);
-    Promise<Map<String, JsonObject>> promise = Promise.promise();
-    doPostRequestToSrs(vertx, deletedRecordSupport, listOfIds, attemptsCount, retryAttempts, promise,
-      request);
-    return promise.future();
+
+    Promise<Map<String, JsonObject>> shared = Promise.promise();
+    Promise<Map<String, JsonObject>> local = Promise.promise();
+
+    var centralTenantId = consortiaService.getCentralTenantId(request);
+
+    if (StringUtils.isNotEmpty(centralTenantId)) {
+      doPostRequestToSrs(vertx, deletedRecordSupport, sharedInstancesIds, attemptsCount, retryAttempts, shared, new Request(request, centralTenantId));
+    } else {
+      shared.complete(Maps.newHashMap());
+    }
+
+    doPostRequestToSrs(vertx, deletedRecordSupport, localInstancesIds, attemptsCount, retryAttempts, local, request);
+
+    return CompositeFuture.join(shared.future(), local.future())
+      .map(CompositeFuture::list)
+      .map(results -> results.stream()
+        .map(map -> (Map<String, JsonObject>) map)
+        .flatMap(map -> map.entrySet().stream())
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+      );
   }
 
   private void doPostRequestToSrs(Vertx vertx, boolean deletedRecordSupport,
@@ -784,7 +799,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     if (!recordsSource.equals(INVENTORY)) {
       try {
-        srsClient.postSourceStorageSourceRecords("INSTANCE", null, deletedRecordSupport, listOfIds, asyncResult -> {
+        SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).postSourceStorageSourceRecords("INSTANCE", null, deletedRecordSupport, listOfIds, asyncResult -> {
           Map<String, String> retrySRSRequestParams = new HashMap<>();
           if (asyncResult.succeeded()) {
             HttpResponse<Buffer> srsResponse = asyncResult.result();
@@ -917,10 +932,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     promise.complete(result);
   }
 
-  private List<String> extractListOfIdsForSRSRequest(List<JsonObject> batch) {
-
+  private List<String> extractIdsForSrsRequest(List<JsonObject> batch, boolean forSharedRecords) {
     return batch.stream()
       .filter(Objects::nonNull)
+      .filter(instance -> forSharedRecords == "MARC_SHARED".equals(instance.getString(SOURCE)))
       .map(instance -> instance.getString(INSTANCE_ID_FIELD_NAME))
       .collect(toList());
   }
@@ -933,6 +948,12 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   @Autowired
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
+  }
+
+  @Override
+  @Autowired
+  public void setConsortiaService(ConsortiaService consortiaService) {
+    this.consortiaService = consortiaService;
   }
 
 }

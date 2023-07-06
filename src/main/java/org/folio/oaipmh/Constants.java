@@ -67,6 +67,7 @@ public final class Constants {
   public static final String UNTIL_PARAM = "until";
   public static final String OFFSET_PARAM = "offset";
   public static final String TOTAL_RECORDS_PARAM = "totalRecords";
+  public static final String SOURCE_RECORDS_PARAM = "sourceRecords";
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
   public static final String REQUEST_ID_PARAM = "requestId";
@@ -144,6 +145,7 @@ public final class Constants {
 
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
   public static final String INSTANCE_ID_FIELD_NAME = "instanceId";
+  public static final String SOURCE = "source";
   public static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   public static final String INVENTORY_STORAGE = "inventory-storage";
 

@@ -3,25 +3,35 @@ package org.folio.oaipmh.service;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SRS_RESPONSE;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 
 public class SourceStorageSourceRecordsClientWrapper {
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
+  private static final Map<String, SourceStorageSourceRecordsClientWrapper> clients = new HashMap<>();
 
   private final SourceStorageSourceRecordsClient client;
 
-  public SourceStorageSourceRecordsClientWrapper(String okapiUrl, String tenantId, String token, WebClient webClient) {
-    client = new SourceStorageSourceRecordsClient(okapiUrl, tenantId, token, webClient);
+  private SourceStorageSourceRecordsClientWrapper(Request request) {
+    client = new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
+      WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
+  }
+
+  public static SourceStorageSourceRecordsClientWrapper getSourceStorageSourceRecordsClient(Request request)
+  {
+    return clients.computeIfAbsent(request.getTenant(), tenantId -> new SourceStorageSourceRecordsClientWrapper(request));
   }
 
   public void postSourceStorageSourceRecords(String idType, String recordType, Boolean deleted, List<String> list,

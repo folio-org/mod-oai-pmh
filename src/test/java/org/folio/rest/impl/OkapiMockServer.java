@@ -180,6 +180,7 @@ public class OkapiMockServer {
 
   private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
+  private static final String USER_TENANTS_URI = "/user-tenants";
   private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
   private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
 
@@ -204,6 +205,7 @@ public class OkapiMockServer {
   private static final String LOAN_TYPES_JSON_PATH = "/filtering-conditions/loanTypes.json";
   private static final String MODES_OF_ISSUANCE_JSON_PATH = "/filtering-conditions/modesOfIssuance.json";
   private static final String NATURE_OF_CONTENT_TERMS_JSON_PATH = "/filtering-conditions/natureOfContentTerms.json";
+  private static final String USER_TENANTS_JSON_PATH = "/user-tenants/user-tenants.json";
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
   private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
@@ -348,6 +350,9 @@ public class OkapiMockServer {
       .handler(this::handleStreamingInventoryItemsAndHoldingsResponse);
     router.get(STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT)
       .handler(this::handleStreamingInventoryInstanceIdsResponse);
+
+    router.get(USER_TENANTS_URI)
+      .handler(this::handleUserTenants);
     return router;
   }
 
@@ -723,6 +728,10 @@ public class OkapiMockServer {
       failureResponse(ctx, 400, "there is no mocked handler for request uri '{" + uri + "}'");
     }
 
+  }
+
+  private void handleUserTenants(RoutingContext ctx) {
+    successResponse(ctx, getJsonObjectFromFileAsString(USER_TENANTS_JSON_PATH));
   }
 
   private void successResponse(RoutingContext ctx, String body) {

@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers;
 
 import com.google.common.io.Resources;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -16,6 +17,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
@@ -29,6 +31,7 @@ import org.folio.oaipmh.helpers.referencedata.ReferenceData;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.TranslationsFunctionHolder;
+import org.folio.oaipmh.service.ConsortiaService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
 import org.folio.okapi.common.GenericCompositeFuture;
@@ -92,8 +95,10 @@ import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SOURCE_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
@@ -135,6 +140,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private ReferenceDataProvider referenceDataProvider;
 
+  private ConsortiaService consortiaService;
+
   protected AbstractGetRecordsHelper() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
@@ -171,8 +178,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise, boolean withInventory) {
-    final var srsClient = new SourceStorageSourceRecordsClientWrapper(request.getOkapiUrl(),
-      request.getTenant(), request.getOkapiToken(), WebClientProvider.getWebClient());
 
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -183,7 +188,39 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-     srsClient.getSourceStorageSourceRecords(
+
+    Promise<JsonObject> local = Promise.promise();
+    Promise<JsonObject> central = Promise.promise();
+
+    var centralTenantId = consortiaService.getCentralTenantId(request);
+
+    if (StringUtils.isNotEmpty(centralTenantId)) {
+      SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId)).getSourceStorageSourceRecords(
+        null,
+        null,
+        null,
+        null,
+        request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+        null,
+        null,
+        null,
+        "MARC_BIB",
+        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        suppressedRecordsSupport ? null : false,
+        deletedRecordsSupport,
+        null,
+        updatedAfter,
+        updatedBefore,
+        null,
+        request.getOffset(),
+        request.isFromInventory() ? 0 : batchSize + 1,
+        getSrsCollectingHandler(request, central));
+    } else {
+      central.complete(new JsonObject());
+    }
+
+
+    SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).getSourceStorageSourceRecords(
       null,
       null,
       null,
@@ -201,8 +238,23 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       updatedBefore,
       null,
       request.getOffset(),
-       request.isFromInventory() ? 0 : batchSize + 1,
-      getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
+      request.isFromInventory() ? 0 : batchSize + 1,
+      getSrsCollectingHandler(request, local));
+
+    CompositeFuture.join(local.future(), central.future())
+      .map(CompositeFuture::list)
+      .map(results -> results.stream()
+        .map(JsonObject.class::cast)
+        .reduce((e1, e2) -> {
+          var result = e1.mergeIn(e2);
+          try {
+            return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
+          } catch (Exception exc) {
+            logger.error("totalRecords is invalid: {}", exc.getMessage());
+            return result.put(TOTAL_RECORDS_PARAM, result.getJsonArray(TOTAL_RECORDS_PARAM).size());
+          }
+        }).get()
+      ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
 
   protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
@@ -282,35 +334,20 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return new ReferenceDataWrapperImpl(referenceDataWrapper);
   }
 
-  private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsRecordsBodyHandler(Request request, Context ctx,
-      Promise<Response> promise, boolean withInventory, int limit) {
+  private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsCollectingHandler(Request request, Promise<JsonObject> promise) {
     return asyncResult -> {
       try {
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
-            var srsRecords = response.bodyAsJsonObject();
-            if (withInventory) {
-              var numOfReturnedSrsRecords = srsRecords.getJsonArray("sourceRecords").size();
-              if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
-                request.setOldSrsOffset(request.getOffset());
-                request.setOffset(0);
-                request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
-                request.setFromInventory(true);
-              }
-              requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
-                handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
-            } else {
-              processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-            }
+            promise.complete(response.bodyAsJsonObject());
           } else {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
             logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
-            var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
             var errorMessage = String.format(MOD_SOURCE_RECORD_STORAGE_ERROR, request.getTenant(), statusCode);
-            promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, errorMessage));
+            promise.fail(errorMessage);
           }
         } else {
           logger.error("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());
@@ -327,6 +364,36 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     };
   }
 
+  private Handler<AsyncResult<JsonObject>> getSrsRecordsBodyHandler(Request request, Context ctx,
+      Promise<Response> promise, boolean withInventory, int limit) {
+    return asyncResult -> {
+      try {
+        if (asyncResult.failed()) {
+          promise.fail(asyncResult.cause());
+        } else {
+          var srsRecords = asyncResult.result();
+          if (withInventory) {
+            var numOfReturnedSrsRecords = srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).size();
+            if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
+              request.setOldSrsOffset(request.getOffset());
+              request.setOffset(0);
+              request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
+              request.setFromInventory(true);
+            }
+            requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
+              handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
+          } else {
+            processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+          }
+        }
+      } catch (Exception ex) {
+        logger.error("getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}", request.getRequestId(), request.getVerb()
+          .value(), ex.getMessage());
+        promise.fail(ex);
+      }
+    };
+  }
+
   private void handleInventoryResponse(Request request, Context ctx, AsyncResult<JsonObject> instancesHandler,
                               JsonObject srsRecords, Promise<Response> promise) {
     if (instancesHandler.succeeded()) {
@@ -334,7 +401,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
       // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
       // or verb is ListRecords (see MODOAIPMH-138).
-      if ((srsRecords.getJsonArray("sourceRecords").isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
+      if ((srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
       && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
         generateRecordsOnTheFly(request, inventoryRecords);
       }
@@ -712,6 +779,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   @Autowired
   public void setReferenceDataProvider(ReferenceDataProvider referenceDataProvider) {
     this.referenceDataProvider = referenceDataProvider;
+  }
+
+  @Autowired
+  public void setConsortiaService(ConsortiaService consortiaService) {
+    this.consortiaService = consortiaService;
   }
 
 }

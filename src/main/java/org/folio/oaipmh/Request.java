@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.ofNullable;
@@ -151,6 +152,27 @@ public class Request {
     this.tenant = okapiHeaders.get(OKAPI_TENANT);
     this.okapiToken = okapiHeaders.get(OKAPI_TOKEN);
     this.okapiUrl = okapiHeaders.get(OKAPI_URL);
+  }
+
+  public Request(Request request, String tenant) {
+    this.oaiRequest = request.getOaiRequest();
+    this.okapiHeaders = request.getOkapiHeaders().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    this.okapiHeaders.put(OKAPI_TENANT, tenant);
+    this.tenant = tenant;
+    this.okapiToken = request.getOkapiToken();
+    this.okapiUrl = request.getOkapiUrl();
+    this.restoredOaiRequest = request.restoredOaiRequest;
+    this.offset = request.getOffset();
+    this.fromInventory = request.fromInventory;
+    this.totalRecords = request.getTotalRecords();
+    this.inventoryTotalRecords = request.getInventoryTotalRecords();
+    this.inventoryOffsetShift = request.getInventoryOffsetShift();
+    this.oldSrsOffset = request.getOldSrsOffset();
+    this.cursor = request.getCursor();
+    this.nextRecordId = request.getNextRecordId();
+    this.completeListSize = request.getCompleteListSize();
+    this.requestId = request.getRequestId();
+    this.nextInstancePkValue = getNextInstancePkValue();
   }
 
 
