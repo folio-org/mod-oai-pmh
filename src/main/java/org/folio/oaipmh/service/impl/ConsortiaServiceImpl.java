@@ -20,7 +20,11 @@ public class ConsortiaServiceImpl implements ConsortiaService {
   public String getCentralTenantId(Request request) {
     var centralTenantIds = consortiaClient.getUserTenants(request);
     if (!centralTenantIds.isEmpty()) {
-      return centralTenantIds.get(0);
+      var centralTenantId = centralTenantIds.getJsonObject(0).getString("centralTenantId");
+      if (centralTenantId.equals(request.getTenant())) {
+        logger.error("Current tenant is central");
+      }
+      return centralTenantId;
     }
     logger.info("No central tenant found");
     return "";
