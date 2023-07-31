@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.storage;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -12,6 +13,8 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -30,26 +33,31 @@ public class RecordStorageHelper implements StorageHelper {
   private static final String ADDITIONAL_INFO = "additionalInfo";
   private static final String SUPPRESS_DISCOVERY = "suppressDiscovery";
 
-  @Override
-  public Integer getTotalRecords(JsonObject entries) {
+  @Override  public Integer getTotalRecords(JsonObject entries) {
     return entries.getInteger(TOTAL_RECORDS_PARAM);
   }
 
   @Override
   public Instant getLastModifiedDate(JsonObject entry) {
-    JsonObject metadata = entry.getJsonObject("metadata");
+    JsonObject metadata = ofNullable(entry.getJsonObject("metadata"))
+      .orElse(entry.containsKey("record") ? entry.getJsonObject("record").getJsonObject("metadata") :
+        null);
     Instant instant = Instant.EPOCH;
-    if (metadata != null) {
+    String lastModifiedDate = nonNull(metadata) ? metadata.getString("updatedDate") : entry.getString("instance_updated_date");
+    if (lastModifiedDate == null) {
+      // According to metadata.schema the createdDate is required so it should be always available
+      lastModifiedDate = nonNull(metadata) ? metadata.getString("createdDate") : entry.getString("instance_created_date");
+    }
+    if (lastModifiedDate != null) {
       try {
-        String lastModifiedDate = metadata.getString("updatedDate");
-        if (lastModifiedDate == null) {
-          // According to metadata.schema the createdDate is required so it should be always available
-          lastModifiedDate = metadata.getString("createdDate");
-        }
         instant = DateUtils.parseDateStrictly(lastModifiedDate, patterns).toInstant();
       } catch (ParseException parseException) {
-        logger.error("Unable to parse the last modified date.", parseException);
-        return instant.truncatedTo(ChronoUnit.SECONDS);
+        try {
+          instant = Instant.parse(lastModifiedDate);
+        } catch (DateTimeParseException dateTimeParseException) {
+          logger.error("Unable to parse the last modified date.", dateTimeParseException);
+          return instant.truncatedTo(ChronoUnit.SECONDS);
+        }
       }
     }
     return instant.truncatedTo(ChronoUnit.SECONDS);
@@ -57,7 +65,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public JsonArray getItems(JsonObject entries) {
-    return Optional.ofNullable(entries.getJsonArray("sourceRecords")).orElse(entries.getJsonArray("instances"));
+    return ofNullable(entries.getJsonArray("sourceRecords")).orElse(entries.getJsonArray("instances"));
   }
 
   @Override
@@ -67,7 +75,10 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public String getRecordId(JsonObject entry) {
-    return Optional.ofNullable(entry.getString(RECORD_ID)).orElse(entry.getString(ID));
+    if (entry.containsKey("instance_id")) {
+      return entry.getString("instance_id");
+    }
+    return ofNullable(entry.getString(RECORD_ID)).orElse(entry.getString(ID));
   }
 
   /**
@@ -78,14 +89,17 @@ public class RecordStorageHelper implements StorageHelper {
    */
   @Override
   public String getIdentifierId(final JsonObject entry) {
-    Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
+    if (entry.containsKey("instance_id")) {
+      return entry.getString("instance_id");
+    }
+    Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
     return jsonObject.map(obj -> obj.getString(INSTANCE_ID))
-      .orElse(Optional.ofNullable(entry.getString(ID)).orElse(""));
+      .orElse(ofNullable(entry.getString(ID)).orElse(""));
   }
 
   @Override
   public String getInstanceRecordSource(JsonObject entry) {
-    return Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
+    return ofNullable(entry.getJsonObject(PARSED_RECORD))
       .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
       .map(JsonObject::encode)
       .orElse(null);
@@ -98,13 +112,25 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
-    Optional<JsonObject> jsonObject = Optional.ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
+    Boolean res;
+    if (entry.getString("source").contains("MARC")) {
+      res = entry.getBoolean("suppress_from_discovery_srs");
+    } else {
+      res = entry.getBoolean("suppress_from_discovery_inventory");
+    }
+    if (nonNull(res)) {
+      return res;
+    }
+    if (entry.containsKey("record")) {
+      return entry.getJsonObject("record").getBoolean("discoverySuppress");
+    }
+    Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
     return jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
       .orElse(entry.getBoolean("discoverySuppress"));
   }
 
   private String getLeaderValue(JsonObject entry) {
-    return Optional.ofNullable(entry.getJsonObject(PARSED_RECORD))
+    return ofNullable(entry.getJsonObject(PARSED_RECORD))
       .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
       .map(content -> content.getString(LEADER))
       .orElse("");
@@ -120,7 +146,7 @@ public class RecordStorageHelper implements StorageHelper {
   }
 
   private boolean getDeletedValue(JsonObject entry) {
-    return Optional.ofNullable(entry.getValue(DELETED))
+    return ofNullable(entry.getValue(DELETED))
       .map(value -> Boolean.parseBoolean(value.toString())).orElse(false);
   }
 

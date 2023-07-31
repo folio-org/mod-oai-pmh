@@ -41,7 +41,7 @@ public final class Constants {
   public static final String REPOSITORY_RECORDS_SOURCE = "repository.recordsSource";
   public static final String REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL = "repository.cleanErrorsInterval";
 
-  public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
+  public static final String SRS_AND_INVENTORY = "Source records storage and Inventory";
   public static final String INVENTORY = "Inventory";
   public static final String SRS = "Source record storage";
 
@@ -70,6 +70,8 @@ public final class Constants {
   public static final String SOURCE_RECORDS_PARAM = "sourceRecords";
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
+  public static final String LAST_INSTANCE_ID_PARAM = "lastInstanceId";
+  public static final String FROM_DELETED_PARAM = "fromDeleted";
   public static final String REQUEST_ID_PARAM = "requestId";
   public static final String REQUEST_FROM_INVENTORY_PARAM = "fromInventory";
   public static final String REQUEST_INVENTORY_TOTAL_RECORDS_PARAM = "inventoryTotalRecords";

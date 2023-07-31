@@ -448,10 +448,10 @@ public abstract class AbstractHelper implements VerbHelper {
   protected String getUntilDate(Request request, String from) {
     boolean isDateOnly = isDateOnlyGranularity(request);
     if (isDateOnly) {
-      return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
+      return isNotEmpty(from) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY) : "";
     } else {
       return isNotEmpty(from) && from.matches(DATE_ONLY_PATTERN) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY)
-        : LocalDateTime.now().format(ISO_UTC_DATE_TIME);
+        : "";
     }
   }
 
