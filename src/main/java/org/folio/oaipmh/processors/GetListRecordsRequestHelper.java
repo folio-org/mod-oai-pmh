@@ -216,15 +216,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       RecordsSource.getSource(recordsSource), limit, supportCompletedSize)
       .onComplete(handler -> {
         if (handler.succeeded()) {
-          JsonArray removedEmptyMarc = new JsonArray(records.stream().map(JsonObject.class::cast)
-            .filter(rec -> {
-              if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
-                return true;
-              }
-              return nonNull(rec.getString("marc_record"));
-            }).collect(toList()));
 
-          var idJsonMap = removedEmptyMarc.stream().map(JsonObject.class::cast)
+          var idJsonMap = records.stream().map(JsonObject.class::cast)
             .filter(json -> json.getString("source").equals(MARC_SHARED.toString()) ||
               json.getString("source").equals(CONSORTIUM_MARC.toString()))
               .collect(toMap(jsonKey -> jsonKey.getString("instance_id"), jsonValue -> jsonValue));
@@ -232,14 +225,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
               doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, retryAttempts,
-                shared, new Request(request, centralTenantId), removedEmptyMarc);
+                shared, new Request(request, centralTenantId), records);
             } else {
               shared.complete(new JsonArray());
             }
           } else {
             shared.complete(new JsonArray());
           }
-          buildResult(removedEmptyMarc, local, request, limit);
+          buildResult(records, local, request, limit);
         } else {
           logger.error("Request records was not succeeded: {}", handler.cause().getMessage(), handler.cause());
         }
