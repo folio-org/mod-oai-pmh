@@ -42,9 +42,7 @@ SELECT instance_record.id                                                       
       JOIN ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
       ON marc_record.id = record_lb.id
       RIGHT JOIN ${myuniversity}_${mymodule}.get_instances_from_inventory instance_record
-      ON instance_record.id = record_lb.external_id
-      WHERE instance_record.jsonb ->> 'source' = 'FOLIO' OR record_lb.leader_record_status != 'd'
-            AND record_lb.state = 'ACTUAL';
+      ON instance_record.id = record_lb.external_id;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
 SELECT (jsonb ->> 'id')::uuid                                                                                              instance_id,

@@ -213,7 +213,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     Promise<JsonArray> shared = Promise.promise();
 
     doRequest(request, records, skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
-      RecordsSource.getSource(recordsSource), limit, supportCompletedSize)
+      RecordsSource.getSource(recordsSource), limit, supportCompletedSize, new JsonArray())
       .onComplete(handler -> {
         if (handler.succeeded()) {
 
@@ -313,7 +313,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private Future<Void> doRequest(Request request, JsonArray records,
                                  boolean skipSuppressedFromDiscovery,
                                  boolean deletedRecordsSupport, String from, String until, RecordsSource source,
-                                 int limit, boolean supportCompletedSize) {
+                                 int limit, boolean supportCompletedSize, JsonArray tempRecords) {
     try {
       var query = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
         from, until, source, skipSuppressedFromDiscovery, request.isFromDeleted() && deletedRecordsSupport,
@@ -321,7 +321,28 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       logger.info("query: {}", query);
       return viewsService.query(query, request.getTenant())
         .compose(instances -> {
-          records.addAll(instances);
+
+          JsonArray removedEmptyMarc = new JsonArray(instances.stream().map(JsonObject.class::cast)
+            .filter(rec -> {
+              if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
+                return true;
+              }
+              return nonNull(rec.getString("marc_record"));
+            }).collect(toList()));
+
+          records.addAll(removedEmptyMarc);
+          int diff = instances.size() - removedEmptyMarc.size();
+          if (diff > 0) { // If at least 1 empty marc was found.
+            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
+
+            tempRecords.addAll(removedEmptyMarc);
+            doRequest(request, records, skipSuppressedFromDiscovery, true,
+              from, until, source, diff, supportCompletedSize, tempRecords);
+            return Future.succeededFuture(tempRecords); // Pass further only collected non-deleted instances.
+          }
+
+          tempRecords.clear(); // It is only needed up to this point to collect all possible non-deleted instances.
+
           if (supportCompletedSize && request.getCompleteListSize() == 0) {
             try {
               var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
@@ -368,7 +389,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             }
             request.setLastInstanceId(null); // Last instance id should be null when switching to deleted.
             return doRequest(request, records, skipSuppressedFromDiscovery, true,
-              from, until, source, remainingFromDeleted, supportCompletedSize);
+              from, until, source, remainingFromDeleted, supportCompletedSize, null);
           }
           if (instances.size() < limit) { // If no remaining records.
             request.setNextRecordId(null);
