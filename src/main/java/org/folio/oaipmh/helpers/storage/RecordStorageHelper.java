@@ -23,7 +23,8 @@ public class RecordStorageHelper implements StorageHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
-  private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"};
+  private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+    "yyyy-MM-dd'T'HH:mm'Z'"};
   private static final String RECORD_ID = "recordId";
   private static final String ID = "id";
   private static final String LEADER = "leader";
