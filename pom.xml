@@ -118,8 +118,9 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
 
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
+    <java.version>17</java.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <argLine>-Dfile.encoding=UTF-8</argLine>
@@ -145,7 +146,9 @@
     <apache-commons-lang3.version>3.12.0</apache-commons-lang3.version>
     <time-adapters.version>1.1.3</time-adapters.version>
     <jaxb2-basics.version>1.11.1</jaxb2-basics.version>
-    <jaxb-osgi.version>2.3.0.1</jaxb-osgi.version>
+    <jaxb-api.version>2.3.1</jaxb-api.version>
+    <jaxb-impl.version>2.3.4</jaxb-impl.version>
+    <jaxb-osgi.version>4.0.3</jaxb-osgi.version>
     <marc4j.version>2.9.2</marc4j.version>
     <mod-configuration-client.version>5.8.0</mod-configuration-client.version>
     <mod-source-record-storage-client.version>5.4.0</mod-source-record-storage-client.version>
@@ -371,6 +374,18 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-s3-client</artifactId>
       <version>${folio-s3-client.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>${jaxb-api.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sun.xml.bind</groupId>
+      <artifactId>jaxb-impl</artifactId>
+      <version>${jaxb-impl.version}</version>
     </dependency>
   </dependencies>
 
@@ -669,7 +684,7 @@
       <plugin>
         <groupId>org.jvnet.jaxb2.maven2</groupId>
         <artifactId>maven-jaxb2-plugin</artifactId>
-        <version>0.14.0</version>
+        <version>0.15.3</version>
         <executions>
           <execution>
             <goals>
