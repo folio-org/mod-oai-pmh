@@ -322,27 +322,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       return viewsService.query(query, request.getTenant())
         .compose(instances -> {
 
-          JsonArray removedEmptyMarc = new JsonArray(instances.stream().map(JsonObject.class::cast)
-            .filter(rec -> {
-              if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
-                return true;
-              }
-              return nonNull(rec.getString("marc_record"));
-            }).collect(toList()));
-
-          records.addAll(removedEmptyMarc);
-          int diff = instances.size() - removedEmptyMarc.size();
-          if (diff > 0) { // If at least 1 empty marc was found.
-            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
-
-            tempRecords.addAll(removedEmptyMarc);
-            doRequest(request, records, skipSuppressedFromDiscovery, true,
-              from, until, source, diff, supportCompletedSize, tempRecords);
-            return Future.succeededFuture(tempRecords); // Pass further only collected non-deleted instances.
-          }
-
-          tempRecords.clear(); // It is only needed up to this point to collect all possible non-deleted instances.
-
           if (supportCompletedSize && request.getCompleteListSize() == 0) {
             try {
               var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
@@ -380,22 +359,49 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             }
           }
           return Future.succeededFuture(instances);
-        }).onFailure(handleException -> logger.error("Error occurred while calling a view: {}.",
-          handleException.getMessage(), handleException)).compose(instances -> {
-          if (deletedRecordsSupport && !request.isFromDeleted() && instances.size() < limit) {
-            int remainingFromDeleted = limit - instances.size();
+        })
+        .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
+          completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
+        .compose(instances -> {
+
+          // First, filter possible empty marcs.
+          JsonArray removedEmptyMarc = new JsonArray(instances.stream().map(JsonObject.class::cast)
+            .filter(rec -> {
+              if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
+                return true;
+              }
+              return nonNull(rec.getString("marc_record"));
+            }).collect(toList()));
+          records.addAll(removedEmptyMarc);
+          int diff = instances.size() - removedEmptyMarc.size();
+          if (diff > 0) { // If at least 1 empty marc was found.
+            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
+            tempRecords.addAll(removedEmptyMarc);
+            return doRequest(request, records, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
+              until, source, diff, supportCompletedSize, tempRecords);
+          }
+          if (!tempRecords.isEmpty()) {
+            tempRecords.addAll(removedEmptyMarc);
+          }
+          var updatedInstances = !tempRecords.isEmpty() ? tempRecords : instances;
+          int oldLimit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
+          // Second, collect deleted if non-deleted exhausted.
+          if (deletedRecordsSupport && !request.isFromDeleted() && updatedInstances.size() < oldLimit) {
+            int remainingFromDeleted = oldLimit - updatedInstances.size();
             if (remainingFromDeleted != 1) { // If not the last instance id.
               request.setFromDeleted(true);
             }
             request.setLastInstanceId(null); // Last instance id should be null when switching to deleted.
             return doRequest(request, records, skipSuppressedFromDiscovery, true,
-              from, until, source, remainingFromDeleted, supportCompletedSize, null);
+              from, until, source, remainingFromDeleted, supportCompletedSize, updatedInstances);
           }
           if (instances.size() < limit) { // If no remaining records.
             request.setNextRecordId(null);
           }
           return Future.succeededFuture();
-        });
+        })
+        .onFailure(collectDeletedHandlerExc -> logger.error("Error occurred while collecting deleted: {}.",
+          collectDeletedHandlerExc.getMessage(), collectDeletedHandlerExc));
     } catch (QueryException exc) {
       logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
       return Future.failedFuture(exc);
