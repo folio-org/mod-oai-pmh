@@ -212,11 +212,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     Promise<JsonArray> local = Promise.promise();
     Promise<JsonArray> shared = Promise.promise();
 
+    logger.info("Before doRequest, limit: {}", limit);
+    long t = System.nanoTime();
     doRequest(request, records, skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
       RecordsSource.getSource(recordsSource), limit, supportCompletedSize, new JsonArray())
       .onComplete(handler -> {
         if (handler.succeeded()) {
-
+          logger.info("After doRequest, total time to complete: {} sec, found records: {}",
+            (System.nanoTime() - t) / 1_000_000_000, records.size());
           var idJsonMap = records.stream().map(JsonObject.class::cast)
             .filter(json -> json.getString("source").equals(MARC_SHARED.toString()) ||
               json.getString("source").equals(CONSORTIUM_MARC.toString()))
@@ -370,8 +373,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
                 return true;
               }
+              // Update date since they are not correct in instance.
+              var marcUpdatedDate = rec.getString("marc_updated_date");
+              var marcCreatedDate = rec.getString("marc_created_date");
+              rec.put("instance_updated_date", marcUpdatedDate);
+              rec.put("instance_created_date", marcCreatedDate);
+
               return nonNull(rec.getString("marc_record"));
-            }).collect(toList()));
+            }).collect(toList())); // Here filter date!
           records.addAll(removedEmptyMarc);
           int diff = instances.size() - removedEmptyMarc.size();
           if (diff > 0) { // If at least 1 empty marc was found.

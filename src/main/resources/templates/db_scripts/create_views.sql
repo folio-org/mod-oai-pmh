@@ -33,8 +33,10 @@ SELECT instance_record.id                                                       
       marc_record.content                                                                                         marc_record,
       instance_record.jsonb                                                                                       instance_record,
       instance_record.jsonb ->> 'source'                                                                          source,
-      (CASE WHEN marc_record IS NULL THEN ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') ELSE ${myuniversity}_mod_inventory_storage.strToTimestamp(record_lb.updated_date::text) END) instance_updated_date,
-      (CASE WHEN marc_record IS NULL THEN ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'createdDate') ELSE ${myuniversity}_mod_inventory_storage.strToTimestamp(record_lb.created_date::text) END) instance_created_date,
+      ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') instance_updated_date,
+      ${myuniversity}_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'createdDate') instance_created_date,
+      ${myuniversity}_mod_inventory_storage.strToTimestamp(record_lb.updated_date::text)                          marc_updated_date,
+      ${myuniversity}_mod_inventory_storage.strToTimestamp(record_lb.created_date::text)                          marc_created_date,
       COALESCE(record_lb.suppress_discovery, false)                                                               suppress_from_discovery_srs,
       COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                      suppress_from_discovery_inventory,
       false                                                                                                       deleted

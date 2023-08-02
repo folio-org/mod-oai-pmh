@@ -43,7 +43,7 @@ public class PostgresClientFactory {
 
   private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
 
-  private static final int POOL_SIZE = 1000;
+  private static final int POOL_SIZE = 20;
 
   private static boolean readWriteSplitEnabled = true;
 
