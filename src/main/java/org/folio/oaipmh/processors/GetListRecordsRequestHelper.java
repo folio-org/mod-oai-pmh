@@ -120,6 +120,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
    */
   @Override
   public Future<Response> handle(Request request, Context vertxContext) {
+    long t = System.nanoTime();
     Promise<Response> oaipmhResponsePromise = Promise.promise();
     metricsCollectingService.startMetric(request.getRequestId(), SEND_REQUEST);
     try {
@@ -141,7 +142,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     } catch (Exception e) {
       handleException(oaipmhResponsePromise, e);
     }
-    return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
+    return oaipmhResponsePromise.future().onComplete(responseAsyncResult -> {
+      logger.info("Total time for response: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+      metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST);
+    });
   }
 
   private void handleRequestMetadata(Request request, OffsetDateTime lastUpdateDate) {
@@ -397,6 +401,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           // Second, collect deleted if non-deleted exhausted.
           if (deletedRecordsSupport && !request.isFromDeleted() && updatedInstances.size() < oldLimit) {
             int remainingFromDeleted = oldLimit - updatedInstances.size();
+            logger.info("Deleted required: {}", remainingFromDeleted);
             if (remainingFromDeleted != 1) { // If not the last instance id.
               request.setFromDeleted(true);
             }
