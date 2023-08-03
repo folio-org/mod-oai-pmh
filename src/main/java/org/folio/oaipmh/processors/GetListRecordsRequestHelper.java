@@ -383,10 +383,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               rec.put("instance_updated_date", marcUpdatedDate);
               rec.put("instance_created_date", marcCreatedDate);
 
+              logger.info("MARC with null marc_record: {}", rec.encodePrettily());
+
               return nonNull(rec.getString("marc_record"));
             }).collect(toList())); // Here filter date!
           records.addAll(removedEmptyMarc);
           int diff = instances.size() - removedEmptyMarc.size();
+          logger.info("diff: {}", diff);
           if (diff > 0) { // If at least 1 empty marc was found.
             request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
             tempRecords.addAll(removedEmptyMarc);
