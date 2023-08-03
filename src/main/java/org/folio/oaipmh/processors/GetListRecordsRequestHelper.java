@@ -383,7 +383,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               rec.put("instance_updated_date", marcUpdatedDate);
               rec.put("instance_created_date", marcCreatedDate);
 
-              logger.info("MARC with null marc_record: {}", rec.encodePrettily());
+              logger.info("MARC with null marc_record: {}", rec.getString("instance_id"));
 
               return nonNull(rec.getString("marc_record"));
             }).collect(toList())); // Here filter date!
