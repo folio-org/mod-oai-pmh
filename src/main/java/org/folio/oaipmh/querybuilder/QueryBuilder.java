@@ -75,8 +75,10 @@ public class QueryBuilder {
     "                  )))\n";
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
-  private static final String DATE_UNTIL = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
-  private static final String DATE_FROM = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
+  private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
+  private static final String DATE_UNTIL_MARC = "   %s inst.marc_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DATE_FROM_MARC = "   %s inst.marc_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
   private static final String DISCOVERY_SUPPRESS = "   %s coalesce(inst.suppress_from_discovery_srs, false) = false AND coalesce(inst.suppress_from_discovery_inventory, false) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
@@ -104,8 +106,8 @@ public class QueryBuilder {
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
-      buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
-      buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
+      buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords, source),
+      buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords, source),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from) && isNull(until), deletedRecords ),
       isCountQuery ? EMPTY : limit);
   }
@@ -115,22 +117,25 @@ public class QueryBuilder {
     return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, where, lastInstanceId) : EMPTY;
   }
 
-  private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport) {
+  private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport, RecordsSource source) {
     if (nonNull(from) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
       whereOrAnd += " (";
-      return format(DATE_FROM, whereOrAnd, tenant, from);
+      var dateFromTemplate = source == RecordsSource.MARC ? DATE_FROM_MARC : DATE_FROM_FOLIO;
+      return format(dateFromTemplate, whereOrAnd, tenant, from);
     }
     return EMPTY;
   }
 
-  private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport) {
+  private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport,
+                                       RecordsSource source) {
     if (nonNull(until) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
       if (isNull(from)) {
         whereOrAnd += " (";
       }
-      return format(DATE_UNTIL, whereOrAnd, tenant, until);
+      var dateUntilTemplate = source == RecordsSource.MARC ? DATE_UNTIL_MARC : DATE_UNTIL_FOLIO;
+      return format(dateUntilTemplate, whereOrAnd, tenant, until);
     }
     return EMPTY;
   }
