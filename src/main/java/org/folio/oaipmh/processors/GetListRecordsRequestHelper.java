@@ -176,8 +176,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       requestRecords(request, retryAttempts, supportCompletedSize)
         .onSuccess(records -> {
             var listRecords = records.stream().map(JsonObject.class::cast).collect(toList());
+            long t = System.nanoTime();
             enrichInstances(listRecords, request)
               .onComplete(listAsyncResult -> {
+                logger.info("After enrich: {} sec", (System.nanoTime() - t) / 1_000_000_000);
                 if (listAsyncResult.succeeded()) {
                   buildRecordsResponse(request, lastUpdateDate, new JsonArray(listAsyncResult.result()), firstBatch, statistics)
                     .onSuccess(oaiPmhResponsePromise::complete)
@@ -256,6 +258,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private void doRequestShared(Vertx vertx, boolean deletedRecordSupport,
                                Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
+    logger.info("doRequestShared execution");
     SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).postSourceStorageSourceRecords("INSTANCE",
       null, deletedRecordSupport, new ArrayList<>(idJsonMap.keySet()), asyncResult -> {
       Map<String, String> retrySRSRequestParams = new HashMap<>();
@@ -383,11 +386,15 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               rec.put("instance_updated_date", marcUpdatedDate);
               rec.put("instance_created_date", marcCreatedDate);
 
-              if (isNull(rec.getString("marc_record"))) {
-                logger.info("MARC with null marc_record: {}", rec.getString("instance_id"));
+              var marcRecord = rec.getString("marc_record");
+
+              if (isNull(marcRecord)) {
+                logger.error("MARC with null marc_record: {}", rec.getString("instance_id"));
+                errorsService.log(request.getTenant(), request.getRequestId(), rec.getString("instance_id"),
+                  "There is no corresponding SRS record for this MARC");
               }
 
-              return nonNull(rec.getString("marc_record"));
+              return nonNull(marcRecord);
             }).collect(toList())); // Here filter date!
           records.addAll(removedEmptyMarc);
           int diff = instances.size() - removedEmptyMarc.size();
