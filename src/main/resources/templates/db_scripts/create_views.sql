@@ -43,7 +43,7 @@ SELECT instance_record.id                                                       
       FROM ${myuniversity}_${mymodule}.get_instances_from_inventory instance_record
       LEFT JOIN ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
       ON instance_record.id = record_lb.external_id
-      INNER JOIN ${myuniversity}_${mymodule}.get_marc_records marc_record
+      LEFT JOIN ${myuniversity}_${mymodule}.get_marc_records marc_record
       ON marc_record.id = record_lb.id;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
