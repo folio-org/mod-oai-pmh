@@ -935,7 +935,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private List<String> extractIdsForSrsRequest(List<JsonObject> batch, boolean forSharedRecords) {
     return batch.stream()
       .filter(Objects::nonNull)
-      .filter(instance -> forSharedRecords == "MARC_SHARED".equals(instance.getString(SOURCE)))
+      .filter(instance -> forSharedRecords == "CONSORTIUM-MARC".equals(instance.getString(SOURCE)))
       .map(instance -> instance.getString(INSTANCE_ID_FIELD_NAME))
       .collect(toList());
   }
