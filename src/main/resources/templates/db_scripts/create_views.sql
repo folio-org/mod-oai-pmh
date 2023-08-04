@@ -40,11 +40,11 @@ SELECT instance_record.id                                                       
       COALESCE(record_lb.suppress_discovery, false)                                                               suppress_from_discovery_srs,
       COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                      suppress_from_discovery_inventory,
       false                                                                                                       deleted
-      FROM ${myuniversity}_${mymodule}.get_marc_records marc_record
-      JOIN ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
-      ON marc_record.id = record_lb.id
-      RIGHT JOIN ${myuniversity}_${mymodule}.get_instances_from_inventory instance_record
-      ON instance_record.id = record_lb.external_id;
+      FROM ${myuniversity}_${mymodule}.get_instances_from_inventory instance_record
+      LEFT JOIN ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
+      ON instance_record.id = record_lb.external_id
+      INNER JOIN ${myuniversity}_${mymodule}.get_marc_records marc_record
+      ON marc_record.id = record_lb.id;
 
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
 SELECT (jsonb ->> 'id')::uuid                                                                                              instance_id,
