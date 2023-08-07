@@ -269,12 +269,12 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       );
   }
 
-  private void doRequestShared(Vertx vertx, boolean deletedRecordSupport,
+  private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport,
                                Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
     logger.info("doRequestShared execution");
     SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).postSourceStorageSourceRecords("INSTANCE",
-      null, deletedRecordSupport, new ArrayList<>(idJsonMap.keySet()), asyncResult -> {
+      null, deletedRecordsSupport, new ArrayList<>(idJsonMap.keySet()), asyncResult -> {
       Map<String, String> retrySRSRequestParams = new HashMap<>();
       if (asyncResult.succeeded()) {
         HttpResponse<Buffer> srsResponse = asyncResult.result();
@@ -284,7 +284,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
           retrySRSRequestParams.put(STATUS_CODE, String.valueOf(statusCode));
           retrySRSRequestParams.put(STATUS_MESSAGE, statusMessage);
-          retrySRSRequest(vertx, deletedRecordSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
+          retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
             request, records);
         }
         if (statusCode != 200) {
@@ -307,13 +307,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
         retrySRSRequestParams.put(STATUS_CODE, String.valueOf(-1));
         retrySRSRequestParams.put(STATUS_MESSAGE, "");
-        retrySRSRequest(vertx, deletedRecordSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
+        retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
           request, records);
       }
     });
   }
 
-  private void retrySRSRequest(Vertx vertx, boolean deletedRecordSupport,
+  private void retrySRSRequest(Vertx vertx, boolean deletedRecordsSupport,
                                Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, Promise<JsonArray> promise, Map <String, String> retrySRSRequestParams,
                                Request request, JsonArray records) {
     if (Integer.parseInt(retrySRSRequestParams.get(STATUS_CODE)) > 0) {
@@ -330,7 +330,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
     logger.debug("Trying to request SRS again, attempts left: {}.", attemptsCount.get());
     vertx.setTimer(REREQUEST_SRS_DELAY,
-      timer -> doRequestShared(vertx, deletedRecordSupport, idJsonMap, attemptsCount,
+      timer -> doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount,
         Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request, records));
   }
 
@@ -351,7 +351,9 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         .compose(instances -> {
 
           // First, filter possible MARCs without SRS records
+          Long t = System.nanoTime();
           JsonArray removedEmptyMarc = handleMARCsWithoutSRSRecord(request, instances, statistics);
+          logger.info("Execution of handleMARCsWithoutSRSRecord: {} sec", (System.nanoTime() - t) / 1_000_000_000);
 
           finalRecords.addAll(removedEmptyMarc);
           int diff = instances.size() - removedEmptyMarc.size();
@@ -461,12 +463,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   }
 
   private Future<Response> buildRecordsResponse(Request request, OffsetDateTime lastUpdateDate,
-      JsonArray srsResponse, boolean firstBatch, StatisticsHolder statistics) {
-
+      JsonArray finalRecords, boolean firstBatch, StatisticsHolder statistics) {
+    logger.info("finalRecords size: {}", finalRecords.size());
+    long t = System.nanoTime();
     var nextInstanceId = request.getNextRecordId();
     Promise<Response> promise = Promise.promise();
     try {
-      List<RecordType> records = buildRecordsList(request, srsResponse, statistics);
+      List<RecordType> records = buildRecordsList(request, finalRecords, statistics);
       ResponseHelper responseHelper = getResponseHelper();
       OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
       if (records.isEmpty() && nextInstanceId == null && firstBatch) {
@@ -497,7 +500,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         response = responseHelper.buildFailureResponse(oaipmh, request);
       }
       instancesService.updateRequestUpdatedDateAndStatistics(request.getRequestId(), lastUpdateDate, statistics, request.getTenant())
-              .onComplete(x -> promise.complete(response));
+              .onComplete(x -> {
+                logger.info("Execution of buildRecordsResponse: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+                promise.complete(response);
+              });
     } catch (Exception e) {
       instancesService.updateRequestUpdatedDateAndStatistics(request.getRequestId(), lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> handleException(promise, e));
@@ -507,7 +513,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private List<RecordType> buildRecordsList(Request request, JsonArray srsResponse, StatisticsHolder statistics) {
     RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-
+    long t = System.nanoTime();
     final boolean suppressedRecordsProcessing = getBooleanProperty(request.getRequestId(),
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     List<RecordType> records = new ArrayList<>();
@@ -552,11 +558,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           statistics.addSuppressedInstancesIds(instanceId);
         }
       });
+    logger.info("Execution of buildRecordsList: {} sec", (System.nanoTime() - t) / 1_000_000_000);
     return records;
   }
 
   private ResumptionTokenType buildResumptionTokenFromRequest(Request request, String requestId, long returnedCount,
       String nextInstanceId) {
+    long t = System.nanoTime();
     long cursor = request.getOffset();
     if (nextInstanceId == null) {
       logHarvestingCompletion();
@@ -598,6 +606,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
     String resumptionToken = request.toResumptionToken(extraParams);
     resumptionTokenType.withValue(resumptionToken);
+    logger.info("Execution of buildResumptionTokenFromRequest: {} sec", (System.nanoTime() - t) / 1_000_000_000);
     return resumptionTokenType;
   }
 
@@ -608,7 +617,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private void buildResult(JsonArray records, Promise<JsonArray> promise, Request request, int limit) {
     JsonArray result = new JsonArray();
-
+    long t = System.nanoTime();
     records.stream()
       .filter(Objects::nonNull)
       .map(JsonObject.class::cast)
@@ -650,7 +659,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     if (limit - records.size() > 1) {
       request.setNextRecordId(null);
     }
-
+    logger.info("Execution of buildResult: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+    logger.info("End of buildResult, result size: {}", result.size());
     promise.complete(result);
   }
 
