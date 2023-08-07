@@ -155,12 +155,6 @@ public class QueryBuilder {
     return skipSuppressedFromDiscovery ? format(DISCOVERY_SUPPRESS, whereOrAnd) : EMPTY;
   }
 
-  public static void main(String...args) throws QueryException {
-    var res = QueryBuilder.build("oaitest", null, "2023-04-20T00:00:00.00Z", "2023-04-20T23:59:59Z",
-      null, false, false, 200, false);
-    System.out.println(res);
-  }
-
   private static String buildDeleted(String tenant, String from, String until, boolean where, boolean deletedSupport) {
     if (nonNull(from) || nonNull(until)) {
 
