@@ -61,10 +61,13 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_DELETED_PARAM;
+import static org.folio.oaipmh.Constants.INSTANCE_ID_FROM_VIEW_RESPONSE;
 import static org.folio.oaipmh.Constants.LAST_INSTANCE_ID_PARAM;
+import static org.folio.oaipmh.Constants.MARC_RECORD_FROM_VIEW_RESPONSE;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
+import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
@@ -73,6 +76,7 @@ import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
 import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
+import static org.folio.oaipmh.Constants.SOURCE;
 import static org.folio.oaipmh.Constants.STATUS_CODE;
 import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
@@ -87,8 +91,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
-
-  public static final String FOLIO_RECORD_SOURCE = "source";
 
   private static final int REREQUEST_SRS_DELAY = 2000;
   private static final long MAX_EVENT_LOOP_EXECUTE_TIME_NS = 60_000_000_000L;
@@ -215,7 +217,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     var dateFrom = convertStringToDate(request.getFrom(), false, false);
     var dateUntil = convertStringToDate(request.getUntil(), true, false);
-    String from = null, until = null;
+    String from = null;
+    String until = null;
     if (nonNull(dateFrom)) {
       from = dateFormat.format(dateFrom);
     }
@@ -238,9 +241,9 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           logger.info("After doRequest, total time to complete: {} sec, found records: {}",
             (System.nanoTime() - t) / 1_000_000_000, finalRecords.size());
           var idJsonMap = finalRecords.stream().map(JsonObject.class::cast)
-            .filter(json -> json.getString("source").equals(MARC_SHARED.toString()) ||
-              json.getString("source").equals(CONSORTIUM_MARC.toString()))
-              .collect(toMap(jsonKey -> jsonKey.getString("instance_id"), jsonValue -> jsonValue));
+            .filter(json -> json.getString(SOURCE).equals(MARC_SHARED.toString()) ||
+              json.getString(SOURCE).equals(CONSORTIUM_MARC.toString()))
+              .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue));
           if (!idJsonMap.isEmpty()) {
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
@@ -261,8 +264,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     return CompositeFuture.join(shared.future(), local.future())
       .map(CompositeFuture::list)
       .map(results -> results.stream()
-        .map(map -> (JsonArray) map)
-        .reduce(new JsonArray(), (map1, map2) -> map1.addAll(map2))
+        .map(JsonArray.class::cast)
+        .reduce(new JsonArray(), JsonArray::addAll)
       );
   }
 
@@ -293,9 +296,9 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         sourceRecords.stream().map(JsonObject.class::cast)
           .forEach(json -> {
             var instId = json.getJsonObject("externalIdsHolder").getString("instanceId");
-            var parsedRecord = json.getJsonObject("parsedRecord");
+            var parsedRecord = json.getJsonObject(PARSED_RECORD);
             var existingRecord = idJsonMap.get(instId);
-            existingRecord.put("parsedRecord", parsedRecord);
+            existingRecord.put(PARSED_RECORD, parsedRecord);
           });
         promise.complete(new JsonArray(new ArrayList<>(idJsonMap.values())));
       } else {
@@ -354,7 +357,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           int diff = instances.size() - removedEmptyMarc.size();
           logger.info("Number of MARCs without SRS found: {}", diff);
           if (diff > 0) { // If at least 1 empty marc was found.
-            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
+            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
             tempRecords.addAll(removedEmptyMarc);
             return doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
               until, source, diff, supportCompletedSize, tempRecords, statistics);
@@ -391,7 +394,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private JsonArray handleMARCsWithoutSRSRecord(Request request, JsonArray finalRecords, StatisticsHolder statistics) {
     return new JsonArray(finalRecords.stream().map(JsonObject.class::cast)
       .filter(rec -> {
-        if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
+        if (!rec.getString(SOURCE).equals(RecordsSource.MARC.name())) {
           return true;
         }
         // Update dates since they are not correct for MARC in instance table.
@@ -400,14 +403,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         rec.put("instance_updated_date", marcUpdatedDate);
         rec.put("instance_created_date", marcCreatedDate);
 
-        var marcRecord = rec.getString("marc_record");
+        var marcRecord = rec.getString(MARC_RECORD_FROM_VIEW_RESPONSE);
 
         if (isNull(marcRecord)) {
-          var instanceId = rec.getString("instance_id");
+          var instanceId = rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE);
           statistics.addSkippedInstancesCounter(1);
           statistics.addSkippedInstancesIds(instanceId);
           logger.error("MARC with null marc_record: {}", instanceId);
-          errorsService.log(request.getTenant(), request.getRequestId(), rec.getString("instance_id"),
+          errorsService.log(request.getTenant(), request.getRequestId(), rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE),
             "There is no corresponding SRS record for this MARC");
         }
 
@@ -512,7 +515,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       .forEach(instanceObj -> {
         JsonObject instance = (JsonObject) instanceObj;
         final String instanceId = ofNullable(instance.getString("id"))
-          .orElse(instance.getString("instance_id"));
+          .orElse(instance.getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
         RecordType instanceRecord = createRecord(request, instance, instanceId);
 
         JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(instance, instance,
@@ -610,7 +613,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       .filter(Objects::nonNull)
       .map(JsonObject.class::cast)
       .forEach(jo -> {
-        var marcRecord = jo.getJsonObject("marc_record");
+        var marcRecord = jo.getJsonObject(MARC_RECORD_FROM_VIEW_RESPONSE);
         if (isNull(marcRecord)) {
           if (request.getVerb() != VerbType.LIST_IDENTIFIERS) {
             // Gen on the fly
@@ -621,14 +624,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
             generateRecordsOnTheFly(request, jsonInstances);
 
-            var instance_record = jo.getJsonObject("instance_record");
-            jo.put("parsedRecord", instance_record.getJsonObject("parsedRecord"));
+            var instanceRecordFromViewResponse = jo.getJsonObject("instance_record");
+            jo.put(PARSED_RECORD, instanceRecordFromViewResponse.getJsonObject(PARSED_RECORD));
           }
         } else {
           JsonObject content = new JsonObject();
           content.put("content", marcRecord);
-          jo.remove("marc_record");
-          jo.put("parsedRecord", content);
+          jo.remove(MARC_RECORD_FROM_VIEW_RESPONSE);
+          jo.put(PARSED_RECORD, content);
 
         }
         result.add(jo);
@@ -636,12 +639,12 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     List<JsonObject> listRecords = records.getList();
 
     if (records.size() == limit) {
-      request.setLastInstanceId(listRecords.size() > 1 ? listRecords.get(listRecords.size() - 2).getString("instance_id") : null);
+      request.setLastInstanceId(listRecords.size() > 1 ? listRecords.get(listRecords.size() - 2).getString(INSTANCE_ID_FROM_VIEW_RESPONSE) : null);
     }
     int batchSize = Integer
       .parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
     if (listRecords.size() == batchSize + 1) {
-      request.setNextRecordId(listRecords.get(records.size() - 1).getString("instance_id"));
+      request.setNextRecordId(listRecords.get(records.size() - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
       result.remove(result.size() - 1);
     }
     if (limit - records.size() > 1) {

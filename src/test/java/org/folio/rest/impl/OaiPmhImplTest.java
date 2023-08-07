@@ -1559,6 +1559,34 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void verifyResponseWhenDeletedRecordsSupportIsPersistent() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "40");
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+
+    RequestSpecification initial = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
+    String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+
+    while(!"".equals(resumptionToken)) {
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      oaipmh = verify200WithXml(request, LIST_RECORDS);
+      resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    }
+    assertThat(oaipmh.getListRecords().getRecords().size(), is(24));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @Test
   void getOaiMetadataFormats(VertxTestContext testContext) {
     logger.info("=== Test Metadata Formats without identifier ===");
     RequestSpecification request = createBaseRequest()

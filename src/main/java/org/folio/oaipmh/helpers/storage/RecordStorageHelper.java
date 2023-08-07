@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 
 import static java.util.Objects.nonNull;
 import static java.util.Optional.ofNullable;
+import static org.folio.oaipmh.Constants.INSTANCE_ID_FROM_VIEW_RESPONSE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -33,6 +34,7 @@ public class RecordStorageHelper implements StorageHelper {
   private static final String EXTERNAL_IDS_HOLDER = "externalIdsHolder";
   private static final String ADDITIONAL_INFO = "additionalInfo";
   private static final String SUPPRESS_DISCOVERY = "suppressDiscovery";
+  private static final String RECORD = "record";
 
   @Override  public Integer getTotalRecords(JsonObject entries) {
     return entries.getInteger(TOTAL_RECORDS_PARAM);
@@ -41,7 +43,7 @@ public class RecordStorageHelper implements StorageHelper {
   @Override
   public Instant getLastModifiedDate(JsonObject entry) {
     JsonObject metadata = ofNullable(entry.getJsonObject("metadata"))
-      .orElse(entry.containsKey("record") ? entry.getJsonObject("record").getJsonObject("metadata") :
+      .orElse(entry.containsKey(RECORD) ? entry.getJsonObject(RECORD).getJsonObject("metadata") :
         null);
     Instant instant = Instant.EPOCH;
     String lastModifiedDate = nonNull(metadata) ? metadata.getString("updatedDate") : entry.getString("instance_updated_date");
@@ -76,8 +78,8 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public String getRecordId(JsonObject entry) {
-    if (entry.containsKey("instance_id")) {
-      return entry.getString("instance_id");
+    if (entry.containsKey(INSTANCE_ID_FROM_VIEW_RESPONSE)) {
+      return entry.getString(INSTANCE_ID_FROM_VIEW_RESPONSE);
     }
     return ofNullable(entry.getString(RECORD_ID)).orElse(entry.getString(ID));
   }
@@ -90,8 +92,8 @@ public class RecordStorageHelper implements StorageHelper {
    */
   @Override
   public String getIdentifierId(final JsonObject entry) {
-    if (entry.containsKey("instance_id")) {
-      return entry.getString("instance_id");
+    if (entry.containsKey(INSTANCE_ID_FROM_VIEW_RESPONSE)) {
+      return entry.getString(INSTANCE_ID_FROM_VIEW_RESPONSE);
     }
     Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(EXTERNAL_IDS_HOLDER));
     return jsonObject.map(obj -> obj.getString(INSTANCE_ID))
@@ -113,7 +115,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
-    if (entry.containsKey("source")) { // FIXME !!!!
+    if (entry.containsKey("source")) {
       Boolean res;
       if (entry.getString("source").contains("MARC")) {
         res = entry.getBoolean("suppress_from_discovery_srs");
@@ -124,8 +126,8 @@ public class RecordStorageHelper implements StorageHelper {
         return res;
       }
     }
-    if (entry.containsKey("record")) {
-      return entry.getJsonObject("record").getBoolean("discoverySuppress");
+    if (entry.containsKey(RECORD)) {
+      return entry.getJsonObject(RECORD).getBoolean("discoverySuppress");
     }
     Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
     return jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))

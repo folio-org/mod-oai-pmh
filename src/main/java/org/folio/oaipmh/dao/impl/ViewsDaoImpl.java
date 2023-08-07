@@ -25,9 +25,7 @@ public class ViewsDaoImpl implements ViewsDao {
 
   private JsonArray rowSetToString(RowSet<Row> rowSet) {
     JsonArray array = new JsonArray();
-    rowSet.forEach(row -> {
-      array.add(row.toJson());
-    });
+    rowSet.forEach(row -> array.add(row.toJson()));
     return array;
   }
 }
