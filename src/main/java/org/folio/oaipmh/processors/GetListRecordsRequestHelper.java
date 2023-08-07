@@ -82,6 +82,7 @@ import static org.folio.oaipmh.querybuilder.RecordsSource.CONSORTIUM_MARC;
 import static org.folio.oaipmh.querybuilder.RecordsSource.MARC_SHARED;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SEND_REQUEST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
@@ -171,10 +172,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         (request.getVerb().equals(VerbType.LIST_IDENTIFIERS)
           || MetadataPrefix.MARC21XML.getName().equals(targetMetadataPrefix)
           || MetadataPrefix.DC.getName().equals(targetMetadataPrefix)
-        ) &&
-          request.getCompleteListSize() == 0;
-      requestRecords(request, retryAttempts, supportCompletedSize)
+        ) && request.getCompleteListSize() == 0;
+      requestRecords(request, retryAttempts, supportCompletedSize, statistics)
         .onSuccess(records -> {
+          if (records.isEmpty() && !firstBatch) {
+            logger.error("processBatch:: For requestId {} instances collection is empty for non-first batch", request.getRequestId());
+            oaiPmhResponsePromise.complete(buildBadResumptionTokenOaiResponse(oaipmhResponse, request,"Specified resumption token doesn't exists." ));
+            return;
+          }
             var listRecords = records.stream().map(JsonObject.class::cast).collect(toList());
             long t = System.nanoTime();
             enrichInstances(listRecords, request)
@@ -197,7 +202,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
   }
 
-  private Future<JsonArray> requestRecords(Request request, int retryAttempts, boolean supportCompletedSize) {
+  private Response buildBadResumptionTokenOaiResponse(OAIPMH oaipmh, Request request, String message) {
+    oaipmh.withErrors(new OAIPMHerrorType().withCode(BAD_RESUMPTION_TOKEN).withValue(message));
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  private Future<JsonArray> requestRecords(Request request, int retryAttempts, boolean supportCompletedSize,
+                                           StatisticsHolder statistics) {
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     int limit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
     boolean skipSuppressedFromDiscovery = isSkipSuppressed(request);
@@ -213,20 +224,20 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
     AtomicInteger attemptsCount = new AtomicInteger(retryAttempts);
 
-    JsonArray records = new JsonArray();
+    JsonArray finalRecords = new JsonArray();
 
     Promise<JsonArray> local = Promise.promise();
     Promise<JsonArray> shared = Promise.promise();
 
     logger.info("Before doRequest, limit: {}", limit);
     long t = System.nanoTime();
-    doRequest(request, records, skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
-      RecordsSource.getSource(recordsSource), limit, supportCompletedSize, new JsonArray())
+    doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
+      RecordsSource.getSource(recordsSource), limit, supportCompletedSize, new JsonArray(), statistics)
       .onComplete(handler -> {
         if (handler.succeeded()) {
           logger.info("After doRequest, total time to complete: {} sec, found records: {}",
-            (System.nanoTime() - t) / 1_000_000_000, records.size());
-          var idJsonMap = records.stream().map(JsonObject.class::cast)
+            (System.nanoTime() - t) / 1_000_000_000, finalRecords.size());
+          var idJsonMap = finalRecords.stream().map(JsonObject.class::cast)
             .filter(json -> json.getString("source").equals(MARC_SHARED.toString()) ||
               json.getString("source").equals(CONSORTIUM_MARC.toString()))
               .collect(toMap(jsonKey -> jsonKey.getString("instance_id"), jsonValue -> jsonValue));
@@ -234,14 +245,14 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
               doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, retryAttempts,
-                shared, new Request(request, centralTenantId), records);
+                shared, new Request(request, centralTenantId), finalRecords);
             } else {
               shared.complete(new JsonArray());
             }
           } else {
             shared.complete(new JsonArray());
           }
-          buildResult(records, local, request, limit);
+          buildResult(finalRecords, local, request, limit);
         } else {
           logger.error("Request records was not succeeded: {}", handler.cause().getMessage(), handler.cause());
         }
@@ -320,90 +331,33 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request, records));
   }
 
-  private Future<Void> doRequest(Request request, JsonArray records,
+  private Future<Void> doRequest(Request request, JsonArray finalRecords,
                                  boolean skipSuppressedFromDiscovery,
                                  boolean deletedRecordsSupport, String from, String until, RecordsSource source,
-                                 int limit, boolean supportCompletedSize, JsonArray tempRecords) {
+                                 int limit, boolean supportCompletedSize, JsonArray tempRecords, StatisticsHolder statistics) {
     try {
       var query = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
         from, until, source, skipSuppressedFromDiscovery, request.isFromDeleted() && deletedRecordsSupport,
         limit, false);
-      logger.info("query: {}", query);
+      logger.info("Query: {}", query);
       return viewsService.query(query, request.getTenant())
-        .compose(instances -> {
-
-          if (supportCompletedSize && request.getCompleteListSize() == 0) {
-            try {
-              var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-                from, until, source, skipSuppressedFromDiscovery, false,
-                limit, true);
-              logger.info("Query for size: {}", queryForSize);
-              return viewsService.query(queryForSize, request.getTenant()).compose(counts -> {
-                  var completeListSize = counts.getJsonObject(0).getInteger("count");
-                  request.setCompleteListSize(completeListSize);
-                return Future.succeededFuture(instances);
-              })
-                .onFailure(handleException -> logger.error("Error occurred while calling a view to get complete list size: {}.",
-                  handleException.getMessage(), handleException))
-                .compose(sameInstances -> {
-                if (deletedRecordsSupport) {
-                  try {
-                    var queryForSizeDeleted = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-                      from, until, source, skipSuppressedFromDiscovery, true,
-                      limit, true);
-                    logger.info("query for size deleted: {}", queryForSizeDeleted);
-                    return viewsService.query(queryForSizeDeleted, request.getTenant()).compose(counts -> {
-                      var completeListSize = counts.getJsonObject(0).getInteger("count");
-                      request.setCompleteListSize(request.getCompleteListSize() + completeListSize);
-                      return Future.succeededFuture(instances);
-                    });
-                  } catch (QueryException exc) {
-                    logger.error("Error occurred while building a query for deleted records: {}.",
-                      exc.getMessage(), exc);
-                  }
-                }
-                return Future.succeededFuture(instances);
-              });
-            } catch (QueryException exc) {
-              logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
-            }
-          }
-          return Future.succeededFuture(instances);
-        })
+        .compose(instances -> handleCompleteListSize(request, supportCompletedSize, from, until, source, limit,
+          instances, skipSuppressedFromDiscovery, deletedRecordsSupport))
         .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
           completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
         .compose(instances -> {
 
-          // First, filter possible empty marcs.
-          JsonArray removedEmptyMarc = new JsonArray(instances.stream().map(JsonObject.class::cast)
-            .filter(rec -> {
-              if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
-                return true;
-              }
-              // Update date since they are not correct in instance.
-              var marcUpdatedDate = rec.getString("marc_updated_date");
-              var marcCreatedDate = rec.getString("marc_created_date");
-              rec.put("instance_updated_date", marcUpdatedDate);
-              rec.put("instance_created_date", marcCreatedDate);
+          // First, filter possible MARCs without SRS records
+          JsonArray removedEmptyMarc = handleMARCsWithoutSRSRecord(request, instances, statistics);
 
-              var marcRecord = rec.getString("marc_record");
-
-              if (isNull(marcRecord)) {
-                logger.error("MARC with null marc_record: {}", rec.getString("instance_id"));
-                errorsService.log(request.getTenant(), request.getRequestId(), rec.getString("instance_id"),
-                  "There is no corresponding SRS record for this MARC");
-              }
-
-              return nonNull(marcRecord);
-            }).collect(toList())); // Here filter date!
-          records.addAll(removedEmptyMarc);
+          finalRecords.addAll(removedEmptyMarc);
           int diff = instances.size() - removedEmptyMarc.size();
-          logger.info("diff: {}", diff);
+          logger.info("Number of MARCs without SRS found: {}", diff);
           if (diff > 0) { // If at least 1 empty marc was found.
             request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString("instance_id"));
             tempRecords.addAll(removedEmptyMarc);
-            return doRequest(request, records, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
-              until, source, diff, supportCompletedSize, tempRecords);
+            return doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
+              until, source, diff, supportCompletedSize, tempRecords, statistics);
           }
           if (!tempRecords.isEmpty()) {
             tempRecords.addAll(removedEmptyMarc);
@@ -418,8 +372,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               request.setFromDeleted(true);
             }
             request.setLastInstanceId(null); // Last instance id should be null when switching to deleted.
-            return doRequest(request, records, skipSuppressedFromDiscovery, true,
-              from, until, source, remainingFromDeleted, supportCompletedSize, updatedInstances);
+            return doRequest(request, finalRecords, skipSuppressedFromDiscovery, true,
+              from, until, source, remainingFromDeleted, supportCompletedSize, updatedInstances, statistics);
           }
           if (instances.size() < limit) { // If no remaining records.
             request.setNextRecordId(null);
@@ -432,6 +386,75 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
       return Future.failedFuture(exc);
     }
+  }
+
+  private JsonArray handleMARCsWithoutSRSRecord(Request request, JsonArray finalRecords, StatisticsHolder statistics) {
+    return new JsonArray(finalRecords.stream().map(JsonObject.class::cast)
+      .filter(rec -> {
+        if (!rec.getString("source").equals(RecordsSource.MARC.name())) {
+          return true;
+        }
+        // Update dates since they are not correct for MARC in instance table.
+        var marcUpdatedDate = rec.getString("marc_updated_date");
+        var marcCreatedDate = rec.getString("marc_created_date");
+        rec.put("instance_updated_date", marcUpdatedDate);
+        rec.put("instance_created_date", marcCreatedDate);
+
+        var marcRecord = rec.getString("marc_record");
+
+        if (isNull(marcRecord)) {
+          var instanceId = rec.getString("instance_id");
+          statistics.addSkippedInstancesCounter(1);
+          statistics.addSkippedInstancesIds(instanceId);
+          logger.error("MARC with null marc_record: {}", instanceId);
+          errorsService.log(request.getTenant(), request.getRequestId(), rec.getString("instance_id"),
+            "There is no corresponding SRS record for this MARC");
+        }
+
+        return nonNull(marcRecord);
+      }).collect(toList()));
+  }
+
+  private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, String from, String until,
+                                      RecordsSource source, int limit, JsonArray instances,
+                                      boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport) {
+    if (supportCompletedSize && request.getCompleteListSize() == 0) {
+      try {
+        var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
+          from, until, source, skipSuppressedFromDiscovery, false,
+          limit, true);
+        logger.info("Query for size: {}", queryForSize);
+        return viewsService.query(queryForSize, request.getTenant()).compose(counts -> {
+            var completeListSize = counts.getJsonObject(0).getInteger("count");
+            request.setCompleteListSize(completeListSize);
+            return Future.succeededFuture(instances);
+          })
+          .onFailure(handleException -> logger.error("Error occurred while calling a view to get complete list size: {}.",
+            handleException.getMessage(), handleException))
+          .compose(sameInstances -> {
+            if (deletedRecordsSupport) {
+              try {
+                var queryForSizeDeleted = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
+                  from, until, source, skipSuppressedFromDiscovery, true,
+                  limit, true);
+                logger.info("Query for size deleted: {}", queryForSizeDeleted);
+                return viewsService.query(queryForSizeDeleted, request.getTenant()).compose(counts -> {
+                  var completeListSize = counts.getJsonObject(0).getInteger("count");
+                  request.setCompleteListSize(request.getCompleteListSize() + completeListSize);
+                  return Future.succeededFuture(instances);
+                });
+              } catch (QueryException exc) {
+                logger.error("Error occurred while building a query for deleted records: {}.",
+                  exc.getMessage(), exc);
+              }
+            }
+            return Future.succeededFuture(instances);
+          });
+      } catch (QueryException exc) {
+        logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
+      }
+    }
+    return Future.succeededFuture(instances);
   }
 
   private Future<Response> buildRecordsResponse(Request request, OffsetDateTime lastUpdateDate,
@@ -513,6 +536,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             logger.error("Error occurred while converting record to xml representation: {}.", e.getMessage(), e);
             logger.debug("Skipping problematic record due the conversion error. Source record id - {}.",
                 storageHelper.getRecordId(instance));
+            errorsService.log(request.getTenant(), request.getRequestId(), instanceId,
+              "Error occurred while converting record to xml representation: " + e.getMessage());
             return;
           }
         }

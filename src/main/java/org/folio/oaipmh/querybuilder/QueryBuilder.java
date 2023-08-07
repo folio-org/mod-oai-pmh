@@ -77,9 +77,9 @@ public class QueryBuilder {
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
   private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
   private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
-  private static final String DATE_UNTIL_MARC = "   %s inst.marc_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
-  private static final String DATE_FROM_MARC = "   %s inst.marc_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
-  private static final String DISCOVERY_SUPPRESS = "   %s coalesce(inst.suppress_from_discovery_srs, false) = false AND coalesce(inst.suppress_from_discovery_inventory, false) = false\n";
+  private static final String DATE_UNTIL_MARC = "   %s COALESCE(inst.marc_updated_date, inst.instance_updated_date) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DATE_FROM_MARC = "   %s COALESCE(inst.marc_updated_date, inst.instance_updated_date) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
+  private static final String DISCOVERY_SUPPRESS = "   %s COALESCE(inst.suppress_from_discovery_srs, false) = false AND COALESCE(inst.suppress_from_discovery_inventory, false) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
 

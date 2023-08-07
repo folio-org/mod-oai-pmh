@@ -8,7 +8,8 @@ public enum RecordsSource {
       return FOLIO;
     } else if (name.equals("Source record storage")) {
       return MARC;
-    } else if (name.equals("Source record storage and Inventory")) {
+    } else if (name.equals("Source record storage and Inventory") ||
+      name.equals("Source records storage and Inventory")) {
       return null; // SRS + Inventory means no need to specify source in SQL.
     } else if (name.equals("CONSORTIUM-MARC")) {
       return CONSORTIUM_MARC;
