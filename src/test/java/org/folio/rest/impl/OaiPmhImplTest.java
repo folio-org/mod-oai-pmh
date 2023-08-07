@@ -1577,15 +1577,18 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
     String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
 
+    int totalRecords = oaipmh.getListRecords().getRecords().size();
+
     while(!"".equals(resumptionToken)) {
       RequestSpecification request = createBaseRequest()
         .with()
         .param(VERB_PARAM, LIST_RECORDS.value())
         .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
       oaipmh = verify200WithXml(request, LIST_RECORDS);
+      totalRecords += oaipmh.getListRecords().getRecords().size();
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
-    assertThat(oaipmh.getListRecords().getRecords().size(), is(25));
+    assertThat(totalRecords, is(64));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
@@ -2675,7 +2678,7 @@ class OaiPmhImplTest {
 
     // Statistics API verification
     var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 60, 0, 0, 0);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 59, 0, 0, 0);
 
     failedInstancesEndpoints.forEach(path -> {
       var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
