@@ -2666,6 +2666,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
     String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    logger.info("Total size first: {}", oaipmh.getListRecords().getRecords().size());
 
     while(!"".equals(resumptionToken)) {
         RequestSpecification request = createBaseRequest()
@@ -2673,6 +2674,7 @@ class OaiPmhImplTest {
     .param(VERB_PARAM, LIST_RECORDS.value())
     .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
       oaipmh = verify200WithXml(request, LIST_RECORDS);
+      logger.info("Total size next: {}", oaipmh.getListRecords().getRecords().size());
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
 
