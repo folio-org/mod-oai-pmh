@@ -174,9 +174,7 @@ public class QueryBuilder {
         var whereOrAnd = where ? WHERE : " AND";
         return format(DELETED_INSTANCES, whereOrAnd, tenant, tenant, from, tenant, tenant, until);
       } else {
-        where = isNull(from) && isNull(until) && where;
-        var whereOrOr = where ? WHERE : " OR";
-        return format(DELETED, whereOrOr, where ? " (" : EMPTY,
+        return format(DELETED, " OR", EMPTY,
           tenant, tenant, tenant, tenant, tenant,
           tenant, tenant, buildDate(from), tenant, buildDate(until),
           tenant, tenant, buildDate(from), tenant, buildDate(until),
