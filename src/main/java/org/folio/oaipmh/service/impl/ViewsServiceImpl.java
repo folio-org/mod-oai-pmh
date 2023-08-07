@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ViewsServiceImpl implements ViewsService {
 
-  protected final Logger logger = LogManager.getLogger(getClass());
+  private static final Logger logger = LogManager.getLogger(ViewsServiceImpl.class);
 
   @Autowired
   private ViewsDao viewsDao;
