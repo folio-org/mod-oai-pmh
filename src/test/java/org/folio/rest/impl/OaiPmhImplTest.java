@@ -1327,13 +1327,17 @@ class OaiPmhImplTest {
 
     if (metadataPrefix == MARC21WITHHOLDINGS) {
       var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-      verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 4, 1, 1, 0);
+      verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 5, 0, 1, 0);
       var requestId = requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId();
       var uuidCollection = getUuidCollection(requestId, "failed-instances");
-      assertThat(uuidCollection.getUuidCollection(), hasSize(1));
-      assertThat(uuidCollection.getTotalRecords(), is(1));
+      assertThat(uuidCollection.getUuidCollection(), hasSize(0));
+      assertThat(uuidCollection.getTotalRecords(), is(0));
     }
-    verifyListResponse(response, LIST_RECORDS, 4);
+    if (metadataPrefix == MARC21WITHHOLDINGS) {
+      verifyListResponse(response, LIST_RECORDS, 5);
+    } else {
+      verifyListResponse(response, LIST_RECORDS, 6);
+    }
   }
 
   @Test
@@ -2633,12 +2637,12 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 4);
+    verifyListResponse(oaipmh, LIST_RECORDS, 5);
 
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 0, 0, 4, 1, 1, 0);
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 0, 0, 5, 0, 1, 0);
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
@@ -2694,7 +2698,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 59);
+    verifyListResponse(oaipmh, LIST_RECORDS, 60);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
@@ -2729,7 +2733,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
 //    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
   }
 
@@ -2742,7 +2746,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 9);
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
     assertEquals(0, OkapiMockServer.getTotalSrsCallsNumber()); // /source-storage/source-records is not used anymore
     // in Marc21WithHoldings
   }
@@ -2761,7 +2765,7 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 7); // One skipped.
+    verifyListResponse(oaipmh, LIST_RECORDS, 8);
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
@@ -2867,20 +2871,20 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 4);
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
     assertEquals(0, resumptionToken.getCursor().intValue());
     List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 3);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 7);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 8);
 
     assertThat(resumptionToken.getValue(), not(isEmptyString()));
 
-    assertThat(totalRecords.size(), is(11));
+    assertThat(totalRecords.size(), is(12));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }

@@ -106,7 +106,7 @@ public class QueryBuilder {
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
       buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords, source),
       buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords, source),
-      buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from) && isNull(until), deletedRecords ),
+      buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
       isCountQuery ? EMPTY : limit);
   }
 

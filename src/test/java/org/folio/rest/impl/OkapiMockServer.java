@@ -179,8 +179,6 @@ public class OkapiMockServer {
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
   private static final String USER_TENANTS_URI = "/user-tenants";
   private static final String STREAMING_INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
-  private static final String STREAMING_INVENTORY_INSTANCE_IDS_ENDPOINT = "/inventory-hierarchy/updated-instance-ids";
-
   public static final String ERROR_TENANT = "error";
   public static final String INVALID_CONFIG_TENANT = "invalid_config_value_tenant";
 
@@ -205,6 +203,7 @@ public class OkapiMockServer {
   private static final String USER_TENANTS_JSON_PATH = "/user-tenants/user-tenants.json";
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
+  private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
   private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
   private static final String LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20 = "list_identifiers_folio_and_marc_view_20.json";
   private static final String LIST_IDENTIFIERS_100_VIEW = "list_identifiers_100_view.json";
