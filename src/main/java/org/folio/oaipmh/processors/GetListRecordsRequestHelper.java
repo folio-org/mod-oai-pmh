@@ -243,7 +243,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           var idJsonMap = finalRecords.stream().map(JsonObject.class::cast)
             .filter(json -> json.getString(SOURCE).equals(MARC_SHARED.toString()) ||
               json.getString(SOURCE).equals(CONSORTIUM_MARC.toString()))
-              .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue));
+              .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue,
+                (id1, id2) -> id1)); // Here id1 = id2, i.e. the same ids, take only first one
           if (!idJsonMap.isEmpty()) {
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
