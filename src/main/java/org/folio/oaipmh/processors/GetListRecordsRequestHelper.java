@@ -48,9 +48,11 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -234,8 +236,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
     logger.info("Before doRequest, limit: {}", limit);
     long t = System.nanoTime();
-    doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
-      RecordsSource.getSource(recordsSource), limit, supportCompletedSize, new JsonArray(), statistics)
+    doRequest(request, finalRecords, new JsonArray(), skipSuppressedFromDiscovery, deletedRecordsSupport, from, until,
+      RecordsSource.getSource(recordsSource), limit, supportCompletedSize, statistics)
       .onComplete(handler -> {
         if (handler.succeeded()) {
           logger.info("After doRequest, total time to complete: {} sec, found records: {}",
@@ -244,7 +246,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             .filter(json -> json.getString(SOURCE).equals(MARC_SHARED.toString()) ||
               json.getString(SOURCE).equals(CONSORTIUM_MARC.toString()))
               .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue,
-                (id1, id2) -> id1)); // Here id1 = id2, i.e. the same ids, take only first one
+                (id1, id2) -> id1)); // Here id1 = id2, i.e. the same ids, take only first one.
           if (!idJsonMap.isEmpty()) {
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
@@ -256,7 +258,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } else {
             shared.complete(new JsonArray());
           }
-          buildResult(finalRecords, local, request, limit);
+          updateWithParsedRecord(finalRecords, local, request, limit);
         } else {
           logger.error("Request records was not succeeded: {}", handler.cause().getMessage(), handler.cause());
         }
@@ -335,57 +337,22 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         Integer.parseInt(retrySRSRequestParams.get(RETRY_ATTEMPTS)), promise, request, records));
   }
 
-  private Future<Void> doRequest(Request request, JsonArray finalRecords,
-                                 boolean skipSuppressedFromDiscovery,
-                                 boolean deletedRecordsSupport, String from, String until, RecordsSource source,
-                                 int limit, boolean supportCompletedSize, JsonArray tempRecords, StatisticsHolder statistics) {
+  private Future<Void> doRequest(Request request, JsonArray finalRecords, JsonArray oldCurrentRecords,
+                                 boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport, String from,
+                                 String until, RecordsSource source, int limit, boolean supportCompletedSize,
+                                 StatisticsHolder statistics) {
     try {
       var query = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
         from, until, source, skipSuppressedFromDiscovery, request.isFromDeleted() && deletedRecordsSupport,
         limit, false);
       logger.info("Query: {}", query);
       return viewsService.query(query, request.getTenant())
-        .compose(instances -> handleCompleteListSize(request, supportCompletedSize, from, until, source, limit,
-          instances, skipSuppressedFromDiscovery, deletedRecordsSupport))
+        .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, from, until, source, limit,
+          currentRecords, skipSuppressedFromDiscovery, deletedRecordsSupport))
         .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
           completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
-        .compose(instances -> {
-
-          // First, filter possible MARCs without SRS records
-          Long t = System.nanoTime();
-          JsonArray removedEmptyMarc = handleMARCsWithoutSRSRecord(request, instances, statistics);
-          logger.info("Execution of handleMARCsWithoutSRSRecord: {} sec", (System.nanoTime() - t) / 1_000_000_000);
-
-          finalRecords.addAll(removedEmptyMarc);
-          int diff = instances.size() - removedEmptyMarc.size();
-          logger.info("Number of MARCs without SRS found: {}", diff);
-          if (diff > 0) { // If at least 1 empty marc was found.
-            request.setLastInstanceId(instances.getJsonObject(instances.size() - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
-            tempRecords.addAll(removedEmptyMarc);
-            return doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
-              until, source, diff, supportCompletedSize, tempRecords, statistics);
-          }
-          if (!tempRecords.isEmpty()) {
-            tempRecords.addAll(removedEmptyMarc);
-          }
-          var updatedInstances = !tempRecords.isEmpty() ? tempRecords : instances;
-          int oldLimit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
-          // Second, collect deleted if non-deleted exhausted.
-          if (deletedRecordsSupport && !request.isFromDeleted() && updatedInstances.size() < oldLimit) {
-            int remainingFromDeleted = oldLimit - updatedInstances.size();
-            logger.info("Deleted required: {}", remainingFromDeleted);
-            if (remainingFromDeleted != 1) { // If not the last instance id.
-              request.setFromDeleted(true);
-            }
-            request.setLastInstanceId(null); // Last instance id should be null when switching to deleted.
-            return doRequest(request, finalRecords, skipSuppressedFromDiscovery, true,
-              from, until, source, remainingFromDeleted, supportCompletedSize, updatedInstances, statistics);
-          }
-          if (instances.size() < limit) { // If no remaining records.
-            request.setNextRecordId(null);
-          }
-          return Future.succeededFuture();
-        })
+        .compose(currentRecords -> processInstancesFromDB(request, currentRecords.addAll(oldCurrentRecords), finalRecords,
+          skipSuppressedFromDiscovery, deletedRecordsSupport, from, until, source, supportCompletedSize, limit, statistics))
         .onFailure(collectDeletedHandlerExc -> logger.error("Error occurred while collecting deleted: {}.",
           collectDeletedHandlerExc.getMessage(), collectDeletedHandlerExc));
     } catch (QueryException exc) {
@@ -394,24 +361,96 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
   }
 
-  private JsonArray handleMARCsWithoutSRSRecord(Request request, JsonArray finalRecords, StatisticsHolder statistics) {
-    return new JsonArray(finalRecords.stream().map(JsonObject.class::cast)
+  private Future<Void> processInstancesFromDB(Request request, JsonArray currentRecords, JsonArray finalRecords,
+                                              boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport,
+                                              String from, String until, RecordsSource source,
+                                              boolean supportCompletedSize, int limit,
+                                              StatisticsHolder statistics) {
+    Long t = System.nanoTime();
+
+    Set<String> idsOfMARCsWithoutSRS = new HashSet<>();
+
+    JsonArray recordsWithoutEmptyMARCs = handleMARCsWithoutSRSRecord(request, currentRecords, statistics, idsOfMARCsWithoutSRS);
+
+    logger.debug("Execution of handleMARCsWithoutSRSRecord: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+
+    finalRecords.addAll(recordsWithoutEmptyMARCs);
+    int diff = currentRecords.size() - recordsWithoutEmptyMARCs.size();
+    logger.info("Number of MARCs without SRS found: {}", diff);
+    logger.info("Number of records before handleDeletedRecords found: {}", recordsWithoutEmptyMARCs.size());
+
+    return handleDeletedRecords(request, currentRecords, finalRecords, skipSuppressedFromDiscovery,
+      deletedRecordsSupport, from, until, source, supportCompletedSize, statistics, idsOfMARCsWithoutSRS, recordsWithoutEmptyMARCs);
+  }
+
+  private Future<Void> handleDeletedRecords(Request request, JsonArray currentRecords, JsonArray finalRecords,
+                                            boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport,
+                                            String from, String until, RecordsSource source,
+                                            boolean supportCompletedSize, StatisticsHolder statistics,
+                                            Set<String> idsOfMARCsWithoutSRS, JsonArray recordsWithoutEmptyMARCs) {
+    int oldLimit = Integer.parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE)) + 1;
+    // Collect deleted if non-deleted exhausted.
+    if (deletedRecordsSupport && !request.isFromDeleted()) {
+      logger.info("Number of records before doRequest for deleted found: {}", currentRecords.size());
+      int remainingFromDeleted = oldLimit - currentRecords.size();
+      logger.info("Deleted required: {}", remainingFromDeleted);
+
+      if (remainingFromDeleted > 0) {
+        request.setLastInstanceId(null); // Last instance id should be null when switching to deleted.
+        request.setFromDeleted(true);
+        return doRequest(request, finalRecords, recordsWithoutEmptyMARCs, skipSuppressedFromDiscovery, true,
+          from, until, source, remainingFromDeleted, supportCompletedSize, statistics);
+      }
+    }
+    updateRequest(request, currentRecords, finalRecords, oldLimit, idsOfMARCsWithoutSRS);
+    return Future.succeededFuture();
+  }
+
+  private void updateRequest(Request request, JsonArray currentRecords, JsonArray finalRecords, int oldLimit,
+                             Set<String> idsOfMARCsWithoutSRS) {
+    var currentRecordsSize = currentRecords.size();
+    var finalRecordsSize = finalRecords.size();
+    if (currentRecordsSize == oldLimit) {
+      if (finalRecordsSize > 1) {
+        request.setNextRecordId(
+          currentRecords.getJsonObject(currentRecordsSize - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
+        request.setLastInstanceId(
+          currentRecords.getJsonObject(currentRecordsSize - 2).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
+      } else {
+        request.setNextRecordId(null);
+        request.setLastInstanceId(null);
+      }
+
+    } else {
+      request.setNextRecordId(null);
+    }
+    if (currentRecordsSize > 0) {
+      var lastInstanceId = currentRecords.getJsonObject(currentRecordsSize - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE);
+      if (nonNull(request.getNextRecordId()) && !idsOfMARCsWithoutSRS.contains(lastInstanceId)) {
+        finalRecords.remove(finalRecordsSize - 1);
+      }
+    }
+  }
+
+  private JsonArray handleMARCsWithoutSRSRecord(Request request, JsonArray currentRecords, StatisticsHolder statistics,
+                                                Set<String> idsOfMARCsWithoutSRS) {
+    return new JsonArray(currentRecords.stream().map(JsonObject.class::cast)
       .filter(rec -> {
-        if (!rec.getString(SOURCE).equals(RecordsSource.MARC.name())) {
+
+        // Keep FOLIO and shared as well as all deleted records.
+        if (!rec.getString(SOURCE).equals(RecordsSource.MARC.name()) || request.isFromDeleted()) {
           return true;
         }
-        // Update dates since they are not correct for MARC in instance table.
-        var marcUpdatedDate = rec.getString("marc_updated_date");
-        var marcCreatedDate = rec.getString("marc_created_date");
-        rec.put("instance_updated_date", marcUpdatedDate);
-        rec.put("instance_created_date", marcCreatedDate);
+
+        setCorrectDatesForMarc(rec);
 
         var marcRecord = rec.getString(MARC_RECORD_FROM_VIEW_RESPONSE);
 
-        if (isNull(marcRecord)) {
+        if (isNull(marcRecord)) { // If MARC does not have underlying SRS record.
           var instanceId = rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE);
           statistics.addSkippedInstancesCounter(1);
           statistics.addSkippedInstancesIds(instanceId);
+          idsOfMARCsWithoutSRS.add(instanceId);
           logger.error("MARC with null marc_record: {}", instanceId);
           errorsService.log(request.getTenant(), request.getRequestId(), rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE),
             "There is no corresponding SRS record for this MARC");
@@ -421,8 +460,22 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       }).collect(toList()));
   }
 
+  /**
+   * Update dates since they are not correct for MARC in instance table.
+   * For example, when deleting MARC record, created/updated dates are
+   * updated only in the records_lb table of SRS,
+   * but not in the 'instance' table of the inventory storage.
+   * @param marcRecord record with source MARC whose dates should be corrected
+   */
+  private void setCorrectDatesForMarc(JsonObject marcRecord) {
+    var marcUpdatedDate = marcRecord.getString("marc_updated_date");
+    var marcCreatedDate = marcRecord.getString("marc_created_date");
+    marcRecord.put("instance_updated_date", marcUpdatedDate);
+    marcRecord.put("instance_created_date", marcCreatedDate);
+  }
+
   private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, String from, String until,
-                                      RecordsSource source, int limit, JsonArray instances,
+                                      RecordsSource source, int limit, JsonArray currentRecords,
                                       boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport) {
     if (supportCompletedSize && request.getCompleteListSize() == 0) {
       try {
@@ -433,7 +486,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         return viewsService.query(queryForSize, request.getTenant()).compose(counts -> {
             var completeListSize = counts.getJsonObject(0).getInteger("count");
             request.setCompleteListSize(completeListSize);
-            return Future.succeededFuture(instances);
+            return Future.succeededFuture(currentRecords);
           })
           .onFailure(handleException -> logger.error("Error occurred while calling a view to get complete list size: {}.",
             handleException.getMessage(), handleException))
@@ -447,20 +500,20 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
                 return viewsService.query(queryForSizeDeleted, request.getTenant()).compose(counts -> {
                   var completeListSize = counts.getJsonObject(0).getInteger("count");
                   request.setCompleteListSize(request.getCompleteListSize() + completeListSize);
-                  return Future.succeededFuture(instances);
+                  return Future.succeededFuture(currentRecords);
                 });
               } catch (QueryException exc) {
                 logger.error("Error occurred while building a query for deleted records: {}.",
                   exc.getMessage(), exc);
               }
             }
-            return Future.succeededFuture(instances);
+            return Future.succeededFuture(currentRecords);
           });
       } catch (QueryException exc) {
         logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
       }
     }
-    return Future.succeededFuture(instances);
+    return Future.succeededFuture(currentRecords);
   }
 
   private Future<Response> buildRecordsResponse(Request request, OffsetDateTime lastUpdateDate,
@@ -502,7 +555,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       }
       instancesService.updateRequestUpdatedDateAndStatistics(request.getRequestId(), lastUpdateDate, statistics, request.getTenant())
               .onComplete(x -> {
-                logger.info("Execution of buildRecordsResponse: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+                logger.debug("Execution of buildRecordsResponse: {} sec", (System.nanoTime() - t) / 1_000_000_000);
                 promise.complete(response);
               });
     } catch (Exception e) {
@@ -519,8 +572,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     List<RecordType> records = new ArrayList<>();
     srsResponse.stream()
-      .forEach(instanceObj -> {
-        JsonObject instance = (JsonObject) instanceObj;
+      .map(JsonObject.class::cast)
+      .forEach(instance -> {
         final String instanceId = ofNullable(instance.getString("id"))
           .orElse(instance.getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
         RecordType instanceRecord = createRecord(request, instance, instanceId);
@@ -530,8 +583,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData, instance,
           suppressedRecordsProcessing);
         String source = storageHelper.getInstanceRecordSource(updatedSrsRecord);
-        if (source != null && instanceRecord.getHeader()
-          .getStatus() == null) {
+        if (source != null && instanceRecord.getHeader().getStatus() == null) {
           if (suppressedRecordsProcessing) {
             source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, updatedSrsRecord);
             source = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, updatedSrsRecord);
@@ -607,7 +659,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     }
     String resumptionToken = request.toResumptionToken(extraParams);
     resumptionTokenType.withValue(resumptionToken);
-    logger.info("Execution of buildResumptionTokenFromRequest: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+    logger.debug("Execution of buildResumptionTokenFromRequest: {} sec", (System.nanoTime() - t) / 1_000_000_000);
     return resumptionTokenType;
   }
 
@@ -616,8 +668,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     batchesSizeCounter.setRelease(0);
   }
 
-  private void buildResult(JsonArray records, Promise<JsonArray> promise, Request request, int limit) {
-    JsonArray result = new JsonArray();
+  private void updateWithParsedRecord(JsonArray records, Promise<JsonArray> promise, Request request, int limit) {
+    JsonArray updatedWithParsedRecord = new JsonArray();
     long t = System.nanoTime();
     records.stream()
       .filter(Objects::nonNull)
@@ -626,7 +678,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         var marcRecord = jo.getJsonObject(MARC_RECORD_FROM_VIEW_RESPONSE);
         if (isNull(marcRecord)) {
           if (request.getVerb() != VerbType.LIST_IDENTIFIERS) {
-            // Gen on the fly
+            // Generate on the fly if no marc.
             JsonObject jsonInstances = new JsonObject();
             JsonArray jsonRecords = new JsonArray();
             jsonRecords.add(jo.getJsonObject("instance_record"));
@@ -642,27 +694,13 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           content.put("content", marcRecord);
           jo.remove(MARC_RECORD_FROM_VIEW_RESPONSE);
           jo.put(PARSED_RECORD, content);
-
         }
-        result.add(jo);
+        updatedWithParsedRecord.add(jo);
       });
-    List<JsonObject> listRecords = records.getList();
 
-    if (records.size() == limit) {
-      request.setLastInstanceId(listRecords.size() > 1 ? listRecords.get(listRecords.size() - 2).getString(INSTANCE_ID_FROM_VIEW_RESPONSE) : null);
-    }
-    int batchSize = Integer
-      .parseInt(getProperty(request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    if (listRecords.size() == batchSize + 1) {
-      request.setNextRecordId(listRecords.get(records.size() - 1).getString(INSTANCE_ID_FROM_VIEW_RESPONSE));
-      result.remove(result.size() - 1);
-    }
-    if (limit - records.size() > 1) {
-      request.setNextRecordId(null);
-    }
-    logger.info("Execution of buildResult: {} sec", (System.nanoTime() - t) / 1_000_000_000);
-    logger.info("End of buildResult, result size: {}", result.size());
-    promise.complete(result);
+    logger.debug("Execution of buildResult: {} sec", (System.nanoTime() - t) / 1_000_000_000);
+    logger.info("End of buildResult, result size: {}", updatedWithParsedRecord.size());
+    promise.complete(updatedWithParsedRecord);
   }
 
   @Override

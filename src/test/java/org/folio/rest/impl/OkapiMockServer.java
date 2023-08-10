@@ -78,9 +78,6 @@ public class OkapiMockServer {
   private static final String JSON_FILE_ID = "e567b8e2-a45b-45f1-a85a-6b6312bdf4d8";
   private static final String ID_PARAM = "instanceId";
 
-  // Dates
-  static final String FAIL_SRS_500 = "2222-12-22";
-  static final String FAIL_SRS_500_END_DATE = "2222-12-23";
   static final String NO_RECORDS_DATE = "2029-11-11T11:11:11Z";
   private static final String NO_RECORDS_DATE_STORAGE = "2029-11-11T11:11:11";
   static final String PARTITIONABLE_RECORDS_DATE = "2003-01-01";
@@ -94,9 +91,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_INVALID_JSON_STRUCTURE = "2004-02-14";
   static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML = "2020-03-03";
   private static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE_STORAGE = "2001-01-01T01:01:02";
-  static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD = "2000-01-02T00:00:00Z";
   private static final String DATE_FOR_ONE_INSTANCE_BUT_WITHOT_RECORD_STORAGE = "2000-01-02T00:00:00";
-  static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD = "2000-01-02T03:04:05Z";
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOT_RECORD_STORAGE = "2000-01-02T03:04:05";
   static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD = "2000-01-02T07:07:07Z";
   private static final String DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT__EXTERNAL_IDS_HOLDER_FIELD_STORAGE = "2000-01-02T07:07:07";
@@ -109,15 +104,12 @@ public class OkapiMockServer {
   static final String DATE_FOR_INSTANCES_10 = "2001-01-29";
   static final String DATE_FOR_INSTANCES_FOLIO_AND_MARC_10 = "2019-12-29";
   static final String INVENTORY_4_INSTANCES_IDS_DATE = "2020-01-01";
-  static final String DATE_INVENTORY_STORAGE_ERROR_RESPONSE = "1488-01-02";
-  static final String DATE_SRS_ERROR_RESPONSE = "1388-01-01";
   static final String DATE_SRS_500_ERROR_RESPONSE = "1388-02-02";
   static final String DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE = "1388-03-03";
   static final String DATE_INVENTORY_10_INSTANCE_IDS = "1499-01-01";
   static final String EMPTY_INSTANCES_IDS_DATE = "1444-01-01";
   static final String INVENTORY_60_INSTANCE_IDS_DATE = "2002-02-04";
   static final String INSTANCE_WITHOUT_SRS_RECORD_DATE = "2002-02-03";
-  static final String DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW = "1433-01-03";
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String DEFAULT_RECORD_DATE = "2023-06-30";
@@ -125,12 +117,7 @@ public class OkapiMockServer {
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   static final String NO_ITEMS_DATE = "2020-01-29";
   static final String DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA = "2000-01-10";
-  static final String GET_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-10";
-  static final String ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE = "2020-01-11";
-  static final String GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE = "2020-01-12";
-  static final String GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE = "2020-01-12";
 
-  public static final String INVALID_INSTANCE_IDS_JSON_DATE = "2011-11-22";
   public static final String INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE = "2024-11-22";
   public static final String INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE = "2013-01-02";
   private static final String OLD_METADATA_DATE_FORMAT = "2020-12-02T11:24:07.230+0000";
@@ -167,7 +154,6 @@ public class OkapiMockServer {
   private static final String INSTANCES_11 = "/instances_11_totalRecords_100.json";
   private static final String SRS_RECORD_WITH_INVALID_JSON = "/srs_record_with_invalid_json.json";
   private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON = "/two_records_one_cannot_be_converted_to_xml.json";
-  private static final String INVALID_SRS_RECORD_INSTANCE_ID_JSON = "invalid_srs_record_instance_id.json";
   private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
   private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
   private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
@@ -203,47 +189,20 @@ public class OkapiMockServer {
   private static final String USER_TENANTS_JSON_PATH = "/user-tenants/user-tenants.json";
 
   private static final String INVENTORY_VIEW_PATH = "/inventory_view/";
-  private static final String USER_TENANTS_ENDPOINT = "/user-tenants?limit=1";
-  private static final String LIST_IDENTIFIERS_VIEW = "list_identifiers_view.json";
-  private static final String LIST_IDENTIFIERS_FOLIO_AND_MARC_VIEW_20 = "list_identifiers_folio_and_marc_view_20.json";
-  private static final String LIST_IDENTIFIERS_100_VIEW = "list_identifiers_100_view.json";
-  private static final String LIST_IDENTIFIERS_11_VIEW = "list_identifiers_11_view.json";
-  private static final String ALL_INSTANCES_IDS_JSON = "instance_ids.json";
-  private static final String INSTANCE_IDS_10_JSON = "10_instance_ids.json";
-  private static final String INSTANCE_IDS_NO_DATA = "instance_ids_no_data.json";
-  private static final String INSTANCE_IDS_ONE_WITH_BAD_DATA = "instance_ids_one_with_bad_data.json";
-  private static final String INSTANCE_IDS_FAIL_SRS_500 = "instance_ids_fail_srs_500.json";
-  private static final String INSTANCE_IDS_3_AND_1_DELETED_JSON = "instance_3_and_1_deleted.json";
-  private static final String INSTANCE_IDS_10_JSON_WITHHOLDINGS = "10_instance_ids_with_holdings.json";
-  private static final String INSTANCE_IDS_60_JSON = "60_instances_ids.json";
   private static final String SRS_RECORD_TEMPLATE_JSON = "/srs_record_template.json";
   private static final String SRS_RESPONSE_TEMPLATE_JSON = "/srs_response_template.json";
-  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_JSON = "instance_id_to_make_srs_fail.json";
-  private static final String INSTANCE_ID_TO_MAKE_SRS_FAIL_WITH_500_JSON = "instance_id_to_make_srs_fail_with_502.json";
-  private static final String INSTANCE_ID_SRS_TIMEOUT_JSON = "instance_id_to_make_srs_fail_with_timeout.json";
-  private static final String EMPTY_INSTANCES_IDS_JSON = "empty_instances_ids.json";
-  private static final String ERROR_FROM_ENRICHED_INSTANCES_IDS_JSON = "error_from_enrichedInstances_ids.json";
   private static final String INSTANCE_IDS = "instanceIds";
   private static final String ENRICHED_INSTANCE_TEMPLATE_JSON = "template/enriched_instance-template.json";
   private static final String ENRICHED_INSTANCE_NO_ITEMS_JSON = "enriched_instance_no_items.json";
-  private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_INSTANCE_IDS_JSON = "two_records_one_cannot_be_converted_to_xml_instance_ids.json";
   private static final String TWO_RECORDS_WITH_CYRILLIC_DATA_JSON = "/two_records_with_cyrillic_data.json";
   private static final String DEFAULT_INSTANCE_ID = "1ed91465-7a75-4d96-bf34-4dfbd89790d5";
-  private static final String DEFAULT_INSTANCE_JSON = "default_instance.json";
-  private static final String DEFAULT_LIST_IDENTIFIER_JSON = "default_list_identifier.json";
   private static final String SRS_RECORD = "/srs_record.json";
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
-  private static final String INSTANCE_ID_INVALID_ENRICHED_INSTANCE_JSON = "instance_id_invalid_enriched_instance.json";
-  private static final String INSTANCE_ID_INVALID_CALL_NUMBER_TYPE_ENRICHED_INSTANCE_JSON = "instance_id_invalid_call_number_type_enriched_instance.json";
-  private static final String INSTANCE_IDS_UNDERLYING_SRS_RECORDS_WITH_CYRILLIC_JSON = "instance_ids_underlying_srs_records_with_cyrillic.json";
-  private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE_JSON = "inventory_instance_mock_forbidden_response.json";
-  private static final String INSTANCE_ID_ENRICH_INSTANCES_500_RESPONSE_JSON = "inventory_instance_mock_500_response.json";
   private static final String INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "instance.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "enriched_instance.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA = "enriched_instance_invalid_data.json";
 
-  private static final String INSTANCE_ID_NO_SRS_RECORD_JSON = "instance_id_no_srs_record.json";
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
   private static final String INSTANCE_ID_ENRICH_INSTANCES_FORBIDDEN_RESPONSE = "8f33cdf4-6a85-4877-8b99-7d5e3be910f1";

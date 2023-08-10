@@ -1360,22 +1360,29 @@ CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_deleted_items AS
 SELECT * FROM oaitest_mod_inventory_storage.audit_item;
 
 CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_with_marc_records AS
-SELECT instance_record.id                                                                                         instance_id,
-      marc_record.content                                                                                         marc_record,
-      instance_record.jsonb                                                                                       instance_record,
-      instance_record.jsonb ->> 'source'                                                                          source,
-      oaitest_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') instance_updated_date,
-      oaitest_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'createdDate') instance_created_date,
-      oaitest_mod_inventory_storage.strToTimestamp(record_lb.updated_date::text)                          marc_updated_date,
-      oaitest_mod_inventory_storage.strToTimestamp(record_lb.created_date::text)                          marc_created_date,
-      COALESCE(record_lb.suppress_discovery, false)                                                               suppress_from_discovery_srs,
-      COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                      suppress_from_discovery_inventory,
-      false                                                                                                       deleted
-      FROM oaitest_mod_oai_pmh.get_instances_from_inventory instance_record
-      LEFT JOIN oaitest_mod_oai_pmh.get_instances_from_srs record_lb
-      ON instance_record.id = record_lb.external_id
-      LEFT JOIN oaitest_mod_oai_pmh.get_marc_records marc_record
-      ON marc_record.id = record_lb.id;
+SELECT instance_record.id                                                                                     instance_id,
+       (select marc_record.content
+        from oaitest_mod_oai_pmh.get_instances_from_srs record_lb
+                 LEFT JOIN oaitest_mod_oai_pmh.get_marc_records marc_record ON marc_record.id = record_lb.id
+        where instance_record.id = record_lb.external_id limit 1)                                                     marc_record,
+       instance_record.jsonb                                                                                  instance_record,
+       instance_record.jsonb ->> 'source'                                                                     source,
+       oaitest_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'updatedDate') instance_updated_date,
+       oaitest_mod_inventory_storage.strToTimestamp(instance_record.jsonb -> 'metadata' ->> 'createdDate') instance_created_date,
+       (select oaitest_mod_inventory_storage.strToTimestamp(record_lb.updated_date::text)
+        from oaitest_mod_oai_pmh.get_instances_from_srs record_lb
+        where instance_record.id = record_lb.external_id limit 1)                                                     marc_updated_date,
+       (select oaitest_mod_inventory_storage.strToTimestamp(record_lb.created_date::text)
+        from oaitest_mod_oai_pmh.get_instances_from_srs record_lb
+        where instance_record.id = record_lb.external_id limit 1)                                                     marc_created_date,
+       COALESCE((select record_lb.suppress_discovery
+                 from oaitest_mod_oai_pmh.get_instances_from_srs record_lb
+                 where instance_record.id = record_lb.external_id limit 1),
+                false)                                                                                        suppress_from_discovery_srs,
+       COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool,
+                false)                                                                                        suppress_from_discovery_inventory,
+       false                                                                                                  deleted
+FROM oaitest_mod_oai_pmh.get_instances_from_inventory instance_record;
 
 CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_with_marc_records_deleted AS
 SELECT (jsonb ->> 'id')::uuid                                                                                              instance_id,
