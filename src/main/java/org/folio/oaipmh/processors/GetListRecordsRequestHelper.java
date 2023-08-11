@@ -258,7 +258,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           } else {
             shared.complete(new JsonArray());
           }
-          updateWithParsedRecord(finalRecords, local, request, limit);
+          updateWithParsedRecord(finalRecords, local, request);
         } else {
           logger.error("Request records was not succeeded: {}", handler.cause().getMessage(), handler.cause());
         }
@@ -272,8 +272,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       );
   }
 
-  private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport,
-                               Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
+  private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport, Map<String, JsonObject> idJsonMap,
+                               AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
     logger.info("doRequestShared execution");
     SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).postSourceStorageSourceRecords("INSTANCE",
@@ -352,7 +352,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
           completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
         .compose(currentRecords -> processInstancesFromDB(request, currentRecords.addAll(oldCurrentRecords), finalRecords,
-          skipSuppressedFromDiscovery, deletedRecordsSupport, from, until, source, supportCompletedSize, limit, statistics))
+          skipSuppressedFromDiscovery, deletedRecordsSupport, from, until, source, supportCompletedSize, statistics))
         .onFailure(collectDeletedHandlerExc -> logger.error("Error occurred while collecting deleted: {}.",
           collectDeletedHandlerExc.getMessage(), collectDeletedHandlerExc));
     } catch (QueryException exc) {
@@ -364,8 +364,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private Future<Void> processInstancesFromDB(Request request, JsonArray currentRecords, JsonArray finalRecords,
                                               boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport,
                                               String from, String until, RecordsSource source,
-                                              boolean supportCompletedSize, int limit,
-                                              StatisticsHolder statistics) {
+                                              boolean supportCompletedSize, StatisticsHolder statistics) {
     Long t = System.nanoTime();
 
     Set<String> idsOfMARCsWithoutSRS = new HashSet<>();
@@ -668,7 +667,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     batchesSizeCounter.setRelease(0);
   }
 
-  private void updateWithParsedRecord(JsonArray records, Promise<JsonArray> promise, Request request, int limit) {
+  private void updateWithParsedRecord(JsonArray records, Promise<JsonArray> promise, Request request) {
     JsonArray updatedWithParsedRecord = new JsonArray();
     long t = System.nanoTime();
     records.stream()
