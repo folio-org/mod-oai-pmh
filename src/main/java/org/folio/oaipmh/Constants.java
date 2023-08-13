@@ -72,6 +72,7 @@ public final class Constants {
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
   public static final String LAST_INSTANCE_ID_PARAM = "lastInstanceId";
   public static final String FROM_DELETED_PARAM = "fromDeleted";
+  public static final String TURNED_TO_DELETED_PARAM = "turnedToDeleted";
   public static final String REQUEST_ID_PARAM = "requestId";
   public static final String REQUEST_FROM_INVENTORY_PARAM = "fromInventory";
   public static final String REQUEST_INVENTORY_TOTAL_RECORDS_PARAM = "inventoryTotalRecords";

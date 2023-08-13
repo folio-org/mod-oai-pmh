@@ -40,6 +40,7 @@ import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TENANT_ID;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
 /**
@@ -75,6 +76,12 @@ public class Request {
   }
 
   private boolean fromDeleted;
+
+  /**
+   * Defines a specific short moment during the request when non-deleted records are exhausted and
+   * needs to get only next record ID from deleted ones.
+   */
+  private boolean turnedToDeleted;
 
   /** The previous total number of records used for partitioning. */
   private int totalRecords;
@@ -189,6 +196,7 @@ public class Request {
     this.nextInstancePkValue = getNextInstancePkValue();
     this.lastInstanceId = getLastInstanceId();
     this.fromDeleted = isFromDeleted();
+    this.turnedToDeleted = isTurnedToDeleted();
   }
 
 
@@ -326,6 +334,14 @@ public class Request {
     return nextInstancePkValue;
   }
 
+  public boolean isTurnedToDeleted() {
+    return turnedToDeleted;
+  }
+
+  public void setTurnedToDeleted(boolean turnedToDeleted) {
+    this.turnedToDeleted = turnedToDeleted;
+  }
+
   public void setRequestId(String requestId) {
     this.requestId = requestId;
   }
@@ -404,6 +420,7 @@ public class Request {
         this.lastInstanceId = params.get(LAST_INSTANCE_ID_PARAM);
       }
       this.fromDeleted = Boolean.parseBoolean(params.get(FROM_DELETED_PARAM));
+      this.turnedToDeleted = Boolean.parseBoolean(params.get(TURNED_TO_DELETED_PARAM));
     } catch (Exception e) {
       return false;
     }
