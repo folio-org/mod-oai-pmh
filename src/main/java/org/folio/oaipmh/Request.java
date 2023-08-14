@@ -20,7 +20,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.FROM_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.LAST_INSTANCE_ID_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
@@ -38,6 +40,7 @@ import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.TENANT_ID;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
 /**
@@ -63,6 +66,23 @@ public class Request {
    * if SRS + Inventory.
    */
   private boolean fromInventory;
+
+  public boolean isFromDeleted() {
+    return fromDeleted;
+  }
+
+  public void setFromDeleted(boolean fromDeleted) {
+    this.fromDeleted = fromDeleted;
+  }
+
+  private boolean fromDeleted;
+
+  /**
+   * Defines a specific short moment during the request when non-deleted records are exhausted and
+   * needs to get only next record ID from deleted ones.
+   */
+  private boolean turnedToDeleted;
+
   /** The previous total number of records used for partitioning. */
   private int totalRecords;
   /**
@@ -81,6 +101,7 @@ public class Request {
   private int cursor;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
+  private String lastInstanceId;
   private int completeListSize;
    /** The id of the request. */
   private String requestId;
@@ -173,6 +194,9 @@ public class Request {
     this.completeListSize = request.getCompleteListSize();
     this.requestId = request.getRequestId();
     this.nextInstancePkValue = getNextInstancePkValue();
+    this.lastInstanceId = getLastInstanceId();
+    this.fromDeleted = isFromDeleted();
+    this.turnedToDeleted = isTurnedToDeleted();
   }
 
 
@@ -298,8 +322,24 @@ public class Request {
     return nextRecordId;
   }
 
+  public void setNextRecordId(String nextRecordId) {
+    this.nextRecordId = nextRecordId;
+  }
+
+  public String getLastInstanceId() {
+    return lastInstanceId;
+  }
+
   public int getNextInstancePkValue() {
     return nextInstancePkValue;
+  }
+
+  public boolean isTurnedToDeleted() {
+    return turnedToDeleted;
+  }
+
+  public void setTurnedToDeleted(boolean turnedToDeleted) {
+    this.turnedToDeleted = turnedToDeleted;
   }
 
   public void setRequestId(String requestId) {
@@ -324,6 +364,10 @@ public class Request {
 
   public void setNextInstancePkValue(int nextInstancePkValue) {
     this.nextInstancePkValue = nextInstancePkValue;
+  }
+
+  public void setLastInstanceId(String lastInstanceId) {
+    this.lastInstanceId = lastInstanceId;
   }
 
   /**
@@ -372,6 +416,11 @@ public class Request {
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
+      if (Objects.nonNull(params.get(LAST_INSTANCE_ID_PARAM))) {
+        this.lastInstanceId = params.get(LAST_INSTANCE_ID_PARAM);
+      }
+      this.fromDeleted = Boolean.parseBoolean(params.get(FROM_DELETED_PARAM));
+      this.turnedToDeleted = Boolean.parseBoolean(params.get(TURNED_TO_DELETED_PARAM));
     } catch (Exception e) {
       return false;
     }

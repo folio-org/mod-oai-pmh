@@ -10,6 +10,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.SqlClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -80,6 +81,12 @@ public class PostgresClientFactory {
 
   public ReactiveClassicGenericQueryExecutor getQueryExecutorReader(String tenantId) {
     return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(this.vertx, tenantId, true));
+  }
+
+  public SqlClient getClient(String tenantId) {
+    PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId, true);
+    PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
+    return PgPool.client(vertx, connectOptions, poolOptions);
   }
 
   public static void closeAll() {

@@ -70,6 +70,9 @@ public final class Constants {
   public static final String SOURCE_RECORDS_PARAM = "sourceRecords";
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
+  public static final String LAST_INSTANCE_ID_PARAM = "lastInstanceId";
+  public static final String FROM_DELETED_PARAM = "fromDeleted";
+  public static final String TURNED_TO_DELETED_PARAM = "turnedToDeleted";
   public static final String REQUEST_ID_PARAM = "requestId";
   public static final String REQUEST_FROM_INVENTORY_PARAM = "fromInventory";
   public static final String REQUEST_INVENTORY_TOTAL_RECORDS_PARAM = "inventoryTotalRecords";
@@ -152,4 +155,6 @@ public final class Constants {
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
 
   public static final String HTTPS = "https:";
+  public static final String INSTANCE_ID_FROM_VIEW_RESPONSE = "instance_id";
+  public static final String MARC_RECORD_FROM_VIEW_RESPONSE = "marc_record";
 }

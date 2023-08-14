@@ -78,6 +78,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -658,7 +659,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       return promise.future();
     }
     Map<String, JsonObject> instancesMap = instances.stream()
-      .collect(LinkedHashMap::new, (map, instance) -> map.put(instance.getString(INSTANCE_ID_FIELD_NAME), instance), Map::putAll);
+      .collect(LinkedHashMap::new, (map, instance) ->
+        map.put(ofNullable(instance.getString(INSTANCE_ID_FIELD_NAME))
+          .orElse(instance.getString("instance_id")), instance), Map::putAll);
 
     var httpRequest = ItemsHoldingInventoryRequestFactory.getItemsHoldingsInventoryRequest(request);
     JsonObject entries = new JsonObject();

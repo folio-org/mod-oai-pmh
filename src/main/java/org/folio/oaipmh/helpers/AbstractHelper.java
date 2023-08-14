@@ -218,6 +218,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
   private Pair<GranularityType, LocalDateTime> parseDateTime(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+    if (date.getValue().isEmpty()) {
+      return null;
+    }
     try {
       LocalDateTime dateTime = LocalDateTime.parse(date.getValue(), ISO_UTC_DATE_TIME);
       return new ImmutablePair<>(GranularityType.YYYY_MM_DD_THH_MM_SS_Z, dateTime);
@@ -237,6 +240,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
   private Pair<GranularityType, LocalDateTime> parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+    if (date.getValue().isEmpty()) {
+      return null;
+    }
     try {
       LocalDateTime dateTime = LocalDate.parse(date.getValue()).atStartOfDay();
       return new ImmutablePair<>(GranularityType.YYYY_MM_DD, dateTime);
@@ -448,10 +454,10 @@ public abstract class AbstractHelper implements VerbHelper {
   protected String getUntilDate(Request request, String from) {
     boolean isDateOnly = isDateOnlyGranularity(request);
     if (isDateOnly) {
-      return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
+      return isNotEmpty(from) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY) : "";
     } else {
       return isNotEmpty(from) && from.matches(DATE_ONLY_PATTERN) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY)
-        : LocalDateTime.now().format(ISO_UTC_DATE_TIME);
+        : "";
     }
   }
 
