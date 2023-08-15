@@ -1934,6 +1934,7 @@
         "translation": {
           "function": "set_electronic_access_indicator",
           "parameters": {
+            "No information provided": " ",
             "Resource": "0",
             "Version of resource": "1",
             "Related resource": "2",
