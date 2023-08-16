@@ -340,7 +340,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
           }
         }
       }
-      return StringUtils.EMPTY;
+      return StringUtils.SPACE;
     }
   },
 

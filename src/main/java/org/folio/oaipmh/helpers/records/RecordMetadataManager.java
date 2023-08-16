@@ -70,7 +70,7 @@ public class RecordMetadataManager {
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
     indicatorsMap.put("No display constant generated", "4,8");
-    indicatorsMap.put("", "4,");
+    indicatorsMap.put("", DEFAULT_INDICATORS);
     indicatorsMap.put("Related resource", "4,2");
     indicatorsMap.put("Resource", "4,0");
     indicatorsMap.put("Version of resource", "4,1");
@@ -248,11 +248,7 @@ public class RecordMetadataManager {
     String key = StringUtils.isNotEmpty(name) ? name : EMPTY;
     String indicatorsInString = indicatorsMap.getOrDefault(key, DEFAULT_INDICATORS);
     if (indicatorsInString != null) {
-      var res = new ArrayList<>(Arrays.asList(indicatorsInString.split(",")));
-      if (res.size() < 2) {
-        res.add(EMPTY);
-      }
-      return res;
+      return Arrays.asList(indicatorsInString.split(","));
     } else {
       return Collections.emptyList();
     }
