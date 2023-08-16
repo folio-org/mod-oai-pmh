@@ -1,3 +1,15 @@
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_with_marc_records CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_from_inventory CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_from_srs CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_from_srs_deleted CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_marc_records CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_holdings CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_items CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_deleted_instances CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_deleted_holdings CASCADE;
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_deleted_items CASCADE;
+
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_from_inventory AS
 SELECT * FROM ${myuniversity}_mod_inventory_storage.instance;
 
