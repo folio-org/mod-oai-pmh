@@ -249,7 +249,7 @@ class RecordMetadataManagerTest {
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_EMPTY, Arrays.asList("4", ""))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_EMPTY, Arrays.asList("4", " "))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RELATED_RESOURCE, Arrays.asList("4", "2"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE, Arrays.asList("4", "0"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE, Arrays.asList("4", "1"))));
