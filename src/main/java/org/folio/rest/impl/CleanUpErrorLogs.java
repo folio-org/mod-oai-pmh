@@ -19,7 +19,6 @@ import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -63,11 +62,23 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
               result.result().forEach(id -> {
                 try {
                   instancesService.updateRequestMetadataByPathToError(id, tenant, null);
+                } catch (Exception ex) {
+                  logger.error("Error occurred while updateRequestMetadataByPathToError : requestId: {}", id);
+                }
+                try {
                   instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
+                } catch (Exception ex) {
+                  logger.error("Error occurred while updateRequestMetadataByLinkToError : requestId: {}", id);
+                }
+                try {
                   folioS3Client.remove(id + "-error.csv");
+                } catch (Exception ex) {
+                  logger.error("Error occurred while deleting file from S3: fileName: {}", id + "-error.csv");
+                }
+                try {
                   errorsService.deleteErrorsByRequestId(tenant, id);
                 } catch (Exception ex) {
-                  logger.error("Error occurred while cleaning up the error logs", ex);
+                  logger.error("Error occurred while deleteErrorsByRequestId: requestId: {}", id);
                 }
               });
             } else {

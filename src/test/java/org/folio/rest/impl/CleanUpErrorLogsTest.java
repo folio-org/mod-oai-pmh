@@ -22,6 +22,7 @@ import org.folio.oaipmh.service.ErrorsService;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.resource.OaiPmhCleanUpErrorLogs;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
@@ -33,6 +34,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -42,6 +45,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.lang.String.format;
@@ -51,8 +55,12 @@ import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(VertxExtension.class)
+@ExtendWith(MockitoExtension.class)
 @TestInstance(PER_CLASS)
 class CleanUpErrorLogsTest {
 
@@ -89,6 +97,18 @@ class CleanUpErrorLogsTest {
 
   @Autowired
   private ErrorsService errorsService;
+
+  @Mock
+  private OaiPmhCleanUpErrorLogs oaiPmhCleanUpErrorLogs;
+
+  @Mock
+  private InstancesService instancesServiceMock;
+
+  @Mock
+  private FolioS3Client folioS3ClientMock;
+
+  @Mock
+  private ErrorsService errorsServiceMock;
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) throws Exception {
@@ -205,6 +225,28 @@ class CleanUpErrorLogsTest {
                 }));
             }));
         }));
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIf(VertxTestContext testContext) {
+//    doThrow(new RuntimeException()).when(instancesServiceMock)
+//      .updateRequestMetadataByPathToError("invalid request id", "tenantId", "");
+    testContext.verify(() -> {
+      doThrow(new RuntimeException()).when(instancesServiceMock)
+        .updateRequestMetadataByLinkToError("invalid request id", "tenantId", "");
+//    doThrow(new RuntimeException()).when(folioS3ClientMock)
+//      .remove("invalid path to file");
+//    doThrow(new RuntimeException()).when(errorsServiceMock)
+//      .deleteErrorsByRequestId("invalid tenant", "id");
+      doNothing().when(oaiPmhCleanUpErrorLogs).postOaiPmhCleanUpErrorLogs(any(), any(), any());
+
+      oaiPmhCleanUpErrorLogs.postOaiPmhCleanUpErrorLogs(Map.of(), null, null);
+
+      assertThrows(RuntimeException.class, () -> instancesServiceMock
+        .updateRequestMetadataByLinkToError("invalid request id", "tenantId", ""));
+
+      testContext.completeNow();
     });
   }
 
