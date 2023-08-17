@@ -503,8 +503,12 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
     ofNullable(pojo.getPathToErrorFileInS3()).ifPresentOrElse(pathToError -> {
-      var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
-      requestMetadata.withLinkToErrorFile(regeneratedLink);
+      if (!pathToError.isEmpty()) {
+        var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
+        requestMetadata.withLinkToErrorFile(regeneratedLink);
+      } else {
+        requestMetadata.setLinkToErrorFile("");
+      }
     }, () -> requestMetadata.setLinkToErrorFile(""));
     of(pojo.getStartedDate())
       .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));

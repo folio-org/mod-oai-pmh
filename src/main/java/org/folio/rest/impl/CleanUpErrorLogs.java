@@ -48,26 +48,11 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
   @Override
   public void postOaiPmhCleanUpErrorLogs(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Running cleaning up error logs");
-    final long[] cleanInterval = {30};
-
-    ModTenantAPI api = new ModTenantAPI();
-    List<String> configsSet = Arrays.asList("technical");
-
-    api.loadConfigurationData(okapiHeaders, configsSet).onComplete(asyncResult -> {
-      if (asyncResult.succeeded()) {
-        try {
-          cleanInterval[0] = Long.parseLong(System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
-        } catch (Exception ex) {
-          logger.error("cannot retrieve config from system properties");
-        }
-      } else {
-        logger.error("loading configuration data failed");
-      }
-    });
+    long interval = Long.parseLong(System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
 
     OffsetDateTime offsetDateTime = ZonedDateTime
       .ofInstant(Instant.now(), ZoneId.of("UTC"))
-      .minusDays(cleanInterval[0])
+      .minusDays(interval)
       .toOffsetDateTime();
 
     var tenant = okapiHeaders.get(OKAPI_TENANT);
@@ -79,31 +64,31 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
             if (!result.result().isEmpty()) {
               result.result().forEach(id -> {
                 try {
-                  instancesService.updateRequestMetadataByPathToError(id, tenant, "");
+                  instancesService.updateRequestMetadataByPathToError(id, tenant, null);
                 } catch (Exception ex) {
-                  logger.error("error while updateRequestMetadataByPathToError : requestId: {}", id);
+                  logger.error("Error occurred while updateRequestMetadataByPathToError : requestId: {}", id);
                 }
                 try {
-                  instancesService.updateRequestMetadataByLinkToError(id, tenant, "");
+                  instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
                 } catch (Exception ex) {
-                  logger.error("error while updateRequestMetadataByLinkToError : requestId: {}", id);
+                  logger.error("Error occurred while updateRequestMetadataByLinkToError : requestId: {}", id);
                 }
                 try {
-                  folioS3Client.remove(File.separator + id + "-error.csv");
+                  folioS3Client.remove(id + "-error.csv");
                 } catch (Exception ex) {
-                  logger.error("error while deleting file from S3: fileName: {}", File.separator + id + "-error.csv");
+                  logger.error("Error occurred while deleting file from S3: fileName: {}", File.separator + id + "-error.csv");
                 }
                 try {
                   errorsService.deleteErrorsByRequestId(tenant, id);
                 } catch (Exception ex) {
-                  logger.error("error while deleteErrorsByRequestId: requestId: {}", id);
+                  logger.error("Error occurred while deleteErrorsByRequestId: requestId: {}", id);
                 }
               });
             } else {
-              logger.debug("nothing to clean (error logs)");
+              logger.debug("Nothing to clean (error logs)");
             }
           } else {
-            logger.error("error while selecting getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3");
+            logger.error("Error occurred while selecting getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3");
           }
         })
         .map(OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond204())
