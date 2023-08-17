@@ -4,6 +4,7 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond500WithTextPlain;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.Response;
 
@@ -23,7 +24,7 @@ public class CleanUpJob implements OaiPmhCleanUpInstances {
 
   private final Logger logger = LogManager.getLogger(this.getClass());
 
-  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400 * 30;
+  private static final long INSTANCES_EXPIRATION_TIME_IN_SECONDS = TimeUnit.DAYS.toSeconds(30);
 
   private InstancesService instancesService;
 

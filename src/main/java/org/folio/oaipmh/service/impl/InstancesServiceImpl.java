@@ -37,7 +37,7 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds) {
+  public Future<List<String>> cleanExpiredInstances(String tenantId, long expirationTimeSeconds) {
     Promise<List<String>> promise = Promise.promise();
     instancesDao.getExpiredRequestIds(tenantId, expirationTimeSeconds)
       .onSuccess(ids -> {

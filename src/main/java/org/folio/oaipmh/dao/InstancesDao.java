@@ -16,7 +16,7 @@ public interface InstancesDao {
   /**
    * Returns request ids which last updated date is 'expirationPeriodInSeconds' seconds less than the current date.
    */
-  Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds);
+  Future<List<String>> getExpiredRequestIds(String tenantId, long expirationPeriodInSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
 

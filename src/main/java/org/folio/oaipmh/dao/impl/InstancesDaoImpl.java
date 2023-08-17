@@ -73,7 +73,7 @@ public class InstancesDaoImpl implements InstancesDao {
   private FolioS3Client folioS3Client;
 
   @Override
-  public Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds) {
+  public Future<List<String>> getExpiredRequestIds(String tenantId, long expirationPeriodInSeconds) {
     OffsetDateTime offsetDateTime = ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault())
       .minusSeconds(expirationPeriodInSeconds)
       .toOffsetDateTime();

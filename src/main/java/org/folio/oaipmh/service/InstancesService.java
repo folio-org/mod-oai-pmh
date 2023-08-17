@@ -17,7 +17,7 @@ public interface InstancesService {
    * Performs cleaning of instances which have request id with lastUpdateDate less or equal to current date -
    * 'expirationTimeSeconds'.
    */
-  Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds);
+  Future<List<String>> cleanExpiredInstances(String tenantId, long expirationTimeSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
   /**
