@@ -23,7 +23,7 @@ public class CleanUpJob implements OaiPmhCleanUpInstances {
 
   private final Logger logger = LogManager.getLogger(this.getClass());
 
-  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
+  private static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400 * 30;
 
   private InstancesService instancesService;
 
