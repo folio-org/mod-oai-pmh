@@ -110,16 +110,6 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
-    return instancesDao.getInstancesList(limit, requestId, id, tenantId);
-  }
-
-  @Override
-  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId) {
-    return instancesDao.getTotalNumberOfRecords(requestId, tenantId);
-  }
-
-  @Override
   public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
     return instancesDao.updateRequestMetadataByPathToError(requestId, tenantId, pathToErrorFile);
   }

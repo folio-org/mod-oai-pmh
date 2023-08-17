@@ -358,26 +358,6 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
-    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext -> dslContext.selectFrom(INSTANCES)
-        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .and(INSTANCES.ID.greaterOrEqual(id))
-        .orderBy(INSTANCES.ID)
-        .limit(limit))
-      .map(this::queryResultToInstancesList));
-  }
-
-  @Override
-  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId) {
-    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext ->
-        dslContext.selectCount().from(INSTANCES)
-          .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
-      .map(this::queryResultToInt));
-  }
-
-  @Override
   public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
     return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext ->

@@ -42,6 +42,7 @@ import javax.ws.rs.NotFoundException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +52,7 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @ExtendWith(VertxExtension.class)
@@ -212,16 +214,16 @@ class CleanUpErrorLogsTest {
   }
 
   @Test
-  void shouldFailWhenInvalidTenant(VertxTestContext testContext) {
+  void shouldSucceedIfNoInstancesToSave(VertxTestContext testContext) {
+
+    var TEST_TENANT_ID = "oaiTest";
 
     testContext.verify(() -> {
 
-      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeaderInvalid);
-      request.when()
-        .post()
-        .then()
-        .statusCode(500);
-
+      instancesService.saveInstances(Collections.emptyList(), TEST_TENANT_ID)
+          .onComplete(handler -> {
+            assertTrue(handler.succeeded());
+          });
       testContext.completeNow();
     });
   }
@@ -236,6 +238,36 @@ class CleanUpErrorLogsTest {
         .post()
         .then()
         .statusCode(204);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldThrowNotFoundExceptionWhenRequestIdNotFoundWhenCleanUpErrorLogs(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+      request.when()
+        .post()
+        .then()
+        .statusCode(204);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldFailWhenInvalidTenant(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeaderInvalid);
+      request.when()
+        .post()
+        .then()
+        .statusCode(500);
 
       testContext.completeNow();
     });

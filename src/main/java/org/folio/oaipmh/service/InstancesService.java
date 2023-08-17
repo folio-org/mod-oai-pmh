@@ -56,13 +56,6 @@ public interface InstancesService {
    */
   Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
-  /**
-   * Retrieves instances which have PK id value >= id by limit and request id.
-   */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId);
-
-  Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId);
-
   Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile);
 
   Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError);
