@@ -205,6 +205,12 @@ class CleanUpErrorLogsTest {
                         }
                       });
 
+                      instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
+                        assertThrows(NotFoundException.class, () -> {
+                          logger.error("request metadata not found");
+                        });
+                      });
+
                       testContext.completeNow();
                     }));
                 }));
@@ -270,6 +276,40 @@ class CleanUpErrorLogsTest {
         .statusCode(500);
 
       testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIfRequestIdNotFound(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      var TEST_TENANT_ID = "oaiTest";
+      var requestId = UUID.randomUUID().toString();
+
+      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      requestMetadata.setRequestId(UUID.fromString(requestId));
+      requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setLinkToErrorFile("error-link");
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate().minusDays(365));
+
+      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
+        .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+
+          RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+          request.when()
+            .post()
+            .then()
+            .statusCode(204);
+
+          instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
+            assertThrows(NotFoundException.class, () -> {
+              logger.error("request metadata not found");
+            });
+          });
+
+          testContext.completeNow();
+        }));
     });
   }
 
