@@ -60,26 +60,10 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
           if (result.succeeded()) {
             if (!result.result().isEmpty()) {
               result.result().forEach(id -> {
-                try {
-                  instancesService.updateRequestMetadataByPathToError(id, tenant, null);
-                } catch (Exception ex) {
-                  logger.error("Error occurred while updateRequestMetadataByPathToError : requestId: {}", id);
-                }
-                try {
-                  instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
-                } catch (Exception ex) {
-                  logger.error("Error occurred while updateRequestMetadataByLinkToError : requestId: {}", id);
-                }
-                try {
-                  folioS3Client.remove(id + "-error.csv");
-                } catch (Exception ex) {
-                  logger.error("Error occurred while deleting file from S3: fileName: {}", id + "-error.csv");
-                }
-                try {
-                  errorsService.deleteErrorsByRequestId(tenant, id);
-                } catch (Exception ex) {
-                  logger.error("Error occurred while deleteErrorsByRequestId: requestId: {}", id);
-                }
+                instancesService.updateRequestMetadataByPathToError(id, tenant, null);
+                instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
+                folioS3Client.remove(id + "-error.csv");
+                errorsService.deleteErrorsByRequestId(tenant, id);
               });
             } else {
               logger.debug("Nothing to clean (error logs)");
