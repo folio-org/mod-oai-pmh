@@ -410,10 +410,6 @@ public class InstancesDaoImpl implements InstancesDao {
       .collect(toList());
   }
 
-  private Integer queryResultToInt(QueryResult queryResult) {
-    return queryResult.get(0, Integer.class);
-  }
-
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
     return queryResult.stream()
       .map(QueryResult::unwrap)
