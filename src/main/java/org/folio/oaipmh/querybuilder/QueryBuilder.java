@@ -145,7 +145,7 @@ public class QueryBuilder {
       sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
         RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC);
     } else {
-      sql = format(SOURCE, whereOrAnd, source);
+      sql = format(SOURCE + " OR inst.source = '%s') ", whereOrAnd + " (", source, RecordsSource.CONSORTIUM_FOLIO);
     }
     return nonNull(source) ? sql : EMPTY;
   }

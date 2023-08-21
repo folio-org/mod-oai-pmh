@@ -36,7 +36,8 @@ class QueryBuilderTest {
         RecordsSource.FOLIO, false, false, 1, false);
     var expected =
       "SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
-      "    WHERE inst.source = 'FOLIO'\n" +
+      "    WHERE ( inst.source = 'FOLIO'\n" +
+        " OR inst.source = 'CONSORTIUM-FOLIO') " +
       "ORDER BY instance_id\n" +
       "LIMIT 1;";
     assertEquals(expected, query);
@@ -50,7 +51,8 @@ class QueryBuilderTest {
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         " WHERE inst.instance_id > '%s'::uuid\n" +
-        "    AND inst.source = 'FOLIO'\n" +
+        "    AND ( inst.source = 'FOLIO'\n" +
+        " OR inst.source = 'CONSORTIUM-FOLIO') " +
         "ORDER BY instance_id\n" +
         "LIMIT 1;", lastInstanceId);
     assertEquals(expected, query);
@@ -65,7 +67,8 @@ class QueryBuilderTest {
 
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
-        "    WHERE inst.source = 'FOLIO'\n" +
+        "    WHERE ( inst.source = 'FOLIO'\n" +
+        " OR inst.source = 'CONSORTIUM-FOLIO') " +
         "    AND ( inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
         "    OR EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
@@ -110,7 +113,8 @@ class QueryBuilderTest {
 
     var expected =
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
-        "    WHERE inst.source = 'FOLIO'\n" +
+        "    WHERE ( inst.source = 'FOLIO'\n" +
+        " OR inst.source = 'CONSORTIUM-FOLIO') " +
         "    AND ( inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
         "    OR EXISTS (SELECT 1\n" +
         "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
