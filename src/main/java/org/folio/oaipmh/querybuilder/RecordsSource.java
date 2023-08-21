@@ -1,7 +1,7 @@
 package org.folio.oaipmh.querybuilder;
 
 public enum RecordsSource {
-  FOLIO, MARC, FOLIO_SHARED, MARC_SHARED, CONSORTIUM_MARC;
+  FOLIO, MARC, FOLIO_SHARED, MARC_SHARED, CONSORTIUM_MARC, CONSORTIUM_FOLIO;
 
   public static RecordsSource getSource(String name) {
     if (name.equals("Inventory")) {
@@ -13,6 +13,8 @@ public enum RecordsSource {
       return null; // SRS + Inventory means no need to specify source in SQL.
     } else if (name.equals("CONSORTIUM-MARC")) {
       return CONSORTIUM_MARC;
+    } else if (name.equals("CONSORTIUM-FOLIO")) {
+      return CONSORTIUM_FOLIO;
     }
     return valueOf(name);
   }
@@ -22,6 +24,8 @@ public enum RecordsSource {
     var res = super.toString();
     if (res.equals("CONSORTIUM_MARC")) {
       return "CONSORTIUM-MARC";
+    } else if (res.equals("CONSORTIUM_FOLIO")) {
+      return "CONSORTIUM-FOLIO";
     }
     return res;
   }
