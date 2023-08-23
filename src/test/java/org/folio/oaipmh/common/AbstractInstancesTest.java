@@ -16,12 +16,13 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 
 public abstract class AbstractInstancesTest {
 
-  protected static final int INSTANCES_EXPIRATION_TIME_IN_SECONDS = 86400;
+  protected static final long INSTANCES_EXPIRATION_TIME_IN_SECONDS = TimeUnit.DAYS.toSeconds(30);
 
   protected static final String EXPIRED_REQUEST_ID = UUID.randomUUID()
     .toString();

@@ -1,13 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.lang.String.format;
-import static java.util.Objects.nonNull;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
-
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
@@ -41,6 +33,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -49,10 +42,21 @@ import javax.ws.rs.NotFoundException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static java.lang.String.format;
+import static java.util.Objects.nonNull;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+
 @ExtendWith(VertxExtension.class)
+@ExtendWith(MockitoExtension.class)
 @TestInstance(PER_CLASS)
 class CleanUpErrorLogsTest {
 
@@ -64,6 +68,7 @@ class CleanUpErrorLogsTest {
   private static final String CLEAN_UP_INSTANCES_PATH = "/oai-pmh/clean-up-error-logs";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
+  private final Header tenantHeaderInvalid = new Header("X-Okapi-Tenant", "invalid");
   private final Header okapiUrlHeader = new Header("X-Okapi-Url", "http://localhost:" + mockPort);
   private final Header okapiUserHeader = new Header("X-Okapi-User-Id", TEST_USER_ID);
 
@@ -176,7 +181,7 @@ class CleanUpErrorLogsTest {
 
                       assertEquals(1, folioS3Client.list("").size());
 
-                      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null);
+                      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
                       request.when()
                         .post()
                         .then()
@@ -200,6 +205,12 @@ class CleanUpErrorLogsTest {
                         }
                       });
 
+                      instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
+                        assertThrows(NotFoundException.class, () -> {
+                          logger.error("request metadata not found");
+                        });
+                      });
+
                       testContext.completeNow();
                     }));
                 }));
@@ -208,7 +219,101 @@ class CleanUpErrorLogsTest {
     });
   }
 
-  private RequestSpecification createBaseRequest(String path, ContentType contentType) {
+  @Test
+  void shouldSucceedIfNoInstancesToSave(VertxTestContext testContext) {
+
+    var TEST_TENANT_ID = "oaiTest";
+
+    testContext.verify(() -> {
+
+      instancesService.saveInstances(Collections.emptyList(), TEST_TENANT_ID)
+          .onComplete(handler -> {
+            assertTrue(handler.succeeded());
+          });
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldPassWhenNoErrorsFound(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+      request.when()
+        .post()
+        .then()
+        .statusCode(204);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldThrowNotFoundExceptionWhenRequestIdNotFoundWhenCleanUpErrorLogs(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+      request.when()
+        .post()
+        .then()
+        .statusCode(204);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldFailWhenInvalidTenant(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeaderInvalid);
+      request.when()
+        .post()
+        .then()
+        .statusCode(500);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIfRequestIdNotFound(VertxTestContext testContext) {
+
+    testContext.verify(() -> {
+
+      var TEST_TENANT_ID = "oaiTest";
+      var requestId = UUID.randomUUID().toString();
+
+      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      requestMetadata.setRequestId(UUID.fromString(requestId));
+      requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setLinkToErrorFile("error-link");
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate().minusDays(365));
+
+      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
+        .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+
+          RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+          request.when()
+            .post()
+            .then()
+            .statusCode(204);
+
+          instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
+            assertThrows(NotFoundException.class, () -> {
+              logger.error("request metadata not found");
+            });
+          });
+
+          testContext.completeNow();
+        }));
+    });
+  }
+
+  private RequestSpecification createBaseRequest(String path, ContentType contentType, Header tenantHeader) {
     RequestSpecification requestSpecification = RestAssured.given()
       .header(okapiUrlHeader)
       .header(tenantHeader)

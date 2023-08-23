@@ -73,7 +73,7 @@ public class InstancesDaoImpl implements InstancesDao {
   private FolioS3Client folioS3Client;
 
   @Override
-  public Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds) {
+  public Future<List<String>> getExpiredRequestIds(String tenantId, long expirationPeriodInSeconds) {
     OffsetDateTime offsetDateTime = ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault())
       .minusSeconds(expirationPeriodInSeconds)
       .toOffsetDateTime();
@@ -358,26 +358,6 @@ public class InstancesDaoImpl implements InstancesDao {
   }
 
   @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
-    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext -> dslContext.selectFrom(INSTANCES)
-        .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId)))
-        .and(INSTANCES.ID.greaterOrEqual(id))
-        .orderBy(INSTANCES.ID)
-        .limit(limit))
-      .map(this::queryResultToInstancesList));
-  }
-
-  @Override
-  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId) {
-    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
-      .query(dslContext ->
-        dslContext.selectCount().from(INSTANCES)
-          .where(INSTANCES.REQUEST_ID.eq(UUID.fromString(requestId))))
-      .map(this::queryResultToInt));
-  }
-
-  @Override
   public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
     return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext ->
@@ -428,10 +408,6 @@ public class InstancesDaoImpl implements InstancesDao {
       .filter(row -> row.getOffsetDateTime(REQUEST_METADATA_LB.STARTED_DATE.getName()).isBefore(date))
     .map(row -> row.getUUID(REQUEST_METADATA_LB.REQUEST_ID.getName()).toString())
       .collect(toList());
-  }
-
-  private Integer queryResultToInt(QueryResult queryResult) {
-    return queryResult.get(0, Integer.class);
   }
 
   private List<Instances> queryResultToInstancesList(QueryResult queryResult) {
@@ -503,8 +479,12 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getSkippedInstancesCounter()).ifPresent(requestMetadata::withSkippedInstancesCounter);
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
     ofNullable(pojo.getPathToErrorFileInS3()).ifPresentOrElse(pathToError -> {
-      var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
-      requestMetadata.withLinkToErrorFile(regeneratedLink);
+      if (!pathToError.isEmpty()) {
+        var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
+        requestMetadata.withLinkToErrorFile(regeneratedLink);
+      } else {
+        requestMetadata.setLinkToErrorFile("");
+      }
     }, () -> requestMetadata.setLinkToErrorFile(""));
     of(pojo.getStartedDate())
       .ifPresent(offsetDateTime -> requestMetadata.withStartedDate(Date.from(offsetDateTime.toInstant())));

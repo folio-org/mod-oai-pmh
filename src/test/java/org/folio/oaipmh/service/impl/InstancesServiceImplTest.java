@@ -50,7 +50,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final int EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME = 2000;
-  private static final int ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
+  private static final long ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
 
   @Autowired
   private InstancesDao instancesDao;

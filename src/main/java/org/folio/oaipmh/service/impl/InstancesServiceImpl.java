@@ -37,7 +37,7 @@ public class InstancesServiceImpl implements InstancesService {
   }
 
   @Override
-  public Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds) {
+  public Future<List<String>> cleanExpiredInstances(String tenantId, long expirationTimeSeconds) {
     Promise<List<String>> promise = Promise.promise();
     instancesDao.getExpiredRequestIds(tenantId, expirationTimeSeconds)
       .onSuccess(ids -> {
@@ -107,16 +107,6 @@ public class InstancesServiceImpl implements InstancesService {
     metricsCollectingService.startMetric(requestId, INVENTORY_STORAGE_RESPONSE);
     return instancesDao.getInstancesList(limit, requestId, tenantId)
             .onComplete(listAsyncResult -> metricsCollectingService.endMetric(requestId, INVENTORY_STORAGE_RESPONSE));
-  }
-
-  @Override
-  public Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId) {
-    return instancesDao.getInstancesList(limit, requestId, id, tenantId);
-  }
-
-  @Override
-  public Future<Integer> getTotalNumberOfRecords(String requestId, String tenantId) {
-    return instancesDao.getTotalNumberOfRecords(requestId, tenantId);
   }
 
   @Override
