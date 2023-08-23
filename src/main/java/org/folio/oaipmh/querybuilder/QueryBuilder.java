@@ -139,15 +139,18 @@ public class QueryBuilder {
   }
 
   private static String buildSource(RecordsSource source, boolean where) {
-    var whereOrAnd = where ? WHERE : " AND";
-    String sql;
-    if (source == RecordsSource.MARC) {
-      sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
-        RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC);
-    } else {
-      sql = format(SOURCE, whereOrAnd, source);
+    if (nonNull(source)) {
+      var whereOrAnd = where ? WHERE : " AND";
+      String sql;
+      if (source == RecordsSource.MARC) {
+        sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
+          RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC);
+      } else {
+        sql = format(SOURCE + " OR inst.source = '%s') ", whereOrAnd + " (", source, RecordsSource.CONSORTIUM_FOLIO);
+      }
+      return sql;
     }
-    return nonNull(source) ? sql : EMPTY;
+    return EMPTY;
   }
 
   private static String buildSuppressFromDiscovery(boolean skipSuppressedFromDiscovery, boolean where) {
