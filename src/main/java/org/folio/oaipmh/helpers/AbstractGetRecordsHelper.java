@@ -245,20 +245,28 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       getSrsCollectingHandler(request, local));
 
     CompositeFuture.join(local.future(), central.future())
-      .map(CompositeFuture::list)
-      .map(results -> results.stream()
-        .map(JsonObject.class::cast)
-        .reduce((e1, e2) -> {
-          var result = e1.mergeIn(e2);
-          try {
-            logger.info("e1: {}, e2: {}, result: {}", e1.encode(), e2.encode(), result.encode());
-            return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
-          } catch (Exception exc) {
-            logger.error("totalRecords is invalid: {}", exc.getMessage());
-            return result.put(TOTAL_RECORDS_PARAM, result.getJsonArray(TOTAL_RECORDS_PARAM).size());
-          }
-        }).get()
-      ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
+      .map(compositeFuture -> {
+        logger.info("compositeFuture: {}", compositeFuture.list());
+        return compositeFuture.list();})
+      .map(results -> {
+        logger.info("results: {}", results);
+        return
+        results.stream()
+          .map(obj -> {
+            logger.info("map(obj: {}", obj);
+            return JsonObject.class.cast(obj);})
+          .reduce((e1, e2) -> {
+            logger.info("e1: {}, e2: {}", e1.encode(), e2.encode());
+            var result = e1.mergeIn(e2);
+            try {
+              logger.info("e1: {}, e2: {}, result: {}", e1.encode(), e2.encode(), result.encode());
+              return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
+            } catch (Exception exc) {
+              logger.error("totalRecords is invalid: {}", exc.getMessage());
+              return result.put(TOTAL_RECORDS_PARAM, result.getJsonArray(TOTAL_RECORDS_PARAM).size());
+            }
+          }).get();
+      }).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
 
   protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
@@ -344,7 +352,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> response = asyncResult.result();
           logger.info("getSrsCollectingHandler response: {}", response.bodyAsJsonObject());
+          logger.info("getSrsCollectingHandler statusCode: {}", response.statusCode());
           if (isSuccess(response.statusCode())) {
+            logger.info("getSrsCollectingHandler isSuccess complete: {}", response.bodyAsJsonObject());
             promise.complete(response.bodyAsJsonObject());
           } else {
             String verbName = request.getVerb().value();
@@ -377,7 +387,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           promise.fail(asyncResult.cause());
         } else {
           var srsRecords = asyncResult.result();
-          logger.info("getSrsRecordsBodyHandler srsRecords: {]", srsRecords.encode());
+          logger.info("getSrsRecordsBodyHandler srsRecords: {}", srsRecords.encode());
           if (withInventory) {
             var numOfReturnedSrsRecords = srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).size();
             if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
