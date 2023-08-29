@@ -195,6 +195,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     var centralTenantId = consortiaService.getCentralTenantId(request);
 
+    logger.info("centralTenantId: {}", centralTenantId);
+
     if (StringUtils.isNotEmpty(centralTenantId)) {
       SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId)).getSourceStorageSourceRecords(
         null,
@@ -249,6 +251,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .reduce((e1, e2) -> {
           var result = e1.mergeIn(e2);
           try {
+            logger.info("e1: {}, e2: {}, result: {}", e1.encode(), e2.encode(), result.encode());
             return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
             logger.error("totalRecords is invalid: {}", exc.getMessage());
@@ -340,6 +343,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       try {
         if (asyncResult.succeeded()) {
           HttpResponse<Buffer> response = asyncResult.result();
+          logger.info("getSrsCollectingHandler response: {}", response.bodyAsJsonObject());
           if (isSuccess(response.statusCode())) {
             promise.complete(response.bodyAsJsonObject());
           } else {
@@ -373,6 +377,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           promise.fail(asyncResult.cause());
         } else {
           var srsRecords = asyncResult.result();
+          logger.info("getSrsRecordsBodyHandler srsRecords: {]", srsRecords.encode());
           if (withInventory) {
             var numOfReturnedSrsRecords = srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).size();
             if (numOfReturnedSrsRecords < limit && !request.isFromInventory()) {
@@ -420,6 +425,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Integer totalRecords = 0;
 
     if (nonNull(srsRecords)) {
+      logger.info("processRecords srsRecords: {}", srsRecords.encode());
       items.addAll(storageHelper.getItems(srsRecords));
       totalRecords = storageHelper.getTotalRecords(srsRecords);
     }
