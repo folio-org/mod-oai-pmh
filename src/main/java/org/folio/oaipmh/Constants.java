@@ -157,4 +157,6 @@ public final class Constants {
   public static final String HTTPS = "https:";
   public static final String INSTANCE_ID_FROM_VIEW_RESPONSE = "instance_id";
   public static final String MARC_RECORD_FROM_VIEW_RESPONSE = "marc_record";
+  public static final String SOURCE_RECORDS = "sourceRecords";
+  public static final String TOTAL_RECORDS = "totalRecords";
 }
