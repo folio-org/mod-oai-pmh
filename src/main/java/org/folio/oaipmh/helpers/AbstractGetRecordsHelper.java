@@ -248,16 +248,16 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       .map(CompositeFuture::list)
       .map(results -> results.stream()
         .map(JsonObject.class::cast)
-        .reduce((e1, e2) -> {
-          JsonArray sourceRecords1 = e1.getJsonArray(SOURCE_RECORDS);
-          JsonArray sourceRecords2 = e2.getJsonArray(SOURCE_RECORDS);
-          sourceRecords1.addAll(sourceRecords2);
-          e1.put(SOURCE_RECORDS, sourceRecords1).put(TOTAL_RECORDS, e1.getInteger(TOTAL_RECORDS) + e2.getInteger(TOTAL_RECORDS));
+        .reduce((resultLocal, resultCentral) -> {
+          JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
+          JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
+          sourceRecordsLocal.addAll(sourceRecordsCentral);
+          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, resultLocal.getInteger(TOTAL_RECORDS) + resultCentral.getInteger(TOTAL_RECORDS));
           try {
-            return e1.put(TOTAL_RECORDS, Integer.parseInt(e1.getString(TOTAL_RECORDS_PARAM)));
+            return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
             logger.error("totalRecords is invalid: {}", exc.getMessage());
-            return e1.put(TOTAL_RECORDS_PARAM, e1.getJsonArray(TOTAL_RECORDS_PARAM).size());
+            return resultLocal.put(TOTAL_RECORDS_PARAM, resultLocal.getJsonArray(TOTAL_RECORDS_PARAM).size());
           }
         }).get()
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
