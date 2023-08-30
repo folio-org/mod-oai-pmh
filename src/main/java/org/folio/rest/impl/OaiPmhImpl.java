@@ -99,8 +99,7 @@ public class OaiPmhImpl implements Oai {
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-            String targetMetadataPrefix = request.getMetadataPrefix();
-            if(verbType.equals(LIST_RECORDS) || (verbType.equals(LIST_IDENTIFIERS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix))) {
+            if(verbType.equals(LIST_RECORDS) || verbType.equals(LIST_IDENTIFIERS)) {
               verbHelper = GetListRecordsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);
