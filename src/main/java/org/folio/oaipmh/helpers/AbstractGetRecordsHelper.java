@@ -96,9 +96,11 @@ import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FLOW_ERROR;
 import static org.folio.oaipmh.Constants.SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS;
+import static org.folio.oaipmh.Constants.SOURCE_RECORDS;
 import static org.folio.oaipmh.Constants.SOURCE_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.SUPPRESS_FROM_DISCOVERY;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
@@ -247,12 +249,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       .map(results -> results.stream()
         .map(JsonObject.class::cast)
         .reduce((e1, e2) -> {
-          var result = e1.mergeIn(e2);
+          JsonArray sourceRecords1 = e1.getJsonArray(SOURCE_RECORDS);
+          JsonArray sourceRecords2 = e2.getJsonArray(SOURCE_RECORDS);
+          sourceRecords1.addAll(sourceRecords2);
+          e1.put(SOURCE_RECORDS, sourceRecords1).put(TOTAL_RECORDS, e1.getInteger(TOTAL_RECORDS) + e2.getInteger(TOTAL_RECORDS));
           try {
-            return result.put("totalRecords", Integer.parseInt(result.getString(TOTAL_RECORDS_PARAM)));
+            return e1.put(TOTAL_RECORDS, Integer.parseInt(e1.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
             logger.error("totalRecords is invalid: {}", exc.getMessage());
-            return result.put(TOTAL_RECORDS_PARAM, result.getJsonArray(TOTAL_RECORDS_PARAM).size());
+            return e1.put(TOTAL_RECORDS_PARAM, e1.getJsonArray(TOTAL_RECORDS_PARAM).size());
           }
         }).get()
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
