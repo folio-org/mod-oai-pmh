@@ -1,12 +1,22 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.*;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
+import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
+import org.folio.oaipmh.helpers.GetOaiRecordHelper;
+import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
+import org.folio.oaipmh.helpers.GetOaiSetsHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.oaipmh.validator.VerbValidator;
@@ -20,15 +30,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.VerbType.*;
+import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
 
@@ -99,8 +127,7 @@ public class OaiPmhImpl implements Oai {
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-            String targetMetadataPrefix = request.getMetadataPrefix();
-            if(verbType.equals(LIST_RECORDS) || (verbType.equals(LIST_IDENTIFIERS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix))) {
+            if(verbType.equals(LIST_RECORDS) || verbType.equals(LIST_IDENTIFIERS)) {
               verbHelper = GetListRecordsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);

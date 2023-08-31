@@ -1,10 +1,5 @@
 package org.folio.rest.impl;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -17,7 +12,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -86,7 +80,6 @@ public class OkapiMockServer {
   static final String ERROR_UNTIL_DATE = "1998-10-10T10:10:10Z";
   // 1 second should be added to storage until date time
   private static final String ERROR_UNTIL_DATE_STORAGE = "1998-10-10T10:10:11";
-  static final String RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE = "2001-01-01T01:01:01Z";
   // 1 second should be added to storage until date time
   static final String SRS_RECORD_WITH_INVALID_JSON_STRUCTURE = "2004-02-14";
   static final String TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML = "2020-03-03";
@@ -609,30 +602,6 @@ public class OkapiMockServer {
     Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
     logger.debug("Ending response for instance ids with buffer: {}", buffer.toString());
     routingContext.response().setStatusCode(200).end(buffer);
-  }
-
-  private void inventoryViewSuccessResponse(RoutingContext routingContext, String jsonFileName, String source) {
-    String path = INVENTORY_VIEW_PATH + jsonFileName;
-    logger.debug("Path value: {}", path);
-    Buffer buffer = Buffer.buffer(getJsonObjectFromFileAsString(path));
-    StringBuilder response = new StringBuilder();
-    var mapper = new ObjectMapper();
-    try {
-      JsonFactory factory = new JsonFactory();
-      JsonParser parser  = factory.createParser(buffer.toString());
-      MappingIterator<InventoryUpdatedInstanceIds> iterator = mapper.readValues(parser, new TypeReference<>() {
-      });
-      while (iterator.hasNextValue()) {
-        var updatedInstancesIds = iterator.next();
-        if (StringUtils.isEmpty(source) || updatedInstancesIds.getSource().equals(source)) {
-          response.append(mapper.writeValueAsString(updatedInstancesIds));
-        }
-      }
-      logger.debug("Ending response for instance ids with buffer: {}", response);
-      routingContext.response().setStatusCode(200).end(response.toString());
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private void inventoryViewSuccessResponse(RoutingContext routingContext, JsonArray instanceIds) {
