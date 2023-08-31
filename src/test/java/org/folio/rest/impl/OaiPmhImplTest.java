@@ -174,7 +174,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
@@ -405,17 +404,10 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
     if (recordsSource.equals(SRS_AND_INVENTORY)) {
-      if (prefix != MARC21WITHHOLDINGS) {
-        assertNull( oaipmh.getListIdentifiers().getResumptionToken());
-        assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
-      } else {
-        assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
-      }
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
       verifyListResponse(oaipmh, LIST_IDENTIFIERS, 3);
-
     } else {
-      assertThat(oaipmh.getListIdentifiers().getResumptionToken(),
-        (recordsSource.equals(INVENTORY) || prefix == MARC21WITHHOLDINGS) ? is(nullValue()) : is(nullValue()));
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
       verifyListResponse(oaipmh, LIST_IDENTIFIERS, prefix == MARC21WITHHOLDINGS ? (recordsSource.equals(SRS) ? 5 : 1) :
         (recordsSource.equals(SRS) ? 6 : 1));
     }
