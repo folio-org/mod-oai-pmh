@@ -980,7 +980,7 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertFalse(nextResumptionToken.getValue().isEmpty());
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(65))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(66))));
   }
 
   @ParameterizedTest
@@ -2838,7 +2838,7 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-    assertEquals(BigInteger.valueOf(64), resumptionToken.getCompleteListSize());
+    assertEquals(BigInteger.valueOf(65), resumptionToken.getCompleteListSize());
     assertEquals(BigInteger.ZERO, resumptionToken.getCursor());
 
     List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);
