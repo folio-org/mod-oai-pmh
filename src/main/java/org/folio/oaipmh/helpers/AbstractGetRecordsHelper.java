@@ -130,7 +130,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
-  private static final String QUERY_TEMPLATE = "(source==FOLIO%s%s%s%s)";
+  private static final String QUERY_TEMPLATE = "((source==FOLIO OR source==CONSORTIUM-FOLIO)%s%s%s%s)";
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
@@ -251,8 +251,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .reduce((resultLocal, resultCentral) -> {
           JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
           JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
-          sourceRecordsLocal.addAll(sourceRecordsCentral);
-          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, resultLocal.getInteger(TOTAL_RECORDS) + resultCentral.getInteger(TOTAL_RECORDS));
+          if (nonNull(sourceRecordsCentral)) {
+            sourceRecordsLocal.addAll(sourceRecordsCentral);
+          }
+          var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
+          var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS)).orElse(0);;
+          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, totalLocal + totalCentral);
           try {
             return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
