@@ -66,7 +66,7 @@ class QueryBuilderTest {
       RecordsSource.FOLIO, false, false, 1, false);
 
     var expected =
-      String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
+      String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records_from_until inst\n" +
         "    WHERE ( inst.source = 'FOLIO'\n" +
         " OR inst.source = 'CONSORTIUM-FOLIO') " +
         "    AND ( inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
@@ -112,7 +112,7 @@ class QueryBuilderTest {
       RecordsSource.FOLIO, false, false, 1, false);
 
     var expected =
-      String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
+      String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records_from_until inst\n" +
         "    WHERE ( inst.source = 'FOLIO'\n" +
         " OR inst.source = 'CONSORTIUM-FOLIO') " +
         "    AND ( inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +

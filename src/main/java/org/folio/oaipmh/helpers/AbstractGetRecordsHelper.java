@@ -255,7 +255,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             sourceRecordsLocal.addAll(sourceRecordsCentral);
           }
           var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
-          var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS)).orElse(0);;
+          var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS)).orElse(0);
           resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, totalLocal + totalCentral);
           try {
             return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal.getString(TOTAL_RECORDS_PARAM)));

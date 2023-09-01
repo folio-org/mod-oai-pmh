@@ -72,6 +72,7 @@ public class QueryBuilder {
     INDENT + AND_DATE_OR_MAX + "\n" +
     "                  )))\n";
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
+  private static final String BASE_QUERY_NON_DELETED_TEMPLATE_FROM_UNTIL = "get_instances_with_marc_records_from_until";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
   private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
   private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
@@ -100,7 +101,7 @@ public class QueryBuilder {
     }
     return format(isCountQuery ? QUERY_COUNT : QUERY,
       tenant,
-      !deletedRecords ? BASE_QUERY_NON_DELETED_TEMPLATE : BASE_QUERY_DELETED_TEMPLATE,
+      defineQueryTemplate(deletedRecords, from, until),
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
@@ -108,6 +109,13 @@ public class QueryBuilder {
       buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords, source),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
       isCountQuery ? EMPTY : limit);
+  }
+
+  private static String defineQueryTemplate(boolean deletedRecords, String from, String until) {
+    if (!deletedRecords) {
+      return nonNull(from) || nonNull(until) ? BASE_QUERY_NON_DELETED_TEMPLATE_FROM_UNTIL : BASE_QUERY_NON_DELETED_TEMPLATE;
+    }
+    return BASE_QUERY_DELETED_TEMPLATE;
   }
 
   private static String buildLastInstanceId(String lastInstanceId) {
