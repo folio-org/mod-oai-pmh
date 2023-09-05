@@ -47,6 +47,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,7 @@ import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.SOURCE;
 import static org.folio.oaipmh.Constants.STATUS_CODE;
 import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
@@ -346,8 +348,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         currentLimit, false);
       logger.info("Query: {}", query);
       return viewsService.query(query, request.getTenant())
-        .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, from, until, source, limit,
-          currentRecords, skipSuppressedFromDiscovery, deletedRecordsSupport))
+        .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, currentRecords))
         .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
           completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
         .compose(currentRecords -> processInstancesFromDB(request, currentRecords, finalRecords,
@@ -463,44 +464,15 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     marcRecord.put("instance_created_date", marcCreatedDate);
   }
 
-  private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, String from, String until,
-                                      RecordsSource source, int limit, JsonArray currentRecords,
-                                      boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport) {
+  private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, JsonArray currentRecords) {
     if (supportCompletedSize && request.getCompleteListSize() == 0) {
-      try {
-        var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-          from, until, source, skipSuppressedFromDiscovery, false,
-          limit, true);
-        logger.info("Query for size: {}", queryForSize);
-        return viewsService.query(queryForSize, request.getTenant()).compose(counts -> {
-            var completeListSize = counts.getJsonObject(0).getInteger("count");
-            request.setCompleteListSize(completeListSize);
-            return Future.succeededFuture(currentRecords);
-          })
-          .onFailure(handleException -> logger.error("Error occurred while calling a view to get complete list size: {}.",
-            handleException.getMessage(), handleException))
-          .compose(sameInstances -> {
-            if (deletedRecordsSupport) {
-              try {
-                var queryForSizeDeleted = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-                  from, until, source, skipSuppressedFromDiscovery, true,
-                  limit, true);
-                logger.info("Query for size deleted: {}", queryForSizeDeleted);
-                return viewsService.query(queryForSizeDeleted, request.getTenant()).compose(counts -> {
-                  var completeListSize = counts.getJsonObject(0).getInteger("count");
-                  request.setCompleteListSize(request.getCompleteListSize() + completeListSize);
-                  return Future.succeededFuture(currentRecords);
-                });
-              } catch (QueryException exc) {
-                logger.error("Error occurred while building a query for deleted records: {}.",
-                  exc.getMessage(), exc);
-              }
-            }
-            return Future.succeededFuture(currentRecords);
-          });
-      } catch (QueryException exc) {
-        logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
-      }
+      return requestFromInventory(request, 1, Collections.emptyList(), false, true, false).compose(counts -> {
+          var completeListSize = counts.getInteger(TOTAL_RECORDS_PARAM);
+          request.setCompleteListSize(completeListSize);
+          return Future.succeededFuture(currentRecords);
+        })
+        .onFailure(handleException -> logger.error("Error occurred while calling /inventory-storage/instances to get complete list size: {}.",
+          handleException.getMessage(), handleException));
     }
     return Future.succeededFuture(currentRecords);
   }
