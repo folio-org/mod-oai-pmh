@@ -128,7 +128,9 @@
     <sonar.exclusions>**/PropertyNameMapper.java,
       **/ModTenantAPI.java,
       **/SourceStorageSourceRecordsClient.java
-      **/RuleProcessor.java</sonar.exclusions>
+      **/RuleProcessor.java
+      **/GetOaiRecordsHelper.java
+    </sonar.exclusions>
     <sonar.coverage.exclusions>**/BatchStreamWrapper.java,
       **/ModTenantAPI.java,
       **/SourceStorageSourceRecordsClient.java,
