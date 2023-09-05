@@ -25,15 +25,6 @@ public class QueryBuilder {
     "ORDER BY instance_id\n" +
     "LIMIT %d;";
 
-  private static final String QUERY_COUNT = "SELECT COUNT(*) FROM %s_mod_oai_pmh.%s inst\n" +
-    "%s" + // last instance id
-    "%s" + // discovery suppress
-    "%s" + // source
-    "%s" + // deleted
-    "%s" + // date from
-    "%s" + // date until
-    "%s";
-
   private static final String AND_DATE_OR_MAX = "AND %s_mod_inventory_storage.dateOrMax(%s)";
   private static final String BETWEEN_DATE_OR_MIN = "BETWEEN %s_mod_inventory_storage.dateOrMin(%s)";
   private static final String INDENT = "                         ";
@@ -87,8 +78,7 @@ public class QueryBuilder {
   private QueryBuilder() {}
 
   public static String build(String tenant, String lastInstanceId, String from, String until, RecordsSource source,
-                             boolean skipSuppressedFromDiscovery, boolean deletedRecords, int limit, boolean isCountQuery
-                             ) throws QueryException {
+                             boolean skipSuppressedFromDiscovery, boolean deletedRecords, int limit) throws QueryException {
     if (isNull(tenant)) {
       var errorMsg = "tenant parameter cannot be null";
       logger.error(errorMsg);
@@ -99,23 +89,16 @@ public class QueryBuilder {
       logger.error(errorMsg);
       throw new QueryException(errorMsg);
     }
-    return format(isCountQuery ? QUERY_COUNT : QUERY,
+    return format(QUERY,
       tenant,
-      defineQueryTemplate(deletedRecords, from, until),
+      !deletedRecords ? BASE_QUERY_NON_DELETED_TEMPLATE : BASE_QUERY_DELETED_TEMPLATE,
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
       buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords, source),
       buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords, source),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
-      isCountQuery ? EMPTY : limit);
-  }
-
-  private static String defineQueryTemplate(boolean deletedRecords, String from, String until) {
-    if (!deletedRecords) {
-      return nonNull(from) || nonNull(until) ? BASE_QUERY_NON_DELETED_TEMPLATE_FROM_UNTIL : BASE_QUERY_NON_DELETED_TEMPLATE;
-    }
-    return BASE_QUERY_DELETED_TEMPLATE;
+      limit);
   }
 
   private static String buildLastInstanceId(String lastInstanceId) {

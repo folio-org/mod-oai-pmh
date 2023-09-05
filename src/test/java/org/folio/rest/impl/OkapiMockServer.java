@@ -35,6 +35,7 @@ import static org.folio.oaipmh.Constants.CALL_NUMBER_TYPES_URI;
 import static org.folio.oaipmh.Constants.CAMPUSES_URI;
 import static org.folio.oaipmh.Constants.CONTRIBUTOR_NAME_TYPES_URI;
 import static org.folio.oaipmh.Constants.ELECTRONIC_ACCESS_RELATIONSHIPS_URI;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.HOLDINGS_NOTE_TYPES_URI;
 import static org.folio.oaipmh.Constants.IDENTIFIER_TYPES_URI;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
@@ -49,6 +50,7 @@ import static org.folio.oaipmh.Constants.MODES_OF_ISSUANCE_URI;
 import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
@@ -405,6 +407,14 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA));
     } else  if (uri.contains(INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
+    } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+      successResponse(ctx, getSrsRecordsPartially(ctx.request().params()));
+    } else if (uri.contains(PARTITIONABLE_RECORDS_DATE)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
+    } else if (uri.contains(THREE_INSTANCES_DATE_TIME) || uri.contains(THREE_INSTANCES_DATE)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+    } else if (!uri.contains(FROM_PARAM) && !uri.contains(UNTIL_PARAM)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");
     }

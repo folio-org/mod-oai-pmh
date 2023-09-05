@@ -345,7 +345,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     try {
       var query = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
         from, until, source, skipSuppressedFromDiscovery, request.isFromDeleted() && deletedRecordsSupport,
-        currentLimit, false);
+        currentLimit);
       logger.info("Query: {}", query);
       return viewsService.query(query, request.getTenant())
         .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, currentRecords))
@@ -466,7 +466,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
   private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, JsonArray currentRecords) {
     if (supportCompletedSize && request.getCompleteListSize() == 0) {
-      return requestFromInventory(request, 1, Collections.emptyList(), false, true, false).compose(counts -> {
+      return requestFromInventory(request, 1, null, false, false, false).compose(counts -> {
           var completeListSize = counts.getInteger(TOTAL_RECORDS_PARAM);
           request.setCompleteListSize(completeListSize);
           return Future.succeededFuture(currentRecords);

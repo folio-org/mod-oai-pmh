@@ -681,7 +681,7 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
 
     assertThat(resumptionToken, is(notNullValue()));
-    assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(64))));
+    assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
     assertThat(resumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(resumptionToken.getExpirationDate(), is(notNullValue()));
 
@@ -695,7 +695,7 @@ class OaiPmhImplTest {
     assertThat(getParamValue(params, UNTIL_PARAM), is((notNullValue())));
     assertThat(getParamValue(params, SET_PARAM), is(equalTo("all")));
     assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("11")));
-    assertThat(getParamValue(params, "completeListSize"), is(equalTo("64")));
+    assertThat(getParamValue(params, "completeListSize"), is(equalTo("10")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM),
       is(equalTo("25cc7799-0a71-4844-af68-a7bb0d7a8638")));
   }
@@ -950,7 +950,7 @@ class OaiPmhImplTest {
       new String(Base64.getDecoder().decode(actualResumptionToken.getValue()), StandardCharsets.UTF_8);
     String expectedValue = actualValue.replaceAll("offset=\\d+", "offset=11");
     assertThat(actualValue, equalTo(expectedValue));
-    assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(64))));
+    assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(actualResumptionToken.getExpirationDate(), is(notNullValue()));
   }
@@ -980,7 +980,7 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertFalse(nextResumptionToken.getValue().isEmpty());
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(66))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
   }
 
   @ParameterizedTest
@@ -1007,7 +1007,7 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(64))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
   }
 
   @ParameterizedTest
@@ -1035,7 +1035,7 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(64))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
   }
 
   @ParameterizedTest
@@ -1062,7 +1062,7 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(66))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
   }
 
   @ParameterizedTest
@@ -2838,7 +2838,7 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-    assertEquals(BigInteger.valueOf(65), resumptionToken.getCompleteListSize());
+    assertEquals(BigInteger.valueOf(10), resumptionToken.getCompleteListSize());
     assertEquals(BigInteger.ZERO, resumptionToken.getCursor());
 
     List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);

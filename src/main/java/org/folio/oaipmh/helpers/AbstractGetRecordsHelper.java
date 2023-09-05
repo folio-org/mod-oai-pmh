@@ -652,7 +652,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         if (response.statusCode() == 200) {
           promise.complete(response.bodyAsJsonObject());
         } else {
-          String errorMsg = nonNull(String.join(", ", listOfIds)) ?
+          String errorMsg = nonNull(listOfIds) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           logger.error(errorMsg);
