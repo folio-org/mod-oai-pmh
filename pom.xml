@@ -134,6 +134,7 @@
       **/SourceStorageSourceRecordsClient.java,
       **/TranslationsFunctionHolder.java,
       **/RuleProcessor.java
+      **/GetOaiRecordsHelper.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>

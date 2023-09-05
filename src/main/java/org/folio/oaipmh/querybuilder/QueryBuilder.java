@@ -63,7 +63,6 @@ public class QueryBuilder {
     INDENT + AND_DATE_OR_MAX + "\n" +
     "                  )))\n";
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
-  private static final String BASE_QUERY_NON_DELETED_TEMPLATE_FROM_UNTIL = "get_instances_with_marc_records_from_until";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
   private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
   private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
