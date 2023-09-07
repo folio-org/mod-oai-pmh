@@ -25,49 +25,15 @@ public class QueryBuilder {
     "ORDER BY instance_id\n" +
     "LIMIT %d;";
 
-  private static final String AND_DATE_OR_MAX = "AND %s_mod_inventory_storage.dateOrMax(%s)";
-  private static final String BETWEEN_DATE_OR_MIN = "BETWEEN %s_mod_inventory_storage.dateOrMin(%s)";
-  private static final String INDENT = "                         ";
-
   private static final String DELETED_INSTANCES = " %s %s_mod_inventory_storage.strToTimestamp\n" +
     " (instance_created_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
     " AND \n" +
     " %s_mod_inventory_storage.strToTimestamp(instance_created_date::text) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
-  private static final String DELETED = "   %s %sEXISTS (SELECT 1\n" +
-    "              FROM %s_mod_oai_pmh.get_holdings holdings_record\n" +
-    "                       LEFT JOIN %s_mod_oai_pmh.get_items item_record\n" +
-    "                                 ON holdings_record.id = item_record.holdingsrecordid\n" +
-    "                       LEFT JOIN %s_mod_oai_pmh.get_deleted_holdings audit_holdings_record\n" +
-    "                                 ON (audit_holdings_record.jsonb #>> '{record,instanceId}')::uuid = instance_id\n" +
-    "                       LEFT JOIN %s_mod_oai_pmh.get_deleted_items audit_item_record\n" +
-    "                                 ON (audit_item_record.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-    "                                    audit_holdings_record.id\n" +
-    "                       LEFT JOIN %s_mod_oai_pmh.get_deleted_items audit_item_record_deleted\n" +
-    "                                 ON (audit_item_record_deleted.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-    "                                    holdings_record.id\n" +
-    "              WHERE instance_id = holdings_record.instanceid\n" +
-    "                AND (%s_mod_inventory_storage.strToTimestamp(holdings_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
-    INDENT + AND_DATE_OR_MAX + "\n" +
-    "                  OR %s_mod_inventory_storage.strToTimestamp(item_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
-    INDENT + AND_DATE_OR_MAX + "\n" +
-    "                  OR %s_mod_inventory_storage.strToTimestamp(audit_holdings_record.jsonb ->> 'createdDate')\n" +
-    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
-    INDENT + AND_DATE_OR_MAX + "\n" +
-    "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record.jsonb ->> 'createdDate')\n" +
-    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
-    INDENT + AND_DATE_OR_MAX + "\n" +
-    "                  OR %s_mod_inventory_storage.strToTimestamp(audit_item_record_deleted.jsonb ->> 'createdDate')\n" +
-    INDENT + BETWEEN_DATE_OR_MIN + "\n" +
-    INDENT + AND_DATE_OR_MAX + "\n" +
-    "                  )))\n";
+
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
   private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
   private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
-  private static final String DATE_UNTIL_MARC = "   %s COALESCE(inst.marc_updated_date, inst.instance_updated_date) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
-  private static final String DATE_FROM_MARC = "   %s COALESCE(inst.marc_updated_date, inst.instance_updated_date) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
   private static final String DISCOVERY_SUPPRESS = "   %s COALESCE(inst.suppress_from_discovery_srs, false) = false AND COALESCE(inst.suppress_from_discovery_inventory, false) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
@@ -94,8 +60,8 @@ public class QueryBuilder {
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
-      buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords, source),
-      buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords, source),
+      buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
+      buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
       limit);
   }
@@ -105,24 +71,23 @@ public class QueryBuilder {
     return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, where, lastInstanceId) : EMPTY;
   }
 
-  private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport, RecordsSource source) {
+  private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport) {
     if (nonNull(from) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
-      whereOrAnd += " (";
-      var dateFromTemplate = source == RecordsSource.MARC ? DATE_FROM_MARC : DATE_FROM_FOLIO;
+//      whereOrAnd += " (";
+      var dateFromTemplate = DATE_FROM_FOLIO;
       return format(dateFromTemplate, whereOrAnd, tenant, from);
     }
     return EMPTY;
   }
 
-  private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport,
-                                       RecordsSource source) {
+  private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport) {
     if (nonNull(until) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
-      if (isNull(from)) {
-        whereOrAnd += " (";
-      }
-      var dateUntilTemplate = source == RecordsSource.MARC ? DATE_UNTIL_MARC : DATE_UNTIL_FOLIO;
+//      if (isNull(from)) {
+//        whereOrAnd += " (";
+//      }
+      var dateUntilTemplate = DATE_UNTIL_FOLIO;
       return format(dateUntilTemplate, whereOrAnd, tenant, until);
     }
     return EMPTY;
@@ -160,15 +125,16 @@ public class QueryBuilder {
         }
         var whereOrAnd = where ? WHERE : " AND";
         return format(DELETED_INSTANCES, whereOrAnd, tenant, tenant, from, tenant, tenant, until);
-      } else {
-        return format(DELETED, " OR", EMPTY,
-          tenant, tenant, tenant, tenant, tenant,
-          tenant, tenant, buildDate(from), tenant, buildDate(until),
-          tenant, tenant, buildDate(from), tenant, buildDate(until),
-          tenant, tenant, buildDate(from), tenant, buildDate(until),
-          tenant, tenant, buildDate(from), tenant, buildDate(until),
-          tenant, tenant, buildDate(from), tenant, buildDate(until));
       }
+//      else {
+//        return format(DELETED, " OR", EMPTY,
+//          tenant, tenant, tenant, tenant, tenant,
+//          tenant, tenant, buildDate(from), tenant, buildDate(until),
+//          tenant, tenant, buildDate(from), tenant, buildDate(until),
+//          tenant, tenant, buildDate(from), tenant, buildDate(until),
+//          tenant, tenant, buildDate(from), tenant, buildDate(until),
+//          tenant, tenant, buildDate(from), tenant, buildDate(until));
+//      }
     }
     return EMPTY;
   }
