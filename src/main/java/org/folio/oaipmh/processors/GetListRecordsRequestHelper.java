@@ -292,6 +292,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
         if (statusCode != 200) {
           String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
             srsResponse.statusMessage());
+          logger.error("Error response: {}, status code: {}", srsResponse.bodyAsString(), statusCode);
           handleException(promise, new IllegalStateException(errorMsg));
         }
         JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
