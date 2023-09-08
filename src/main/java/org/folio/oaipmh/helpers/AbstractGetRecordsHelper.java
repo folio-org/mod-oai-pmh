@@ -634,6 +634,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       URLEncoder.encode(format(QUERY_TEMPLATE, source,queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
 
+    logger.info("Inventory uri: {}", uri);
+
     processRequest(uri, request, promise, listOfIds);
 
     return promise.future();
