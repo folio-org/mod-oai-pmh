@@ -108,7 +108,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String DEFAULT_RECORD_DATE = "2023-06-30";
-  static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
+  static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2023-06-30T13:54:18Z";
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   static final String NO_ITEMS_DATE = "2020-01-29";
   static final String DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA = "2000-01-10";

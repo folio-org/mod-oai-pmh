@@ -248,6 +248,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue,
                 (id1, id2) -> id1)); // Here id1 = id2, i.e. the same ids, take only first one.
           if (!idJsonMap.isEmpty()) {
+            excludeSharedMarcRecords(finalRecords, idJsonMap);
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
               doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, retryAttempts,
@@ -272,6 +273,16 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       );
   }
 
+  private void excludeSharedMarcRecords(JsonArray finalRecords, Map<String, JsonObject> idJsonMap) {
+    var iterator = finalRecords.iterator();
+    while (iterator.hasNext()) {
+      var rec = (JsonObject)iterator.next();
+      if (idJsonMap.keySet().contains(rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE))) {
+        iterator.remove();
+      }
+    }
+  }
+
   private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport, Map<String, JsonObject> idJsonMap,
                                AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
@@ -294,6 +305,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
             srsResponse.statusMessage());
           handleException(promise, new IllegalStateException(errorMsg));
+          logger.error("Error response: {}", srsResponse.bodyAsString());
         }
         JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
         sourceRecords.stream().map(JsonObject.class::cast)
@@ -432,8 +444,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           return true;
         }
 
-        setCorrectDatesForMarc(rec);
-
         var marcRecord = rec.getString(MARC_RECORD_FROM_VIEW_RESPONSE);
 
         if (isNull(marcRecord)) { // If MARC does not have underlying SRS record.
@@ -447,20 +457,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
 
         return nonNull(marcRecord);
       }).collect(toList()));
-  }
-
-  /**
-   * Update dates since they are not correct for MARC in instance table.
-   * For example, when deleting MARC record, created/updated dates are
-   * updated only in the records_lb table of SRS,
-   * but not in the 'instance' table of the inventory storage.
-   * @param marcRecord record with source MARC whose dates should be corrected
-   */
-  private void setCorrectDatesForMarc(JsonObject marcRecord) {
-    var marcUpdatedDate = marcRecord.getString("marc_updated_date");
-    var marcCreatedDate = marcRecord.getString("marc_created_date");
-    marcRecord.put("instance_updated_date", marcUpdatedDate);
-    marcRecord.put("instance_created_date", marcCreatedDate);
   }
 
   private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, JsonArray currentRecords) {

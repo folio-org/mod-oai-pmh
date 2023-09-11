@@ -31,6 +31,7 @@ class ViewTest {
   private static final Path EXPECTED_ALL_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_all_deleted_instance_ids.csv");
   private static final Path EXPECTED_FOLIO_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_folio_deleted_instance_ids.csv");
   private static final Path EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_folio_non_deleted_instance_ids.csv");
+  private static final Path EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS_NO_FROM_UNTIL = Path.of("src/test/resources/views/expected_folio_non_deleted_instance_ids_no_from_until.csv");
   private static final Path EXPECTED_MARC_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_deleted_instance_ids.csv");
   private static final Path EXPECTED_MARC_NON_DELETED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_marc_non_deleted_instance_ids.csv");
   private static final Path EXPECTED_ALL_NON_DISCOVERY_SUPPRESSED_INSTANCE_IDS = Path.of("src/test/resources/views/expected_all_non_discovery_suppressed_instance_ids.csv");
@@ -79,7 +80,7 @@ class ViewTest {
       false, false, 200);
     LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
-    assertEquals(Files.readString(EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
+    assertEquals(Files.readString(EXPECTED_FOLIO_NON_DELETED_INSTANCE_IDS_NO_FROM_UNTIL).trim(), actualResponse.trim());
   }
 
   @SneakyThrows

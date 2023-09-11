@@ -616,13 +616,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<JsonObject> promise = Promise.promise();
 
     var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
-    var queryFrom = nonNull(updatedAfter) ?
-      " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
-    var queryUntil = nonNull(updatedBefore) ?
-      " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
-    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : " and discoverySuppress==false";
     var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
     String source = EMPTY;
     if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
@@ -630,8 +623,21 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else if (recordsSource == RecordsSource.MARC) {
       source = "(source==MARC OR source==CONSORTIUM-MARC)";
     }
-    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + "&query=" +
-      URLEncoder.encode(format(QUERY_TEMPLATE, source,queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
+    var and = nonNull(listOfIds) || !source.isEmpty() ? "and" : EMPTY;
+    var queryFrom = nonNull(updatedAfter) ?
+      format(" %s metadata.updatedDate>=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    and = nonNull(listOfIds) || nonNull(updatedAfter) || !source.isEmpty() ? "and" : EMPTY;
+    var queryUntil = nonNull(updatedBefore) ?
+      format(" %s metadata.updatedDate<=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
+      EMPTY;
+    and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty() ? "and" : EMPTY;
+    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : format(" %s discoverySuppress==false", and);
+    String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty()
+      || !querySuppressFromDiscovery.isEmpty() ? "&query=" +
+      URLEncoder.encode(format(QUERY_TEMPLATE, source, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
+      : EMPTY;
+    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + queryParam;
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
 
     logger.info("Inventory uri: {}", uri);

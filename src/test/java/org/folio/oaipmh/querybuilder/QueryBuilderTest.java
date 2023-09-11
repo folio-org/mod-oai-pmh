@@ -69,36 +69,7 @@ class QueryBuilderTest {
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE ( inst.source = 'FOLIO'\n" +
         " OR inst.source = 'CONSORTIUM-FOLIO') " +
-        "    AND ( inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "    OR EXISTS (SELECT 1\n" +
-        "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_items item_record\n" +
-        "                                 ON holdings_record.id = item_record.holdingsrecordid\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_holdings audit_holdings_record\n" +
-        "                                 ON (audit_holdings_record.jsonb #>> '{record,instanceId}')::uuid = instance_id\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_items audit_item_record\n" +
-        "                                 ON (audit_item_record.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-        "                                    audit_holdings_record.id\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_items audit_item_record_deleted\n" +
-        "                                 ON (audit_item_record_deleted.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-        "                                    holdings_record.id\n" +
-        "              WHERE instance_id = holdings_record.instanceid\n" +
-        "                AND (test_tenant_mod_inventory_storage.strToTimestamp(holdings_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(null)\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(item_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(null)\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_holdings_record.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(null)\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_item_record.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(null)\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_item_record_deleted.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(null)\n" +
-        "                  )))\n" +
+        "    AND inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
         "ORDER BY instance_id\n" +
         "LIMIT 1;", fromFormatted, fromFormatted, fromFormatted, fromFormatted, fromFormatted, fromFormatted);
     assertEquals(expected, query);
@@ -115,36 +86,7 @@ class QueryBuilderTest {
       String.format("SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n" +
         "    WHERE ( inst.source = 'FOLIO'\n" +
         " OR inst.source = 'CONSORTIUM-FOLIO') " +
-        "    AND ( inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "    OR EXISTS (SELECT 1\n" +
-        "              FROM test_tenant_mod_oai_pmh.get_holdings holdings_record\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_items item_record\n" +
-        "                                 ON holdings_record.id = item_record.holdingsrecordid\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_holdings audit_holdings_record\n" +
-        "                                 ON (audit_holdings_record.jsonb #>> '{record,instanceId}')::uuid = instance_id\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_items audit_item_record\n" +
-        "                                 ON (audit_item_record.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-        "                                    audit_holdings_record.id\n" +
-        "                       LEFT JOIN test_tenant_mod_oai_pmh.get_deleted_items audit_item_record_deleted\n" +
-        "                                 ON (audit_item_record_deleted.jsonb #>> '{record,holdingsRecordId}')::uuid =\n" +
-        "                                    holdings_record.id\n" +
-        "              WHERE instance_id = holdings_record.instanceid\n" +
-        "                AND (test_tenant_mod_inventory_storage.strToTimestamp(holdings_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(null)\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(item_record.jsonb -> 'metadata' ->> 'updatedDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(null)\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_holdings_record.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(null)\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_item_record.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(null)\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "                  OR test_tenant_mod_inventory_storage.strToTimestamp(audit_item_record_deleted.jsonb ->> 'createdDate')\n" +
-        "                         BETWEEN test_tenant_mod_inventory_storage.dateOrMin(null)\n" +
-        "                         AND test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
-        "                  )))\n" +
+        "    AND inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax(timestamptz '%s')\n" +
         "ORDER BY instance_id\n" +
         "LIMIT 1;", untilFormatted, untilFormatted, untilFormatted, untilFormatted, untilFormatted, untilFormatted);
     assertEquals(expected, query);
