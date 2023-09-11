@@ -50,7 +50,7 @@ CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_recor
            LIMIT 1) AS marc_record,
     instance_record.jsonb AS instance_record,
     instance_record.jsonb ->> 'source'::text AS source,
-    instance_record.completeUpdatedDate AS instance_updated_date,
+    instance_record.complete_updated_date AS instance_updated_date,
     ${myuniversity}_mod_inventory_storage.strtotimestamp((instance_record.jsonb -> 'metadata'::text) ->> 'createdDate'::text) AS instance_created_date,
            COALESCE(( SELECT record_lb.suppress_discovery
            FROM ${myuniversity}_${mymodule}.get_instances_from_srs record_lb

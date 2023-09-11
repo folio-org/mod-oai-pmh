@@ -74,7 +74,6 @@ public class QueryBuilder {
   private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport) {
     if (nonNull(from) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
-//      whereOrAnd += " (";
       var dateFromTemplate = DATE_FROM_FOLIO;
       return format(dateFromTemplate, whereOrAnd, tenant, from);
     }
@@ -84,9 +83,6 @@ public class QueryBuilder {
   private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport) {
     if (nonNull(until) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
-//      if (isNull(from)) {
-//        whereOrAnd += " (";
-//      }
       var dateUntilTemplate = DATE_UNTIL_FOLIO;
       return format(dateUntilTemplate, whereOrAnd, tenant, until);
     }
@@ -114,32 +110,16 @@ public class QueryBuilder {
   }
 
   private static String buildDeleted(String tenant, String from, String until, boolean where, boolean deletedSupport) {
-    if (nonNull(from) || nonNull(until)) {
-
-      if (deletedSupport) {
-        if (isNull(from)) {
-          from = MIN_DATE;
-        }
-        if (isNull(until)) {
-          until = MAX_DATE;
-        }
-        var whereOrAnd = where ? WHERE : " AND";
-        return format(DELETED_INSTANCES, whereOrAnd, tenant, tenant, from, tenant, tenant, until);
+    if ((nonNull(from) || nonNull(until)) && deletedSupport) {
+      if (isNull(from)) {
+        from = MIN_DATE;
       }
-//      else {
-//        return format(DELETED, " OR", EMPTY,
-//          tenant, tenant, tenant, tenant, tenant,
-//          tenant, tenant, buildDate(from), tenant, buildDate(until),
-//          tenant, tenant, buildDate(from), tenant, buildDate(until),
-//          tenant, tenant, buildDate(from), tenant, buildDate(until),
-//          tenant, tenant, buildDate(from), tenant, buildDate(until),
-//          tenant, tenant, buildDate(from), tenant, buildDate(until));
-//      }
+      if (isNull(until)) {
+        until = MAX_DATE;
+      }
+      var whereOrAnd = where ? WHERE : " AND";
+      return format(DELETED_INSTANCES, whereOrAnd, tenant, tenant, from, tenant, tenant, until);
     }
     return EMPTY;
-  }
-
-  private static String buildDate(String date) {
-    return isNull(date) ? null : format("timestamptz '%s'", date);
   }
 }
