@@ -61,7 +61,7 @@ public class QueryBuilder {
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
       buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
-      buildDateUntil(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
+      buildDateUntil(tenant, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
       limit);
   }
@@ -80,7 +80,7 @@ public class QueryBuilder {
     return EMPTY;
   }
 
-  private static String buildDateUntil(String tenant, String from, String until, boolean where, boolean deletedSupport) {
+  private static String buildDateUntil(String tenant, String until, boolean where, boolean deletedSupport) {
     if (nonNull(until) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
       var dateUntilTemplate = DATE_UNTIL_FOLIO;
