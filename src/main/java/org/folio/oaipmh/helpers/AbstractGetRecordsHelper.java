@@ -131,7 +131,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
-  private static final String QUERY_TEMPLATE = "(%s%s%s%s%s)";
+  private static final String INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE = "(%s%s%s%s%s)";
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
@@ -635,7 +635,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : format(" %s discoverySuppress==false", and);
     String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty()
       || !querySuppressFromDiscovery.isEmpty() ? "&query=" +
-      URLEncoder.encode(format(QUERY_TEMPLATE, source, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
+      URLEncoder.encode(format(INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE, source, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
       : EMPTY;
     String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + queryParam;
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
