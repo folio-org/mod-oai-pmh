@@ -115,6 +115,11 @@ This value should be `true` if AWS S3 is used.
 | S3_SECRET_ACCESS_KEY         | -                      | S3 secret key                               |
 | S3_IS_AWS                    | false                  | Specify if AWS S3 is used as files storage  |
 
+### Updates for harvest
+OAI-PMH incremental harvest with from/until parameters will use a new complete_updated_date column in the Instance table of
+mod_inventory_storage schema to check date range. This column will be updated every time when instance (holdings
+record or item) is updated (inserted or deleted). See more in [MODINVSTOR-1105](https://issues.folio.org/browse/MODINVSTOR-1105).
+
 ### Issue tracker
 
 See project [MODOAIPMH](https://issues.folio.org/browse/MODOAIPMH)
