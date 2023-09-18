@@ -47,7 +47,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
-        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false)
+        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());

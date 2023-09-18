@@ -35,6 +35,7 @@ import static org.folio.oaipmh.Constants.CALL_NUMBER_TYPES_URI;
 import static org.folio.oaipmh.Constants.CAMPUSES_URI;
 import static org.folio.oaipmh.Constants.CONTRIBUTOR_NAME_TYPES_URI;
 import static org.folio.oaipmh.Constants.ELECTRONIC_ACCESS_RELATIONSHIPS_URI;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.HOLDINGS_NOTE_TYPES_URI;
 import static org.folio.oaipmh.Constants.IDENTIFIER_TYPES_URI;
 import static org.folio.oaipmh.Constants.ILL_POLICIES_URI;
@@ -49,6 +50,7 @@ import static org.folio.oaipmh.Constants.MODES_OF_ISSUANCE_URI;
 import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class OkapiMockServer {
@@ -106,7 +108,7 @@ public class OkapiMockServer {
   static final String SRS_RECORD_WITH_OLD_METADATA_DATE = "1999-01-01";
   static final String SRS_RECORD_WITH_NEW_METADATA_DATE = "1999-02-02";
   static final String DEFAULT_RECORD_DATE = "2023-06-30";
-  static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2002-02-02";
+  static final String SRS_RECORDS_WITH_CYRILLIC_DATA_DATE = "2023-06-30T13:54:18Z";
   static final String SUPPRESSED_RECORDS_DATE = "2020-03-30";
   static final String NO_ITEMS_DATE = "2020-01-29";
   static final String DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA = "2000-01-10";
@@ -405,6 +407,14 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA));
     } else  if (uri.contains(INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
+    } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
+      successResponse(ctx, getSrsRecordsPartially(ctx.request().params()));
+    } else if (uri.contains(PARTITIONABLE_RECORDS_DATE)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
+    } else if (uri.contains(THREE_INSTANCES_DATE_TIME) || uri.contains(THREE_INSTANCES_DATE)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_3));
+    } else if (!uri.contains(FROM_PARAM) && !uri.contains(UNTIL_PARAM)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
     } else {
       failureResponse(ctx, 500, "Internal Server Error");
     }

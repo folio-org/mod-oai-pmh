@@ -125,15 +125,20 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <argLine>-Dfile.encoding=UTF-8</argLine>
 
-    <sonar.exclusions>**/PropertyNameMapper.java,
+    <sonar.exclusions>
+      **/PropertyNameMapper.java,
       **/ModTenantAPI.java,
-      **/SourceStorageSourceRecordsClient.java
-      **/RuleProcessor.java</sonar.exclusions>
-    <sonar.coverage.exclusions>**/BatchStreamWrapper.java,
+      **/SourceStorageSourceRecordsClient.java,
+      **/RuleProcessor.java,
+      **/GetOaiRecordsHelper.java
+    </sonar.exclusions>
+    <sonar.coverage.exclusions>
+      **/BatchStreamWrapper.java,
       **/ModTenantAPI.java,
       **/SourceStorageSourceRecordsClient.java,
       **/TranslationsFunctionHolder.java,
-      **/RuleProcessor.java
+      **/RuleProcessor.java,
+      **/GetOaiRecordsHelper.java
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>

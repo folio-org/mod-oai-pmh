@@ -31,6 +31,7 @@ import org.folio.oaipmh.helpers.referencedata.ReferenceData;
 import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.TranslationsFunctionHolder;
+import org.folio.oaipmh.querybuilder.RecordsSource;
 import org.folio.oaipmh.service.ConsortiaService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
@@ -130,7 +131,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
   private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
   private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
-  private static final String QUERY_TEMPLATE = "(source==FOLIO%s%s%s%s)";
+  private static final String INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE = "(%s%s%s%s%s)";
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
   private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
@@ -251,8 +252,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .reduce((resultLocal, resultCentral) -> {
           JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
           JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
-          sourceRecordsLocal.addAll(sourceRecordsCentral);
-          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, resultLocal.getInteger(TOTAL_RECORDS) + resultCentral.getInteger(TOTAL_RECORDS));
+          if (nonNull(sourceRecordsCentral)) {
+            sourceRecordsLocal.addAll(sourceRecordsCentral);
+          }
+          var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
+          var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS)).orElse(0);
+          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, totalLocal + totalCentral);
           try {
             return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal.getString(TOTAL_RECORDS_PARAM)));
           } catch (Exception exc) {
@@ -267,7 +272,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     int batchSize = Integer.parseInt(
       RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(handler -> {
+    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true).onComplete(handler -> {
       try {
         if (handler.succeeded()) {
           var inventoryRecords = handler.result();
@@ -386,7 +391,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
               request.setFromInventory(true);
             }
-            requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false).onComplete(instancesHandler ->
+            requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
+              .onComplete(instancesHandler ->
               handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
           } else {
             processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -576,7 +582,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestFromInventory(request, 1, List.of(instanceId), false, false).compose(instance -> {
+      return requestFromInventory(request, 1, List.of(instanceId), false, false, true).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
         instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
         instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
@@ -601,7 +607,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
-                                                    boolean ignoreOffset) {
+                                                    boolean ignoreOffset, boolean ignoreSource) {
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     final Date updatedAfter = request.getFrom() == null || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
@@ -610,16 +616,31 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<JsonObject> promise = Promise.promise();
 
     var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
+    var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
+    String source = EMPTY;
+    if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
+      source = "(source==FOLIO OR source==CONSORTIUM-FOLIO)";
+    } else if (recordsSource == RecordsSource.MARC) {
+      source = "(source==MARC OR source==CONSORTIUM-MARC)";
+    }
+    var and = nonNull(listOfIds) || !source.isEmpty() ? "and" : EMPTY;
     var queryFrom = nonNull(updatedAfter) ?
-      " and metadata.updatedDate>=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
+      format(" %s metadata.updatedDate>=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
+    and = nonNull(listOfIds) || nonNull(updatedAfter) || !source.isEmpty() ? "and" : EMPTY;
     var queryUntil = nonNull(updatedBefore) ?
-      " and metadata.updatedDate<=" + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
+      format(" %s metadata.updatedDate<=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
       EMPTY;
-    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : " and discoverySuppress==false";
-    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + "&query=" +
-      URLEncoder.encode(format(QUERY_TEMPLATE, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset());
+    and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty() ? "and" : EMPTY;
+    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : format(" %s discoverySuppress==false", and);
+    String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty()
+      || !querySuppressFromDiscovery.isEmpty() ? "&query=" +
+      URLEncoder.encode(format(INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE, source, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
+      : EMPTY;
+    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + queryParam;
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
+
+    logger.info("Inventory uri: {}", uri);
 
     processRequest(uri, request, promise, listOfIds);
 
@@ -639,7 +660,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         if (response.statusCode() == 200) {
           promise.complete(response.bodyAsJsonObject());
         } else {
-          String errorMsg = nonNull(String.join(", ", listOfIds)) ?
+          String errorMsg = nonNull(listOfIds) ?
             format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
             format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
           logger.error(errorMsg);

@@ -50,16 +50,8 @@ CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_recor
            LIMIT 1) AS marc_record,
     instance_record.jsonb AS instance_record,
     instance_record.jsonb ->> 'source'::text AS source,
-    ${myuniversity}_mod_inventory_storage.strtotimestamp((instance_record.jsonb -> 'metadata'::text) ->> 'updatedDate'::text) AS instance_updated_date,
+    instance_record.complete_updated_date AS instance_updated_date,
     ${myuniversity}_mod_inventory_storage.strtotimestamp((instance_record.jsonb -> 'metadata'::text) ->> 'createdDate'::text) AS instance_created_date,
-           ( SELECT ${myuniversity}_mod_inventory_storage.strtotimestamp(record_lb.updated_date::text) AS strtotimestamp
-           FROM ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
-           WHERE instance_record.id = record_lb.external_id
-           LIMIT 1) AS marc_updated_date,
-           ( SELECT ${myuniversity}_mod_inventory_storage.strtotimestamp(record_lb.created_date::text) AS strtotimestamp
-           FROM ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
-           WHERE instance_record.id = record_lb.external_id
-           LIMIT 1) AS marc_created_date,
            COALESCE(( SELECT record_lb.suppress_discovery
            FROM ${myuniversity}_${mymodule}.get_instances_from_srs record_lb
            WHERE instance_record.id = record_lb.external_id

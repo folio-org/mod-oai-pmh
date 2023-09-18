@@ -79,6 +79,7 @@ import static org.folio.oaipmh.Constants.RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.SOURCE;
 import static org.folio.oaipmh.Constants.STATUS_CODE;
 import static org.folio.oaipmh.Constants.STATUS_MESSAGE;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
@@ -247,6 +248,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
               .collect(toMap(jsonKey -> jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE), jsonValue -> jsonValue,
                 (id1, id2) -> id1)); // Here id1 = id2, i.e. the same ids, take only first one.
           if (!idJsonMap.isEmpty()) {
+            excludeSharedMarcRecords(finalRecords, idJsonMap);
             var centralTenantId = consortiaService.getCentralTenantId(request);
             if (StringUtils.isNotEmpty(centralTenantId)) {
               doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, retryAttempts,
@@ -271,6 +273,16 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       );
   }
 
+  private void excludeSharedMarcRecords(JsonArray finalRecords, Map<String, JsonObject> idJsonMap) {
+    var iterator = finalRecords.iterator();
+    while (iterator.hasNext()) {
+      var rec = (JsonObject)iterator.next();
+      if (idJsonMap.keySet().contains(rec.getString(INSTANCE_ID_FROM_VIEW_RESPONSE))) {
+        iterator.remove();
+      }
+    }
+  }
+
   private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport, Map<String, JsonObject> idJsonMap,
                                AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
@@ -293,6 +305,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
             srsResponse.statusMessage());
           handleException(promise, new IllegalStateException(errorMsg));
+          logger.error("Error response: {}", srsResponse.bodyAsString());
         }
         JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
         sourceRecords.stream().map(JsonObject.class::cast)
@@ -343,11 +356,10 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     try {
       var query = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
         from, until, source, skipSuppressedFromDiscovery, request.isFromDeleted() && deletedRecordsSupport,
-        currentLimit, false);
+        currentLimit);
       logger.info("Query: {}", query);
       return viewsService.query(query, request.getTenant())
-        .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, from, until, source, limit,
-          currentRecords, skipSuppressedFromDiscovery, deletedRecordsSupport))
+        .compose(currentRecords -> handleCompleteListSize(request, supportCompletedSize, currentRecords))
         .onFailure(completeListSizeHandlerExc -> logger.error("Error occurred while calling a view: {}.",
           completeListSizeHandlerExc.getMessage(), completeListSizeHandlerExc))
         .compose(currentRecords -> processInstancesFromDB(request, currentRecords, finalRecords,
@@ -432,8 +444,6 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           return true;
         }
 
-        setCorrectDatesForMarc(rec);
-
         var marcRecord = rec.getString(MARC_RECORD_FROM_VIEW_RESPONSE);
 
         if (isNull(marcRecord)) { // If MARC does not have underlying SRS record.
@@ -449,58 +459,15 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       }).collect(toList()));
   }
 
-  /**
-   * Update dates since they are not correct for MARC in instance table.
-   * For example, when deleting MARC record, created/updated dates are
-   * updated only in the records_lb table of SRS,
-   * but not in the 'instance' table of the inventory storage.
-   * @param marcRecord record with source MARC whose dates should be corrected
-   */
-  private void setCorrectDatesForMarc(JsonObject marcRecord) {
-    var marcUpdatedDate = marcRecord.getString("marc_updated_date");
-    var marcCreatedDate = marcRecord.getString("marc_created_date");
-    marcRecord.put("instance_updated_date", marcUpdatedDate);
-    marcRecord.put("instance_created_date", marcCreatedDate);
-  }
-
-  private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, String from, String until,
-                                      RecordsSource source, int limit, JsonArray currentRecords,
-                                      boolean skipSuppressedFromDiscovery, boolean deletedRecordsSupport) {
+  private Future<JsonArray> handleCompleteListSize(Request request, boolean supportCompletedSize, JsonArray currentRecords) {
     if (supportCompletedSize && request.getCompleteListSize() == 0) {
-      try {
-        var queryForSize = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-          from, until, source, skipSuppressedFromDiscovery, false,
-          limit, true);
-        logger.info("Query for size: {}", queryForSize);
-        return viewsService.query(queryForSize, request.getTenant()).compose(counts -> {
-            var completeListSize = counts.getJsonObject(0).getInteger("count");
-            request.setCompleteListSize(completeListSize);
-            return Future.succeededFuture(currentRecords);
-          })
-          .onFailure(handleException -> logger.error("Error occurred while calling a view to get complete list size: {}.",
-            handleException.getMessage(), handleException))
-          .compose(sameInstances -> {
-            if (deletedRecordsSupport) {
-              try {
-                var queryForSizeDeleted = QueryBuilder.build(request.getTenant(), request.getLastInstanceId(),
-                  from, until, source, skipSuppressedFromDiscovery, true,
-                  limit, true);
-                logger.info("Query for size deleted: {}", queryForSizeDeleted);
-                return viewsService.query(queryForSizeDeleted, request.getTenant()).compose(counts -> {
-                  var completeListSize = counts.getJsonObject(0).getInteger("count");
-                  request.setCompleteListSize(request.getCompleteListSize() + completeListSize);
-                  return Future.succeededFuture(currentRecords);
-                });
-              } catch (QueryException exc) {
-                logger.error("Error occurred while building a query for deleted records: {}.",
-                  exc.getMessage(), exc);
-              }
-            }
-            return Future.succeededFuture(currentRecords);
-          });
-      } catch (QueryException exc) {
-        logger.error("Error occurred while building a query: {}.", exc.getMessage(), exc);
-      }
+      return requestFromInventory(request, 1, null, false, false, false).compose(counts -> {
+          var completeListSize = counts.getInteger(TOTAL_RECORDS_PARAM);
+          request.setCompleteListSize(completeListSize);
+          return Future.succeededFuture(currentRecords);
+        })
+        .onFailure(handleException -> logger.error("Error occurred while calling /inventory-storage/instances to get complete list size: {}.",
+          handleException.getMessage(), handleException));
     }
     return Future.succeededFuture(currentRecords);
   }
