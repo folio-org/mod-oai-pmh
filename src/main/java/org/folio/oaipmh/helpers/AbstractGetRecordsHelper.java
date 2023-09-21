@@ -198,6 +198,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     var centralTenantId = consortiaService.getCentralTenantId(request);
 
+    logger.info("Central tenant id: {}, token: {}, headers: {}, okapiUrl: {}",
+            centralTenantId, request.getOkapiToken(), request.getOkapiHeaders(), request.getOkapiUrl());
+
     if (StringUtils.isNotEmpty(centralTenantId)) {
       SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId)).getSourceStorageSourceRecords(
         null,
