@@ -198,7 +198,7 @@
       },
       {
         "from": "$.instance.identifiers[*].value",
-        "subfield": "i",
+        "subfield": "l",
         "translation": {
           "function": "set_related_identifier",
           "parameters": {
