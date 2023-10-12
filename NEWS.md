@@ -1,4 +1,38 @@
-## 3.12.0 - Unreleased
+## 3.13.0 - Unreleased
+
+## 3.12.0 (Released)
+
+This release includes bug fixes, performance improvements, code refactoring and technical tasks.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.0...v3.12.0)
+
+### Stories
+* [MODOAIPMH-515](https://issues.folio.org/browse/MODOAIPMH-515) Export harvest logs into csv format
+* [MODOAIPMH-514](https://issues.folio.org/browse/MODOAIPMH-514) Purge error logs
+* [MODOAIPMH-513](https://issues.folio.org/browse/MODOAIPMH-513) Avoid skipping entire batch when 500 Internal Server Error from inventory
+* [MODOAIPMH-492](https://issues.folio.org/browse/MODOAIPMH-492) Re-work asynchronous code for harvesting
+* [MODOAIPMH-477](https://issues.folio.org/browse/MODOAIPMH-477) Adjust 856 mappings
+* [MODOAIPMH-433](https://issues.folio.org/browse/MODOAIPMH-433) Unable to build on ARM
+* [MODOAIPMH-322](https://issues.folio.org/browse/MODOAIPMH-322) Implement performance improvement of harvesting with marc21 prefix
+
+### Technical tasks
+* [MODOAIPMH-534](https://issues.folio.org/browse/MODOAIPMH-534) Handle CONSORTIUM-FOLIO instances in the harvest
+* [MODOAIPMH-533](https://issues.folio.org/browse/MODOAIPMH-533) Add missing electronic access relationship value to default rules
+* [MODOAIPMH-525](https://issues.folio.org/browse/MODOAIPMH-525) Update to Java 17 mod-oai-pmh
+* [MODOAIPMH-524](https://issues.folio.org/browse/MODOAIPMH-524) SRS-client with "shared" MARC records support
+* [MODOAIPMH-516](https://issues.folio.org/browse/MODOAIPMH-516) Resumption Token Extension
+* [MODOAIPMH-491](https://issues.folio.org/browse/MODOAIPMH-491) Implement query builder for the new approach of OAI-PMH
+* [MODOAIPMH-490](https://issues.folio.org/browse/MODOAIPMH-490) Inventory-client to views mechanism replacement
+* [MODOAIPMH-457](https://issues.folio.org/browse/MODOAIPMH-457) PoC for moving to RMB approach
+
+### Bug fixes
+* [MODOAIPMH-530](https://issues.folio.org/browse/MODOAIPMH-530) OAI-PMH: Incorrect mapping rules for "Linking ISSN" identifier
+* [MODOAIPMH-519](https://issues.folio.org/browse/MODOAIPMH-519) SRS records which are not marked as "deleted" are omitted in response with "Deleted records support" set to "NO"
+* [MODOAIPMH-507](https://issues.folio.org/browse/MODOAIPMH-507) 856 field subfield "t" is not returned in response for Instance with electronic access in some cases
+* [MODOAIPMH-499](https://issues.folio.org/browse/MODOAIPMH-499) mod-oai-pmh returns 500 error when depended module reboots
+* [MODOAIPMH-480](https://issues.folio.org/browse/MODOAIPMH-480) 952 field subfield "n" is not returned in response for holdings without items
+* [MODOAIPMH-458](https://issues.folio.org/browse/MODOAIPMH-458) Duplicated "t" subfield in 856 field
+* [MODOAIPMH-442](https://issues.folio.org/browse/MODOAIPMH-442) bad data in call number type field returns 500 error
 
 ## 3.11.0 (Released)
 
