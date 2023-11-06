@@ -170,7 +170,7 @@
     <junit.version>5.8.2</junit.version>
     <netty.version>4.1.78.Final</netty.version>
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
-    <generate-marc-utils-version>1.5.0</generate-marc-utils-version>
+    <generate-marc-utils-version>1.7.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
     <folio-s3-client.version>1.1.0</folio-s3-client.version>
     <aws.sdk.version>2.19.2</aws.sdk.version>
