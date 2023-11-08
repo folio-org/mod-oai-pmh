@@ -1,5 +1,11 @@
 ## 3.13.0 - Unreleased
 
+## 3.12.2 (Released)
+
+This release contains dependency update
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.1...v3.12.2)
+
 ## 3.12.1 (Released)
 
 This release includes fixes for vulnerabilities and memory-leaks.
