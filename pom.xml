@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.12.2-SNAPSHOT</version>
+  <version>3.12.3-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -172,7 +172,7 @@
     <mockserver-client-java.version>5.11.2</mockserver-client-java.version>
     <generate-marc-utils-version>1.7.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
-    <folio-s3-client.version>2.0.0</folio-s3-client.version>
+    <folio-s3-client.version>2.0.1</folio-s3-client.version>
     <aws.sdk.version>2.19.2</aws.sdk.version>
 
   </properties>
