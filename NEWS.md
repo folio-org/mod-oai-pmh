@@ -1,5 +1,14 @@
 ## 3.13.0 - Unreleased
 
+## 3.12.1 (Released)
+
+This release includes fixes for vulnerabilities and memory-leaks.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.0...v3.12.1)
+
+### Bug fixes
+* [MODOAIPMH-543](https://issues.folio.org/browse/MODOAIPMH-543) generate-marc-utils 1.7.0 fixing json-smart stack overflow
+
 ## 3.12.0 (Released)
 
 This release includes bug fixes, performance improvements, code refactoring and technical tasks.
