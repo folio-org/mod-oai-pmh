@@ -1,5 +1,11 @@
 ## 3.13.0 - Unreleased
 
+## 3.12.4 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.3...v3.12.4)
+
 ## 3.12.3 (Released)
 
 This release includes folio-s3-client update.
