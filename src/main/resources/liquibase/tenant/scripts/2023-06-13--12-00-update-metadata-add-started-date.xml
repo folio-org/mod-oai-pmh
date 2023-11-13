@@ -6,9 +6,8 @@
 
   <changeSet id="2023-06-13--12-00-update-metadata-add-started-date" author="Oleksandr Bozhko">
     <addColumn tableName="request_metadata_lb">
-      <column name="started_date" type="timestamptz">
+      <column name="started_date" type="timestamptz" defaultValueComputed="CURRENT_TIMESTAMP">
         <constraints nullable="false"/>
-        <defaultValueDateComputed>CURRENT_DATE</defaultValueDateComputed>
       </column>
     </addColumn>
   </changeSet>
