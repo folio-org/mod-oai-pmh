@@ -8,6 +8,7 @@
     <addColumn tableName="request_metadata_lb">
       <column name="started_date" type="timestamptz">
         <constraints nullable="false"/>
+        <defaultValueDateComputed>CURRENT_DATE</defaultValueDateComputed>
       </column>
     </addColumn>
   </changeSet>
