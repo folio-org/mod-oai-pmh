@@ -13,8 +13,10 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Optional.ofNullable;
+import static jdk.dynalink.linker.support.Guards.isNotNull;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FROM_VIEW_RESPONSE;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
@@ -118,7 +120,8 @@ public class RecordStorageHelper implements StorageHelper {
     logger.info("RecordStorageHelper getSuppressedFromDiscovery entry: {}", entry);
     if (entry.containsKey("source")) {
       Boolean res;
-      if (entry.getString("source").contains("MARC")) {
+      if (entry.getString("source").contains("MARC") && entry.containsKey("marc_record")
+          && nonNull(entry.getString("marc_record"))) {
         res = entry.getBoolean("suppress_from_discovery_srs");
       } else {
         res = entry.getBoolean("suppress_from_discovery_inventory");
