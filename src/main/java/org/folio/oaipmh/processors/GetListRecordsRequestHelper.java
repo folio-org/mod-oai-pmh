@@ -250,6 +250,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           if (!idJsonMap.isEmpty()) {
             excludeSharedMarcRecords(finalRecords, idJsonMap);
             var centralTenantId = consortiaService.getCentralTenantId(request);
+            logger.info("centralTenantId found: {}", centralTenantId);
             if (StringUtils.isNotEmpty(centralTenantId)) {
               doRequestShared(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, retryAttempts,
                 shared, new Request(request, centralTenantId), finalRecords);
@@ -307,6 +308,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           handleException(promise, new IllegalStateException(errorMsg));
           logger.error("Error response: {}", srsResponse.bodyAsString());
         }
+        logger.info("doRequestShared response: {}", srsResponse.bodyAsJsonObject());
         JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
         sourceRecords.stream().map(JsonObject.class::cast)
           .forEach(json -> {

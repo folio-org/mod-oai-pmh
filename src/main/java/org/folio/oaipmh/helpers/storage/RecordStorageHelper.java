@@ -115,6 +115,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
+    logger.info("RecordStorageHelper getSuppressedFromDiscovery entry: {}", entry);
     if (entry.containsKey("source")) {
       Boolean res;
       if (entry.getString("source").contains("MARC")) {
