@@ -130,9 +130,11 @@ public class RecordMetadataManager {
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       items.forEach(item -> {
-        var illPolicyOpt = ofNullable(holdings).stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
+        var illPolicyOpt = nonNull(holdings) ?
+          holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
             .equals(((JsonObject)item).getString("holdingsRecordId")) && StringUtils.isNotBlank(hold.getString("illPolicy")))
-            .map(hold -> hold.getString("illPolicy")).findFirst();
+            .map(hold -> hold.getString("illPolicy")).findFirst()
+          : Optional.<String> empty();
         updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
         updateFieldsWithElectronicAccessField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
       });
