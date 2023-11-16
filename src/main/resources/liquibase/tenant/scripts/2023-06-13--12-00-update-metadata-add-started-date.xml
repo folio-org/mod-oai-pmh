@@ -4,7 +4,13 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
 
-  <changeSet id="2023-06-13--12-00-update-metadata-add-started-date" author="Oleksandr Bozhko">
+  <changeSet id="2023-06-13--12-00-update-metadata-add-started-date" author="Oleksandr Bozhko" runOnChange="true">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <columnExists tableName="request_metadata_lb" columnName="started_date" />
+      </not>
+    </preConditions>
+    <delete tableName="request_metadata_lb"/>
     <addColumn tableName="request_metadata_lb">
       <column name="started_date" type="timestamptz">
         <constraints nullable="false"/>
