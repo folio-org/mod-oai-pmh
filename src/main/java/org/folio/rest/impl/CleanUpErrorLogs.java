@@ -45,7 +45,9 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
   @Override
   public void postOaiPmhCleanUpErrorLogs(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Running cleaning up error logs");
+    logger.info("CLEAN_ERRORS_INTERVAL: {}", System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
     long interval = Long.parseLong(System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
+    logger.info("interval: {}", interval);
 
     OffsetDateTime offsetDateTime = ZonedDateTime
       .ofInstant(Instant.now(), ZoneId.of("UTC"))
