@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -246,6 +247,27 @@ class RecordMetadataManagerTest {
     assertEquals(1, value);
   }
 
+  @Test
+  void shouldCorrectlySetTheIllPolicyValue_whenItExistsInHoldings() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+      requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+    String holdingsId = UUID.randomUUID().toString();
+    JsonObject holdings = new JsonObject().put("id", holdingsId).put("illPolicy", "test ill policy value");
+    inventoryInstance.getJsonObject("itemsandholdingsfields").put("holdings", new JsonArray().add(holdings));
+    inventoryInstance.getJsonObject("itemsandholdingsfields").getJsonArray("items").getJsonObject(0)
+      .put("holdingsRecordId", holdingsId);
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+      inventoryInstance, true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    String value = getIllPolicyValue(effectiveLocationFields);
+    assertEquals("test ill policy value", value);
+  }
+
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
@@ -416,6 +438,23 @@ class RecordMetadataManagerTest {
       return suppressFromDiscoverySubfield.getInteger("t");
     } else {
       return -1;
+    }
+  }
+
+  private String getIllPolicyValue(List<JsonObject> effectiveLocationFields) {
+    Optional<JsonObject> optionalIllPolicySubfield = effectiveLocationFields.iterator()
+      .next()
+      .getJsonObject("952")
+      .getJsonArray("subfields")
+      .stream()
+      .map(JsonObject.class::cast)
+      .filter(jsonObject -> jsonObject.containsKey("r"))
+      .findFirst();
+    if (optionalIllPolicySubfield.isPresent()) {
+      JsonObject illPolicyField = optionalIllPolicySubfield.get();
+      return illPolicyField.getString("r");
+    } else {
+      return null;
     }
   }
 

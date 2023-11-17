@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.records;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -43,6 +44,7 @@ public class RecordMetadataManager {
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
   private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
   private static final String LOAN_TYPE_SUBFIELD_CODE = "p";
+  private static final String ILL_POLICY_SUBFIELD_CODE = "r";
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
@@ -123,11 +125,17 @@ public class RecordMetadataManager {
     }
     JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
+    JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       items.forEach(item -> {
-        updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
+        var illPolicyOpt = nonNull(holdings) ?
+          holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
+            .equals(((JsonObject)item).getString("holdingsRecordId")) && StringUtils.isNotBlank(hold.getString("illPolicy")))
+            .map(hold -> hold.getString("illPolicy")).findFirst()
+          : Optional.<String> empty();
+        updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
         updateFieldsWithElectronicAccessField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
       });
     }
@@ -177,13 +185,18 @@ public class RecordMetadataManager {
    * @param itemData                    - json of single item
    * @param marcRecordFields            - fields list to be updated with new one
    * @param suppressedRecordsProcessing - include suppressed flag in 952 field?
+   * @param illPolicy                   - include illPolicy if present
    */
   private void updateFieldsWithItemEffectiveLocationField(JsonObject itemData,
                                                           List<Object> marcRecordFields,
-                                                          boolean suppressedRecordsProcessing) {
+                                                          boolean suppressedRecordsProcessing,
+                                                          Optional<String> illPolicy) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
+    }
+    if (illPolicy.isPresent()) {
+      effectiveLocationSubFields.put(ILL_POLICY_SUBFIELD_CODE, illPolicy.get());
     }
     FieldBuilder fieldBuilder = new FieldBuilder();
     Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
@@ -266,7 +279,7 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     //Map location name, which changed paths in json, to 952$d
-    Optional.ofNullable(itemData.getJsonObject(LOCATION))
+    ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
