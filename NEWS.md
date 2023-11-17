@@ -1,5 +1,11 @@
 ## 3.13.0 - Unreleased
 
+## 3.12.7 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.6...v3.12.7)
+
 ## 3.12.6 (Released)
 
 This release includes bug fixes for suppressed from discovery, missing columns in request_metadata_lb and clean-up error logs.
