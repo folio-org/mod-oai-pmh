@@ -598,6 +598,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
           if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
             recordType.getHeader().setStatus(StatusType.DELETED);
+            logger.info("549 - Status has set as deleted: {}, {}",
+                    storageHelper.isRecordMarkAsDeleted(updatedSrsRecord), updatedSrsRecord.encodePrettily());
           }
           return Future.succeededFuture(updatedSrsRecord);
         });
