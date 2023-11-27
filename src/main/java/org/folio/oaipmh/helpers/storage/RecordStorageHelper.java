@@ -155,7 +155,7 @@ public class RecordStorageHelper implements StorageHelper {
   }
 
   private boolean getDeletedValue(JsonObject entry) {
-    logger.info("549 - getDeletedValue: {}", ofNullable(entry.getValue(DELETED))
+    logger.info("549 - getDeletedValue: {}, {}", entry.encodePrettily(), ofNullable(entry.getValue(DELETED))
             .map(value -> Boolean.parseBoolean(value.toString())).orElse(false));
     return ofNullable(entry.getValue(DELETED))
       .map(value -> Boolean.parseBoolean(value.toString())).orElse(false);
