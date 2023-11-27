@@ -584,7 +584,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
-    logger.info("549 - enrichRecordIfRequired: {}", srsRecordToEnrich.encodePrettily());
+    logger.info("549 - enrichRecordIfRequired: {}", srsRecordToEnrich.encode());
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
       return requestFromInventory(request, 1, List.of(instanceId), false, false, true).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
@@ -602,8 +602,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
           if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
             recordType.getHeader().setStatus(StatusType.DELETED);
-            logger.info("549 - Status has set as deleted: {}, {}",
-                    storageHelper.isRecordMarkAsDeleted(updatedSrsRecord), updatedSrsRecord.encodePrettily());
+            logger.info("549 - Status has set as deleted: {}",
+                    storageHelper.isRecordMarkAsDeleted(updatedSrsRecord));
           }
           return Future.succeededFuture(updatedSrsRecord);
         });
