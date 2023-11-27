@@ -255,7 +255,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("549 - central: {}", sourceRecordsCentral);
           logger.info("549 - local: {}", sourceRecordsLocal);
           if (nonNull(sourceRecordsCentral)) {
-            if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
+            if (request.getVerb() == VerbType.GET_RECORD) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
