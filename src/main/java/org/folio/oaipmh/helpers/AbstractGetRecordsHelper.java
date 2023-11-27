@@ -581,6 +581,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
 
   private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
+    logger.info("549 - enrichRecordIfRequired: {}", srsRecordToEnrich.encodePrettily());
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
       return requestFromInventory(request, 1, List.of(instanceId), false, false, true).compose(instance -> {
         JsonObject instanceRequiredFieldsOnly = new JsonObject();
