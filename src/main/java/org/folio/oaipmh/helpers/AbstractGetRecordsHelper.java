@@ -255,9 +255,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("549 - central: {}", sourceRecordsCentral);
           logger.info("549 - local: {}", sourceRecordsLocal);
           if (nonNull(sourceRecordsCentral)) {
-            if (request.getVerb() == VerbType.GET_RECORD) {
-              sourceRecordsLocal.clear();
-            }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
           }
           var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
