@@ -252,6 +252,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         .reduce((resultLocal, resultCentral) -> {
           JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
           JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
+          logger.info("549 - central: {}", sourceRecordsCentral);
+          logger.info("549 - local: {}", sourceRecordsLocal);
           if (nonNull(sourceRecordsCentral)) {
             if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
               sourceRecordsLocal.clear();
