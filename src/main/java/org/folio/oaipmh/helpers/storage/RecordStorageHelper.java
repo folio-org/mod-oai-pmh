@@ -145,26 +145,19 @@ public class RecordStorageHelper implements StorageHelper {
   private boolean isLeaderValueContainsDeletedFlag(String leaderValue) {
     final String leaderDeletedRegexp = "\\d{5}d";
     final Pattern pattern = Pattern.compile(leaderDeletedRegexp);
-    logger.info("549 - leaderValue: {}", leaderValue);
     if (leaderValue != null) {
-      logger.info("549 - pattern.matcher(leaderValue).find(): {}",
-              pattern.matcher(leaderValue).find());
       return pattern.matcher(leaderValue).find();
     }
     return false;
   }
 
   private boolean getDeletedValue(JsonObject entry) {
-    logger.info("549 - getDeletedValue: {}", ofNullable(entry.getValue(DELETED))
-            .map(value -> Boolean.parseBoolean(value.toString())).orElse(false));
     return ofNullable(entry.getValue(DELETED))
       .map(value -> Boolean.parseBoolean(value.toString())).orElse(false);
   }
 
   @Override
   public boolean isRecordMarkAsDeleted(JsonObject entry) {
-    logger.info("549 - isRecordMarkAsDeleted: {}, {}", isLeaderValueContainsDeletedFlag(getLeaderValue(entry)),
-            getDeletedValue(entry));
     return isLeaderValueContainsDeletedFlag(getLeaderValue(entry)) || getDeletedValue(entry);
   }
 
