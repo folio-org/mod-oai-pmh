@@ -255,7 +255,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("Number of SRS records from central tenant: {}", sourceRecordsCentral.size());
           logger.info("Number of SRS records from local tenant: {}", sourceRecordsLocal.size());
           if (nonNull(sourceRecordsCentral)) {
-            if (request.getVerb() == VerbType.GET_RECORD) {
+            if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
