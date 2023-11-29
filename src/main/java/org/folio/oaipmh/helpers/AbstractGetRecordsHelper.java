@@ -210,7 +210,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         null,
         "MARC_BIB",
         //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-        null,
+        suppressedRecordsSupport ? null : false,
         deletedRecordsSupport,
         null,
         updatedAfter,
@@ -259,10 +259,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                     (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty()
                             && storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0)))) {
               sourceRecordsLocal.clear();
-              if (!suppressedRecordsSupport && !sourceRecordsCentral.isEmpty() &&
-                      storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0))) {
-                sourceRecordsCentral.clear();
-              }
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
           }
