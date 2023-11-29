@@ -255,7 +255,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
                   nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0, sourceRecordsLocal.size());
           if (nonNull(sourceRecordsCentral)) {
-            if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
+            if (request.getVerb() == VerbType.GET_RECORD &&
+                    (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty()
+                            && storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0)))) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
