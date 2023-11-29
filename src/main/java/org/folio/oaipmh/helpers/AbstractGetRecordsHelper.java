@@ -259,6 +259,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                     (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty()
                             && storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0)))) {
               sourceRecordsLocal.clear();
+              if (!suppressedRecordsSupport && !sourceRecordsCentral.isEmpty() &&
+                      storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0))) {
+                sourceRecordsCentral.clear();
+              }
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
           }
