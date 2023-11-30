@@ -255,9 +255,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
                   nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0, sourceRecordsLocal.size());
           if (nonNull(sourceRecordsCentral)) {
-            if (request.getVerb() == VerbType.GET_RECORD &&
-                    (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty()
-                            && storageHelper.getSuppressedFromDiscovery(sourceRecordsLocal.getJsonObject(0)))) {
+            Promise<Boolean> ignoreFromLocal = Promise.promise();
+            ignoreFromLocal(request, sourceRecordsCentral, sourceRecordsLocal, suppressedRecordsSupport, ignoreFromLocal);
+            if (ignoreFromLocal.future().result()) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
@@ -273,6 +273,22 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           }
         }).get()
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
+  }
+
+  private void ignoreFromLocal(Request request, JsonArray sourceRecordsCentral, JsonArray sourceRecordsLocal,
+                               boolean suppressedRecordsSupport, Promise<Boolean> result) {
+    requestFromInventory(request, 1, List.of(request.getIdentifier()), true, true, true)
+            .onComplete(handler -> {
+              if (handler.succeeded()) {
+                var instance = handler.result();
+                logger.info("Instance: {}", instance.encodePrettily());
+                var suppressed = storageHelper.getSuppressedFromDiscovery(instance);
+                result.complete(request.getVerb() == VerbType.GET_RECORD &&
+                        (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty() && suppressed));
+              } else {
+                result.fail("Cannot retrieve instance by id = " + request.getIdentifier());
+              }
+            });
   }
 
   protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
