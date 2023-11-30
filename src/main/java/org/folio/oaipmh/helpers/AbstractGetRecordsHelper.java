@@ -277,7 +277,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private void ignoreFromLocal(Request request, JsonArray sourceRecordsCentral, JsonArray sourceRecordsLocal,
                                boolean suppressedRecordsSupport, Promise<Boolean> result) {
-    requestFromInventory(request, 1, List.of(request.getStorageIdentifier()), true, true, false)
+    requestFromInventory(request, List.of(request.getStorageIdentifier()))
             .onComplete(handler -> {
               if (handler.succeeded()) {
                 var instance = handler.result();
@@ -627,6 +627,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     } else {
       return Future.succeededFuture(srsRecordToEnrich);
     }
+  }
+
+  protected Future<JsonObject> requestFromInventory(Request request, List<String> listOfIds) {
+    String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "/" + listOfIds.get(0);
+    logger.info("Inventory uri: {}", uri);
+    Promise<JsonObject> promise = Promise.promise();
+    processRequest(uri, request, promise, listOfIds);
+    return promise.future();
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
