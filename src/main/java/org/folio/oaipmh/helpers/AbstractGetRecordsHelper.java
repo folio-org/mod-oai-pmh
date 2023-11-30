@@ -283,8 +283,11 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 var instance = handler.result();
                 logger.info("Instance: {}", instance.encodePrettily());
                 var suppressed = storageHelper.getSuppressedFromDiscovery(instance);
-                result.complete(request.getVerb() == VerbType.GET_RECORD &&
-                        (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty() && suppressed));
+                logger.info("suppressed: {}", suppressed);
+                var res = request.getVerb() == VerbType.GET_RECORD &&
+                        (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty() && suppressed);
+                logger.info("result: {}", res);
+                result.complete(res);
               } else {
                 result.fail("Cannot retrieve instance by id = " + request.getIdentifier());
               }
