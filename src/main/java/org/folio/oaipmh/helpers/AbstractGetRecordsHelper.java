@@ -640,6 +640,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
     var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
+    logger.info("recordsSource: {}, {}", recordsSource, getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
     String source = EMPTY;
     if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
       source = "(source==FOLIO OR source==CONSORTIUM-FOLIO)";
