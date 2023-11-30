@@ -277,7 +277,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   private void ignoreFromLocal(Request request, JsonArray sourceRecordsCentral, JsonArray sourceRecordsLocal,
                                boolean suppressedRecordsSupport, Promise<Boolean> result) {
-    requestFromInventory(request, 1, List.of(request.getStorageIdentifier()), true, true, true)
+    requestFromInventory(request, 1, List.of(request.getStorageIdentifier()), true, true, false)
             .onComplete(handler -> {
               if (handler.succeeded()) {
                 var instance = handler.result();
