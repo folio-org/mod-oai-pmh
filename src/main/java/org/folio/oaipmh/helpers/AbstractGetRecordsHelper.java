@@ -195,6 +195,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     Promise<JsonObject> local = Promise.promise();
     Promise<JsonObject> central = Promise.promise();
+    Promise<JsonObject> inventory = Promise.promise();
 
     var centralTenantId = consortiaService.getCentralTenantId(request);
 
@@ -245,7 +246,17 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       request.isFromInventory() ? 0 : batchSize + 1,
       getSrsCollectingHandler(request, local));
 
-    CompositeFuture.join(local.future(), central.future())
+    requestFromInventory(request, List.of(request.getStorageIdentifier()))
+            .onComplete(handler -> {
+              if (handler.succeeded()) {
+                var instance = handler.result();
+                inventory.complete(instance);
+              } else {
+                inventory.fail("Cannot retrieve instance by id = " + request.getIdentifier());
+              }
+            });
+
+    CompositeFuture.join(local.future(), central.future(), inventory.future())
       .map(CompositeFuture::list)
       .map(results -> results.stream()
         .map(JsonObject.class::cast)
@@ -255,11 +266,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
                   nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0, sourceRecordsLocal.size());
           if (nonNull(sourceRecordsCentral)) {
-            Promise<Boolean> ignoreFromLocal = Promise.promise();
-            ignoreFromLocal(request, sourceRecordsCentral, sourceRecordsLocal, suppressedRecordsSupport, ignoreFromLocal);
-            var result = ignoreFromLocal.future().result();
-            logger.info("ignore result: {}", result);
-            if (result) {
+            var ignoreFromLocal = ignoreFromLocal(request, sourceRecordsCentral, sourceRecordsLocal, suppressedRecordsSupport, (JsonObject) results.get(2));
+            logger.info("ignoreFromLocal: {}", ignoreFromLocal);
+            if (ignoreFromLocal) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
@@ -277,22 +286,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
   }
 
-  private void ignoreFromLocal(Request request, JsonArray sourceRecordsCentral, JsonArray sourceRecordsLocal,
-                               boolean suppressedRecordsSupport, Promise<Boolean> result) {
-    requestFromInventory(request, List.of(request.getStorageIdentifier()))
-            .onComplete(handler -> {
-              if (handler.succeeded()) {
-                var instance = handler.result();
-                var suppressed = storageHelper.getSuppressedFromDiscovery(instance);
-                logger.info("suppressed: {}", suppressed);
-                var res = request.getVerb() == VerbType.GET_RECORD &&
-                        (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty() && suppressed);
-                logger.info("result: {}", res);
-                result.complete(res);
-              } else {
-                result.fail("Cannot retrieve instance by id = " + request.getIdentifier());
-              }
-            });
+  private boolean ignoreFromLocal(Request request, JsonArray sourceRecordsCentral, JsonArray sourceRecordsLocal,
+                                  boolean suppressedRecordsSupport, JsonObject instance) {
+    var suppressed = storageHelper.getSuppressedFromDiscovery(instance);
+    logger.info("suppressed: {}", suppressed);
+    var res = request.getVerb() == VerbType.GET_RECORD &&
+            (!sourceRecordsCentral.isEmpty() || !suppressedRecordsSupport && !sourceRecordsLocal.isEmpty() && suppressed);
+    logger.info("result: {}", res);
+    return res;
   }
 
   protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
