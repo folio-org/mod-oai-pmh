@@ -257,7 +257,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           if (nonNull(sourceRecordsCentral)) {
             Promise<Boolean> ignoreFromLocal = Promise.promise();
             ignoreFromLocal(request, sourceRecordsCentral, sourceRecordsLocal, suppressedRecordsSupport, ignoreFromLocal);
-            if (ignoreFromLocal.future().result()) {
+            var result = ignoreFromLocal.future().result();
+            logger.info("ignore result: {}", result);
+            if (result) {
               sourceRecordsLocal.clear();
             }
             sourceRecordsLocal.addAll(sourceRecordsCentral);
@@ -281,7 +283,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             .onComplete(handler -> {
               if (handler.succeeded()) {
                 var instance = handler.result();
-                logger.info("Instance: {}", instance.encodePrettily());
                 var suppressed = storageHelper.getSuppressedFromDiscovery(instance);
                 logger.info("suppressed: {}", suppressed);
                 var res = request.getVerb() == VerbType.GET_RECORD &&
