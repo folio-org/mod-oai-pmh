@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -129,18 +130,54 @@ public class RecordMetadataManager {
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      items.forEach(item -> {
-        JsonObject itemJson = (JsonObject) item;
-        var illPolicyOpt = nonNull(holdings) ?
-          holdings.stream().map(JsonObject.class::cast).filter(hold -> (hold.getString("id")
-            .equals(itemJson.getString("holdingsRecordId")) || !itemJson.containsKey("holdingsRecordId")) && StringUtils.isNotBlank(hold.getString("illPolicy")))
-            .map(hold -> hold.getString("illPolicy")).findFirst()
-          : Optional.<String> empty();
-        updateFieldsWithItemEffectiveLocationField(itemJson, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
-        updateFieldsWithElectronicAccessField(itemJson, fieldsList, suppressedRecordsProcessing);
-      });
+      populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
+      populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
     }
     return srsInstance;
+  }
+
+  private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
+    getItemsFromItems(items).forEach(item -> {
+      var illPolicyOpt = nonNull(holdings) ?
+        holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
+            .equals(item.getString("holdingsRecordId")) && StringUtils.isNotBlank(hold.getString("illPolicy")))
+          .map(hold -> hold.getString("illPolicy")).findFirst()
+        : Optional.<String> empty();
+      updateFieldsWithItemEffectiveLocationField(item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
+      updateFieldsWithElectronicAccessField(item, fieldsList, suppressedRecordsProcessing);
+    });
+  }
+
+  private void populateHoldingsWithIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
+    var onlyHoldings = getHoldingsWithoutItems(holdings, items);
+    var holdingsFromItems = getHoldingsFromItems(items);
+    if (onlyHoldings.size() == holdingsFromItems.size()) {
+      IntStream.range(0, onlyHoldings.size()).forEach(pos -> {
+        var illPolicyOpt = ofNullable(onlyHoldings.get(pos).getString("illPolicy"));
+        var itemJson = holdingsFromItems.get(pos);
+        updateFieldsWithItemEffectiveLocationField(itemJson, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
+      });
+    }
+  }
+
+  private List<JsonObject> getItemsFromItems(JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).filter(item -> item.containsKey("holdingsRecordId"))
+      .collect(Collectors.toList());
+  }
+
+  private List<JsonObject> getHoldingsFromItems(JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).filter(item -> !item.containsKey("holdingsRecordId"))
+      .collect(Collectors.toList());
+  }
+
+  private List<JsonObject> getHoldingsWithoutItems(JsonArray holdings, JsonArray items) {
+    return holdings.stream().map(JsonObject.class::cast).filter(hold -> !holdingsContainsItem(hold, items))
+      .collect(Collectors.toList());
+  }
+
+  private boolean holdingsContainsItem(JsonObject hold, JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).anyMatch(item -> ofNullable(item.getString("holdingsRecordId")).orElse(EMPTY)
+      .equals(hold.getString("id")));
   }
 
   /**
