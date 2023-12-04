@@ -61,6 +61,8 @@ public class RecordMetadataManager {
 
   private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   private static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
+  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
+  private static final String ILL_POLICY = "illPolicy";
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
   public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
   public static final String ITEMS = "items";
@@ -142,8 +144,8 @@ public class RecordMetadataManager {
     getItemsFromItems(items).forEach(item -> {
       var illPolicyOpt = nonNull(holdings) ?
         holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
-            .equals(item.getString("holdingsRecordId")) && StringUtils.isNotBlank(hold.getString("illPolicy")))
-          .map(hold -> hold.getString("illPolicy")).findFirst()
+            .equals(item.getString(HOLDINGS_RECORD_ID)) && StringUtils.isNotBlank(hold.getString(ILL_POLICY)))
+          .map(hold -> hold.getString(ILL_POLICY)).findFirst()
         : Optional.<String> empty();
       updateFieldsWithItemEffectiveLocationField(item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
       updateFieldsWithElectronicAccessField(item, fieldsList, suppressedRecordsProcessing);
@@ -155,7 +157,7 @@ public class RecordMetadataManager {
     var holdingsFromItems = getHoldingsFromItems(items);
     if (onlyHoldings.size() == holdingsFromItems.size()) {
       IntStream.range(0, onlyHoldings.size()).forEach(pos -> {
-        var illPolicyOpt = ofNullable(onlyHoldings.get(pos).getString("illPolicy"));
+        var illPolicyOpt = ofNullable(onlyHoldings.get(pos).getString(ILL_POLICY));
         var itemJson = holdingsFromItems.get(pos);
         updateFieldsWithItemEffectiveLocationField(itemJson, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
       });
@@ -168,7 +170,7 @@ public class RecordMetadataManager {
   }
 
   private List<JsonObject> getHoldingsFromItems(JsonArray items) {
-    return items.stream().map(JsonObject.class::cast).filter(item -> !item.containsKey("holdingsRecordId"))
+    return items.stream().map(JsonObject.class::cast).filter(item -> !item.containsKey(HOLDINGS_RECORD_ID))
       .collect(Collectors.toList());
   }
 
@@ -178,7 +180,7 @@ public class RecordMetadataManager {
   }
 
   private boolean holdingsContainsItem(JsonObject hold, JsonArray items) {
-    return items.stream().map(JsonObject.class::cast).anyMatch(item -> ofNullable(item.getString("holdingsRecordId")).orElse(EMPTY)
+    return items.stream().map(JsonObject.class::cast).anyMatch(item -> ofNullable(item.getString(HOLDINGS_RECORD_ID)).orElse(EMPTY)
       .equals(hold.getString("id")));
   }
 
