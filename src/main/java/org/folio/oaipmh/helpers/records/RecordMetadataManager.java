@@ -131,7 +131,9 @@ public class RecordMetadataManager {
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
-      populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
+      if (nonNull(holdings)) {
+        populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
+      }
     }
     return srsInstance;
   }
@@ -161,7 +163,7 @@ public class RecordMetadataManager {
   }
 
   private List<JsonObject> getItemsFromItems(JsonArray items) {
-    return items.stream().map(JsonObject.class::cast).filter(item -> item.containsKey("holdingsRecordId"))
+    return items.stream().map(JsonObject.class::cast).filter(item -> item.containsKey("id"))
       .collect(Collectors.toList());
   }
 
