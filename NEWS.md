@@ -1,5 +1,14 @@
 ## 3.13.0 - Unreleased
 
+## 3.12.8 (Released)
+
+This release includes bug fixes for member tenant harvesting
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.7...v3.12.8)
+
+### Bug fixes
+* [MODOAIPMH-549](https://issues.folio.org/browse/MODOAIPMH-549) ECS: Inconsistent response for verb=GetRecord&metadataPrefix=marc21_withholdings for instances shared from member tenant
+
 ## 3.12.7 (Released)
 
 This release includes folio-s3-client update.
