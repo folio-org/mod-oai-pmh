@@ -162,7 +162,7 @@
     <jooq.version>3.14.11</jooq.version>
     <vertx-jooq.generator.version>6.5.4</vertx-jooq.generator.version>
     <vertx-jooq.classic-reactive.version>6.5.4</vertx-jooq.classic-reactive.version>
-    <postgres.version>42.5.4</postgres.version>
+    <postgres.version>42.7.2</postgres.version>
     <lombok.version>1.18.24</lombok.version>
     <log4j.version>2.19.0</log4j.version>
     <testcontainers.version>1.19.6</testcontainers.version>
