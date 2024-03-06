@@ -808,14 +808,14 @@
               <goal>start</goal>
             </goals>
           </execution>
-<!--          <execution>-->
-<!--            <id>stop-pgsql</id>-->
-<!--            <phase>post-integration-test</phase>-->
-<!--            <goals>-->
-<!--              <goal>stop</goal>-->
-<!--              <goal>remove</goal>-->
-<!--            </goals>-->
-<!--          </execution>-->
+          <execution>
+            <id>stop-pgsql</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+              <goal>remove</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
