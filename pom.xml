@@ -142,7 +142,7 @@
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.9.1</aspectj.version>
-    <raml-module-builder.version>35.0.1</raml-module-builder.version>
+    <raml-module-builder.version>35.2.0</raml-module-builder.version>
     <folio-liquibase-util.version>1.5.0</folio-liquibase-util.version>
     <data-import-utils.version>1.10.0</data-import-utils.version>
     <folio-di-support.version>1.6.0</folio-di-support.version>
@@ -808,14 +808,14 @@
               <goal>start</goal>
             </goals>
           </execution>
-          <execution>
-            <id>stop-pgsql</id>
-            <phase>post-integration-test</phase>
-            <goals>
-              <goal>stop</goal>
-              <goal>remove</goal>
-            </goals>
-          </execution>
+<!--          <execution>-->
+<!--            <id>stop-pgsql</id>-->
+<!--            <phase>post-integration-test</phase>-->
+<!--            <goals>-->
+<!--              <goal>stop</goal>-->
+<!--              <goal>remove</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
         </executions>
       </plugin>
 
