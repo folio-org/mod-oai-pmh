@@ -359,7 +359,7 @@ public class InstancesDaoImpl implements InstancesDao {
 
   @Override
   public Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile) {
-    return getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+    return getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .executeAny(dslContext ->
         dslContext.update(REQUEST_METADATA_LB)
           .set(REQUEST_METADATA_LB.PATH_TO_ERROR_FILE_IN_S3, pathToErrorFile)
