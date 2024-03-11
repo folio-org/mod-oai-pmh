@@ -148,14 +148,13 @@
     <folio-di-support.version>1.6.0</folio-di-support.version>
     <vertx.version>4.3.4</vertx.version>
     <apache-httpclient.version>4.5.13</apache-httpclient.version>
-    <apache-commons-lang3.version>3.12.0</apache-commons-lang3.version>
     <time-adapters.version>1.1.3</time-adapters.version>
     <jaxb2-basics.version>1.11.1</jaxb2-basics.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <jaxb-impl.version>2.3.4</jaxb-impl.version>
     <jaxb-osgi.version>4.0.3</jaxb-osgi.version>
     <marc4j.version>2.9.2</marc4j.version>
-    <mod-configuration-client.version>5.8.0</mod-configuration-client.version>
+    <mod-configuration-client.version>5.9.2</mod-configuration-client.version>
     <mod-source-record-storage-client.version>5.4.0</mod-source-record-storage-client.version>
     <restassured.version>5.1.1</restassured.version>
     <junit.jupiter.version>5.9.0-M1</junit.jupiter.version>
@@ -164,7 +163,7 @@
     <vertx-jooq.classic-reactive.version>6.5.4</vertx-jooq.classic-reactive.version>
     <postgres.version>42.7.2</postgres.version>
     <lombok.version>1.18.24</lombok.version>
-    <log4j.version>2.19.0</log4j.version>
+    <log4j.version>2.23.0</log4j.version>
     <testcontainers.version>1.19.6</testcontainers.version>
     <mockito-junit-jupiter.version>4.6.1</mockito-junit-jupiter.version>
     <junit.version>5.8.2</junit.version>
@@ -252,11 +251,6 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>${apache-httpclient.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>${apache-commons-lang3.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jooq</groupId>
