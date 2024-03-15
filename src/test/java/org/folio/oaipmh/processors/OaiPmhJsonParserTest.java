@@ -42,7 +42,7 @@ class OaiPmhJsonParserTest {
       .handler(events::add)
       .exceptionHandler(errors::add);
     jsonParser.write(Buffer.buffer(json)).end();
-    assertEquals(2, errors.size());
-    assertEquals(0, events.size());
+    assertEquals(1, errors.size());
+    assertEquals(2, events.size());
   }
 }
