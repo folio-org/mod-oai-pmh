@@ -50,7 +50,7 @@ public class ErrorsDaoImpl implements ErrorsDao {
   @Override
   public Future<Boolean> deleteErrorsByRequestId(String requestId, String tenantId) {
     logger.debug("Deleting errors with request id - {}.", requestId);
-    return postgresClientFactory.getQueryExecutorReader(tenantId).transaction(queryExecutor -> queryExecutor
+    return postgresClientFactory.getQueryExecutor(tenantId).transaction(queryExecutor -> queryExecutor
       .execute(dslContext -> dslContext.deleteFrom(ERRORS)
         .where(ERRORS.REQUEST_ID.eq(UUID.fromString(requestId))))
       .map(res -> {
