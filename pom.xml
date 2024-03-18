@@ -400,11 +400,12 @@
 
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>3.12.1</version>
         <configuration>
           <compilerArgument>-Xlint:unchecked</compilerArgument>
           <encoding>${project.build.sourceEncoding}</encoding>
-          <release>11</release>
+          <release>17</release>
+          <parameters>true</parameters>
         </configuration>
         <executions>
           <execution>
