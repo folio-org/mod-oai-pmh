@@ -171,7 +171,7 @@
     <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
     <generate-marc-utils-version>1.7.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
-    <folio-s3-client.version>2.1.0-SNAPSHOT</folio-s3-client.version>
+    <folio-s3-client.version>2.1.0</folio-s3-client.version>
     <aws.sdk.version>2.19.2</aws.sdk.version>
 
   </properties>
