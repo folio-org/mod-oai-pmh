@@ -1,4 +1,74 @@
-## 3.13.0 - Unreleased
+## 3.14.0 - Unreleased
+
+## 3.13.0 (Released)
+
+This release includes dependency updates and minor fixes
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.8...v3.13.0)
+
+### Technical tasks
+* [MODOAIPMH-564](https://folio-org.atlassian.net/browse/MODOAIPMH-564) mod-oai-pmh: Vertx 4.5.* upgrade
+* [MODOAIPMH-559](https://folio-org.atlassian.net/browse/MODOAIPMH-559) mod-oai-pmh: Upgrade RAML Module Builder
+* [MODOAIPMH-523](https://folio-org.atlassian.net/browse/MODOAIPMH-523) Add holdings ILL Policy to the fields exported as part of the withholdings metadatPrefix
+
+## 3.12.8 (Released)
+
+This release includes bug fixes for member tenant harvesting
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.7...v3.12.8)
+
+### Bug fixes
+* [MODOAIPMH-549](https://issues.folio.org/browse/MODOAIPMH-549) ECS: Inconsistent response for verb=GetRecord&metadataPrefix=marc21_withholdings for instances shared from member tenant
+
+## 3.12.7 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.6...v3.12.7)
+
+## 3.12.6 (Released)
+
+This release includes bug fixes for suppressed from discovery and missing columns in request_metadata_lb.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.5...v3.12.6)
+
+### Bug fixes
+* [MODOAIPMH-546](https://issues.folio.org/browse/MODOAIPMH-546) ECS: ListRecords returns suppressed from discovery Shared MARC Instance with flag t=0 in 999 and 856 fields
+* [MODOAIPMH-545](https://issues.folio.org/browse/MODOAIPMH-545) Missing columns in request_metadata_lb in Poppy upgraded environments
+
+## 3.12.5 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.4...v3.12.5)
+
+## 3.12.4 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.3...v3.12.4)
+
+## 3.12.3 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.2...v3.12.3)
+
+## 3.12.2 (Released)
+
+This release includes dependency update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.1...v3.12.2)
+
+## 3.12.1 (Released)
+
+This release includes fixes for vulnerabilities and memory leaks.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.0...v3.12.1)
+
+### Bug fixes
+* [MODOAIPMH-543](https://issues.folio.org/browse/MODOAIPMH-543) generate-marc-utils 1.7.0 fixing json-smart stack overflow
+
 
 ## 3.12.0 (Released)
 
