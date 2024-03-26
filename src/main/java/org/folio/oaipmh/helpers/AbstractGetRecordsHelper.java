@@ -472,8 +472,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<Response> oaiResponsePromise = Promise.promise();
     buildRecords(ctx, request, items).onSuccess(recordsMap -> {
       Response response;
-      if (recordsMap.isEmpty()) {
+      if (recordsMap.isEmpty() && items.size() > 1) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
+      } else if (recordsMap.isEmpty() && items.size() == 1) {
+        response = buildTheByteArrayCannotBeConvertedToJaxbObjectResponse(oaipmh, request);
       } else {
         addRecordsToOaiResponse(oaipmh, recordsMap.values());
         addResumptionTokenToOaiResponse(oaipmh, resumptionToken);

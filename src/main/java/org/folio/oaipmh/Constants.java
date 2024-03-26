@@ -103,6 +103,7 @@ public final class Constants {
   public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "Verb '%s', argument 'resumptionToken' is exclusive, no others maybe specified with it.";
   public static final String INVALID_RESUMPTION_TOKEN = "Verb '%s', argument resumptionToken is invalid";
   public static final String NO_RECORD_FOUND_ERROR = "There were no records found matching the search criteria";
+  public static final String INVALID_CHARACTER_IN_THE_RECORD = "Invalid character in the record.";
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
