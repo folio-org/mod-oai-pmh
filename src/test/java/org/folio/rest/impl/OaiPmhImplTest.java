@@ -761,7 +761,6 @@ class OaiPmhImplTest {
   void invalidCharacterInTheRecordTest() {
     MetadataPrefix prefix = MARC21XML;
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER_WITH_INVALID_CHARACTER;
-//    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;//_WITH_INVALID_CHARACTER;
 
     RequestSpecification request = createBaseRequest()
       .with()

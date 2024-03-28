@@ -17,6 +17,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -472,11 +473,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<Response> oaiResponsePromise = Promise.promise();
     buildRecords(ctx, request, items).onSuccess(recordsMap -> {
       Response response;
-      if ((recordsMap.isEmpty() && jsonArrayIsEmptyCheck(items)) ||
-            (recordsMap.isEmpty() && jsonArrayNotEmptyCheck(items) && VerbType.GET_RECORD != request.getVerb())
-      ) {
+      if (noRecordsFoundResultCheck(recordsMap, items, request.getVerb())) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
-      } else if (recordsMap.isEmpty() && jsonArrayNotEmptyCheck(items) && VerbType.GET_RECORD == request.getVerb()) {
+      } else if (theByteArrayCannotBeConvertedToJaxbObjectResultCheck(recordsMap, items, request.getVerb())) {
         response = buildTheByteArrayCannotBeConvertedToJaxbObjectResponse(oaipmh, request);
       } else {
         addRecordsToOaiResponse(oaipmh, recordsMap.values());
@@ -488,11 +487,13 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return oaiResponsePromise.future();
   }
 
-  private boolean jsonArrayNotEmptyCheck(JsonArray ja){
-    return ja != null && !ja.isEmpty();
+  boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
+    return (recordsMap.isEmpty() && ObjectUtils.isEmpty(items)) ||
+      (recordsMap.isEmpty() && ObjectUtils.isNotEmpty(items) && VerbType.GET_RECORD != verb);
   }
-  private boolean jsonArrayIsEmptyCheck(JsonArray ja){
-    return !jsonArrayNotEmptyCheck(ja);
+
+  boolean theByteArrayCannotBeConvertedToJaxbObjectResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
+    return recordsMap.isEmpty() && ObjectUtils.isNotEmpty(items) && VerbType.GET_RECORD == verb;
   }
   /**
    * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
@@ -506,7 +507,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
     Map<String, RecordType> recordsMap = new ConcurrentHashMap<>();
 
-    if (jsonArrayNotEmptyCheck(records)) {
+    if (records != null && !records.isEmpty()) {
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
       records.stream()
