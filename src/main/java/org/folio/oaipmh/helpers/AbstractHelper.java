@@ -114,7 +114,7 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected ErrorsService errorsService;
 
-  public Response buildTheByteArrayCannotBeConvertedToJaxbObjectResponse(OAIPMH oaipmh, Request request) {
+  public Response conversionIntoJaxbObjectIssueResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createInvalidJsonContentError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
