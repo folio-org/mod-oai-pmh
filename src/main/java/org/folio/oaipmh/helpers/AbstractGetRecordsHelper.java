@@ -487,8 +487,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
-    return (recordsMap.isEmpty() && jsonArrayIsEmpty(items)) ||
-      (recordsMap.isEmpty() && jsonArrayNotEmpty(items) && VerbType.GET_RECORD != verb);
+    return recordsMap.isEmpty() &&
+      (jsonArrayIsEmpty(items) || (jsonArrayNotEmpty(items) && VerbType.GET_RECORD != verb));
   }
 
   boolean conversionIntoJaxbObjectIssueCheck(Map<String, RecordType> recordsMap, JsonArray items, VerbType verb){
