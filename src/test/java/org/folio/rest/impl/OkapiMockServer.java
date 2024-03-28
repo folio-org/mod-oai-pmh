@@ -60,6 +60,7 @@ public class OkapiMockServer {
   public static final String TEST_USER_ID = "30fde4be-2d1a-4546-8d6c-b468caca2720";
 
   static final String EXISTING_IDENTIFIER = "existing-identifier";
+  static final String EXISTING_IDENTIFIER_WITH_INVALID_CHARACTER = "id-of-existing-instance-with-invalid-character";
   static final String INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY_INVALID_DATA = "existing-invalid-data-identifier";
   static final String RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS = "00000000-0000-4a89-a2f9-78ce3145e4fc";
   static final String RECORD_IDENTIFIER_INSTANCE_NOT_FOUND = "fb3e23e5-eb7f-4b8b-b531-40e74ec9c6e9";
@@ -135,6 +136,7 @@ public class OkapiMockServer {
   private static final String SRS_RECORD_WITH_NON_EXISTING_INSTANCE_JSON = "/srs_record_with_non_existing_instance.json";
   private static final String INSTANCES_0 = "/instances_0.json";
   private static final String INSTANCES_1 = "/instances_1.json";
+  private static final String INSTANCES_1_WITH_INVALID_CHARACTER = "/instances_1_with_invalid_character.json";
   private static final String INSTANCES_1_NO_RECORD_SOURCE = "/instances_1_withNoRecordSource.json";
 
   private static final String INSTANCES_3 = "/instances_3.json";
@@ -516,7 +518,9 @@ public class OkapiMockServer {
       } else if (uri.contains(SRS_RECORD_WITH_NEW_METADATA_DATE)) {
         String json = getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD);
         successResponse(ctx, json.replaceAll("REPLACE_ME", NEW_METADATA_DATE_FORMAT));
-      } else {
+      } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER_WITH_INVALID_CHARACTER))) {
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1_WITH_INVALID_CHARACTER));}
+      else {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_10_TOTAL_RECORDS_11));
       }
       logger.info("Mock returns http status code: {}", ctx.response()

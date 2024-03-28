@@ -89,6 +89,7 @@
       <enumeration value="badResumptionToken"/>
       <enumeration value="noSetHierarchy"/>
       <enumeration value="serviceUnavailable"/>
+      <enumeration value="invalidRecordContent"/>
     </restriction>
   </simpleType>
 
