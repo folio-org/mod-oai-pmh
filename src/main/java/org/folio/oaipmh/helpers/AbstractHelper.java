@@ -64,6 +64,7 @@ import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.INVALID_CHARACTER_IN_THE_RECORD;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
@@ -87,6 +88,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.INVALID_RECORD_CONTENT;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -112,6 +114,10 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected ErrorsService errorsService;
 
+  public Response conversionIntoJaxbObjectIssueResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createInvalidJsonContentError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
   public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
     oaipmh.withErrors(createNoRecordsFoundError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
@@ -133,6 +139,9 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected static OAIPMHerrorType createNoRecordsFoundError() {
     return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
+  }
+  protected static OAIPMHerrorType createInvalidJsonContentError() {
+    return new OAIPMHerrorType().withCode(INVALID_RECORD_CONTENT).withValue(INVALID_CHARACTER_IN_THE_RECORD);
   }
 
   public static ResponseHelper getResponseHelper() {

@@ -42,6 +42,7 @@ import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -179,6 +180,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.INVALID_RECORD_CONTENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
@@ -753,6 +755,20 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, GET_RECORD);
     verifyHeaderDateStamp(oaipmh, GET_RECORD, granularityType.value());
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
+  }
+
+  @Test
+  void invalidCharacterInTheRecordTest() {
+    MetadataPrefix prefix = MARC21XML;
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER_WITH_INVALID_CHARACTER;
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+
+    OAIPMH oaipmh = verify404InvalidCharacterInTheRecord(request, GET_RECORD);
   }
 
   private void verifyHeaderDateStamp(OAIPMH oaipmh, VerbType verbType, String timeGranularity) {
@@ -1767,6 +1783,19 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
 
     verifyBaseResponse(oaipmh, verb);
+
+    return oaipmh;
+  }
+
+  private OAIPMH verify404InvalidCharacterInTheRecord(RequestSpecification request, VerbType verb) {
+    String response = verifyWithCodeWithXml(request, 404);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh, verb);
+
+    Assertions.assertEquals(INVALID_RECORD_CONTENT, oaipmh.getErrors().get(0).getCode());
 
     return oaipmh;
   }
