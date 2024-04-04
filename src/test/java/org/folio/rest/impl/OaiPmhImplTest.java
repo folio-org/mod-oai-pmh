@@ -38,9 +38,11 @@ import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.jaxrs.model.UuidCollection;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
@@ -68,16 +70,22 @@ import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ElementType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.xml.bind.JAXBElement;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
@@ -86,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -251,8 +260,39 @@ class OaiPmhImplTest {
 
   private PostgresTesterContainer postgresTesterContainer;
 
+  @Autowired
+  private FolioS3Client folioS3Client;
+
+  // --- s3 setup ---
+  private static final GenericContainer<?> s3;
+  private static final String MINIO_ENDPOINT;
+  public static final String S3_ACCESS_KEY = "minio-access-key";
+  public static final String S3_SECRET_KEY = "minio-secret-key";
+  public static final int S3_PORT = 9000;
+  public static final String BUCKET = "test-bucket";
+  public static final String REGION = "us-west-2";
+
+  static {
+    s3 = new GenericContainer<>("minio/minio:latest")
+      .withEnv("MINIO_ACCESS_KEY", S3_ACCESS_KEY)
+      .withEnv("MINIO_SECRET_KEY", S3_SECRET_KEY)
+      .withCommand("server /data")
+      .withExposedPorts(S3_PORT)
+      .waitingFor(new HttpWaitStrategy().forPath("/minio/health/ready")
+        .forPort(S3_PORT)
+        .withStartupTimeout(Duration.ofSeconds(10))
+      );
+    s3.start();
+    MINIO_ENDPOINT = format("http://%s:%s", s3.getHost(), s3.getFirstMappedPort());
+  }
+
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty("minio.bucket", BUCKET);
+    System.setProperty("minio.region", REGION);
+    System.setProperty("minio.accessKey", S3_ACCESS_KEY);
+    System.setProperty("minio.secretKey", S3_SECRET_KEY);
+    System.setProperty("minio.endpoint", MINIO_ENDPOINT);
     resetSystemProperties();
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000*60*60);
@@ -2941,6 +2981,35 @@ class OaiPmhImplTest {
       .collect(Collectors.toList())
       : oaipmh.getListIdentifiers()
       .getHeaders();
+  }
+
+  @Test
+  void downloadLog(VertxTestContext testContext) {
+    var requestId = UUID.randomUUID();
+    var pathToError = "log.csv";
+    var requestMetadata = new RequestMetadataLb();
+    requestMetadata.setRequestId(requestId);
+    requestMetadata.setPathToErrorFileInS3(pathToError);
+    requestMetadata.setStartedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    requestMetadata.setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    var expectedValue = "log data";
+
+    folioS3Client.write(pathToError, new ByteArrayInputStream(expectedValue.getBytes()));
+    instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
+      .map(RequestMetadataLb::getRequestId)
+      .map(uuid -> RestAssured.given()
+        .header(okapiUrlHeader)
+        .header(tokenHeader)
+        .header(tenantHeader)
+        .basePath(REQUEST_METADATA_PATH + "/" + uuid + "/logs")
+        .when()
+        .get())
+      .onSuccess(res -> {
+        Assertions.assertEquals(expectedValue, new String(res.getBody().asByteArray()));
+        testContext.completeNow();
+      })
+      .onFailure(testContext::failNow);
+
   }
 
   private RequestMetadataCollection getRequestMetadataCollection(int limit) {

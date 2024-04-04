@@ -23,6 +23,7 @@ import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,6 +65,9 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
   public static final int S3_PORT = 9000;
   public static final String BUCKET = "test-bucket";
   public static final String REGION = "us-west-2";
+
+  @Autowired
+  private FolioS3Client folioS3Client;
 
   static {
     s3 = new GenericContainer<>("minio/minio:latest")
@@ -271,7 +275,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
   }
 
   private void verifyErrorCSVFile(String linkToError, List<String> initErrorFileContent) {
-    try (InputStream inputStream = new URL(linkToError).openStream();
+    try (InputStream inputStream = folioS3Client.read(linkToError);
     Scanner scanner = new Scanner(inputStream)) {
       List<String> listCsvLines = new ArrayList<>();
       while (scanner.hasNextLine()) {
