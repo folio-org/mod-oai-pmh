@@ -1,5 +1,14 @@
 ## 3.14.0 - Unreleased
 
+## 3.13.1 (Released)
+
+This release includes bug fixes for incorrect characters
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.13.0...v3.13.1)
+
+### Bug fixes
+* [MODOAIPMH-540](https://issues.folio.org/browse/MODOAIPMH-540) Error while converting record to xml
+
 ## 3.13.0 (Released)
 
 This release includes dependency updates and minor fixes
