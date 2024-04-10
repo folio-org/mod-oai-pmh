@@ -102,6 +102,11 @@
           "permissionsRequired": ["oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"]
         },
         {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/logs",
+          "permissionsRequired": ["oai-pmh.request-metadata.logs.item.get"]
+        },
+        {
           "methods": [
             "POST"
           ],
@@ -274,6 +279,11 @@
       "description": "Retrieves request metadata collection - suppressed from discovery instances UUIDs"
     },
     {
+      "permissionName": "oai-pmh.request-metadata.logs.item.get",
+      "displayName": "OAI-PMH Request metadata - download error log",
+      "description": "Downloads error log by request id"
+    },
+    {
       "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
@@ -289,7 +299,8 @@
         "oai-pmh.request-metadata.failed-to-save-instances.collection.get",
         "oai-pmh.request-metadata.failed-instances.collection.get",
         "oai-pmh.request-metadata.skipped-instances.collection.get",
-        "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"
+        "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get",
+        "oai-pmh.request-metadata.logs.item.get"
       ]
     },
     {

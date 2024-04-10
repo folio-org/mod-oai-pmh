@@ -44,10 +44,8 @@ import org.folio.rest.jooq.tables.records.InstancesRecord;
 import org.folio.rest.jooq.tables.records.RequestMetadataLbRecord;
 import org.folio.rest.jooq.tables.records.SkippedInstancesIdsRecord;
 import org.folio.rest.jooq.tables.records.SuppressedFromDiscoveryInstancesIdsRecord;
-import org.folio.s3.client.FolioS3Client;
 import org.jooq.InsertValuesStep3;
 import org.jooq.Record;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
@@ -68,9 +66,6 @@ public class InstancesDaoImpl implements InstancesDao {
   public InstancesDaoImpl(PostgresClientFactory postgresClientFactory) {
     this.postgresClientFactory = postgresClientFactory;
   }
-
-  @Autowired
-  private FolioS3Client folioS3Client;
 
   @Override
   public Future<List<String>> getExpiredRequestIds(String tenantId, long expirationPeriodInSeconds) {
@@ -311,6 +306,7 @@ public class InstancesDaoImpl implements InstancesDao {
     return new RequestMetadataLbRecord().setRequestId(requestMetadata.getRequestId())
       .setLastUpdatedDate(requestMetadata.getLastUpdatedDate())
       .setStreamEnded(requestMetadata.getStreamEnded()).setLinkToErrorFile(requestMetadata.getLinkToErrorFile())
+      .setPathToErrorFileInS3(requestMetadata.getPathToErrorFileInS3())
       .setStartedDate(requestMetadata.getStartedDate());
   }
 
@@ -480,8 +476,7 @@ public class InstancesDaoImpl implements InstancesDao {
     of(pojo.getSuppressedInstancesCounter()).ifPresent(requestMetadata::withSuppressedInstancesCounter);
     ofNullable(pojo.getPathToErrorFileInS3()).ifPresentOrElse(pathToError -> {
       if (!pathToError.isEmpty()) {
-        var regeneratedLink = folioS3Client.getPresignedUrl(pathToError);
-        requestMetadata.withLinkToErrorFile(regeneratedLink);
+        requestMetadata.withLinkToErrorFile(pathToError);
       } else {
         requestMetadata.setLinkToErrorFile("");
       }
