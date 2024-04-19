@@ -50,27 +50,7 @@
             </dc:creator>
         </xsl:for-each>
         <dc:type>
-            <xsl:if test="$leader7='c'"><!--Remove attribute 6/04 jer--><!--
-<xsl:attribute name="collection">yes</xsl:attribute>
--->
-                <xsl:text>collection</xsl:text>
-            </xsl:if>
-            <xsl:if test="$leader6='d' or $leader6='f' or $leader6='p' or $leader6='t'"><!--Remove attribute 6/04 jer--><!--
-<xsl:attribute name="manuscript">yes</xsl:attribute>
--->
-                <xsl:text>manuscript</xsl:text>
-            </xsl:if>
-            <xsl:choose>
-                <xsl:when test="$leader6='a' or $leader6='t'">text</xsl:when>
-                <xsl:when test="$leader6='e' or $leader6='f'">cartographic</xsl:when>
-                <xsl:when test="$leader6='c' or $leader6='d'">notated music</xsl:when>
-                <xsl:when test="$leader6='i' or $leader6='j'">sound recording</xsl:when>
-                <xsl:when test="$leader6='k'">still image</xsl:when>
-                <xsl:when test="$leader6='g'">moving image</xsl:when>
-                <xsl:when test="$leader6='r'">three dimensional object</xsl:when>
-                <xsl:when test="$leader6='m'">software, multimedia</xsl:when>
-                <xsl:when test="$leader6='p'">mixed material</xsl:when>
-            </xsl:choose>
+          <xsl:value-of select="marc:datafield[@tag=336]/marc:subfield[@code='a']"/>
         </dc:type>
         <xsl:for-each select="marc:datafield[@tag=655]">
             <dc:type>
