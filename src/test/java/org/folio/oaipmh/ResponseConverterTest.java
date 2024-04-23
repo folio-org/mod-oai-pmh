@@ -72,9 +72,9 @@ class ResponseConverterTest {
 
   @Test
   void shouldProvideDetailedErrorMessage() {
-    var source = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><marc:record xmlns:marc=\"http://www.loc.gov/MARC21/slim\"><marc:leader>01344nja a2200289 c 4500</marc:leader><marc:datafield tag=\"035\" ind1=\" \" ind2=\" \"><marc:subfield code=\"a\">(DE-599)GBV\u001f1011162431</marc:subfield></marc:record>\n";
+    var source = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><marc:record xmlns:marc=\"http://www.loc.gov/MARC21/slim\"><marc:leader>01344nja a2200289 c 4500</marc:leader><marc:datafield tag=\"035\" ind1=\" \" ind2=\" \"><marc:subfield code=\"a\">(DE-599)GBV\u001f1011162431</marc:subfield></marc:record>\n".getBytes();
     var converter = ResponseConverter.getInstance();
-    var exception = assertThrows(IllegalStateException.class, () -> converter.bytesToObject(source.getBytes()));
+    var exception = assertThrows(IllegalStateException.class, () -> converter.bytesToObject(source));
     assertThat(exception.getMessage(), containsString("An invalid XML character (Unicode: 0x1f) was found in the element content of the document."));
   }
 }
