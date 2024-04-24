@@ -10,10 +10,12 @@ import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ObjectFactory;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
@@ -160,12 +162,18 @@ public class ResponseConverter {
         jaxbUnmarshaller.setSchema(oaipmhSchema);
       }
       return jaxbUnmarshaller.unmarshal(inputStream);
-    } catch (JAXBException | IOException e) {
+    }  catch (JAXBException | IOException e) {
       // In case there is an issue to unmarshal byteSource, there is no way to handle it
-      throw new IllegalStateException("The byte array cannot be converted to JAXB object response.", e);
+      throw new IllegalStateException(processException(e), e);
     } finally {
       logExecutionTime("Array of bytes converted to Object", timer);
     }
+  }
+
+  private String processException(Exception e) {
+    return e instanceof UnmarshalException ue && ue.getLinkedException() instanceof SAXParseException se ?
+      se.getLocalizedMessage() :
+      "The byte array cannot be converted to JAXB object response.";
   }
 
   /**
