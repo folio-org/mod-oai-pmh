@@ -1,5 +1,14 @@
 ## 3.14.0 - Unreleased
 
+## 3.13.2 (Released)
+
+This release includes bug fixes for incorrect characters
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.13.1...v3.13.2)
+
+### Bug fixes
+* [MODOAIPMH-565](https://issues.folio.org/browse/MODOAIPMH-565) Skip invalid instance records when inventory responds with 500
+
 ## 3.13.1 (Released)
 
 This release includes bug fixes for incorrect characters
