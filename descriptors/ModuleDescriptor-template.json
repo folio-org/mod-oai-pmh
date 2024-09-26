@@ -34,8 +34,8 @@
             "inventory-storage.material-types.collection.get",
             "inventory-storage.modes-of-issuance.collection.get",
             "inventory-storage.nature-of-content-terms.collection.get",
-            "source-storage.records.get",
-            "source-storage.sourceRecords.get",
+            "source-storage.source-records.item.get",
+            "source-storage.source-records.collection.get",
             "user-tenants.collection.get"
           ]
         },
