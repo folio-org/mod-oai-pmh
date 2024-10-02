@@ -172,11 +172,11 @@
     },
     {
       "id": "source-storage-records",
-      "version": "3.0"
+      "version": "3.2"
     },
     {
       "id": "source-storage-source-records",
-      "version": "3.0"
+      "version": "3.2"
     },
     {
       "id": "configuration",
