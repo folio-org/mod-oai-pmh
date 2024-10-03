@@ -279,9 +279,10 @@
       "description": "Retrieves request metadata collection - suppressed from discovery instances UUIDs"
     },
     {
-      "permissionName": "oai-pmh.request-metadata.logs.item.get",
+      "permissionName": "oai-pmh.metadata.logs.item.get",
       "displayName": "OAI-PMH Request metadata - download error log",
-      "description": "Downloads error log by request id"
+      "description": "Downloads error log by request id",
+      "replaces": ["oai-pmh.request-metadata.logs.item.get"]
     },
     {
       "permissionName": "oai-pmh.all",
