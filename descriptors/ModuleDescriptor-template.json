@@ -320,9 +320,10 @@
       "description": "Manage oai-pmh set item"
     },
     {
-      "permissionName": "oai-pmh.sets.item.put",
+      "permissionName": "oai-pmh.settings.item.put",
       "displayName": "OAI-PMH Set - put item",
-      "description": "Manage oai-pmh update item"
+      "description": "Manage oai-pmh update item",
+      "replaces": ["oai-pmh.sets.item.put"]
     },
     {
       "permissionName": "oai-pmh.sets.item.delete",
