@@ -1,5 +1,8 @@
 ## 3.14.0 - Unreleased
 
+### Technical tasks
+[MODOAIPMH-576](https://folio-org.atlassian.net/browse/MODOAIPMH-576) Update source-storage-records to v3.3 and source-storage-source-records to v3.2 with module permission renaming
+
 ## 3.13.0 (Released)
 
 This release includes dependency updates and minor fixes
