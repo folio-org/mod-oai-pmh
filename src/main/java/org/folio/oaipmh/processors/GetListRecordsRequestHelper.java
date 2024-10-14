@@ -287,45 +287,49 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
                                AtomicInteger attemptsCount, int retryAttempts, Promise<JsonArray> promise,
                                Request request, JsonArray records) {
     logger.info("doRequestShared execution");
-    SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request).postSourceStorageSourceRecords("INSTANCE",
-      null, deletedRecordsSupport, new ArrayList<>(idJsonMap.keySet()), asyncResult -> {
-      Map<String, String> retrySRSRequestParams = new HashMap<>();
-      if (asyncResult.succeeded()) {
-        HttpResponse<Buffer> srsResponse = asyncResult.result();
-        int statusCode = srsResponse.statusCode();
-        String statusMessage = srsResponse.statusMessage();
-        if (statusCode >= 400) {
-          retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
-          retrySRSRequestParams.put(STATUS_CODE, String.valueOf(statusCode));
-          retrySRSRequestParams.put(STATUS_MESSAGE, statusMessage);
-          retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
-            request, records);
-        }
-        if (statusCode != 200) {
-          String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
-            srsResponse.statusMessage());
-          handleException(promise, new IllegalStateException(errorMsg));
-          logger.error("Error response: {}", srsResponse.bodyAsString());
-        }
-        JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
-        sourceRecords.stream().map(JsonObject.class::cast)
-          .forEach(json -> {
-            var instId = json.getJsonObject("externalIdsHolder").getString("instanceId");
-            var parsedRecord = json.getJsonObject(PARSED_RECORD);
-            var existingRecord = idJsonMap.get(instId);
-            existingRecord.put(PARSED_RECORD, parsedRecord);
-          });
-        promise.complete(new JsonArray(new ArrayList<>(idJsonMap.values())));
-      } else {
-        logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
-          .getMessage(), asyncResult.cause());
-        retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
-        retrySRSRequestParams.put(STATUS_CODE, String.valueOf(-1));
-        retrySRSRequestParams.put(STATUS_MESSAGE, "");
-        retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
-          request, records);
-      }
-    });
+    try (var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request)) {
+      client.postSourceStorageSourceRecords("INSTANCE",
+        null, deletedRecordsSupport, new ArrayList<>(idJsonMap.keySet()), asyncResult -> {
+          Map<String, String> retrySRSRequestParams = new HashMap<>();
+          if (asyncResult.succeeded()) {
+            HttpResponse<Buffer> srsResponse = asyncResult.result();
+            int statusCode = srsResponse.statusCode();
+            String statusMessage = srsResponse.statusMessage();
+            if (statusCode >= 400) {
+              retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
+              retrySRSRequestParams.put(STATUS_CODE, String.valueOf(statusCode));
+              retrySRSRequestParams.put(STATUS_MESSAGE, statusMessage);
+              retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
+                request, records);
+            }
+            if (statusCode != 200) {
+              String errorMsg = getErrorFromStorageMessage("source-record-storage", "/source-storage/source-records",
+                srsResponse.statusMessage());
+              handleException(promise, new IllegalStateException(errorMsg));
+              logger.error("Error response: {}", srsResponse.bodyAsString());
+            }
+            JsonArray sourceRecords = srsResponse.bodyAsJsonObject().getJsonArray("sourceRecords");
+            sourceRecords.stream().map(JsonObject.class::cast)
+              .forEach(json -> {
+                var instId = json.getJsonObject("externalIdsHolder").getString("instanceId");
+                var parsedRecord = json.getJsonObject(PARSED_RECORD);
+                var existingRecord = idJsonMap.get(instId);
+                existingRecord.put(PARSED_RECORD, parsedRecord);
+              });
+            promise.complete(new JsonArray(new ArrayList<>(idJsonMap.values())));
+          } else {
+            logger.error("Error has been occurred while requesting the SRS: {}.", asyncResult.cause()
+              .getMessage(), asyncResult.cause());
+            retrySRSRequestParams.put(RETRY_ATTEMPTS, String.valueOf(retryAttempts));
+            retrySRSRequestParams.put(STATUS_CODE, String.valueOf(-1));
+            retrySRSRequestParams.put(STATUS_MESSAGE, "");
+            retrySRSRequest(vertx, deletedRecordsSupport, idJsonMap, attemptsCount, promise, retrySRSRequestParams,
+              request, records);
+          }
+        });
+    } catch (Exception e) {
+      promise.fail(e);
+    }
   }
 
   private void retrySRSRequest(Vertx vertx, boolean deletedRecordsSupport,
