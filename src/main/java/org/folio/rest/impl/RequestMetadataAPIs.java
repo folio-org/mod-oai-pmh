@@ -42,9 +42,7 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
   }
 
   @Override
-  public void getOaiRequestMetadata(int offset, int limit, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
-
+  public void getOaiRequestMetadata(String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         var tenantId = TenantTool.tenantId(okapiHeaders);
@@ -62,7 +60,7 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
   }
 
   @Override
-  public void getOaiRequestMetadataFailedToSaveInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRequestMetadataFailedToSaveInstancesByRequestId(String requestId, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
       var tenantId = TenantTool.tenantId(okapiHeaders);
       logger.info("Get failed to save instances UUIDs collection for tenant: {}, requestId: {}", tenantId, requestId);
@@ -78,7 +76,7 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
   }
 
   @Override
-  public void getOaiRequestMetadataSkippedInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRequestMetadataSkippedInstancesByRequestId(String requestId, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
       var tenantId = TenantTool.tenantId(okapiHeaders);
       logger.info("Get skipped instances UUIDs collection for tenant: {}, requestId: {}", tenantId, requestId);
@@ -94,7 +92,7 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
   }
 
   @Override
-  public void getOaiRequestMetadataFailedInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRequestMetadataFailedInstancesByRequestId(String requestId, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
       var tenantId = TenantTool.tenantId(okapiHeaders);
       logger.info("Get failed UUIDs collection for tenant: {}, requestId: {}", tenantId, requestId);
@@ -110,7 +108,7 @@ public class RequestMetadataAPIs implements OaiRequestMetadata {
   }
 
   @Override
-  public void getOaiRequestMetadataSuppressedFromDiscoveryInstancesByRequestId(String requestId, int offset, int limit, String lang, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiRequestMetadataSuppressedFromDiscoveryInstancesByRequestId(String requestId, String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     try {
       var tenantId = TenantTool.tenantId(okapiHeaders);
       logger.info("Get suppressed from discovery instances UUIDs collection for tenant: {}, requestId: {}", tenantId, requestId);

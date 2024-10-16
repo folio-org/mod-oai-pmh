@@ -1,7 +1,7 @@
 #%RAML 1.0
 title: OAI-PMH API
 baseUri: https://github.com/folio-org/mod-oai-pmh
-version: v3
+version: v3.1
 protocols: [ HTTP, HTTPS ]
 
 documentation:
@@ -15,7 +15,6 @@ types:
 
 traits:
   validate: !include raml-util/traits/validation.raml
-  language: !include raml-util/traits/language.raml
   pageable: !include raml-util/traits/pageable.raml
 
 resourceTypes:
