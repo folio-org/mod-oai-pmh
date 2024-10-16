@@ -3,11 +3,10 @@ package org.folio.oaipmh.service;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SRS_RESPONSE;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+import io.vertx.ext.web.client.WebClient;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
@@ -17,21 +16,21 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 
-public class SourceStorageSourceRecordsClientWrapper {
+public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
-  private static final Map<String, SourceStorageSourceRecordsClientWrapper> clients = new HashMap<>();
 
   private final SourceStorageSourceRecordsClient client;
 
+  private final WebClient webClient;
+
   private SourceStorageSourceRecordsClientWrapper(Request request) {
-    client = new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(),
-      WebClientProvider.getWebClientForSRSByTenant(request.getTenant(), request.getRequestId()));
+    webClient = WebClientProvider.getWebClientForSrs(request.getRequestId());
+    client = new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(), webClient);
   }
 
-  public static SourceStorageSourceRecordsClientWrapper getSourceStorageSourceRecordsClient(Request request)
-  {
-    return clients.computeIfAbsent(request.getTenant(), tenantId -> new SourceStorageSourceRecordsClientWrapper(request));
+  public static SourceStorageSourceRecordsClientWrapper getSourceStorageSourceRecordsClient(Request request) {
+    return new SourceStorageSourceRecordsClientWrapper(request);
   }
 
   public void postSourceStorageSourceRecords(String idType, String recordType, Boolean deleted, List<String> list,
@@ -59,5 +58,10 @@ public class SourceStorageSourceRecordsClientWrapper {
         metricsCollectingService.endMetric(requestId, SRS_RESPONSE);
         responseHandler.handle(httpResponseAsyncResult);
       });
+  }
+
+  @Override
+  public void close() throws Exception {
+    webClient.close();
   }
 }
