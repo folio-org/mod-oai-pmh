@@ -52,8 +52,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   @Override
-  public void getOaiPmhSetsById(String id, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiPmhSetsById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Get set by id with id: {}.", id);
@@ -70,8 +69,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   @Override
-  public void putOaiPmhSetsById(String id, String lang, FolioSet entity, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void putOaiPmhSetsById(String id, FolioSet entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Put set by id with id: '{}' and body: {}", id, entityToJsonString(entity));
@@ -89,8 +87,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   @Override
-  public void postOaiPmhSets(String lang, FolioSet entity, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOaiPmhSets(FolioSet entity, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Post set with body: {}.", entityToJsonString(entity));
@@ -108,8 +105,7 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   @Override
-  public void deleteOaiPmhSetsById(String id, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void deleteOaiPmhSetsById(String id, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Delete set by id '{}'.", id);
@@ -126,8 +122,8 @@ public class OaiPmhSetImpl implements OaiPmhSets, OaiPmhFilteringConditions {
   }
 
   @Override
-  public void getOaiPmhSets(int offset, int limit, String lang, Map<String, String> okapiHeaders,
-      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void getOaiPmhSets(String totalRecords, int offset, int limit, Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+
     vertxContext.runOnContext(v -> {
       try {
         logger.info("Get list of sets, offset: {}, limit: {}.", offset, limit);
