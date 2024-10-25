@@ -16,7 +16,7 @@ public interface InstancesDao {
   /**
    * Returns request ids which last updated date is 'expirationPeriodInSeconds' seconds less than the current date.
    */
-  Future<List<String>> getExpiredRequestIds(String tenantId, int expirationPeriodInSeconds);
+  Future<List<String>> getExpiredRequestIds(String tenantId, long expirationPeriodInSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
 
@@ -68,11 +68,11 @@ public interface InstancesDao {
   /**
    * Retrieves instances by limit, source and request id.
    */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
-  /**
-   * Retrieves instances which have PK id value >= id by limit, source and request id.
-   */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source);
+  Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile);
 
+  Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError);
+
+  Future<List<String>> getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(String tenantId, OffsetDateTime date);
 }

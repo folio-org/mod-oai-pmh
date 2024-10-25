@@ -22,6 +22,10 @@ import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 
+/**
+ * @deprecated
+ */
+@Deprecated(forRemoval = true)
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
   private static final Logger logger = LogManager.getLogger(GetOaiRecordsHelper.class);
@@ -39,7 +43,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
         int batchSize = Integer.parseInt(
           RepositoryConfigurationUtil.getProperty(request.getRequestId(),
             REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-        requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false)
+        requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));

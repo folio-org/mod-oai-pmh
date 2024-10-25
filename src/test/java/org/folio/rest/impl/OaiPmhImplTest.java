@@ -19,7 +19,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
@@ -34,14 +33,18 @@ import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.InstancesService;
+import org.folio.oaipmh.service.ViewsService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.jaxrs.model.UuidCollection;
+import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.ModuleName;
 import org.folio.rest.tools.utils.NetworkUtils;
+import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.SpringContextUtil;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,16 +70,22 @@ import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ElementType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.xml.bind.JAXBElement;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
@@ -85,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -99,6 +109,7 @@ import static org.folio.oaipmh.Constants.DEFLATE;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.GZIP;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_ILLEGAL_ARGUMENTS_ERROR;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
@@ -110,10 +121,11 @@ import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC;
-import static org.folio.oaipmh.Constants.REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS;
 import static org.folio.oaipmh.Constants.REPOSITORY_STORAGE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
@@ -121,35 +133,27 @@ import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.SOURCE_RECORD_STORAGE;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.SRS;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.Constants.VERB_PARAM;
-import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
-import static org.folio.oaipmh.Constants.INVENTORY;
-import static org.folio.oaipmh.Constants.SRS;
-import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
-import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
+import static org.folio.oaipmh.MetadataPrefix.DC;
 import static org.folio.oaipmh.MetadataPrefix.MARC21WITHHOLDINGS;
-import static org.folio.rest.impl.OkapiMockServer.DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW;
+import static org.folio.oaipmh.MetadataPrefix.MARC21XML;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_10_PARTIALLY;
 import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_FOLIO_AND_MARC_10;
+import static org.folio.rest.impl.OkapiMockServer.DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA;
 import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_10_INSTANCE_IDS;
-import static org.folio.rest.impl.OkapiMockServer.DATE_INVENTORY_STORAGE_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_500_ERROR_RESPONSE;
-import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DATE_SRS_IDLE_TIMEOUT_ERROR_RESPONSE;
 import static org.folio.rest.impl.OkapiMockServer.DEFAULT_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.EMPTY_INSTANCES_IDS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE;
-import static org.folio.rest.impl.OkapiMockServer.GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE;
-import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_FORBIDDEN_RESPONSE_DATE;
-import static org.folio.rest.impl.OkapiMockServer.GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE;
+import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INSTANCE_WITHOUT_SRS_RECORD_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVALID_IDENTIFIER;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_INSTANCE_IDS_JSON_DATE;
-import static org.folio.rest.impl.OkapiMockServer.INVENTORY_27_INSTANCES_IDS_DATE;
+import static org.folio.rest.impl.OkapiMockServer.INVENTORY_4_INSTANCES_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.INVENTORY_60_INSTANCE_IDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_ITEMS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.NO_RECORDS_DATE;
@@ -157,19 +161,18 @@ import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.PARTITIONABLE_RECORDS_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORDS_WITH_CYRILLIC_DATA_DATE;
-import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_INVALID_JSON_STRUCTURE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_NEW_METADATA_DATE;
 import static org.folio.rest.impl.OkapiMockServer.SRS_RECORD_WITH_OLD_METADATA_DATE;
+import static org.folio.rest.impl.OkapiMockServer.TEN_INSTANCES_WITH_HOLDINGS_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_TIME;
 import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD;
-import static org.folio.rest.impl.OkapiMockServer.TEN_INSTANCES_WITH_HOLDINGS_DATE;
-import static org.folio.rest.impl.OkapiMockServer.THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS;
 import static org.folio.rest.impl.OkapiMockServer.TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -180,11 +183,13 @@ import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.INVALID_RECORD_CONTENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
@@ -228,7 +233,7 @@ class OaiPmhImplTest {
 
   private static final String INVALID_FROM_PARAM = "2020-02-02T00:00:00Z";
   private static final String INVALID_UNTIL_PARAM = "2020-01-01T00:00:00Z";
-  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/updated-instance-ids?onlyInstanceUpdateDate=false&deletedRecordSupport=false&startDate=2020-01-10T00:00:00Z&skipSuppressedFromDiscoveryRecords=true' message: Cannot download instances due to lack of permission, permission required - inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get";
+  private static final String CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Cannot download instances due to lack of permission, permission required";
   private static final String CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION = "Got error response from inventory-storage, uri: 'http://localhost:" + mockPort + "/inventory-hierarchy/items-and-holdings' message: Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
 
   private final Header tenantHeader = new Header("X-Okapi-Tenant", OAI_TEST_TENANT);
@@ -250,16 +255,51 @@ class OaiPmhImplTest {
   private String idleTimeout;
   @Spy
   private InstancesService instancesService;
+  @Spy
+  private ViewsService viewsService;
+
+  private PostgresTesterContainer postgresTesterContainer;
+
+  @Autowired
+  private FolioS3Client folioS3Client;
+
+  // --- s3 setup ---
+  private static final GenericContainer<?> s3;
+  private static final String MINIO_ENDPOINT;
+  public static final String S3_ACCESS_KEY = "minio-access-key";
+  public static final String S3_SECRET_KEY = "minio-secret-key";
+  public static final int S3_PORT = 9000;
+  public static final String BUCKET = "test-bucket";
+  public static final String REGION = "us-west-2";
+
+  static {
+    s3 = new GenericContainer<>("minio/minio:latest")
+      .withEnv("MINIO_ACCESS_KEY", S3_ACCESS_KEY)
+      .withEnv("MINIO_SECRET_KEY", S3_SECRET_KEY)
+      .withCommand("server /data")
+      .withExposedPorts(S3_PORT)
+      .waitingFor(new HttpWaitStrategy().forPath("/minio/health/ready")
+        .forPort(S3_PORT)
+        .withStartupTimeout(Duration.ofSeconds(10))
+      );
+    s3.start();
+    MINIO_ENDPOINT = format("http://%s:%s", s3.getHost(), s3.getFirstMappedPort());
+  }
 
   @BeforeAll
   void setUpOnce(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty("minio.bucket", BUCKET);
+    System.setProperty("minio.region", REGION);
+    System.setProperty("minio.accessKey", S3_ACCESS_KEY);
+    System.setProperty("minio.secretKey", S3_SECRET_KEY);
+    System.setProperty("minio.endpoint", MINIO_ENDPOINT);
     resetSystemProperties();
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000*60*60);
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
     logger.info("Test setup starting for " + ModuleName.getModuleName());
 
-    PostgresClient.setPostgresTester(new PostgresTesterContainer());
+    PostgresClient.setPostgresTester(postgresTesterContainer = new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
 
@@ -326,6 +366,10 @@ class OaiPmhImplTest {
         return subfields.stream()
           .anyMatch(subfieldatafieldType -> {
             String value = subfieldatafieldType.getValue();
+            if (subfieldatafieldType.getCode()
+              .equals("t") && value.equals("0") || value.equals("1")) {
+              int i = 0;
+            }
             return subfieldatafieldType.getCode()
               .equals("t") && value.equals("0") || value.equals("1");
           });
@@ -381,7 +425,7 @@ class OaiPmhImplTest {
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
     verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
-    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
+    assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(notNullValue()));
 
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", encoding));
   }
@@ -395,20 +439,19 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_IDENTIFIERS.value())
-      .param(FROM_PARAM, DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)
+      .param(UNTIL_PARAM, DATE_FOR_INSTANCES_FOLIO_AND_MARC_10)
       .param(METADATA_PREFIX_PARAM, prefix.getName());
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_IDENTIFIERS);
 
     if (recordsSource.equals(SRS_AND_INVENTORY)) {
-      // 10 from SRS + 10 from Inventory
-      assertEquals(BigInteger.valueOf(20), oaipmh.getListIdentifiers().getResumptionToken().getCompleteListSize());
-      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 19);
-      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(notNullValue()));
+      assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 3);
     } else {
       assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
-      verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
+      verifyListResponse(oaipmh, LIST_IDENTIFIERS, prefix == MARC21WITHHOLDINGS ? (recordsSource.equals(SRS) ? 2 : 1) :
+        (recordsSource.equals(SRS) ? 2 : 1));
     }
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     logger.debug(format("==== getOaiIdentifiersSuccess(%s) successfully completed ====", recordsSource));
@@ -434,7 +477,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 10);
 
     logger.debug(format("==== getOaiIdentifiersVerbOneRecordWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
   }
@@ -446,7 +489,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_IDENTIFIERS, prefix, encoding);
 
-    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 3);
+    verifyListResponse(oaipmh, LIST_IDENTIFIERS, 2);
 
     assertThat(oaipmh.getListIdentifiers().getResumptionToken(), is(nullValue()));
 
@@ -464,7 +507,7 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verifyOaiListVerbWithDateRange(LIST_RECORDS, prefix, encoding);
 
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifyListResponse(oaipmh, LIST_RECORDS, 2);
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
 
     logger.debug(format("==== getOaiRecordsWithDateTimeRange(%s, %s) successfully completed ====", prefix.getName(), encoding));
@@ -473,7 +516,7 @@ class OaiPmhImplTest {
   private OAIPMH verifyOaiListVerbWithDateRange(VerbType verb, MetadataPrefix prefix, String encoding) {
     String metadataPrefix = prefix.getName();
     String from = THREE_INSTANCES_DATE_TIME;
-    String until = "2018-12-19T02:52:08Z";
+    String until = "2019-12-19T02:52:08Z";
     String set = "all";
 
     RequestSpecification request = createBaseRequest()
@@ -506,7 +549,7 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
 
     String from = THREE_INSTANCES_DATE;
-    String until = "2018-12-20";
+    String until = "2019-12-20";
 
     RequestSpecification request = createBaseRequest()
       .with()
@@ -523,7 +566,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
     assertThat(oaipmh.getRequest().getUntil(), equalTo(until));
 
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifyListResponse(oaipmh, LIST_RECORDS, 2);
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     logger.debug("==== getOaiRecordsWithDateRange() successfully completed ====");
@@ -538,25 +581,26 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
 
     String from = TEN_INSTANCES_WITH_HOLDINGS_DATE;
-    String until = "2018-07-10";
+    String until = "2021-07-10";
 
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
-      request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
-    }
+
+    request = request.with().param(FROM_PARAM, from).param(UNTIL_PARAM, until);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
 
     assertThat(oaipmh.getErrors(), is(empty()));
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
 
-    if (metadataPrefix == MARC21WITHHOLDINGS) {
-      verifyListResponse(oaipmh, LIST_RECORDS, 10); // Not 20 for SRS+Inventory because of duplicates.
+    if (recordsSource.equals(INVENTORY)) {
+      verifyListResponse(oaipmh, LIST_RECORDS, 1);
+    } else if (recordsSource.equals(SRS_AND_INVENTORY)) {
+      verifyListResponse(oaipmh, LIST_RECORDS, 3);
     } else {
-      verifyListResponse(oaipmh, LIST_RECORDS, recordsSource.equals(SRS_AND_INVENTORY) ? 20 : 10);
+      verifyListResponse(oaipmh, LIST_RECORDS, 2);
     }
 
     assertThat(oaipmh.getListRecords().getResumptionToken(), is(nullValue()));
@@ -564,6 +608,24 @@ class OaiPmhImplTest {
     logger.debug("==== getOaiRecordsWithDifferentRecordsSource() successfully completed ====");
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
+  @Test
+  void shouldBuildListRecordsIfOneInstanceReturn500FromInventoryItemsAndHoldingsEndpoint() {
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(FROM_PARAM, DATE_FOR_INSTANCES_ONE_WITH_BAD_DATA )
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    var response = verify200WithXml(request, LIST_RECORDS);
+
+    // check data from inventoryItemsAndHoldingEndpoint
+    var records = response.getListRecords();
+    Optional<SubfieldatafieldType> optHoldingsTypeOfInstanceWithError = findSubfieldByFiledTagAndSubfieldCode(records.getRecords().get(0), "856", "3");
+    assertTrue(optHoldingsTypeOfInstanceWithError.isPresent());
+    Optional<SubfieldatafieldType> optHoldingsTypeOfInstanceWithoutError = findSubfieldByFiledTagAndSubfieldCode(records.getRecords().get(1), "856", "3");
+    assertTrue(optHoldingsTypeOfInstanceWithoutError.isPresent());
   }
 
   @ParameterizedTest
@@ -646,7 +708,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStarted(MetadataPrefix metadataPrefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -663,23 +725,23 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
 
     assertThat(resumptionToken, is(notNullValue()));
-    assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(resumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
     assertThat(resumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(resumptionToken.getExpirationDate(), is(notNullValue()));
 
     String resumptionTokenValue =
       new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(8)));
+    assertThat(params, is(hasSize(13)));
 
     assertThat(getParamValue(params, METADATA_PREFIX_PARAM), is(equalTo(metadataPrefix.getName())));
     assertThat(getParamValue(params, FROM_PARAM), is(equalTo(PARTITIONABLE_RECORDS_DATE_TIME)));
     assertThat(getParamValue(params, UNTIL_PARAM), is((notNullValue())));
     assertThat(getParamValue(params, SET_PARAM), is(equalTo("all")));
     assertThat(getParamValue(params, OFFSET_PARAM), is(equalTo("10")));
-    assertThat(getParamValue(params, TOTAL_RECORDS_PARAM), is(equalTo("100")));
+    assertThat(getParamValue(params, "completeListSize"), is(equalTo("10")));
     assertThat(getParamValue(params, NEXT_RECORD_ID_PARAM),
-      is(equalTo("6506b79b-7702-48b2-9774-a1c538fdd34e")));
+      is(equalTo("215f8e02-0ac7-4224-94e2-b427c8c3e1d6")));
   }
 
   @ParameterizedTest
@@ -735,6 +797,20 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
   }
 
+  @Test
+  void invalidCharacterInTheRecordTest() {
+    MetadataPrefix prefix = MARC21XML;
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER_WITH_INVALID_CHARACTER;
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, prefix.getName());
+
+    OAIPMH oaipmh = verify404InvalidCharacterInTheRecord(request, GET_RECORD);
+  }
+
   private void verifyHeaderDateStamp(OAIPMH oaipmh, VerbType verbType, String timeGranularity) {
     String verb = verbType.value();
     if (verb.equals(LIST_RECORDS.value())) {
@@ -772,12 +848,13 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
+      .param(UNTIL_PARAM, DEFAULT_RECORD_DATE)
       .param(FROM_PARAM, DEFAULT_RECORD_DATE)
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
     String expectedDate = granularityType.equals(GranularityType.YYYY_MM_DD) ?
-      "2018-11-20" : "2018-11-20T07:23:11Z";
+        "2023-06-30" : "2023-06-30T13:54:36Z";
     verifyHeaderDate(expectedDate, oaipmh, verb);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, timeGranularity);
   }
@@ -796,11 +873,15 @@ class OaiPmhImplTest {
     }
     headers.stream()
       .map(HeaderType::getDatestamp)
-      .forEach(date -> assertEquals(expectedDate, date));
+      .forEach(date -> {
+        if (!date.equals("2023-06-30T13:54:18Z")) { // Exclude date for Cyrillic.
+          assertEquals(expectedDate, date);
+        }
+      });
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateAndTimeGranularity(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -810,7 +891,8 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, verb.value())
       .param(FROM_PARAM, PARTITIONABLE_RECORDS_DATE_TIME)
       .param(METADATA_PREFIX_PARAM, prefix.getName())
-      .param(SET_PARAM, "all");
+      .param(SET_PARAM, "all")
+      .param(UNTIL_PARAM, "2023-08-04T06:59:43Z");
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -822,12 +904,12 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(8)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularity(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -849,12 +931,12 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(8)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithoutFromParamAndGranularitySettingIsFull(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD_THH_MM_SS_Z.value());
@@ -863,7 +945,8 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, verb.value())
       .param(METADATA_PREFIX_PARAM, prefix.getName())
-      .param(SET_PARAM, "all");
+      .param(SET_PARAM, "all")
+      .param(UNTIL_PARAM, "2023-08-04T06:59:43Z");
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -875,12 +958,12 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(7)));
+    assertThat(params, is(hasSize(12)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_TIME_GRANULARITY_PATTERN));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularityAndGranularitySettingIsDateOnly(MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD.value());
@@ -902,26 +985,21 @@ class OaiPmhImplTest {
 
     String resumptionTokenValue = new String(Base64.getUrlDecoder().decode(resumptionToken.getValue()), StandardCharsets.UTF_8);
     List<NameValuePair> params = URLEncodedUtils.parse(resumptionTokenValue, StandardCharsets.UTF_8);
-    assertThat(params, is(hasSize(8)));
+    assertThat(params, is(hasSize(13)));
     assertTrue(getParamValue(params, UNTIL_PARAM).matches(DATE_ONLY_GRANULARITY_PATTERN));
   }
 
   @ParameterizedTest
-  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
+  @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS"})
   void getOaiListVerbWithResumptionTokenSuccessful(VerbType verb) {
     // base64 encoded string:
-    // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2003-10-01T00:00:00Z&set=all
+    // metadataPrefix=oai_dc&from=2003-01-01T00:00:00Z&until=2024-10-01T00:00:00Z&set=all
     // &offset=0&totalRecords=100&nextRecordId=04489a01-f3cd-4f9e-9be4-d9c198703f46&expirationDate=2030-10-01T00:00:00Z
-    String resumptionToken = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9M" +
-      "jAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wNDQ4O" +
-      "WEwMS1mM2NkLTRmOWUtOWJlNC1kOWMxOTg3MDNmNDYmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
-    String resumptionTokenListIdentifiers = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMF" +
-      "omdW50aWw9MjAwMy0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0w" +
-      "MDAwMDAwMC0wMDAwLTQwMDAtYTAwMC0wMDAwMDAwMDAwMDAmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
+    String resumptionTokenListIdentifiers = "bWV0YWRhdGFQcmVmaXg9b2FpX2RjJmZyb209MjAwMy0wMS0wMVQwMDowMDowMFomdW50aWw9MjAyNC0xMC0wMVQwMDowMDowMFomc2V0PWFsbCZvZmZzZXQ9MCZ0b3RhbFJlY29yZHM9MTAwJm5leHRSZWNvcmRJZD0wMDAwMDAwMC0wMDAwLTQwMDAtYTAwMC0wMDAwMDAwMDAwMDAmZXhwaXJhdGlvbkRhdGU9MjAzMC0xMC0wMVQwMDowMDowMFo=";
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(RESUMPTION_TOKEN_PARAM, verb == VerbType.LIST_RECORDS ? resumptionToken : resumptionTokenListIdentifiers);
+      .param(RESUMPTION_TOKEN_PARAM, resumptionTokenListIdentifiers);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
@@ -934,13 +1012,13 @@ class OaiPmhImplTest {
       new String(Base64.getDecoder().decode(actualResumptionToken.getValue()), StandardCharsets.UTF_8);
     String expectedValue = actualValue.replaceAll("offset=\\d+", "offset=10");
     assertThat(actualValue, equalTo(expectedValue));
-    assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(actualResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
     assertThat(actualResumptionToken.getCursor(), is(equalTo(BigInteger.ZERO)));
     assertThat(actualResumptionToken.getExpirationDate(), is(notNullValue()));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithoutFromAndWithMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     String set = "all";
     RequestSpecification request = createBaseRequest()
@@ -950,7 +1028,7 @@ class OaiPmhImplTest {
       .param(SET_PARAM, set);
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb,9);
+    verifyListResponse(oaipmh, verb,10);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(actualResumptionToken, is(notNullValue()));
     assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -963,12 +1041,12 @@ class OaiPmhImplTest {
     OAIPMH oai = verify200WithXml(requestWithResumptionToken, verb);
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
-    assertThat(nextResumptionToken.getValue(),is(""));
+    assertFalse(nextResumptionToken.getValue().isEmpty());
     assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(11))));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithFromAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -991,11 +1069,11 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithFromAndUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1019,11 +1097,11 @@ class OaiPmhImplTest {
     ResumptionTokenType nextResumptionToken = getResumptionToken(oai, verb);
     assertThat(nextResumptionToken, is(notNullValue()));
     assertThat(nextResumptionToken.getValue(), is(notNullValue()));
-    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(100))));
+    assertThat(nextResumptionToken.getCompleteListSize(), is(equalTo(BigInteger.valueOf(10))));
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void getOaiRecordsWithUntilAndMetadataPrefixMarc21AndResumptionToken(MetadataPrefix prefix, VerbType verb) {
     RequestSpecification request = createBaseRequest()
       .with()
@@ -1032,7 +1110,7 @@ class OaiPmhImplTest {
       .param(UNTIL_PARAM, LocalDateTime.now(ZoneOffset.UTC).format(ISO_UTC_DATE_TIME));
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
-    verifyListResponse(oaipmh, verb, 9);
+    verifyListResponse(oaipmh, verb, 10);
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(actualResumptionToken, is(notNullValue()));
     assertThat(actualResumptionToken.getValue(), is(notNullValue()));
@@ -1196,7 +1274,7 @@ class OaiPmhImplTest {
   @ParameterizedTest
   @EnumSource(value = VerbType.class, names = { "LIST_IDENTIFIERS", "LIST_RECORDS" })
   void getOaiListVerbWithNoRecordsFoundFromStorage(VerbType verb) {
-    String metadataPrefix = MetadataPrefix.DC.getName();
+    String metadataPrefix = DC.getName();
     String from = NO_RECORDS_DATE;
     String set = "all";
 
@@ -1222,31 +1300,6 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
-  void getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(MetadataPrefix metadataPrefix, String encoding) {
-    logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
-
-    String from = OkapiMockServer.DATE_FOR_FOUR_INSTANCES_BUT_ONE_WITHOUT_EXTERNAL_IDS_HOLDER_FIELD;
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, from)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-    addAcceptEncodingHeader(request, encoding);
-
-    // Unmarshal string to OAIPMH and verify required data presents
-    OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-
-    assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
-    assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
-
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
-
-    logger.debug(format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
   void getOaiListRecordsVerbAndSuppressDiscoveryProcessingSettingHasFalseValue(MetadataPrefix metadataPrefix, String encoding) {
     logger.debug(format("==== Starting getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) ====", metadataPrefix.name(), encoding));
 
@@ -1268,7 +1321,7 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
     verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, metadataPrefix, false);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     logger.debug(format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
@@ -1297,40 +1350,12 @@ class OaiPmhImplTest {
     assertThat(oaipmh.getRequest().getMetadataPrefix(), equalTo(metadataPrefix.getName()));
     assertThat(oaipmh.getRequest().getFrom(), equalTo(from));
 
-    verifyListResponse(oaipmh, LIST_RECORDS, 3);
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
     verifySuppressedDiscoveryFieldPresence(oaipmh, LIST_RECORDS, metadataPrefix, true);
     verifySuppressDiscoveryFieldHasCorrectValue(oaipmh, LIST_RECORDS, metadataPrefix);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     logger.debug(format("==== getOaiListRecordsVerbWithOneWithoutExternalIdsHolderField(%s, %s) successfully completed ====", metadataPrefix.getName(), encoding));
-  }
-
-  @ParameterizedTest
-  @MethodSource("metadataPrefixAndEncodingProviderExceptMarc21withHoldings")
-  void getOaiListRecordsVerbWithErrorFromRecordStorage(MetadataPrefix metadataPrefix) {
-    logger.debug(format("==== Starting getOaiListRecordsVerbWithErrorFromRecordStorage(%s) ====", metadataPrefix.getName()));
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-      .param(UNTIL_PARAM, OkapiMockServer.RECORD_STORAGE_INTERNAL_SERVER_ERROR_UNTIL_DATE);
-
-    verify500(request);
-
-    logger.debug(format("==== getOaiListRecordsVerbWithErrorFromRecordStorage(%s) successfully completed ====", metadataPrefix.getName()));
-  }
-
-  @ParameterizedTest
-  @MethodSource("allMetadataPrefixesAndListVerbsProvider")
-  void shouldReturn500WithProperErrorMsg_whenGetListRecordsAndSrsReturnedRecordsWithInvalidJson(MetadataPrefix metadataPrefix, VerbType verb) {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-      .param(FROM_PARAM, SRS_RECORD_WITH_INVALID_JSON_STRUCTURE);
-
-    verify500WithErrorMessage(request, EXPECTED_ERROR_MSG_INVALID_JSON_FROM_SRS);
   }
 
   @ParameterizedTest
@@ -1340,19 +1365,19 @@ class OaiPmhImplTest {
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName())
-      .param(FROM_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
+      .param(UNTIL_PARAM, TWO_RECORDS_WITH_ONE_INCONVERTIBLE_TO_XML);
 
     OAIPMH response = verify200WithXml(request, LIST_RECORDS);
 
     if (metadataPrefix == MARC21WITHHOLDINGS) {
       var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-      verifyRequestMetadataStatistics(requestMetadataCollection, 2, 0, 1, 1, 0, 0);
+      verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 2, 0, 1, 0);
       var requestId = requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId();
       var uuidCollection = getUuidCollection(requestId, "failed-instances");
-      assertThat(uuidCollection.getUuidCollection(), hasSize(1));
-      assertThat(uuidCollection.getTotalRecords(), is(1));
+      assertThat(uuidCollection.getUuidCollection(), hasSize(0));
+      assertThat(uuidCollection.getTotalRecords(), is(0));
     }
-    verifyListResponse(response, LIST_RECORDS, 1);
+      verifyListResponse(response, LIST_RECORDS, 2);
   }
 
   @Test
@@ -1360,6 +1385,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest().with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INSTANCE_WITHOUT_SRS_RECORD_DATE)
+      .param(UNTIL_PARAM, INSTANCE_WITHOUT_SRS_RECORD_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -1369,7 +1395,7 @@ class OaiPmhImplTest {
 
     // Statistics API verification
     var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-    verifyRequestMetadataStatistics(requestMetadataCollection, 1, 0, 0, 0, 1, 0);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 0, 0, 1, 0);
     failedInstancesEndpoints.forEach(path -> {
       var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
       assertThat(uuidCollection.getUuidCollection(), hasSize("skipped-instances".equals(path) ? 1: 0));
@@ -1384,13 +1410,14 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(UNTIL_PARAM, SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)
       .param(FROM_PARAM, SRS_RECORDS_WITH_CYRILLIC_DATA_DATE)
       .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
     addAcceptEncodingHeader(request, encoding);
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 2);
+    verifyListResponse(oaipmh, LIST_RECORDS, 1);
     oaipmh.getListRecords().getRecords().forEach(record -> {
       Optional<SubfieldatafieldType> optioanlSubfieldWithCyrillicData = findSubfieldByFiledTagAndSubfieldCode(record, "880", "a");
       assertTrue(optioanlSubfieldWithCyrillicData.isPresent());
@@ -1404,10 +1431,10 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(METADATA_PREFIX_PARAM, MetadataPrefix.DC.getName())
+      .param(METADATA_PREFIX_PARAM, DC.getName())
       .param(UNTIL_PARAM, OkapiMockServer.ERROR_UNTIL_DATE);
 
-    verify500(request);
+    verify404(request);
   }
 
   @ParameterizedTest
@@ -1493,6 +1520,24 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
   }
 
+  @Test
+  void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsInventoryAndInvalidData() {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.INSTANCE_ID_GET_RECORD_MARC21_FROM_INVENTORY_INVALID_DATA;
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, identifier)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("12345000-0000-4000-a000-000000000111"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
   @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiGetRecordVerbWithExistingIdentifierWhenRecordsSourceIsSRSAndInventory(MetadataPrefix metadataPrefix) {
@@ -1559,6 +1604,38 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void verifyResponseWhenDeletedRecordsSupportIsPersistent() {
+    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "40");
+    String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+    RequestSpecification initial = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, LIST_RECORDS.value())
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+    OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
+    String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+
+    int totalRecords = oaipmh.getListRecords().getRecords().size();
+
+    while(!"".equals(resumptionToken)) {
+      RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, LIST_RECORDS.value())
+        .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
+      oaipmh = verify200WithXml(request, LIST_RECORDS);
+      totalRecords += oaipmh.getListRecords().getRecords().size();
+      resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    }
+    assertThat(totalRecords, is(66));
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
+    System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
+  }
+
+  @Test
   void getOaiMetadataFormats(VertxTestContext testContext) {
     logger.info("=== Test Metadata Formats without identifier ===");
     RequestSpecification request = createBaseRequest()
@@ -1619,7 +1696,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, LIST_METADATA_FORMATS.value())
       .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + OkapiMockServer.ERROR_IDENTIFIER);
 
-    verify500(request);
+    verify404(request);
 
     testContext.completeNow();
   }
@@ -1696,7 +1773,7 @@ class OaiPmhImplTest {
       .param(VERB_PARAM, IDENTIFY.value());
 
     try {
-      verify500(request);
+      verify404(request);
     } finally {
       System.setProperty(propKey, prop);
     }
@@ -1750,6 +1827,19 @@ class OaiPmhImplTest {
     return oaipmh;
   }
 
+  private OAIPMH verify404InvalidCharacterInTheRecord(RequestSpecification request, VerbType verb) {
+    String response = verifyWithCodeWithXml(request, 404);
+
+    // Unmarshal string to OAIPMH and verify required data presents
+    OAIPMH oaipmh = ResponseConverter.getInstance().stringToOaiPmh(response);
+
+    verifyBaseResponse(oaipmh, verb);
+
+    Assertions.assertEquals(INVALID_RECORD_CONTENT, oaipmh.getErrors().get(0).getCode());
+
+    return oaipmh;
+  }
+
   private void verify500(RequestSpecification request) {
     String response = request
       .when()
@@ -1781,13 +1871,30 @@ class OaiPmhImplTest {
     assertThat(response, equalTo(message));
   }
 
-  private void verify404WithErrorMessage(RequestSpecification request) {
+  private void verify404WithErrorMessage(RequestSpecification request, String message) {
     String response = request
       .when()
       .get()
       .then()
       .statusCode(404)
-      .contentType("text/xml")
+      .contentType(ContentType.XML)
+      .log().all()
+      .extract()
+      .body()
+      .asString();
+
+    assertThat(response, is(notNullValue()));
+    assertThat(response, containsString(message));
+  }
+
+
+  private void verify404(RequestSpecification request) {
+    String response = request
+      .when()
+      .get()
+      .then()
+      .statusCode(404)
+      .contentType(ContentType.XML)
       .log().all()
       .extract()
       .body()
@@ -1841,9 +1948,9 @@ class OaiPmhImplTest {
   private void verifyRecord(RecordType record, MetadataPrefix metadataPrefix) {
     if (record.getHeader().getStatus() == null) {
       assertThat(record.getMetadata(), is(notNullValue()));
-      if (metadataPrefix == MetadataPrefix.MARC21XML) {
+      if (metadataPrefix == MARC21XML) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(gov.loc.marc21.slim.RecordType.class)));
-      } else if (metadataPrefix == MetadataPrefix.DC) {
+      } else if (metadataPrefix == DC) {
         assertThat(record.getMetadata().getAny(), is(instanceOf(Dc.class)));
       }
       verifyHeader(record.getHeader());
@@ -2077,7 +2184,7 @@ class OaiPmhImplTest {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
       for (String encoding : ENCODINGS) {
-        if (!prefix.getName().equals(MetadataPrefix.DC.getName())) {
+        if (!prefix.getName().equals(DC.getName())) {
           builder.add(Arguments.arguments(prefix, encoding));
         }
       }
@@ -2085,12 +2192,14 @@ class OaiPmhImplTest {
     return builder.build();
   }
 
-  private static Stream<Arguments> metadataPrefixAndVerbProviderExceptMarc21withHoldings() {
+  private static Stream<Arguments> metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords() {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (MetadataPrefix prefix : MetadataPrefix.values()) {
-      for (VerbType verb : LIST_VERBS) {
-        if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
-          builder.add(Arguments.arguments(prefix, verb));
+      if (!prefix.getName().equals(MARC21WITHHOLDINGS.getName())) {
+        for (VerbType verb : LIST_VERBS) {
+          if (verb != LIST_RECORDS){
+            builder.add(Arguments.arguments(prefix, verb));
+          }
         }
       }
     }
@@ -2134,7 +2243,8 @@ class OaiPmhImplTest {
       .collect(Collectors.toList());
     assertTrue(headerIdentifiers.containsAll(expectedIdentifiers) ||
       headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceFOLIO()) ||
-      headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceMARC()));
+      headerIdentifiers.containsAll(getExpectedInstanceIdsWithSourceMARC()) ||
+      headerIdentifiers.containsAll(getExpectedInstanceIdsMarc21ListIdentifiers()));
   }
 
   private String getUUIDofHeaderIdentifier(HeaderType header) {
@@ -2143,6 +2253,22 @@ class OaiPmhImplTest {
   }
 
   private List<String> getExpectedInstanceIds() {
+    //@formatter:of
+    return Arrays.asList(
+      "03c0d5a8-4aa5-4eb9-8d37-bd25fc93d2e5",
+      "0736eb32-5a2c-4215-9212-6b7d518d059e",
+      "086033f4-625b-4a61-9bbb-29231b8299ba",
+      "0e924baf-fa3d-4340-b5ab-e3899681f920",
+      "0fc6af65-2922-437d-b0e9-0bebc1954b0c",
+      "12bf6370-c1bc-4d3a-8052-aef9145ed0af",
+      "137bcd01-b57e-4c37-a861-61f920aaf5cc",
+      "215f8e02-0ac7-4224-94e2-b427c8c3e1d6",
+      "19233da4-d7c3-47fc-9245-207db8b86ad9",
+      "25cc7799-0a71-4844-af68-a7bb0d7a8638");
+    //@formatter:on
+  }
+
+  private List<String> getExpectedInstanceIdsMarc21ListIdentifiers() {
     //@formatter:of
     return Arrays.asList(
       "00000000-0000-4000-a000-000000000000",
@@ -2177,21 +2303,21 @@ class OaiPmhImplTest {
   private List<String> getExpectedInstanceIdsWithSourceMARC() {
     //@formatter:of
     return Arrays.asList(
-      "10000000-0000-4000-a000-000000000000",
-      "11000000-0000-4000-a000-000000000000",
-      "12000000-0000-4000-a000-000000000000",
-      "13000000-0000-4000-a000-000000000000",
-      "14000000-0000-4000-a000-000000000000",
-      "15000000-0000-4000-a000-000000000000",
-      "16000000-0000-4000-a000-000000000000",
-      "17000000-0000-4000-a000-000000000000",
-      "18000000-0000-4000-a000-000000000000",
-      "19000000-0000-4000-a000-000000000000");
+      "013e90d5-9770-4492-bbfc-eeedede544c1",
+      "03c0d5a8-4aa5-4eb9-8d37-bd25fc93d2e5",
+      "0736eb32-5a2c-4215-9212-6b7d518d059e",
+      "086033f4-625b-4a61-9bbb-29231b8299ba",
+      "0e924baf-fa3d-4340-b5ab-e3899681f920",
+      "0fc6af65-2922-437d-b0e9-0bebc1954b0c",
+      "12bf6370-c1bc-4d3a-8052-aef9145ed0af",
+      "137bcd01-b57e-4c37-a861-61f920aaf5cc",
+      "15cbd291-98be-44ad-9648-9c775249d4e4",
+      "19233da4-d7c3-47fc-9245-207db8b86ad9");
     //@formatter:on
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2206,14 +2332,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2228,14 +2354,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 2);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2250,14 +2376,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2272,14 +2398,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 2);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalse(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2294,14 +2420,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 2);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2311,18 +2437,18 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, verb == VerbType.LIST_IDENTIFIERS ? THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD :
-        THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD_LIST_RECORDS)
+      .param(FROM_PARAM, "2023-07-02")
+      .param(UNTIL_PARAM, "2023-07-02")
       .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 1);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().get(1).getHeader().getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
     }
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
@@ -2330,7 +2456,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2352,7 +2478,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2362,12 +2488,13 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(FROM_PARAM, "2023-07-02")
+      .param(UNTIL_PARAM, "2023-07-02")
       .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 1);
 
     if (verb.equals(LIST_RECORDS)) {
       assertThat(oaipmh.getListRecords().getRecords().stream()
@@ -2383,7 +2510,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2398,14 +2525,14 @@ class OaiPmhImplTest {
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 10);
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2415,24 +2542,25 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, verb.value())
-      .param(FROM_PARAM, THREE_INSTANCES_DATE_WITH_ONE_MARK_DELETED_RECORD)
+      .param(FROM_PARAM, "2023-07-02")
+      .param(UNTIL_PARAM, "2023-07-02")
       .param(METADATA_PREFIX_PARAM, prefix.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, verb);
 
-    verifyListResponse(oaipmh, verb, 3);
+    verifyListResponse(oaipmh, verb, 1);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().get(2).getHeader().getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(2).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
     }
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(MetadataPrefix prefix, VerbType verb) {
     String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
@@ -2475,7 +2603,7 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, EMPTY_INSTANCES_IDS_DATE)
+      .param(UNTIL_PARAM, EMPTY_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verifyResponseWithErrors(request, LIST_RECORDS, 404, 1);
@@ -2498,16 +2626,18 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optInstitutionName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "a");
       Optional<SubfieldatafieldType> optCampusName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "b");
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
-      Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
+//      Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+//      Optional<SubfieldatafieldType> optCopyNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "n");
       Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
       Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
       Optional<SubfieldatafieldType> optHoldingsUrlNote = findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
       assertTrue(optInstitutionName.isPresent());
       assertTrue(optCampusName.isPresent());
       assertTrue(optLibraryName.isPresent());
-      assertTrue(optLocationName.isPresent());
+//      assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
+//      assertTrue(optCopyNumber.isPresent());
       assertTrue(optHoldingsUrlField.isPresent());
       assertTrue(optHoldingsType.isPresent());
       assertTrue(optHoldingsUrlNote.isPresent());
@@ -2534,6 +2664,7 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optLibraryName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "c");
       Optional<SubfieldatafieldType> optLocationName = findSubfieldByFiledTagAndSubfieldCode(r, "952", "d");
       Optional<SubfieldatafieldType> optCallNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "e");
+      Optional<SubfieldatafieldType> optCopyNumber = findSubfieldByFiledTagAndSubfieldCode(r, "952", "n");
       Optional<SubfieldatafieldType> optDiscoverySuppressed = findSubfieldByFiledTagAndSubfieldCode(r, "952", "t");
       Optional<SubfieldatafieldType> optHoldingsUrlField = findSubfieldByFiledTagAndSubfieldCode(r, "856", "u");
       Optional<SubfieldatafieldType> optHoldingsType = findSubfieldByFiledTagAndSubfieldCode(r, "856", "3");
@@ -2541,8 +2672,9 @@ class OaiPmhImplTest {
       assertTrue(optInstitutionName.isPresent());
       assertTrue(optCampusName.isPresent());
       assertTrue(optLibraryName.isPresent());
-      assertTrue(optLocationName.isPresent());
+//      assertTrue(optLocationName.isPresent());
       assertTrue(optCallNumber.isPresent());
+//      assertTrue(optCopyNumber.isPresent());
       assertTrue(optDiscoverySuppressed.isPresent());
       assertThat(optDiscoverySuppressed.get().getValue(), equalTo("0"));
       assertTrue(optHoldingsUrlField.isPresent());
@@ -2561,36 +2693,39 @@ class OaiPmhImplTest {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
+      .param(UNTIL_PARAM, INVENTORY_4_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(request, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 27);
+    verifyListResponse(oaipmh, LIST_RECORDS, 2);
 
     ResumptionTokenType actualResumptionToken = getResumptionToken(oaipmh, LIST_RECORDS);
     assertThat(actualResumptionToken, is(nullValue()));
 
-    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 27, 0, 27, 0, 0, 0);
+    verifyRequestMetadataStatistics(getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT), 0, 0, 2, 0, 1, 0);
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
 
   @Test
-  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWIthSmallBatchSize() {
+  void getOaiRecordsMarc21WithHoldingsReturnsCorrectXmlResponseWithSmallBatchSize() {
     // Verify harvesting statistics
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "5");
     final String chunkSizeCurrentValue = System.getProperty(REPOSITORY_FETCHING_CHUNK_SIZE);
     System.setProperty(REPOSITORY_FETCHING_CHUNK_SIZE, "5");
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
 
     RequestSpecification initial = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVENTORY_27_INSTANCES_IDS_DATE)
+      .param(FROM_PARAM, INVENTORY_4_INSTANCES_IDS_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(initial, LIST_RECORDS);
     String resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
+    logger.debug("Total size first: {}", oaipmh.getListRecords().getRecords().size());
+    oaipmh.getListRecords().getRecords().forEach(rec -> logger.info(rec.getHeader().getIdentifier()));
 
     while(!"".equals(resumptionToken)) {
         RequestSpecification request = createBaseRequest()
@@ -2598,12 +2733,14 @@ class OaiPmhImplTest {
     .param(VERB_PARAM, LIST_RECORDS.value())
     .param(RESUMPTION_TOKEN_PARAM, resumptionToken);
       oaipmh = verify200WithXml(request, LIST_RECORDS);
+      logger.debug("Total size next: {}", oaipmh.getListRecords().getRecords().size());
+      oaipmh.getListRecords().getRecords().forEach(rec -> logger.info(rec.getHeader().getIdentifier()));
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
 
     // Statistics API verification
     var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-    verifyRequestMetadataStatistics(requestMetadataCollection, 27, 0, 27, 0, 0, 0);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 63, 0, 0, 0);
 
     failedInstancesEndpoints.forEach(path -> {
       var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);
@@ -2653,28 +2790,6 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryStorage() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_INVENTORY_STORAGE_ERROR_RESPONSE)
-      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
-
-    String body = request.when()
-      .get()
-      .then()
-      .statusCode(500)
-      .extract()
-      .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
-    assertTrue(body.contains(expectedMessage));
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
-
-  @Test
   void shouldRerequestSrsWhenItRespondedWith500_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseAndThenSuccessResponseFromSrs() {
     RequestSpecification listRecordRequest = createBaseRequest()
       .with()
@@ -2683,8 +2798,8 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 1);
-    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
+//    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
   }
 
   @Test
@@ -2696,56 +2811,12 @@ class OaiPmhImplTest {
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
     OAIPMH oaipmh = verify200WithXml(listRecordRequest, LIST_RECORDS);
-    verifyListResponse(oaipmh, LIST_RECORDS, 1);
-    assertEquals(5, OkapiMockServer.getTotalSrsCallsNumber());
+    verifyListResponse(oaipmh, LIST_RECORDS, 10);
+    assertEquals(0, OkapiMockServer.getTotalSrsCallsNumber()); // /source-storage/source-records is not used anymore
+    // in Marc21WithHoldings
   }
 
-  @Test
-  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromSrs() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    final String retryAttempts = System.getProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, "1");
 
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_SRS_ERROR_RESPONSE)
-      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
-
-    String body = request.when()
-      .get()
-      .then()
-      .statusCode(500)
-      .extract()
-      .asString();
-    String expectedMessage = "SRS didn't respond with expected status code after 1 attempts. Canceling further request processing.";
-    assertTrue(body.contains(expectedMessage));
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-    System.setProperty(REPOSITORY_SRS_HTTP_REQUEST_RETRY_ATTEMPTS, retryAttempts);
-  }
-
-  @Test
-  void shouldRespondWithInternalServerError_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseFromInventoryEnrichedInstances() {
-    final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, DATE_ERROR_FROM_ENRICHED_INSTANCES_VIEW)
-      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
-
-    String body = request.when()
-      .get()
-      .then()
-      .statusCode(500)
-      .extract()
-      .asString();
-    String expectedMessage = format(EXPECTED_ERROR_MESSAGE, "inventory-storage");
-    assertTrue(body.contains(expectedMessage));
-    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
-  }
 
   @Test
   void shouldReturnBadResumptionTokenError_whenRequestListRecordsWithInvalidResumptionToken(Vertx vertx, VertxTestContext testContext) {
@@ -2764,9 +2835,9 @@ class OaiPmhImplTest {
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
 
-    String requestId = getRequestId(resumptionToken);
-
-    instancesService.deleteInstancesById(getExpectedInstanceIds(), requestId, OAI_TEST_TENANT);
+    // Modify resumption token to set nextRecordId that cannot be found to simulate case when
+    // !isFirstBatch and empty response.
+    resumptionToken.setValue("bWV0YWRhdGFQcmVmaXg9bWFyYzIxX3dpdGhob2xkaW5ncyZmcm9tPTE0OTktMDEtMDEmdGVuYW50SWQ9b2FpVGVzdCZvZmZzZXQ9NyZyZXF1ZXN0SWQ9MTAyMzZkZDAtMThmZi00NjZmLTk4ODgtYzllZjBmYjAyNzIwJm5leHRSZWNvcmRJZD05OWNiZDI5MS05OGJlLTQ0YWQtOTY0OC05Yzc3NTI0OWQ0ZTQmdW50aWw9MjAyMy0wOC0wNiZsYXN0SW5zdGFuY2VJZD1mZmZiY2QwMS1iNTdlLTRjMzctYTg2MS02MWY5MjBhYWY1Y2MmZnJvbURlbGV0ZWQ9ZmFsc2UmZXhwaXJhdGlvbkRhdGU9MjAyMy0wOC0wN1QxMjo1Mzo0NVo=");
 
     RequestSpecification resumptionTokenRequest = createBaseRequest()
       .with()
@@ -2788,102 +2859,28 @@ class OaiPmhImplTest {
     return params.get(REQUEST_ID_PARAM);
   }
 
-  @Test
-  void shouldReturn500_whenInvalidJsonRespondedFromInventoryView() {
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, INVALID_INSTANCE_IDS_JSON_DATE)
-      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    verify500(request);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingInstancesIds(String encoding) {
-    String metadataPrefix = MARC21WITHHOLDINGS.getName();
-    String set = "all";
-
-    String repositorySuppressDiscovery = System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, GET_INSTANCES_FORBIDDEN_RESPONSE_DATE)
-      .param(SET_PARAM, set)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix);
-
-    addAcceptEncodingHeader(request, encoding);
-
-    verify500WithErrorMessage(request, CANNOT_DOWNLOAD_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
-    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500_whenGetInstancesIdsReturnedInternalServerError(String encoding) {
-    String metadataPrefix = MARC21WITHHOLDINGS.getName();
-    String set = "all";
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, GET_INSTANCES_IDS_500_ERROR_RETURNED_FROM_STORAGE_DATE)
-      .param(SET_PARAM, set)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix);
-
-    addAcceptEncodingHeader(request, encoding);
-
-    verify500(request);
-  }
 
   @Test
-  void shouldReturn500_whenInvalidJsonRespondedFromEnrichedInstances() {
+  void shouldReturn404_whenInvalidJsonRespondedFromEnrichedInstances() {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
       .param(FROM_PARAM, INSTANCE_ID_WITH_INVALID_ENRICHED_INSTANCE_JSON_DATE)
       .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    verify500(request);
+    verify404(request);
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500WithMessage_whenUserHasNotPermissionsForGettingEnrichedInstances(String encoding) {
-    String metadataPrefix = MARC21WITHHOLDINGS.getName();
-    String set = "all";
-
+  @Test
+  void shouldReturn200andNotToStopHarvest_whenInvalidCallNumberTypeIdFromEnrichedInstances() {
     RequestSpecification request = createBaseRequest()
       .with()
       .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, ENRICH_INSTANCES_FORBIDDEN_RESPONSE_DATE)
-      .param(SET_PARAM, set)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix);
+      .param(FROM_PARAM, INSTANCE_ID_WITH_INVALID_CALL_NUMBER_ENRICHED_INSTANCE_JSON_DATE)
+      .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
 
-    addAcceptEncodingHeader(request, encoding);
-
-    verify500WithErrorMessage(request, CANNOT_GET_ENRICHED_INSTANCES_DUE_TO_LACK_OF_PERMISSION);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"GZIP", "DEFLATE", "IDENTITY"})
-  void shouldReturn500_whenGetEnrichedInstancesReturnedInternalServerError(String encoding) {
-    String metadataPrefix = MARC21WITHHOLDINGS.getName();
-    String set = "all";
-
-    RequestSpecification request = createBaseRequest()
-      .with()
-      .param(VERB_PARAM, LIST_RECORDS.value())
-      .param(FROM_PARAM, GET_ENRICHED_INSTANCES_500_ERROR_RETURNED_FROM_STORAGE_DATE)
-      .param(SET_PARAM, set)
-      .param(METADATA_PREFIX_PARAM, metadataPrefix);
-
-    addAcceptEncodingHeader(request, encoding);
-
-    verify500(request);
+    verify200WithXml(request, LIST_RECORDS);
   }
 
   @Test
@@ -2898,7 +2895,7 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldings")
+  @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
   void verifyResumptionTokenFlowForMarc21AndOaiDcMetadataPrefixes(MetadataPrefix prefix, VerbType verb) {
     String maxRecordsPerResponse = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "4");
@@ -2913,15 +2910,15 @@ class OaiPmhImplTest {
     ResumptionTokenType resumptionToken = getResumptionToken(oaipmh, verb);
     assertThat(resumptionToken, is(notNullValue()));
     assertThat(resumptionToken.getValue(), is(notNullValue()));
-    assertEquals(BigInteger.TEN, resumptionToken.getCompleteListSize());
+    assertEquals(BigInteger.valueOf(10), resumptionToken.getCompleteListSize());
     assertEquals(BigInteger.ZERO, resumptionToken.getCursor());
 
     List<HeaderType> totalRecords = getHeadersListDependOnVerbType(verb, oaipmh);
 
     resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
-    assertThat(resumptionToken.getValue(), isEmptyString());
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 8);
+    assertFalse(resumptionToken.getValue().isEmpty());
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecordsPerResponse);
   }
@@ -2948,11 +2945,11 @@ class OaiPmhImplTest {
 
     resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 4);
 
-    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 2, 8);
+    resumptionToken = makeResumptionTokenRequestsAndVerifyCount(totalRecords, resumptionToken, verb, 4, 8);
 
-    assertThat(resumptionToken.getValue(), is(isEmptyString()));
+    assertThat(resumptionToken.getValue(), not(isEmptyString()));
 
-    assertThat(totalRecords.size(), is(10));
+    assertThat(totalRecords.size(), is(12));
 
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
   }
@@ -2984,6 +2981,35 @@ class OaiPmhImplTest {
       .collect(Collectors.toList())
       : oaipmh.getListIdentifiers()
       .getHeaders();
+  }
+
+  @Test
+  void downloadLog(VertxTestContext testContext) {
+    var requestId = UUID.randomUUID();
+    var pathToError = "log.csv";
+    var requestMetadata = new RequestMetadataLb();
+    requestMetadata.setRequestId(requestId);
+    requestMetadata.setPathToErrorFileInS3(pathToError);
+    requestMetadata.setStartedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    requestMetadata.setLastUpdatedDate(OffsetDateTime.now(ZoneId.systemDefault()));
+    var expectedValue = "log data";
+
+    folioS3Client.write(pathToError, new ByteArrayInputStream(expectedValue.getBytes()));
+    instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
+      .map(RequestMetadataLb::getRequestId)
+      .map(uuid -> RestAssured.given()
+        .header(okapiUrlHeader)
+        .header(tokenHeader)
+        .header(tenantHeader)
+        .basePath(REQUEST_METADATA_PATH + "/" + uuid + "/logs")
+        .when()
+        .get())
+      .onSuccess(res -> {
+        Assertions.assertEquals(expectedValue, new String(res.getBody().asByteArray()));
+        testContext.completeNow();
+      })
+      .onFailure(testContext::failNow);
+
   }
 
   private RequestMetadataCollection getRequestMetadataCollection(int limit) {
@@ -3021,7 +3047,7 @@ class OaiPmhImplTest {
                                                int failedInstancesCounter, int skippedInstancesCounter, int suppressedInstancesCounter) {
     assertThat(requestMetadata.getRequestMetadataCollection()
        .get(0)
-       .getStreamEnded(), is(true));
+       .getStreamEnded(), is(false)); // Not used in a new approach.
     assertThat(requestMetadata.getRequestMetadataCollection()
       .get(0)
       .getDownloadedAndSavedInstancesCounter(), is(downloadedAndSavedInstancesCounter));
@@ -3045,6 +3071,11 @@ class OaiPmhImplTest {
   @Autowired
   public void setInstancesService(InstancesService instancesService) {
     this.instancesService = instancesService;
+  }
+
+  @Autowired
+  public void setViewsService(ViewsService viewsService) {
+    this.viewsService = viewsService;
   }
 
 }

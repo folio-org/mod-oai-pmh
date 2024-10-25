@@ -1,14 +1,24 @@
 package org.folio.rest.impl;
 
-import io.vertx.core.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.*;
+import org.folio.oaipmh.helpers.AbstractHelper;
+import org.folio.oaipmh.helpers.GetOaiIdentifiersHelper;
+import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
+import org.folio.oaipmh.helpers.GetOaiRecordHelper;
+import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
+import org.folio.oaipmh.helpers.GetOaiSetsHelper;
+import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
+import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.processors.MarcWithHoldingsRequestHelper;
+import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.folio.spring.SpringContextUtil;
@@ -20,15 +30,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.*;
+import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
+import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
+import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
-import static org.openarchives.oai._2.VerbType.*;
+import static org.openarchives.oai._2.VerbType.GET_RECORD;
+import static org.openarchives.oai._2.VerbType.IDENTIFY;
+import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
+import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
+import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
+import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 public class OaiPmhImpl implements Oai {
 
@@ -46,7 +74,6 @@ public class OaiPmhImpl implements Oai {
   public static void init() {
     HELPERS.put(IDENTIFY, new GetOaiRepositoryInfoHelper());
     HELPERS.put(LIST_IDENTIFIERS, new GetOaiIdentifiersHelper());
-    HELPERS.put(LIST_RECORDS, new GetOaiRecordsHelper());
     HELPERS.put(LIST_SETS, new GetOaiSetsHelper());
     HELPERS.put(LIST_METADATA_FORMATS, new GetOaiMetadataFormatsHelper());
     HELPERS.put(GET_RECORD, new GetOaiRecordHelper());
@@ -60,21 +87,21 @@ public class OaiPmhImpl implements Oai {
     logger.info("getOaiRecords:: parameters verb: {}, identifier: {}, resumptionToken: {}, from: {}, until: {}, set: {}, metadataPrefix: {}",
       verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
+    Request.Builder requestBuilder = Request.builder()
+      .okapiHeaders(okapiHeaders)
+      .verb(getVerb(verb))
+      .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
+    Request request = requestBuilder.build();
+    var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
+
     RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
       .onSuccess(v -> {
         String requestId = generatedRequestId;
         try {
-          Request.Builder requestBuilder = Request.builder()
-            .okapiHeaders(okapiHeaders)
-            .verb(getVerb(verb))
-            .baseURL(getProperty(generatedRequestId, REPOSITORY_BASE_URL))
-            .from(from).metadataPrefix(metadataPrefix).resumptionToken(resumptionToken).set(set).until(until);
+          request.setBaseUrl((getProperty(generatedRequestId, REPOSITORY_BASE_URL)));
           if (StringUtils.isNotEmpty(identifier)) {
-            requestBuilder.identifier(URLDecoder.decode(identifier, "UTF-8"));
+            request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
           }
-
-          Request request = requestBuilder.build();
-
           if (!getBooleanProperty(generatedRequestId, REPOSITORY_ENABLE_OAI_SERVICE)) {
             ResponseHelper responseHelper = ResponseHelper.getInstance();
             OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, OAIPMHerrorcodeType.SERVICE_UNAVAILABLE, "OAI-PMH service is disabled");
@@ -100,11 +127,8 @@ public class OaiPmhImpl implements Oai {
           } else {
             VerbType verbType = VerbType.fromValue(verb);
             VerbHelper verbHelper;
-
-            String targetMetadataPrefix = request.getMetadataPrefix();
-
-            if(verbType.equals(LIST_RECORDS) && MetadataPrefix.MARC21WITHHOLDINGS.getName().equals(targetMetadataPrefix)) {
-              verbHelper = MarcWithHoldingsRequestHelper.getInstance();
+            if(verbType.equals(LIST_RECORDS) || verbType.equals(LIST_IDENTIFIERS)) {
+              verbHelper = GetListRecordsRequestHelper.getInstance();
             } else {
               verbHelper = HELPERS.get(verbType);
             }
@@ -115,22 +139,27 @@ public class OaiPmhImpl implements Oai {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
                 asyncResultHandler.handle(succeededFuture(response));
                 return succeededFuture();
-              }).onFailure(t-> {
+              }).onFailure(e -> {
                 RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
-                asyncResultHandler.handle(getFutureWithErrorResponse(t, request));
+                var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+                asyncResultHandler.handle(succeededFuture(responseWithErrors));
                });
           }
         } catch (Exception e) {
-          logger.warn("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
+          logger.error("getOaiRecords:: RequestId {} completed with  error {}", requestId,  e.getMessage());
           RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
-          asyncResultHandler.handle(getFutureWithErrorResponse(e.getMessage()));
+          var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+          asyncResultHandler.handle(succeededFuture(responseWithErrors));
         }
-      }).onFailure(throwable -> asyncResultHandler.handle(getFutureWithErrorResponse(throwable.getMessage())));
+      }).onFailure(e -> {
+        var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(oaipmhResponse, request, e.getMessage());
+        asyncResultHandler.handle(succeededFuture(responseWithErrors));
+      });
   }
 
   private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
     final Response errorResponse;
-    logger.warn("getOaiRecords::  RequestId {} completed with error {}", request.getRequestId(), t.getMessage());
+    logger.error("getOaiRecords::  RequestId {} completed with error {}", request.getRequestId(), t.getMessage());
     if (t instanceof IllegalArgumentException) {
       final ResponseHelper rh = ResponseHelper.getInstance();
       OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FORMAT_ERROR);

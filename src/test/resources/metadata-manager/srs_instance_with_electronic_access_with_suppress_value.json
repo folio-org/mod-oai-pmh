@@ -1,0 +1,69 @@
+{
+  "recordId": "04489a01-f3cd-4f9e-9be4-d9c198703f45",
+  "snapshotId": "dcca0c83-f338-4434-8770-e33dc31629b8",
+  "recordType": "MARC",
+  "parsedRecord": {
+    "id": "012da750-3792-465f-b02e-8c962130321b",
+    "content": {
+      "leader": "01741nam a2200373 cb4500",
+      "fields": [
+        {
+          "001": "101073931X"
+        },
+        {
+          "003": "DE-601"
+        },
+        {
+          "005": "20180416162657.0"
+        },
+        {
+          "008": "180111s2018    sz            000 0 eng d"
+        },
+        {
+          "856": {
+            "subfields": [
+              {
+                "t": 0
+              },
+              {
+                "u": "test.com"
+              },
+              {
+                "y": "GS demo Holding 1_2"
+              },
+              {
+                "z": "URL public note"
+              },
+              {
+                "3": "Materials specified"
+              }
+            ],
+            "ind1": "4",
+            "ind2": "0"
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "s": "3c4ae3f3-b460-4a89-a2f9-78ce3145e4fc"
+              },
+              {
+                "i": "00000000-0000-4000-a000-000000000000"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "externalIdsHolder": {
+    "instanceId": "2f7f23be-81a6-4227-85ba-7c1c81272ee1"
+  },
+  "additionalInfo": {
+    "suppressDiscovery": false
+  },
+  "metadata": {}
+}

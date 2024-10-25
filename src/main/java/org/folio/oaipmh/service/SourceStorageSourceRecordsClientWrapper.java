@@ -6,22 +6,31 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import io.vertx.ext.web.client.WebClient;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 
-public class SourceStorageSourceRecordsClientWrapper {
+public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
 
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
 
   private final SourceStorageSourceRecordsClient client;
 
-  public SourceStorageSourceRecordsClientWrapper(String okapiUrl, String tenantId, String token, WebClient webClient) {
-    client = new SourceStorageSourceRecordsClient(okapiUrl, tenantId, token, webClient);
+  private final WebClient webClient;
+
+  private SourceStorageSourceRecordsClientWrapper(Request request) {
+    webClient = WebClientProvider.getWebClientForSrs(request.getRequestId());
+    client = new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(), webClient);
+  }
+
+  public static SourceStorageSourceRecordsClientWrapper getSourceStorageSourceRecordsClient(Request request) {
+    return new SourceStorageSourceRecordsClientWrapper(request);
   }
 
   public void postSourceStorageSourceRecords(String idType, String recordType, Boolean deleted, List<String> list,
@@ -49,5 +58,10 @@ public class SourceStorageSourceRecordsClientWrapper {
         metricsCollectingService.endMetric(requestId, SRS_RESPONSE);
         responseHandler.handle(httpResponseAsyncResult);
       });
+  }
+
+  @Override
+  public void close() throws Exception {
+    webClient.close();
   }
 }

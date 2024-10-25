@@ -17,7 +17,7 @@ public interface InstancesService {
    * Performs cleaning of instances which have request id with lastUpdateDate less or equal to current date -
    * 'expirationTimeSeconds'.
    */
-  Future<List<String>> cleanExpiredInstances(String tenantId, int expirationTimeSeconds);
+  Future<List<String>> cleanExpiredInstances(String tenantId, long expirationTimeSeconds);
 
   Future<RequestMetadataLb> getRequestMetadataByRequestId(String requestId, String tenantId);
   /**
@@ -54,11 +54,11 @@ public interface InstancesService {
   /**
    * Retrieves instances by limit and request id.
    */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId, String source);
+  Future<List<Instances>> getInstancesList(int limit, String requestId, String tenantId);
 
-  /**
-   * Retrieves instances which have PK id value >= id by limit and request id.
-   */
-  Future<List<Instances>> getInstancesList(int limit, String requestId, int id, String tenantId, String source);
+  Future<RequestMetadataLb> updateRequestMetadataByPathToError(String requestId, String tenantId, String pathToErrorFile);
 
+  Future<RequestMetadataLb> updateRequestMetadataByLinkToError(String requestId, String tenantId, String linkToError);
+
+  Future<List<String>> getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(String tenantId, OffsetDateTime date);
 }

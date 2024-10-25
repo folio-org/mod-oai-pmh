@@ -50,7 +50,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final int EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME = 2000;
-  private static final int ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
+  private static final long ZERO_EXPIRED_INSTANCES_TIME = INSTANCES_EXPIRATION_TIME_IN_SECONDS * 2;
 
   @Autowired
   private InstancesDao instancesDao;
@@ -107,6 +107,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(id);
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
         .onComplete(testContext.succeeding(requestMetadataLb -> {
           assertNotNull(requestMetadataLb.getRequestId());
@@ -168,7 +169,19 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   @Test
   void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now());
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now()).setStartedDate(OffsetDateTime.now());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
+        assertTrue(throwable instanceof IllegalStateException);
+        testContext.completeNow();
+      }));
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFuture_whenSaveRequestMetadataWithoutStartedDate(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now())
+        .setRequestId(UUID.randomUUID());
       instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
         assertTrue(throwable instanceof IllegalStateException);
         testContext.completeNow();
@@ -228,7 +241,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       String randomRequestId = UUID.randomUUID().toString();
       instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT).compose(res -> {
         assertFalse(res);
-        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT, null);
+        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
       }).onSuccess(instanceIdList -> {
         assertEquals(1, instanceIdList.size());
         assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
@@ -248,7 +261,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT, null)
+    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT)
       .onComplete(testContext.succeeding(instancesList -> {
         assertFalse(instancesList.isEmpty());
         testContext.completeNow();
@@ -257,7 +270,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnSucceedFutureWithEmptyList_whenGetInstancesListAndThereNoAnyInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT, null))
+    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT))
       .onComplete(testContext.succeeding(instancesList -> {
         assertTrue(instancesList.isEmpty());
         testContext.completeNow();

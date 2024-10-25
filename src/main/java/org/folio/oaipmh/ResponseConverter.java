@@ -10,16 +10,20 @@ import org.openarchives.oai._2_0.oai_dc.Dc;
 import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
 import org.purl.dc.elements._1.ObjectFactory;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -54,7 +58,7 @@ public class ResponseConverter {
     NAMESPACE_PREFIX_MAP.put("http://www.openarchives.org/OAI/2.0/oai-identifier", "oai-identifier");
     try {
       ourInstance = new ResponseConverter();
-    } catch (JAXBException | SAXException e) {
+    } catch (JAXBException | SAXException | FileNotFoundException e) {
       logger.error("The jaxb context could not be initialized.");
       throw new IllegalStateException("Marshaller and unmarshaller are not available.", e);
     }
@@ -70,17 +74,16 @@ public class ResponseConverter {
   /**
    * The main purpose is to initialize JAXB Marshaller and Unmarshaller to use the instances for business logic operations
    */
-  private ResponseConverter() throws JAXBException, SAXException {
+  private ResponseConverter() throws JAXBException, SAXException, FileNotFoundException {
     jaxbContext = JAXBContext.newInstance(OAIPMH.class, RecordType.class, Dc.class, OaiIdentifier.class, ObjectFactory.class);
     // Specifying OAI-PMH schema to validate response if the validation is enabled. Enabled by default if no config specified
     if (Boolean.parseBoolean(System.getProperty(JAXB_MARSHALLER_ENABLE_VALIDATION, Boolean.TRUE.toString()))) {
-      ClassLoader classLoader = this.getClass().getClassLoader();
       StreamSource[] streamSources = {
-        new StreamSource(classLoader.getResourceAsStream(RESPONSE_SCHEMA)),
-        new StreamSource(classLoader.getResourceAsStream(OAI_IDENTIFIER_SCHEMA)),
-        new StreamSource(classLoader.getResourceAsStream(MARC21_SCHEMA)),
-        new StreamSource(classLoader.getResourceAsStream(SIMPLE_DC_SCHEMA)),
-        new StreamSource(classLoader.getResourceAsStream(DC_SCHEMA))
+        new StreamSource(new FileInputStream(RESPONSE_SCHEMA)),
+        new StreamSource(new FileInputStream(OAI_IDENTIFIER_SCHEMA)),
+        new StreamSource(new FileInputStream(MARC21_SCHEMA)),
+        new StreamSource(new FileInputStream(SIMPLE_DC_SCHEMA)),
+        new StreamSource(new FileInputStream(DC_SCHEMA))
       };
       oaipmhSchema = SchemaFactory.newInstance(W3C_XML_SCHEMA_NS_URI).newSchema(streamSources);
     }
@@ -159,12 +162,18 @@ public class ResponseConverter {
         jaxbUnmarshaller.setSchema(oaipmhSchema);
       }
       return jaxbUnmarshaller.unmarshal(inputStream);
-    } catch (JAXBException | IOException e) {
+    }  catch (JAXBException | IOException e) {
       // In case there is an issue to unmarshal byteSource, there is no way to handle it
-      throw new IllegalStateException("The byte array cannot be converted to JAXB object response.", e);
+      throw new IllegalStateException(processException(e), e);
     } finally {
       logExecutionTime("Array of bytes converted to Object", timer);
     }
+  }
+
+  private String processException(Exception e) {
+    return e instanceof UnmarshalException ue && ue.getLinkedException() instanceof SAXParseException se ?
+      se.getLocalizedMessage() :
+      "The byte array cannot be converted to JAXB object response.";
   }
 
   /**

@@ -39,6 +39,7 @@ public final class Constants {
   public static final String REPOSITORY_ERRORS_PROCESSING = "repository.errorsProcessing";
   public static final String REPOSITORY_FETCHING_CHUNK_SIZE = "repository.fetchingChunkSize";
   public static final String REPOSITORY_RECORDS_SOURCE = "repository.recordsSource";
+  public static final String REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL = "repository.cleanErrorsInterval";
 
   public static final String SRS_AND_INVENTORY = "Source record storage and Inventory";
   public static final String INVENTORY = "Inventory";
@@ -66,9 +67,29 @@ public final class Constants {
   public static final String UNTIL_PARAM = "until";
   public static final String OFFSET_PARAM = "offset";
   public static final String TOTAL_RECORDS_PARAM = "totalRecords";
+  public static final String SOURCE_RECORDS_PARAM = "sourceRecords";
   public static final String NEXT_RECORD_ID_PARAM = "nextRecordId";
   public static final String NEXT_INSTANCE_PK_VALUE = "nextInstancePkValue";
+  public static final String LAST_INSTANCE_ID_PARAM = "lastInstanceId";
+  public static final String FROM_DELETED_PARAM = "fromDeleted";
+  public static final String TURNED_TO_DELETED_PARAM = "turnedToDeleted";
   public static final String REQUEST_ID_PARAM = "requestId";
+  public static final String REQUEST_FROM_INVENTORY_PARAM = "fromInventory";
+  public static final String REQUEST_INVENTORY_TOTAL_RECORDS_PARAM = "inventoryTotalRecords";
+  public static final String TENANT_ID = "tenantId";
+  /**
+   * It is used if SRS + Inventory and serves as reduce offset from Inventory once a number of returned
+   * SRS records is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}, so the rest
+   * should be from Inventory, but with reduced offset by the number of SRS records returned.
+   */
+  public static final String REQUEST_INVENTORY_OFFSET_SHIFT_PARAM = "inventoryOffsetShift";
+  /**
+   * Intended to keep cursor incremented if offset resets to 0 when switching to Inventory
+   * once SRS exhausted.
+   */
+  public static final String REQUEST_OLD_SRS_OFFSET_PARAM = "oldSrsOffset";
+  public static final String REQUEST_CURSOR_PARAM = "cursor";
+  public static final String REQUEST_COMPLETE_LIST_SIZE_PARAM = "completeListSize";
   public static final String VERB_PARAM = "verb";
 
   public static final String DEFLATE = "deflate";
@@ -82,11 +103,19 @@ public final class Constants {
   public static final String LIST_ILLEGAL_ARGUMENTS_ERROR = "Verb '%s', argument 'resumptionToken' is exclusive, no others maybe specified with it.";
   public static final String INVALID_RESUMPTION_TOKEN = "Verb '%s', argument resumptionToken is invalid";
   public static final String NO_RECORD_FOUND_ERROR = "There were no records found matching the search criteria";
+  public static final String INVALID_CHARACTER_IN_THE_RECORD = "Invalid character in the record.";
   public static final String BAD_DATESTAMP_FORMAT_ERROR = "Bad datestamp format for '%s=%s' argument.";
   public static final String RECORD_METADATA_PREFIX_PARAM_ERROR = "The request is missing required arguments. There is no metadataPrefix.";
   public static final String RECORD_NOT_FOUND_ERROR = "No matching identifier in repository.";
   public static final String INVALID_IDENTIFIER_ERROR_MESSAGE = "Identifier has invalid structure.";
   public static final String EXPIRED_RESUMPTION_TOKEN = "The value of the resumptionToken argument is expired";
+  public static final String LOCAL_ERROR_STORAGE_DIR = "local_error_storage";
+  public static final String LOCAL_ERROR_FILE_SAVE_FAILED = "Cannot save error to the local file: {}";
+  public static final String LOCAL_ERROR_FILE_GET_FAILED = "Cannot get error local file: {}";
+  public static final String LOCAL_ERROR_FILE_NOT_FOUND = "No errors found by request id: {}";
+  public static final String S3_ERROR_FILE_SAVE_FAILED = "Cannot save error to S3: {}";
+  public static final String LOCAL_ERROR_FILE_DELETE_FAILED = "Cannot delete local file {}: {}";
+  public static final String LOCAL_ERROR_DIRECTORY_DELETE_FAILED = "Cannot delete local directory: {}";
 
   public static final String SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE = "Field '%s' cannot be empty or null";
 
@@ -120,10 +149,15 @@ public final class Constants {
 
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS = "skipSuppressedFromDiscoveryRecords";
   public static final String INSTANCE_ID_FIELD_NAME = "instanceId";
+  public static final String SOURCE = "source";
   public static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
   public static final String INVENTORY_STORAGE = "inventory-storage";
 
   public static final Integer RESUMPTION_TOKEN_TIMEOUT = 24 * 60 * 60;
 
   public static final String HTTPS = "https:";
+  public static final String INSTANCE_ID_FROM_VIEW_RESPONSE = "instance_id";
+  public static final String MARC_RECORD_FROM_VIEW_RESPONSE = "marc_record";
+  public static final String SOURCE_RECORDS = "sourceRecords";
+  public static final String TOTAL_RECORDS = "totalRecords";
 }

@@ -198,7 +198,7 @@
       },
       {
         "from": "$.instance.identifiers[*].value",
-        "subfield": "i",
+        "subfield": "l",
         "translation": {
           "function": "set_related_identifier",
           "parameters": {
@@ -1934,9 +1934,13 @@
         "translation": {
           "function": "set_electronic_access_indicator",
           "parameters": {
+            "No information provided": " ",
             "Resource": "0",
             "Version of resource": "1",
-            "Related resource": "2"
+            "Related resource": "2",
+            "Component part(s) of resource": "3",
+            "Version of component part(s) of resource": "4",
+            "No display constant generated": "8"
           }
         }
       }

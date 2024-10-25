@@ -11,14 +11,32 @@
           "pathPattern": "/oai/records",
           "permissionsRequired": ["oai-pmh.records.collection.get"],
           "modulePermissions": [
+            "configuration.entries.collection.get",
+            "inventory-storage.alternative-title-types.collection.get",
+            "inventory-storage.call-number-types.collection.get",
+            "inventory-storage.contributor-name-types.collection.get",
+            "inventory-storage.electronic-access-relationships.collection.get",
+            "inventory-storage.holdings-note-types.collection.get",
+            "inventory-storage.identifier-types.collection.get",
+            "inventory-storage.instance-formats.collection.get",
+            "inventory-storage.instance-types.collection.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.source-record.marc-json.get",
-            "source-storage.records.get",
-            "source-storage.sourceRecords.get",
-            "configuration.entries.collection.get",
+            "inventory-storage.inventory-hierarchy.items-and-holdings.collection.post",
             "inventory-storage.inventory-hierarchy.updated-instances-ids.collection.get",
-            "inventory-storage.inventory-hierarchy.items-and-holdings.collection.post"
+            "inventory-storage.item-note-types.collection.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.location-units.campuses.collection.get",
+            "inventory-storage.location-units.institutions.collection.get",
+            "inventory-storage.location-units.libraries.collection.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.modes-of-issuance.collection.get",
+            "inventory-storage.nature-of-content-terms.collection.get",
+            "source-storage.source-records.item.get",
+            "source-storage.source-records.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -84,6 +102,11 @@
           "permissionsRequired": ["oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"]
         },
         {
+          "methods": ["GET"],
+          "pathPattern": "/oai/request-metadata/{requestId}/logs",
+          "permissionsRequired": ["oai-pmh.request-metadata.logs.item.get"]
+        },
+        {
           "methods": [
             "POST"
           ],
@@ -93,6 +116,12 @@
           ],
           "modulePermissions": [
           ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/oai-pmh/clean-up-error-logs",
+          "permissionsRequired": ["oai-pmh.clean-up-error-logs.post"],
+          "modulePermissions": []
         }
       ]
     },
@@ -125,6 +154,13 @@
           ],
           "unit": "hour",
           "delay": "2"
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/oai-pmh/clean-up-error-logs",
+          "modulePermissions": [],
+          "unit": "day",
+          "delay": "1"
         }
       ]
     }
@@ -132,15 +168,15 @@
   "requires": [
     {
       "id": "instance-storage",
-      "version": "7.6 8.0 9.0 10.0"
+      "version": "7.6 8.0 9.0 10.0 11.0"
     },
     {
       "id": "source-storage-records",
-      "version": "3.0"
+      "version": "3.3"
     },
     {
       "id": "source-storage-source-records",
-      "version": "3.0"
+      "version": "3.2"
     },
     {
       "id": "configuration",
@@ -243,6 +279,11 @@
       "description": "Retrieves request metadata collection - suppressed from discovery instances UUIDs"
     },
     {
+      "permissionName": "oai-pmh.request-metadata.logs.item.get",
+      "displayName": "OAI-PMH Request metadata - download error log",
+      "description": "Downloads error log by request id"
+    },
+    {
       "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
@@ -258,7 +299,8 @@
         "oai-pmh.request-metadata.failed-to-save-instances.collection.get",
         "oai-pmh.request-metadata.failed-instances.collection.get",
         "oai-pmh.request-metadata.skipped-instances.collection.get",
-        "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get"
+        "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get",
+        "oai-pmh.request-metadata.logs.item.get"
       ]
     },
     {
@@ -297,6 +339,11 @@
       "description": "Entry point to start clean up process of retained instances"
     },
     {
+      "permissionName": "oai-pmh.clean-up-error-logs.post",
+      "displayName": "OAI-PMH - call to clean up old error logs",
+      "description": "Entry point to start clean up process of error logs"
+    },
+    {
       "permissionName": "oai-pmh.set.all",
       "displayName": "OAI-PMH Set - all permissions",
       "description": "Entire set of permissions for managing oai-pmh set items",
@@ -307,7 +354,8 @@
         "oai-pmh.sets.item.delete",
         "oai-pmh.sets.item.collection.get",
         "oai-pmh.filtering-conditions.get",
-        "oai-pmh.clean-up-instances.post"
+        "oai-pmh.clean-up-instances.post",
+        "oai-pmh.clean-up-error-logs.post"
       ]
     }
   ],
@@ -329,7 +377,14 @@
       { "name": "DB_DATABASE", "value": "okapi_modules" },
       { "name": "DB_QUERYTIMEOUT", "value": "2700000" },
       { "name": "DB_CHARSET", "value": "UTF-8" },
-      { "name": "DB_MAXPOOLSIZE", "value": "20" }
+      { "name": "DB_MAXPOOLSIZE", "value": "20" },
+      { "name": "S3_URL", "value": "http://127.0.0.1:9000/"},
+      { "name": "S3_REGION", "value": ""},
+      { "name": "S3_BUCKET", "value": "test-bucket2"},
+      { "name": "S3_ACCESS_KEY_ID", "value": "AKIAIOSFODNN7EXAMPLE"},
+      { "name": "S3_SECRET_ACCESS_KEY", "value": ""},
+      { "name": "S3_IS_AWS", "value": false},
+      { "name": "CLEAN_UP_ERROR_LOGS_INTERVAL", "value": 30 }
     ]
   }
 }

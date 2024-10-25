@@ -16,6 +16,7 @@ import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
+import org.folio.oaipmh.service.ErrorsService;
 import org.openarchives.oai._2.GranularityType;
 import org.openarchives.oai._2.HeaderType;
 import org.openarchives.oai._2.MetadataType;
@@ -24,6 +25,8 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.ResumptionTokenType;
 import org.openarchives.oai._2.SetType;
 import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.core.Response;
 import java.math.BigInteger;
@@ -47,32 +50,45 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.BAD_DATESTAMP_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.CANNOT_DISSEMINATE_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.INVENTORY;
 import static org.folio.oaipmh.Constants.ISO_DATE_TIME_PATTERN;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_ONLY;
 import static org.folio.oaipmh.Constants.ISO_UTC_DATE_TIME;
 import static org.folio.oaipmh.Constants.LIST_NO_REQUIRED_PARAM_ERROR;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
 import static org.folio.oaipmh.Constants.NO_RECORD_FOUND_ERROR;
+import static org.folio.oaipmh.Constants.INVALID_CHARACTER_IN_THE_RECORD;
 import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_TIME_GRANULARITY;
+import static org.folio.oaipmh.Constants.REQUEST_CURSOR_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_TIMEOUT;
+import static org.folio.oaipmh.Constants.SRS;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.isDeletedRecordsEnabled;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
+import static org.openarchives.oai._2.OAIPMHerrorcodeType.INVALID_RECORD_CONTENT;
 
 /**
  * Abstract helper implementation that provides some common methods.
@@ -89,12 +105,48 @@ public abstract class AbstractHelper implements VerbHelper {
     ISO_DATE_TIME_PATTERN
   };
 
-  private ResponseHelper responseHelper = ResponseHelper.getInstance();
+  private static ResponseHelper responseHelper = ResponseHelper.getInstance();
 
   /**
    * Holds instance to handle items returned
    */
   protected StorageHelper storageHelper = StorageHelper.getInstance();
+
+  protected ErrorsService errorsService;
+
+  public Response conversionIntoJaxbObjectIssueResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createInvalidJsonContentError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordsFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  public static Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request, String errorMessage) {
+    if (StringUtils.isNotEmpty(errorMessage)) {
+      var verb = request.getVerb();
+      if (verb == VerbType.GET_RECORD) {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(errorMessage));
+      } else {
+        oaipmh.withErrors(new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(errorMessage));
+      }
+    } else {
+      oaipmh.withErrors(createNoRecordsFoundError());
+    }
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  protected static OAIPMHerrorType createNoRecordsFoundError() {
+    return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
+  }
+  protected static OAIPMHerrorType createInvalidJsonContentError() {
+    return new OAIPMHerrorType().withCode(INVALID_RECORD_CONTENT).withValue(INVALID_CHARACTER_IN_THE_RECORD);
+  }
+
+  public static ResponseHelper getResponseHelper() {
+    return responseHelper;
+  }
 
   /**
    * The method is intended to be used to validate 'ListIdentifiers' and 'ListRecords' requests
@@ -175,6 +227,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
   private Pair<GranularityType, LocalDateTime> parseDateTime(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+    if (date.getValue().isEmpty()) {
+      return null;
+    }
     try {
       LocalDateTime dateTime = LocalDateTime.parse(date.getValue(), ISO_UTC_DATE_TIME);
       return new ImmutablePair<>(GranularityType.YYYY_MM_DD_THH_MM_SS_Z, dateTime);
@@ -194,6 +249,9 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return {@link LocalDateTime} if date format is valid, {@literal null} otherwise.
    */
   private Pair<GranularityType, LocalDateTime> parseDate(Pair<String, String> date, List<OAIPMHerrorType> errors) {
+    if (date.getValue().isEmpty()) {
+      return null;
+    }
     try {
       LocalDateTime dateTime = LocalDate.parse(date.getValue()).atStartOfDay();
       return new ImmutablePair<>(GranularityType.YYYY_MM_DD, dateTime);
@@ -257,10 +315,6 @@ public abstract class AbstractHelper implements VerbHelper {
 
   protected boolean validateIdentifier(Request request) {
     return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
-  }
-
-  protected OAIPMHerrorType createNoRecordsFoundError() {
-    return new OAIPMHerrorType().withCode(NO_RECORDS_MATCH).withValue(NO_RECORD_FOUND_ERROR);
   }
 
   protected List<SetType> getSupportedSetTypes() {
@@ -350,14 +404,23 @@ public abstract class AbstractHelper implements VerbHelper {
    * null if the result set is not partitioned.
    */
   protected ResumptionTokenType buildResumptionToken(Request request, JsonArray instances, Integer totalRecords) {
-    int newOffset = request.getOffset() + Integer.parseInt(RepositoryConfigurationUtil.getProperty
+    int inventoryOffsetShift = request.getInventoryOffsetShift();
+    int maxRecordsPerResponse = Integer.parseInt(RepositoryConfigurationUtil.getProperty
       (request.getRequestId(), REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+    int newOffset = request.getOffset() + maxRecordsPerResponse + inventoryOffsetShift;
+    int newCursor = request.getCursor() + instances.size() - 1;
+    request.setInventoryOffsetShift(0);
     String resumptionToken = request.isRestored() ? EMPTY : null;
-    if (newOffset < totalRecords) {
-      Map<String, String> extraParams = new HashMap<>();
+    Map<String, String> extraParams = new HashMap<>();
+    if (newOffset < (request.isFromInventory() ? request.getInventoryTotalRecords() : totalRecords)) {
       extraParams.put(TOTAL_RECORDS_PARAM, String.valueOf(totalRecords));
       extraParams.put(OFFSET_PARAM, String.valueOf(newOffset));
       extraParams.put(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM, String.valueOf(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT)));
+      extraParams.put(REQUEST_FROM_INVENTORY_PARAM, String.valueOf(request.isFromInventory()));
+      extraParams.put(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM, String.valueOf(request.getInventoryTotalRecords()));
+      extraParams.put(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM, String.valueOf(request.getInventoryOffsetShift()));
+      extraParams.put(REQUEST_OLD_SRS_OFFSET_PARAM, String.valueOf(request.getOldSrsOffset()));
+      extraParams.put(REQUEST_CURSOR_PARAM, String.valueOf(newCursor));
       String nextRecordId;
       if (isDeletedRecordsEnabled(request.getRequestId())) {
         nextRecordId = storageHelper.getId(getAndRemoveLastInstance(instances));
@@ -377,7 +440,7 @@ public abstract class AbstractHelper implements VerbHelper {
         .withValue(resumptionToken)
         .withExpirationDate(Instant.now().with(ChronoField.NANO_OF_SECOND, 0).plusSeconds(RESUMPTION_TOKEN_TIMEOUT))
         .withCompleteListSize(BigInteger.valueOf(totalRecords))
-        .withCursor(request.getOffset() == 0 ? BigInteger.ZERO : BigInteger.valueOf(request.getOffset()));
+        .withCursor(BigInteger.valueOf(request.getCursor()));
     }
 
     return null;
@@ -400,10 +463,10 @@ public abstract class AbstractHelper implements VerbHelper {
   protected String getUntilDate(Request request, String from) {
     boolean isDateOnly = isDateOnlyGranularity(request);
     if (isDateOnly) {
-      return LocalDateTime.now().format(ISO_UTC_DATE_ONLY);
+      return isNotEmpty(from) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY) : "";
     } else {
       return isNotEmpty(from) && from.matches(DATE_ONLY_PATTERN) ? LocalDateTime.now().format(ISO_UTC_DATE_ONLY)
-        : LocalDateTime.now().format(ISO_UTC_DATE_TIME);
+        : "";
     }
   }
 
@@ -458,9 +521,6 @@ public abstract class AbstractHelper implements VerbHelper {
       .collect(Collectors.toList());
   }
 
-  protected ResponseHelper getResponseHelper() {
-    return responseHelper;
-  }
 
   protected Future<Response> buildResponseWithErrors(Request request, Promise<Response> promise, List<OAIPMHerrorType> errors) {
     OAIPMH oai;
@@ -481,6 +541,43 @@ public abstract class AbstractHelper implements VerbHelper {
     Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
     metadata.setAny(record);
     return metadata;
+  }
+
+  /**
+   * This method determines source from request
+   * @param request instances source
+   * @return FOLIO if records source is 'Inventory records source', MARC if records source is 'Source record storage',
+   * null if records source is 'SRS + Inventory'
+   */
+  protected String resolveRequestSource(Request request) {
+    var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+    String source = null; // Case when SRS + Inventory.
+    if (recordsSource.equals(INVENTORY)) {
+      source = "FOLIO";
+    } else if (recordsSource.equals(SRS)) {
+      source = "MARC";
+    }
+    return source;
+  }
+
+  protected void saveErrorsIfExist(Request request) {
+    errorsService.saveErrorsAndUpdateRequestMetadata(request.getTenant(), request.getRequestId())
+      .onComplete(requestMetadataLbAsyncResult -> {
+        if (requestMetadataLbAsyncResult.succeeded()) {
+          var linkToErrorFile = requestMetadataLbAsyncResult.result().getLinkToErrorFile();
+          if (!isBlank(linkToErrorFile)) {
+            logger.info("Errors saved successfully for requestId {}", request.getRequestId());
+          }
+        } else {
+          logger.error("Error occurred during the update of RequestMetadataLb: {}",
+            requestMetadataLbAsyncResult.cause().toString());
+        }
+      });
+  }
+
+  @Autowired
+  public void setErrorService(ErrorsService errorsService) {
+    this.errorsService = errorsService;
   }
 
 }

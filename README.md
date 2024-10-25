@@ -1,6 +1,6 @@
 # mod-oai-pmh
 
-Copyright (C) 2019-2021 The Open Library Foundation
+Copyright (C) 2019-2023 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -39,8 +39,8 @@ OAI-PMH is heavily loaded module and for correct work with big data set(approxim
 Configuration properties are intended to be retrieved from [mod-configuration](https://github.com/folio-org/mod-configuration/blob/master/README.md) module. System property values are used as a fallback.
 Configurations can be managed from the UI through the mod-configuration via folio settings.
 The default configuration system properties split into the logically bounded groups and defined within next 3 json files: [behavior.json](src/main/resources/config/behavior.json), [general.json](src/main/resources/config/general.json), [technical.json](src/main/resources/config/technical.json). 
-The configurations by itself are placed within json 'value' field in the "key":"value" way. For stable operation, the application requires the following memory configuration. Java: -XX:MetaspaceSize=384m -XX:MaxMetaspaceSize=512m -Xmx1440m.
-Amazon Container: cpu - 2048, memory - 2048, memoryReservation - 1845.
+The configurations by itself are placed within json 'value' field in the "key":"value" way. For stable operation, the application requires the following memory configuration. Java: -XX:MetaspaceSize=384m -XX:MaxMetaspaceSize=512m -Xmx2160m.
+Amazon Container: cpu - 2048, memory - 3072, memoryReservation - 2765.
 
 The following configuration properties are used:
 
@@ -60,7 +60,8 @@ OAI-PMH | `repository.errorsProcessing` | `500` | Defines in which way OAI-PMH l
 OAI-PMH | `repository.srsHttpRequestRetryAttempts` | `50`| Property is used in marc21_withholdings metadata prefix handler. If SRS returns an incorrect response then the same request will be sent again up to 50 times until the expected response will not be received or all 50 attempts will fail which leads to error response.
 OAI-PMH | `repository.srsClientIdleTimeoutSec` | `20` | The idle timeout for requests to SRS.
 OAI-PMH | `repository.fetchingChunkSize` | `5000` | The chunk size in batch processing.
-OAI-PMH | `repository.recordsSource` | `Source record storage` | Indicates from where instance records are retrieved. Other possible values: Inventory, Source record storage and Inventory.
+OAI-PMH | `repository.recordsSource` | `Source record storage` | Indicates from where instance records are retrieved. Other possible values: Inventory, Source records storage and Inventory.
+OAI-PMH | `repository.cleanErrorsInterval` | `30` | The interval for cleaning up old error logs.
 
 ### Configuration priority resolving
 TenantApi 'POST' implementation is responsible for getting configurations for a module from mod-configuration and adjusting them to system properties when posting module for tenant. Since there 3 places of configurations (mod-configuration, JVM, default form resources), there are ways of resolving configuration inconsistencies when TenantAPI executes. <br/>
@@ -98,6 +99,26 @@ Suppressed from discovery instances UUIDs| GET /oai/request-metadata/{requestId}
 
 A typical API usage should be performed with the following approach. The user requests a collection of Request Metadata. Finds the necessary request metadata by the harvesting start time. Request Metadata contains the `requestId` 
 and counters of the corresponding events. Next, the user can call the necessary endpoints using `requestId` to get a list of UUIDs.
+
+### Environment variables
+This module uses S3 storage for files. AWS S3 and Minio Server are supported for files storage.
+It is also necessary to specify variable S3_IS_AWS to determine if AWS S3 is used as files storage. By default,
+this variable is `false` and means that MinIO server is used as storage.
+This value should be `true` if AWS S3 is used.
+
+| Name                         | Default value          | Description                                 |
+|:-----------------------------|:-----------------------|:--------------------------------------------|
+| S3_URL                       | http://127.0.0.1:9000/ | S3 url                                      |
+| S3_REGION                    | -                      | S3 region                                   |
+| S3_BUCKET                    | -                      | S3 bucket                                   |
+| S3_ACCESS_KEY_ID             | -                      | S3 access key                               |
+| S3_SECRET_ACCESS_KEY         | -                      | S3 secret key                               |
+| S3_IS_AWS                    | false                  | Specify if AWS S3 is used as files storage  |
+
+### Updates for harvest
+OAI-PMH incremental harvest with from/until parameters will use a new complete_updated_date column in the Instance table of
+mod_inventory_storage schema to check date range. This column will be updated every time when instance (holdings
+record or item) is updated (inserted or deleted). See more in [MODINVSTOR-1105](https://issues.folio.org/browse/MODINVSTOR-1105).
 
 ### Issue tracker
 

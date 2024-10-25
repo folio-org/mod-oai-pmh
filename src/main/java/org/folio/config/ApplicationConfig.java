@@ -2,6 +2,7 @@ package org.folio.config;
 
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 @Configuration
 @ComponentScan(basePackages = {
@@ -13,5 +14,6 @@ import org.springframework.context.annotation.Configuration;
   "org.folio.oaipmh.service",
   "org.folio.oaipmh.validator",
   "org.folio.oaipmh.processors"})
+@PropertySource("classpath:minio.properties")
 public class ApplicationConfig {
 }

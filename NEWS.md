@@ -1,4 +1,111 @@
-## 3.12.0 - Unreleased
+## 3.14.0 - Unreleased
+
+### Technical tasks
+[MODOAIPMH-576](https://folio-org.atlassian.net/browse/MODOAIPMH-576) Update source-storage-records to v3.3 and source-storage-source-records to v3.2 with module permission renaming
+
+## 3.13.0 (Released)
+
+This release includes dependency updates and minor fixes
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.8...v3.13.0)
+
+### Technical tasks
+* [MODOAIPMH-564](https://folio-org.atlassian.net/browse/MODOAIPMH-564) mod-oai-pmh: Vertx 4.5.* upgrade
+* [MODOAIPMH-559](https://folio-org.atlassian.net/browse/MODOAIPMH-559) mod-oai-pmh: Upgrade RAML Module Builder
+* [MODOAIPMH-523](https://folio-org.atlassian.net/browse/MODOAIPMH-523) Add holdings ILL Policy to the fields exported as part of the withholdings metadatPrefix
+
+## 3.12.8 (Released)
+
+This release includes bug fixes for member tenant harvesting
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.7...v3.12.8)
+
+### Bug fixes
+* [MODOAIPMH-549](https://issues.folio.org/browse/MODOAIPMH-549) ECS: Inconsistent response for verb=GetRecord&metadataPrefix=marc21_withholdings for instances shared from member tenant
+
+## 3.12.7 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.6...v3.12.7)
+
+## 3.12.6 (Released)
+
+This release includes bug fixes for suppressed from discovery and missing columns in request_metadata_lb.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.5...v3.12.6)
+
+### Bug fixes
+* [MODOAIPMH-546](https://issues.folio.org/browse/MODOAIPMH-546) ECS: ListRecords returns suppressed from discovery Shared MARC Instance with flag t=0 in 999 and 856 fields
+* [MODOAIPMH-545](https://issues.folio.org/browse/MODOAIPMH-545) Missing columns in request_metadata_lb in Poppy upgraded environments
+
+## 3.12.5 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.4...v3.12.5)
+
+## 3.12.4 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.3...v3.12.4)
+
+## 3.12.3 (Released)
+
+This release includes folio-s3-client update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.2...v3.12.3)
+
+## 3.12.2 (Released)
+
+This release includes dependency update.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.1...v3.12.2)
+
+## 3.12.1 (Released)
+
+This release includes fixes for vulnerabilities and memory leaks.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.12.0...v3.12.1)
+
+### Bug fixes
+* [MODOAIPMH-543](https://issues.folio.org/browse/MODOAIPMH-543) generate-marc-utils 1.7.0 fixing json-smart stack overflow
+
+
+## 3.12.0 (Released)
+
+This release includes bug fixes, performance improvements, code refactoring and technical tasks.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.11.0...v3.12.0)
+
+### Stories
+* [MODOAIPMH-515](https://issues.folio.org/browse/MODOAIPMH-515) Export harvest logs into csv format
+* [MODOAIPMH-514](https://issues.folio.org/browse/MODOAIPMH-514) Purge error logs
+* [MODOAIPMH-513](https://issues.folio.org/browse/MODOAIPMH-513) Avoid skipping entire batch when 500 Internal Server Error from inventory
+* [MODOAIPMH-492](https://issues.folio.org/browse/MODOAIPMH-492) Re-work asynchronous code for harvesting
+* [MODOAIPMH-477](https://issues.folio.org/browse/MODOAIPMH-477) Adjust 856 mappings
+* [MODOAIPMH-433](https://issues.folio.org/browse/MODOAIPMH-433) Unable to build on ARM
+* [MODOAIPMH-322](https://issues.folio.org/browse/MODOAIPMH-322) Implement performance improvement of harvesting with marc21 prefix
+
+### Technical tasks
+* [MODOAIPMH-534](https://issues.folio.org/browse/MODOAIPMH-534) Handle CONSORTIUM-FOLIO instances in the harvest
+* [MODOAIPMH-533](https://issues.folio.org/browse/MODOAIPMH-533) Add missing electronic access relationship value to default rules
+* [MODOAIPMH-525](https://issues.folio.org/browse/MODOAIPMH-525) Update to Java 17 mod-oai-pmh
+* [MODOAIPMH-524](https://issues.folio.org/browse/MODOAIPMH-524) SRS-client with "shared" MARC records support
+* [MODOAIPMH-516](https://issues.folio.org/browse/MODOAIPMH-516) Resumption Token Extension
+* [MODOAIPMH-491](https://issues.folio.org/browse/MODOAIPMH-491) Implement query builder for the new approach of OAI-PMH
+* [MODOAIPMH-490](https://issues.folio.org/browse/MODOAIPMH-490) Inventory-client to views mechanism replacement
+* [MODOAIPMH-457](https://issues.folio.org/browse/MODOAIPMH-457) PoC for moving to RMB approach
+
+### Bug fixes
+* [MODOAIPMH-530](https://issues.folio.org/browse/MODOAIPMH-530) OAI-PMH: Incorrect mapping rules for "Linking ISSN" identifier
+* [MODOAIPMH-519](https://issues.folio.org/browse/MODOAIPMH-519) SRS records which are not marked as "deleted" are omitted in response with "Deleted records support" set to "NO"
+* [MODOAIPMH-507](https://issues.folio.org/browse/MODOAIPMH-507) 856 field subfield "t" is not returned in response for Instance with electronic access in some cases
+* [MODOAIPMH-499](https://issues.folio.org/browse/MODOAIPMH-499) mod-oai-pmh returns 500 error when depended module reboots
+* [MODOAIPMH-480](https://issues.folio.org/browse/MODOAIPMH-480) 952 field subfield "n" is not returned in response for holdings without items
+* [MODOAIPMH-458](https://issues.folio.org/browse/MODOAIPMH-458) Duplicated "t" subfield in 856 field
+* [MODOAIPMH-442](https://issues.folio.org/browse/MODOAIPMH-442) bad data in call number type field returns 500 error
 
 ## 3.11.0 (Released)
 

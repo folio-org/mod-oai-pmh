@@ -14,11 +14,15 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
 import static org.folio.oaipmh.Constants.EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM;
+import static org.folio.oaipmh.Constants.FROM_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
+import static org.folio.oaipmh.Constants.LAST_INSTANCE_ID_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
 import static org.folio.oaipmh.Constants.NEXT_INSTANCE_PK_VALUE;
 import static org.folio.oaipmh.Constants.NEXT_RECORD_ID_PARAM;
@@ -26,9 +30,17 @@ import static org.folio.oaipmh.Constants.OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REQUEST_COMPLETE_LIST_SIZE_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_CURSOR_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_FROM_INVENTORY_PARAM;
 import static org.folio.oaipmh.Constants.REQUEST_ID_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_OFFSET_SHIFT_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_INVENTORY_TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.REQUEST_OLD_SRS_OFFSET_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
+import static org.folio.oaipmh.Constants.TENANT_ID;
 import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
 /**
@@ -49,10 +61,48 @@ public class Request {
   private RequestType restoredOaiRequest;
   /** The result offset used for partitioning. */
   private int offset;
+  /**
+   * Indicates whether records should be retrieved from Inventory
+   * if SRS + Inventory.
+   */
+  private boolean fromInventory;
+
+  public boolean isFromDeleted() {
+    return fromDeleted;
+  }
+
+  public void setFromDeleted(boolean fromDeleted) {
+    this.fromDeleted = fromDeleted;
+  }
+
+  private boolean fromDeleted;
+
+  /**
+   * Defines a specific short moment during the request when non-deleted records are exhausted and
+   * needs to get only next record ID from deleted ones.
+   */
+  private boolean turnedToDeleted;
+
   /** The previous total number of records used for partitioning. */
   private int totalRecords;
+  /**
+   * Defines a total records from Inventory if SRS + Inventory.
+   */
+  private int inventoryTotalRecords;
+  /**
+   * Defines by how much to decrease offset to retrieve from Inventory when records source is SRS + Inventory.
+   * It matters when number of records returned from SRS is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
+   */
+  private int inventoryOffsetShift;
+  /**
+   * Saves last offset from SRS to keep offset updated when switching to Inventory.
+   */
+  private int oldSrsOffset;
+  private int cursor;
   /** The id of the first record in the next set of results used for partitioning. */
   private String nextRecordId;
+  private String lastInstanceId;
+  private int completeListSize;
    /** The id of the request. */
   private String requestId;
   /** The PK id of the first record in the next set of results used for partitioning. */
@@ -125,6 +175,30 @@ public class Request {
     this.okapiUrl = okapiHeaders.get(OKAPI_URL);
   }
 
+  public Request(Request request, String tenant) {
+    this.oaiRequest = request.getOaiRequest();
+    this.okapiHeaders = request.getOkapiHeaders().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    this.okapiHeaders.put(OKAPI_TENANT, tenant);
+    this.tenant = tenant;
+    this.okapiToken = request.getOkapiToken();
+    this.okapiUrl = request.getOkapiUrl();
+    this.restoredOaiRequest = request.restoredOaiRequest;
+    this.offset = request.getOffset();
+    this.fromInventory = request.fromInventory;
+    this.totalRecords = request.getTotalRecords();
+    this.inventoryTotalRecords = request.getInventoryTotalRecords();
+    this.inventoryOffsetShift = request.getInventoryOffsetShift();
+    this.oldSrsOffset = request.getOldSrsOffset();
+    this.cursor = request.getCursor();
+    this.nextRecordId = request.getNextRecordId();
+    this.completeListSize = request.getCompleteListSize();
+    this.requestId = request.getRequestId();
+    this.nextInstancePkValue = getNextInstancePkValue();
+    this.lastInstanceId = getLastInstanceId();
+    this.fromDeleted = isFromDeleted();
+    this.turnedToDeleted = isTurnedToDeleted();
+  }
+
 
   public String getMetadataPrefix() {
     return restoredOaiRequest != null ? restoredOaiRequest.getMetadataPrefix() : oaiRequest.getMetadataPrefix();
@@ -134,6 +208,13 @@ public class Request {
     return restoredOaiRequest != null ? restoredOaiRequest.getIdentifier() : oaiRequest.getIdentifier();
   }
 
+  public void setIdentifier(String identifier) {
+    oaiRequest.setIdentifier(identifier);
+  }
+
+  public void setBaseUrl(String baseUrl) {
+    oaiRequest.setValue(baseUrl);
+  }
 
   public String getFrom() {
     return restoredOaiRequest != null ? restoredOaiRequest.getFrom() : oaiRequest.getFrom();
@@ -185,6 +266,54 @@ public class Request {
     return offset;
   }
 
+  public void setOffset(int offset) {
+    this.offset = offset;
+  }
+
+  public boolean isFromInventory() {
+    return fromInventory;
+  }
+
+  public void setFromInventory(boolean fromInventory) {
+    this.fromInventory = fromInventory;
+  }
+
+  public int getInventoryOffsetShift() {
+    return inventoryOffsetShift;
+  }
+
+  public void setInventoryOffsetShift(int inventoryOffsetShift) {
+    this.inventoryOffsetShift = inventoryOffsetShift;
+  }
+
+  public int getInventoryTotalRecords() {
+    return inventoryTotalRecords;
+  }
+
+  public void setInventoryTotalRecords(int inventoryTotalRecords) {
+    this.inventoryTotalRecords = inventoryTotalRecords;
+  }
+
+  public int getOldSrsOffset() {
+    return oldSrsOffset;
+  }
+
+  public void setOldSrsOffset(int oldSrsOffset) {
+    this.oldSrsOffset = oldSrsOffset;
+  }
+
+  public int getCursor() {
+    return cursor;
+  }
+
+  public int getCompleteListSize() {
+    return completeListSize;
+  }
+
+  public void setCompleteListSize(int completeListSize) {
+    this.completeListSize = completeListSize;
+  }
+
   public int getTotalRecords() {
     return totalRecords;
   }
@@ -193,8 +322,24 @@ public class Request {
     return nextRecordId;
   }
 
+  public void setNextRecordId(String nextRecordId) {
+    this.nextRecordId = nextRecordId;
+  }
+
+  public String getLastInstanceId() {
+    return lastInstanceId;
+  }
+
   public int getNextInstancePkValue() {
     return nextInstancePkValue;
+  }
+
+  public boolean isTurnedToDeleted() {
+    return turnedToDeleted;
+  }
+
+  public void setTurnedToDeleted(boolean turnedToDeleted) {
+    this.turnedToDeleted = turnedToDeleted;
   }
 
   public void setRequestId(String requestId) {
@@ -219,6 +364,10 @@ public class Request {
 
   public void setNextInstancePkValue(int nextInstancePkValue) {
     this.nextInstancePkValue = nextInstancePkValue;
+  }
+
+  public void setLastInstanceId(String lastInstanceId) {
+    this.lastInstanceId = lastInstanceId;
   }
 
   /**
@@ -258,9 +407,20 @@ public class Request {
       this.totalRecords = value == null ? 0 : Integer.parseInt(value);
       this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
       this.requestId = params.get(REQUEST_ID_PARAM);
+      this.fromInventory = Boolean.parseBoolean(params.get(REQUEST_FROM_INVENTORY_PARAM));
+      this.inventoryTotalRecords = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM)).orElse("0"));
+      this.inventoryOffsetShift = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
+      this.oldSrsOffset = Integer.parseInt(ofNullable(params.get(REQUEST_OLD_SRS_OFFSET_PARAM)).orElse("0"));
+      this.cursor = Integer.parseInt(ofNullable(params.get(REQUEST_CURSOR_PARAM)).orElse("0"));
+      this.completeListSize = Integer.parseInt(ofNullable(params.get(REQUEST_COMPLETE_LIST_SIZE_PARAM)).orElse("0"));
       if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
+      if (Objects.nonNull(params.get(LAST_INSTANCE_ID_PARAM))) {
+        this.lastInstanceId = params.get(LAST_INSTANCE_ID_PARAM);
+      }
+      this.fromDeleted = Boolean.parseBoolean(params.get(FROM_DELETED_PARAM));
+      this.turnedToDeleted = Boolean.parseBoolean(params.get(TURNED_TO_DELETED_PARAM));
     } catch (Exception e) {
       return false;
     }
@@ -305,6 +465,7 @@ public class Request {
     appendParam(builder, FROM_PARAM, getFrom());
     appendParam(builder, UNTIL_PARAM, getUntil());
     appendParam(builder, SET_PARAM, getSet());
+    appendParam(builder, TENANT_ID, getTenant());
 
     extraParams.entrySet().stream()
       .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())

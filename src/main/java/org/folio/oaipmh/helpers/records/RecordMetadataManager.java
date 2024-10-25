@@ -2,6 +2,7 @@ package org.folio.oaipmh.helpers.records;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -42,6 +45,7 @@ public class RecordMetadataManager {
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
   private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
   private static final String LOAN_TYPE_SUBFIELD_CODE = "p";
+  private static final String ILL_POLICY_SUBFIELD_CODE = "r";
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
@@ -57,6 +61,8 @@ public class RecordMetadataManager {
 
   private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   private static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
+  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
+  private static final String ILL_POLICY = "illPolicy";
   public static final String ITEMS_AND_HOLDINGS_FIELDS = "itemsandholdingsfields";
   public static final String INVENTORY_SUPPRESS_DISCOVERY_FIELD = "suppressFromDiscovery";
   public static final String ITEMS = "items";
@@ -64,6 +70,7 @@ public class RecordMetadataManager {
   public static final String CALL_NUMBER = "callNumber";
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
+  public static final String SUPPRESS_DISCOVERY_CODE = "t";
 
   private RecordMetadataManager() {
     indicatorsMap = new HashMap<>();
@@ -73,6 +80,8 @@ public class RecordMetadataManager {
     indicatorsMap.put("Resource", "4,0");
     indicatorsMap.put("Version of resource", "4,1");
     indicatorsMap.put("No information provided", DEFAULT_INDICATORS);
+    indicatorsMap.put("Component part(s) of resource", "4,3");
+    indicatorsMap.put("Version of component part(s) of resource", "4,4");
 
     generalInfoFieldPredicate = jsonObject -> {
       if (jsonObject.containsKey(GENERAL_INFO_FIELD_TAG_NUMBER)) {
@@ -90,7 +99,7 @@ public class RecordMetadataManager {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotBlank(secondIndicator);
+        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
       }
       return false;
     };
@@ -119,15 +128,60 @@ public class RecordMetadataManager {
     }
     JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
+    JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      items.forEach(item -> {
-        updateFieldsWithItemEffectiveLocationField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
-        updateFieldsWithElectronicAccessField((JsonObject) item, fieldsList, suppressedRecordsProcessing);
-      });
+      populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
+      if (nonNull(holdings)) {
+        populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
+      }
     }
     return srsInstance;
+  }
+
+  private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
+    getItemsFromItems(items).forEach(item -> {
+      var illPolicyOpt = nonNull(holdings) ?
+        holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
+            .equals(item.getString(HOLDINGS_RECORD_ID)) && StringUtils.isNotBlank(hold.getString(ILL_POLICY)))
+          .map(hold -> hold.getString(ILL_POLICY)).findFirst()
+        : Optional.<String> empty();
+      updateFieldsWithItemEffectiveLocationField(item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
+      updateFieldsWithElectronicAccessField(item, fieldsList, suppressedRecordsProcessing);
+    });
+  }
+
+  private void populateHoldingsWithIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
+    var onlyHoldings = getHoldingsWithoutItems(holdings, items);
+    var holdingsFromItems = getHoldingsFromItems(items);
+    if (onlyHoldings.size() == holdingsFromItems.size()) {
+      IntStream.range(0, onlyHoldings.size()).forEach(pos -> {
+        var illPolicyOpt = ofNullable(onlyHoldings.get(pos).getString(ILL_POLICY));
+        var itemJson = holdingsFromItems.get(pos);
+        updateFieldsWithItemEffectiveLocationField(itemJson, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
+      });
+    }
+  }
+
+  private List<JsonObject> getItemsFromItems(JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).filter(item -> item.containsKey("id"))
+      .collect(Collectors.toList());
+  }
+
+  private List<JsonObject> getHoldingsFromItems(JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).filter(item -> !item.containsKey(HOLDINGS_RECORD_ID))
+      .collect(Collectors.toList());
+  }
+
+  private List<JsonObject> getHoldingsWithoutItems(JsonArray holdings, JsonArray items) {
+    return holdings.stream().map(JsonObject.class::cast).filter(hold -> !holdingsContainsItem(hold, items))
+      .collect(Collectors.toList());
+  }
+
+  private boolean holdingsContainsItem(JsonObject hold, JsonArray items) {
+    return items.stream().map(JsonObject.class::cast).anyMatch(item -> ofNullable(item.getString(HOLDINGS_RECORD_ID)).orElse(EMPTY)
+      .equals(hold.getString("id")));
   }
 
   /**
@@ -173,13 +227,18 @@ public class RecordMetadataManager {
    * @param itemData                    - json of single item
    * @param marcRecordFields            - fields list to be updated with new one
    * @param suppressedRecordsProcessing - include suppressed flag in 952 field?
+   * @param illPolicy                   - include illPolicy if present
    */
   private void updateFieldsWithItemEffectiveLocationField(JsonObject itemData,
                                                           List<Object> marcRecordFields,
-                                                          boolean suppressedRecordsProcessing) {
+                                                          boolean suppressedRecordsProcessing,
+                                                          Optional<String> illPolicy) {
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
+    }
+    if (illPolicy.isPresent()) {
+      effectiveLocationSubFields.put(ILL_POLICY_SUBFIELD_CODE, illPolicy.get());
     }
     FieldBuilder fieldBuilder = new FieldBuilder();
     Map<String, Object> effectiveLocationField = fieldBuilder.withFieldTagNumber(EFFECTIVE_LOCATION_FILED_TAG_NUMBER)
@@ -262,7 +321,7 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     //Map location name, which changed paths in json, to 952$d
-    Optional.ofNullable(itemData.getJsonObject(LOCATION))
+    ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
@@ -337,8 +396,7 @@ public class RecordMetadataManager {
   public String updateElectronicAccessFieldWithDiscoverySuppressedData(String metadataSource, JsonObject metadataSourceOwner) {
     JsonObject content = new JsonObject(metadataSource);
     JsonArray fields = content.getJsonArray(FIELDS);
-    Optional<JsonObject> electronicAccessField = getElectronicAccessField(fields);
-    electronicAccessField.ifPresent(jsonObject ->
+    getElectronicAccessFields(fields).forEach(jsonObject ->
       updateDataFieldWithDiscoverySuppressedData(jsonObject, metadataSourceOwner, ELECTRONIC_ACCESS_FILED_TAG_NUMBER));
     return content.encode();
   }
@@ -351,11 +409,11 @@ public class RecordMetadataManager {
       .findFirst();
   }
 
-  private Optional<JsonObject> getElectronicAccessField(JsonArray fields) {
+  private List<JsonObject> getElectronicAccessFields(JsonArray fields) {
     return fields.stream()
       .map(obj -> (JsonObject) obj)
       .filter(electronicAccessPredicate)
-      .findFirst();
+      .collect(Collectors.toList());
   }
 
   @SuppressWarnings("unchecked")
@@ -366,7 +424,12 @@ public class RecordMetadataManager {
     JsonObject dataFieldContent = dataField.getJsonObject(tagNumber);
     JsonArray subFields = dataFieldContent.getJsonArray(SUBFIELDS);
     List<Object> subFieldsList = subFields.getList();
-
+    for (var s : subFieldsList) {
+      var subField = (LinkedHashMap<String, Object>)s;
+      if (subField.containsKey(SUPPRESS_DISCOVERY_CODE)) {
+        return;
+      }
+    }
     Map<String, Object> discoverySuppressedSubField = new LinkedHashMap<>();
     int subFieldValue = storageHelper.getSuppressedFromDiscovery(sourceOwner) ? 1 : 0;
     discoverySuppressedSubField.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, subFieldValue);

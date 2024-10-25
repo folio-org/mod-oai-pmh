@@ -47,14 +47,14 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
-        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false)
+        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
           .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
         requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
-      logger.warn("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
+      logger.error("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future();
@@ -84,7 +84,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
     if (!records.isEmpty()) {
       oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
     } else {
-      oaipmh.withErrors(createNoRecordsFoundError());
+      oaipmh.withErrors(createNoRecordFoundError());
     }
   }
 
@@ -96,7 +96,12 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected OAIPMHerrorType createNoRecordsFoundError() {
+  public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    oaipmh.withErrors(createNoRecordFoundError());
+    return getResponseHelper().buildFailureResponse(oaipmh, request);
+  }
+
+  private OAIPMHerrorType createNoRecordFoundError() {
     return new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(RECORD_NOT_FOUND_ERROR);
   }
 

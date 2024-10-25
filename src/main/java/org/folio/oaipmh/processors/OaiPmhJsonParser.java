@@ -8,11 +8,17 @@ import io.vertx.core.parsetools.impl.JsonParserImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public class OaiPmhJsonParser extends JsonParserImpl {
 
   private final Logger logger = LogManager.getLogger(OaiPmhJsonParser.class);
 
   private Handler<Throwable> oaiPmhExceptionalHandler;
+  private final Set<String> errors = new HashSet<>();
 
   public OaiPmhJsonParser() {
     super(null);
@@ -32,8 +38,36 @@ public class OaiPmhJsonParser extends JsonParserImpl {
     } catch (DecodeException e) {
       var errorResolver = new JsonParserErrorResolver(normalized, e.getLocalizedMessage());
       logger.error(e.getLocalizedMessage());
-      logger.error("Error position at error part of json is {}", errorResolver.getErrorPosition());
+      logger.error("Decode parser exception: Error position at error part of json is {}", errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
+      errors.add(errorResolver.getErrorPart());
+      if (handle(e)) {
+        return;
+      }
+      throw e;
+    } catch (Exception e) {
+      logger.error("Generic parser exception: {}", e.getLocalizedMessage());
+      errors.add(e.getLocalizedMessage());
+      if (handle(e)) {
+        return;
+      }
+      throw e;
+    }
+  }
+
+  private boolean handle(Exception e) {
+    if (oaiPmhExceptionalHandler != null) {
+      oaiPmhExceptionalHandler.handle(e);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public void end() {
+    try {
+      super.end();
+    } catch (Exception e) {
       if (oaiPmhExceptionalHandler != null) {
         oaiPmhExceptionalHandler.handle(e);
         return;
@@ -42,16 +76,7 @@ public class OaiPmhJsonParser extends JsonParserImpl {
     }
   }
 
-  @Override
-  public void end() {
-    try {
-      super.end();
-    } catch (DecodeException e) {
-      if (oaiPmhExceptionalHandler != null) {
-        oaiPmhExceptionalHandler.handle(e);
-        return;
-      }
-      throw e;
-    }
+  public List<String> getErrors() {
+    return new ArrayList<>(errors);
   }
 }

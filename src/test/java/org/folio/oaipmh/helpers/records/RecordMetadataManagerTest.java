@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,6 +50,8 @@ class RecordMetadataManagerTest {
 
   private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
   private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
+  private static final String SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/srs_instance_with_two_electronic_accesses.json";
+  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE = "/metadata-manager/srs_instance_with_electronic_access_with_suppress_value.json";
   private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
   private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
@@ -63,6 +66,8 @@ class RecordMetadataManagerTest {
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE = "/metadata-manager/electronic_access-resource.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_resource.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP = "/metadata-manager/electronic_access-new_relationship.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-component_parts_of_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_component_parts_of_resource.json";
 
   private static final String ITEM_BOTH_LOAN_TYPES = "/metadata-manager/item_both_loan_types.json";
   private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE = "/metadata-manager/item_only_permanent_loan_type.json";
@@ -159,12 +164,24 @@ class RecordMetadataManagerTest {
   void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
       String source = storageHelper.getInstanceRecordSource(record);
       String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(), GENERAL_INFO_FIELD);
       updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
       verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldSkipDiscoverySuppressedCodeAddingIfAlreadyExist(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject record = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE)));
+      String source = storageHelper.getInstanceRecordSource(record);
+      String updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+      verifyCountOfSuppressedValueField(updatedSource, metadataManager.getElectronicAccessPredicate(), ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
   }
@@ -230,6 +247,27 @@ class RecordMetadataManagerTest {
     assertEquals(1, value);
   }
 
+  @Test
+  void shouldCorrectlySetTheIllPolicyValue_whenItExistsInHoldings() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+      requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+    String holdingsId = UUID.randomUUID().toString();
+    JsonObject holdings = new JsonObject().put("id", holdingsId).put("illPolicy", "test ill policy value");
+    inventoryInstance.getJsonObject("itemsandholdingsfields").put("holdings", new JsonArray().add(holdings));
+    inventoryInstance.getJsonObject("itemsandholdingsfields").getJsonArray("items").getJsonObject(0)
+      .put("holdingsRecordId", holdingsId);
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+      inventoryInstance, true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    String value = getIllPolicyValue(effectiveLocationFields);
+    assertEquals("test ill policy value", value);
+  }
+
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
@@ -238,6 +276,8 @@ class RecordMetadataManagerTest {
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE, Arrays.asList("4", "0"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE, Arrays.asList("4", "1"))));
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP, Arrays.asList("4", " "))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE, Arrays.asList("4", "3"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE, Arrays.asList("4", "4"))));
     return builder.build();
   }
 
@@ -360,13 +400,28 @@ class RecordMetadataManagerTest {
 
     JsonObject fieldContent = generalInfoFiled.getJsonObject(tagNumber);
     JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
-    JsonObject discoverySuppressedSubField = subFields.stream()
+    assertTrue(subFields.stream()
       .map(jsonObject -> (JsonObject) jsonObject)
       .filter(jsonObject -> jsonObject.containsKey("t"))
+      .map(json -> json.getInteger("t"))
+      .allMatch(i -> i == 0));
+  }
+
+  private void verifyCountOfSuppressedValueField(String source, Predicate<JsonObject> predicate, String tagNumber) {
+    JsonObject jsonFromSource = new JsonObject(source);
+    JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
+    JsonObject generalInfoField = fields.stream()
+      .map(jsonObject -> (JsonObject) jsonObject)
+      .filter(predicate)
       .findFirst()
       .get();
-    int subFieldValue = discoverySuppressedSubField.getInteger("t");
-    assertEquals(0, subFieldValue);
+
+    JsonObject fieldContent = generalInfoField.getJsonObject(tagNumber);
+    JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
+    var count = subFields.stream()
+      .map(jsonObject -> (JsonObject) jsonObject)
+      .filter(jsonObject -> jsonObject.containsKey("t")).count();
+    assertEquals(1, count);
   }
 
   private int getSuppressedFromDiscoveryValue(List<JsonObject> effectiveLocationFields) {
@@ -383,6 +438,23 @@ class RecordMetadataManagerTest {
       return suppressFromDiscoverySubfield.getInteger("t");
     } else {
       return -1;
+    }
+  }
+
+  private String getIllPolicyValue(List<JsonObject> effectiveLocationFields) {
+    Optional<JsonObject> optionalIllPolicySubfield = effectiveLocationFields.iterator()
+      .next()
+      .getJsonObject("952")
+      .getJsonArray("subfields")
+      .stream()
+      .map(JsonObject.class::cast)
+      .filter(jsonObject -> jsonObject.containsKey("r"))
+      .findFirst();
+    if (optionalIllPolicySubfield.isPresent()) {
+      JsonObject illPolicyField = optionalIllPolicySubfield.get();
+      return illPolicyField.getString("r");
+    } else {
+      return null;
     }
   }
 
