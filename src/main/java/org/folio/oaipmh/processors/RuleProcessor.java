@@ -68,7 +68,7 @@ public final class RuleProcessor {
   public String process(EntityReader reader, RecordWriter writer, ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
     rules.forEach(rule -> {
       if (LEADER_FIELD.equals(rule.getField())) {
-        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation()));
+        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
       } else {
         processRule(reader, writer, referenceData, rule, errorHandler);
       }
@@ -86,7 +86,7 @@ public final class RuleProcessor {
   public List<VariableField> processFields(EntityReader reader, RecordWriter writer, ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
     rules.forEach(rule -> {
       if (LEADER_FIELD.equals(rule.getField())) {
-        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation()));
+        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
       } else {
         processRule(reader, writer, referenceData, rule, errorHandler);
       }
