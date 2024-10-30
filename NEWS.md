@@ -1,7 +1,22 @@
-## 3.14.0 - Unreleased
+## 3.15.0 - Unreleased
+
+## 3.14.0 (Released)
+
+This release includes dependency updates and minor fixes
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.13.0...v3.14.0)
+
+### Stories
+* [MODOAIPMH-556](https://folio-org.atlassian.net/browse/MODOAIPMH-556) Improve clarity of the error message
 
 ### Technical tasks
-[MODOAIPMH-576](https://folio-org.atlassian.net/browse/MODOAIPMH-576) Update source-storage-records to v3.3 and source-storage-source-records to v3.2 with module permission renaming
+* [MODOAIPMH-576](https://folio-org.atlassian.net/browse/MODOAIPMH-576) Update source-storage-records to v3.3 and source-storage-source-records to v3.2 with module permission renaming
+* [MODOAIPMH-575](https://folio-org.atlassian.net/browse/MODOAIPMH-575) API version update
+* [FOLIO-4087](https://folio-org.atlassian.net/browse/FOLIO-4087) RMB & Spring upgrades (all modules)
+
+### Bug fixes
+* [MODOAIPMH-578](https://folio-org.atlassian.net/browse/MODOAIPMH-578) OAI-PMH GetRecord call does not return MARC records after token was expired and refreshed
+* [MODOAIPMH-550](https://folio-org.atlassian.net/browse/MODOAIPMH-550) Harvesting FOLIO Instances with oai_dc metadataPrefix returns "text" in <dc:type> regardless the Instance resource type
 
 ## 3.13.0 (Released)
 
