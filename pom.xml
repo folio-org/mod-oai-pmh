@@ -172,7 +172,7 @@
     <generate-marc-utils-version>1.9.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
     <folio-s3-client.version>2.2.0</folio-s3-client.version>
-    <aws.sdk.version>2.19.2</aws.sdk.version>
+    <aws.sdk.version>2.25.12</aws.sdk.version>
 
   </properties>
 
