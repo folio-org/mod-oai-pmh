@@ -1,5 +1,11 @@
 ## 3.15.0 - Unreleased
 
+## 3.14.1 (Released)
+
+This release includes only aws sdk dependency update
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.0...v3.14.1)
+
 ## 3.14.0 (Released)
 
 This release includes dependency updates and minor fixes
