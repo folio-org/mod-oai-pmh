@@ -172,6 +172,7 @@
     <generate-marc-utils-version>1.9.0</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
     <folio-s3-client.version>2.2.0</folio-s3-client.version>
+    <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
     <aws.sdk.version>2.25.12</aws.sdk.version>
 
   </properties>
@@ -916,6 +917,19 @@
             <goals>
               <goal>integration-test</goal>
               <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>folio-module-descriptor-validator</artifactId>
+        <version>${folio-module-descriptor-validator.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>validate</goal>
             </goals>
           </execution>
         </executions>
