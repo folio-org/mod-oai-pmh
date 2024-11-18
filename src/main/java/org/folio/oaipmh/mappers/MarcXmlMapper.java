@@ -1,11 +1,9 @@
 package org.folio.oaipmh.mappers;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -49,9 +47,9 @@ public class MarcXmlMapper implements Mapper {
      * which contradicts to the MARC21slim.xsd schema. So replacing unexpected char by space
      */
     source = DOUBLE_BACKSLASH_PATTERN.matcher(source).replaceAll(" ");
-    try (InputStream inputStream
-           = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8))) {
-      MarcReader marcJsonReader = new MarcJsonReader(inputStream);
+    try  {
+      var stringReader = new StringReader(source);
+      MarcReader marcJsonReader = new MarcJsonReader(stringReader);
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       Record record = marcJsonReader.next();
       MarcXmlWriter.writeSingleRecord(record, out, false, false);
