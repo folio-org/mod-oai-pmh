@@ -47,10 +47,9 @@ public class MarcXmlMapper implements Mapper {
      * which contradicts to the MARC21slim.xsd schema. So replacing unexpected char by space
      */
     source = DOUBLE_BACKSLASH_PATTERN.matcher(source).replaceAll(" ");
-    try  {
+    try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
       var stringReader = new StringReader(source);
       MarcReader marcJsonReader = new MarcJsonReader(stringReader);
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
       Record record = marcJsonReader.next();
       MarcXmlWriter.writeSingleRecord(record, out, false, false);
       return out.toByteArray();
