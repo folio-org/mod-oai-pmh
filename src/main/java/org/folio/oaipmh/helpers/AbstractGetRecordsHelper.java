@@ -186,6 +186,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
+    logger.info("requestFromInventory suppressedRecordsSupport: {}, deletedRecordsSupport: {}", suppressedRecordsSupport, deletedRecordsSupport);
+
     final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
     final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
 
@@ -639,6 +641,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
                                                     boolean ignoreOffset, boolean ignoreSource) {
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    logger.info("requestFromInventory suppressedRecordsSupport: {}", suppressedRecordsSupport);
 
     final Date updatedAfter = request.getFrom() == null || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
     final Date updatedBefore = request.getUntil() == null || ignoreDate ? null : convertStringToDate(request.getUntil(), true, true);

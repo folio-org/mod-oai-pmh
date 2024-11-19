@@ -7,8 +7,11 @@ import java.util.List;
 import java.util.UUID;
 
 import io.vertx.ext.web.client.WebClient;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.helpers.AbstractGetRecordsHelper;
 import org.folio.rest.client.SourceStorageSourceRecordsClient;
 
 import io.vertx.core.AsyncResult;
@@ -23,6 +26,8 @@ public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
   private final SourceStorageSourceRecordsClient client;
 
   private final WebClient webClient;
+
+  private static final Logger logger = LogManager.getLogger(SourceStorageSourceRecordsClientWrapper.class);
 
   private SourceStorageSourceRecordsClientWrapper(Request request) {
     webClient = WebClientProvider.getWebClientForSrs(request.getRequestId());
@@ -50,6 +55,9 @@ public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
       String[] orderBy, int offset, int limit, Handler<AsyncResult<HttpResponse<Buffer>>> responseHandler) {
     var requestId = UUID.randomUUID().toString();
     metricsCollectingService.startMetric(requestId, SRS_RESPONSE);
+    logger.info("recordId: {}, snapshotId: {}, externalId: {}, externalHrid: {}, instanceId: {}, instanceHrid: {}, holdingsId: {}, holdingsHrid: {}, recordType: {}, suppressFromDiscovery: {}, deleted: {}, leaderRecordStatus: {}, updatedAfter: {}, updatedBefore: {}, orderBy: {}, offset: {}, limit: {}",
+      recordId, snapshotId, externalId, externalHrid, instanceId, instanceHrid, holdingsId, holdingsHrid, recordType, suppressFromDiscovery, deleted, leaderRecordStatus, updatedAfter,
+      updatedBefore, orderBy, offset, limit);
     client
       .getSourceStorageSourceRecords(recordId, snapshotId, externalId, externalHrid, instanceId, instanceHrid, holdingsId,
           holdingsHrid, recordType, suppressFromDiscovery, deleted, leaderRecordStatus, updatedAfter, updatedBefore, orderBy,
