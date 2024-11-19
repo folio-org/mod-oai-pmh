@@ -1,5 +1,14 @@
 ## 3.15.0 - Unreleased
 
+## 3.14.2 (Released)
+
+This release includes fix missing interface dependencies and minor improvements.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.1...v3.14.2)
+
+### Bug fixes
+* [MODOAIPMH-585](https://folio-org.atlassian.net/browse/MODOAIPMH-585) Missing interface dependencies in module descriptor
+
 ## 3.14.1 (Released)
 
 This release includes only aws sdk dependency update
