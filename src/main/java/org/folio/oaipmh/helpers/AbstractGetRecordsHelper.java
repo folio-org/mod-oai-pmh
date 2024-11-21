@@ -480,7 +480,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<Response> oaiResponsePromise = Promise.promise();
     buildRecords(ctx, request, items).onSuccess(recordsMap -> {
       Response response;
-      if (noRecordsFoundResultCheck(recordsMap, items, request.getVerb())) {
+      if (noRecordsFoundResultCheck(recordsMap)) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
       }  else {
         addRecordsToOaiResponse(oaipmh, recordsMap.values());
@@ -498,7 +498,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return oaiResponsePromise.future();
   }
 
-  boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
+  boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap) {
     return recordsMap.isEmpty();
   }
 
