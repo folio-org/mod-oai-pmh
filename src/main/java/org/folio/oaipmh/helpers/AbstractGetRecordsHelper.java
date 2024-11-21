@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.exception.BuildOaiMetadataException;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
@@ -481,32 +482,27 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       Response response;
       if (noRecordsFoundResultCheck(recordsMap, items, request.getVerb())) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
-      } else if (conversionIntoJaxbObjectIssueCheck(recordsMap, items, request.getVerb())) {
-        response = conversionIntoJaxbObjectIssueResponse(oaipmh, request);
-      } else {
+      }  else {
         addRecordsToOaiResponse(oaipmh, recordsMap.values());
         addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
         response = buildResponse(oaipmh, request);
       }
       oaiResponsePromise.complete(response);
-    }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage())));
+    }).onFailure(throwable -> {
+      if (throwable instanceof BuildOaiMetadataException) {
+        oaiResponsePromise.complete(conversionIntoJaxbObjectIssueResponse(oaipmh, request));
+      }
+      oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage()));
+    });
     return oaiResponsePromise.future();
   }
 
   boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
-    return recordsMap.isEmpty() &&
-      (jsonArrayIsEmpty(items) || (jsonArrayNotEmpty(items) && VerbType.GET_RECORD != verb));
-  }
-
-  boolean conversionIntoJaxbObjectIssueCheck(Map<String, RecordType> recordsMap, JsonArray items, VerbType verb){
-    return recordsMap.isEmpty() && jsonArrayNotEmpty(items) && VerbType.GET_RECORD == verb;
+    return recordsMap.isEmpty();
   }
 
   private boolean jsonArrayNotEmpty(JsonArray ja){
     return ja != null && !ja.isEmpty();
-  }
-  private boolean jsonArrayIsEmpty(JsonArray ja){
-    return !jsonArrayNotEmpty(ja);
   }
 
   /**
@@ -543,7 +539,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
                     logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
                     errorsService.log(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
-                    return;
+                    recordsPromise.fail(new BuildOaiMetadataException(e.getMessage()));
                   }
                 } else {
                   context.put(recordId, jsonRecord);
