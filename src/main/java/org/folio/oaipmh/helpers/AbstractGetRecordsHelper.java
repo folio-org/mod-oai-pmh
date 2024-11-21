@@ -530,7 +530,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           RecordType recordType = createRecord(request, jsonRecord, instanceId);
           Future<JsonObject> enrichedRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
               suppressedRecordsProcessingEnabled).compose(enrichedSrsRecord -> {
-//                Promise<JsonObject> enrichedSrsRecordPromise = Promise.promise();
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
                 if (source != null && recordType.getHeader().getStatus() == null) {
