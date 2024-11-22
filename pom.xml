@@ -153,7 +153,7 @@
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <jaxb-impl.version>2.3.4</jaxb-impl.version>
     <jaxb-osgi.version>4.0.3</jaxb-osgi.version>
-    <marc4j.version>2.9.5</marc4j.version>
+    <marc4j.version>2.9.6</marc4j.version>
     <mod-configuration-client.version>5.9.2</mod-configuration-client.version>
     <mod-source-record-storage-client.version>5.4.0</mod-source-record-storage-client.version>
     <restassured.version>5.4.0</restassured.version>

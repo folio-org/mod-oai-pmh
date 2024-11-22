@@ -373,7 +373,7 @@
       }
     },
     "env": [
-      { "name": "JAVA_OPTIONS", "value": "-XX:MaxRAMPercentage=66.0" },
+      { "name": "JAVA_OPTIONS", "value": "-XX:MaxRAMPercentage=66.0 -Dfile.encoding=UTF-8" },
       { "name": "DB_HOST", "value": "postgres" },
       { "name": "DB_PORT", "value": "5432" },
       { "name": "DB_USERNAME", "value": "folio_admin" },
