@@ -23,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.exception.BuildOaiMetadataException;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
 import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
@@ -479,34 +480,30 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<Response> oaiResponsePromise = Promise.promise();
     buildRecords(ctx, request, items).onSuccess(recordsMap -> {
       Response response;
-      if (noRecordsFoundResultCheck(recordsMap, items, request.getVerb())) {
+      if (noRecordsFoundResultCheck(recordsMap)) {
         response = buildNoRecordsFoundOaiResponse(oaipmh, request);
-      } else if (conversionIntoJaxbObjectIssueCheck(recordsMap, items, request.getVerb())) {
-        response = conversionIntoJaxbObjectIssueResponse(oaipmh, request);
-      } else {
+      }  else {
         addRecordsToOaiResponse(oaipmh, recordsMap.values());
         addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
         response = buildResponse(oaipmh, request);
       }
       oaiResponsePromise.complete(response);
-    }).onFailure(throwable -> oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage())));
+    }).onFailure(throwable -> {
+      if (throwable instanceof BuildOaiMetadataException) {
+        oaiResponsePromise.complete(conversionIntoJaxbObjectIssueResponse(oaipmh, request));
+      } else {
+        oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage()));
+      }
+    });
     return oaiResponsePromise.future();
   }
 
-  boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap, JsonArray items,  VerbType verb){
-    return recordsMap.isEmpty() &&
-      (jsonArrayIsEmpty(items) || (jsonArrayNotEmpty(items) && VerbType.GET_RECORD != verb));
-  }
-
-  boolean conversionIntoJaxbObjectIssueCheck(Map<String, RecordType> recordsMap, JsonArray items, VerbType verb){
-    return recordsMap.isEmpty() && jsonArrayNotEmpty(items) && VerbType.GET_RECORD == verb;
+  boolean noRecordsFoundResultCheck(Map<String, RecordType> recordsMap) {
+    return recordsMap.isEmpty();
   }
 
   private boolean jsonArrayNotEmpty(JsonArray ja){
     return ja != null && !ja.isEmpty();
-  }
-  private boolean jsonArrayIsEmpty(JsonArray ja){
-    return !jsonArrayNotEmpty(ja);
   }
 
   /**
@@ -514,7 +511,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
    * otherwise empty map is returned
    */
   private Future<Map<String, RecordType>> buildRecords(Context context, Request request, JsonArray records) {
-    Promise<Map<String, RecordType>> recordsPromise = Promise.promise();
+    Promise<Map<String, RecordType>> enrichedRecordsPromise = Promise.promise();
     List<Future<JsonObject>> futures = new ArrayList<>();
 
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
@@ -531,8 +528,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           String recordId = storageHelper.getRecordId(jsonRecord);
           String instanceId = storageHelper.getIdentifierId(jsonRecord);
           RecordType recordType = createRecord(request, jsonRecord, instanceId);
-          Future<JsonObject> enrichRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
-              suppressedRecordsProcessingEnabled).onSuccess(enrichedSrsRecord -> {
+          Future<JsonObject> enrichedRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
+              suppressedRecordsProcessingEnabled).compose(enrichedSrsRecord -> {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
                 if (source != null && recordType.getHeader().getStatus() == null) {
@@ -543,7 +540,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                     logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
                     logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
                     errorsService.log(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
-                    return;
+                    return Future.failedFuture(new BuildOaiMetadataException(e));
                   }
                 } else {
                   context.put(recordId, jsonRecord);
@@ -551,27 +548,30 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                 if (filterInstance(request, jsonRecord)) {
                   recordsMap.put(recordId, recordType);
                 }
-              })
-                .onFailure(throwable -> {
-                  String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
-                  errorsService.log(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
-                  logger.error(errorMsg, throwable);
-                  recordsPromise.fail(new IllegalStateException(throwable.getMessage()));
-                });
-          futures.add(enrichRecordFuture);
+
+                return Future.succeededFuture();
+              },
+              throwable -> {
+                String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
+                errorsService.log(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
+                logger.error(errorMsg, throwable);
+                return Future.failedFuture(new IllegalStateException(errorMsg));
+              }
+              );
+          futures.add(enrichedRecordFuture);
         });
 
       GenericCompositeFuture.all(futures).onComplete(res -> {
           if (res.succeeded()) {
-            recordsPromise.complete(recordsMap);
+            enrichedRecordsPromise.complete(recordsMap);
           } else {
-            recordsPromise.fail(res.cause());
+            enrichedRecordsPromise.fail(res.cause());
           }
         });
-      return recordsPromise.future();
+      return enrichedRecordsPromise.future();
     }
-    recordsPromise.complete(recordsMap);
-    return recordsPromise.future();
+    enrichedRecordsPromise.complete(recordsMap);
+    return enrichedRecordsPromise.future();
   }
 
   private String enrichSource(String source, boolean suppressedRecordsProcessingEnabled,
