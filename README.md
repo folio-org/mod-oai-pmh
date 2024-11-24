@@ -72,7 +72,8 @@ So, configurations priority from highest to lowest is the next: mod-configuratio
 Notes: 
 * There is an option, as it says at "Configuration priority resolving" paragraph, if mod-configuration doesn't contain a value for configuration, then default or specified via JVM value will be used further as expected, but in the opposite case such value will be used only during InitAPIs execution and will be overridden further with value from mod-configuration after ModTenantAPI execution. Only configPath and repository.storage configurations are an exception here.
 * The system default values can be overwritten by VM options e.g. `-Drepository.name=Specific_FOLIO_OAI-PMH_Repository`. 
-* Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader. 
+* Another configuration file can be specified via `-DconfigPath=<path_to_configs>` but the file should be accessible by ClassLoader.
+* For proper encoding the module should be started with `-Dfile.encoding=UTF-8` VM option.
 * For verb `ListRecords` and metadata prefix `marc21_withholdings`, holding and item fields from [mod-inventory-storage](https://github.com/folio-org/mod-inventory-storage)  are returned along with the corresponding records from [mod-source-record-storage](https://github.com/folio-org/mod-source-record-storage)
 
 ### About Marc21 with holdings and initial load
