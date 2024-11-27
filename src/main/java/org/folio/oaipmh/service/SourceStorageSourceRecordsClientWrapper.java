@@ -2,6 +2,9 @@ package org.folio.oaipmh.service;
 
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.SRS_RESPONSE;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +21,8 @@ import io.vertx.ext.web.client.HttpResponse;
 
 public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
 
+  private static final Logger logger = LogManager.getLogger(Request.class);
+
   private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
 
   private final SourceStorageSourceRecordsClient client;
@@ -26,6 +31,7 @@ public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
 
   private SourceStorageSourceRecordsClientWrapper(Request request) {
     webClient = WebClientProvider.getWebClientForSrs(request.getRequestId());
+    logger.info("Okapi token SourceStorageSourceRecordsClientWrapper: {} - {}.", request.getOkapiToken(), request.getTenant());
     client = new SourceStorageSourceRecordsClient(request.getOkapiUrl(), request.getTenant(), request.getOkapiToken(), webClient);
   }
 
