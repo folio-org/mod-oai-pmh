@@ -1,5 +1,15 @@
 ## 3.15.0 - Unreleased
 
+## 3.14.3 (Released)
+
+This release includes bug fixes.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.2...v3.14.3)
+
+### Bug fixes
+* [MODOAIPMH-584](https://folio-org.atlassian.net/browse/MODOAIPMH-584) Character encoding inconsistent for non-ASCII location names in OAI-PMH 952 holdings
+* [MODOAIPMH-567](https://folio-org.atlassian.net/browse/MODOAIPMH-567) GetRecord unexpectedly returns "invalidRecordContent" error for deleted MARC Instance
+
 ## 3.14.2 (Released)
 
 This release includes fix missing interface dependencies and minor improvements.
