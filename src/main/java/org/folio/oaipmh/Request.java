@@ -1,5 +1,7 @@
 package org.folio.oaipmh;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.folio.rest.tools.utils.TenantTool;
@@ -48,6 +50,9 @@ import static org.folio.oaipmh.Constants.UNTIL_PARAM;
  * It implements builder pattern, so use {@link Builder} instance to build an instance of the request.
  */
 public class Request {
+
+  private static final Logger logger = LogManager.getLogger(Request.class);
+  
   private static final char PARAMETER_SEPARATOR = '&';
   private static final String PARAMETER_VALUE_SEPARATOR = "=";
 
@@ -355,6 +360,7 @@ public class Request {
   }
 
   public String getOkapiToken() {
+    logger.info("Okapi token: {}.", okapiToken);
     return okapiToken;
   }
 
