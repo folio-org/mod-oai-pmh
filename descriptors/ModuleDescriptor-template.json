@@ -249,6 +249,10 @@
     {
       "id": "call-number-types",
       "version": "1.0"
+    },
+    {
+      "id": "user-tenants",
+      "version": "1.0"
     }
   ],
   "permissionSets": [
