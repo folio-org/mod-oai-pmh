@@ -1,5 +1,11 @@
 ## 3.15.0 - Unreleased
 
+## 3.14.4 (Released)
+
+This release includes bug fixes (adding missing interface).
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.3...v3.14.4)
+
 ## 3.14.3 (Released)
 
 This release includes bug fixes.
