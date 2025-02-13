@@ -43,9 +43,10 @@ public class RecordMetadataManager {
 
   private static final String INDICATOR_VALUE = "f";
   private static final String DISCOVERY_SUPPRESSED_SUBFIELD_CODE = "t";
-  private static final String LOCATION_NAME_SUBFIELD_CODE = "d";
+  private static final String LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE = "d";
   private static final String LOAN_TYPE_SUBFIELD_CODE = "p";
   private static final String ILL_POLICY_SUBFIELD_CODE = "r";
+  private static final String LOCATION_NAME_SUBFIELD_CODE = "s";
 
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
@@ -70,6 +71,7 @@ public class RecordMetadataManager {
   public static final String CALL_NUMBER = "callNumber";
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
+  public static final String LOCATION_NAME = "locationName";
   public static final String SUPPRESS_DISCOVERY_CODE = "t";
 
   private RecordMetadataManager() {
@@ -320,9 +322,14 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
-    //Map location name, which changed paths in json, to 952$d
+    // Map location discovery display name (or location name if null) to 952$d
     ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
+      .filter(StringUtils::isNotBlank)
+      .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE, value));
+    // Map location name to 952$s
+    ofNullable(itemData.getJsonObject(LOCATION))
+      .map(jo -> jo.getString(LOCATION_NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
     return effectiveLocationSubFields;
