@@ -329,6 +329,7 @@ public class RecordMetadataManager {
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE, value));
     // Map location name to 952$s
     ofNullable(itemData.getJsonObject(LOCATION))
+      .map(jo -> jo.getJsonObject(LOCATION))
       .map(jo -> jo.getString(LOCATION_NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
