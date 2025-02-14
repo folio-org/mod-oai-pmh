@@ -322,18 +322,24 @@ public class RecordMetadataManager {
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
-    // Map location discovery display name (or location name if null) to 952$d
+    addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
+    addLocationNameSubfield(itemData, effectiveLocationSubFields);
+    return effectiveLocationSubFields;
+  }
+
+  private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE, value));
-    // Map location name to 952$s
+  }
+
+  private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getJsonObject(LOCATION))
       .map(jo -> jo.getString(LOCATION_NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
-    return effectiveLocationSubFields;
   }
 
   private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {
