@@ -328,11 +328,13 @@ class RecordMetadataManagerTest {
       assertTrue(verifySubFieldValuePresence(subFieldsList, "b", "City Campus", true));
       assertTrue(verifySubFieldValuePresence(subFieldsList, "c", "Datalogisk Institut", true));
       assertTrue(verifySubFieldValuePresence(subFieldsList, "d", "testName", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "s", "testName", true));
     } else {
       assertFalse(verifySubFieldValuePresence(subFieldsList, "a", "Københavns Universitet", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "b", "City Campus", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "c", "Datalogisk Institut", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "d", "testName", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "s", "testName", true));
     }
     if (callNumberGroupMustBePresented) {
       assertTrue(verifySubFieldValuePresence(subFieldsList, "e", "Call number 1_2_1", true));

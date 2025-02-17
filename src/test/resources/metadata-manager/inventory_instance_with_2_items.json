@@ -15,7 +15,8 @@
             "campusName": "City Campus",
             "libraryName": "Datalogisk Institut",
             "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
-            "institutionName": "Københavns Universitet"
+            "institutionName": "Københavns Universitet",
+            "locationName": "testName"
           }
         },
         "callNumber": {
@@ -51,7 +52,8 @@
             "campusName": "City Campus",
             "libraryName": "Datalogisk Institut",
             "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
-            "institutionName": "Københavns Universitet"
+            "institutionName": "Københavns Universitet",
+            "locationName": "testName"
           }
         },
         "callNumber": {
