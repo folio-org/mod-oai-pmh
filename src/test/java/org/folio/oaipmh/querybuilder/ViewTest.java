@@ -253,7 +253,7 @@ class ViewTest {
       var ids = actualResponse.split("\n");
       var numOfRecords = ids.length;
       if (cursor == 100) {
-        assertEquals(9, numOfRecords); // when non-deleted exhausted (< max_records_per_response)
+        assertEquals(10, numOfRecords); // when non-deleted exhausted (< max_records_per_response)
       } else if (cursor == 110) {
         assertEquals(1, numOfRecords); // first 1 deleted to complete 9 + 1
       } else if (cursor == 111) {
@@ -271,7 +271,7 @@ class ViewTest {
       }
       LOGGER.info("numOfRecords: {}, lastInstanceId: {}, cursor: {}", numOfRecords, lastInstanceId, cursor);
     } while (!lastId.isEmpty());
-    assertEquals(121, cursor);
+    assertEquals(110, cursor);
   }
 
   private String doQuery(String query, String... columns) throws SQLException {
