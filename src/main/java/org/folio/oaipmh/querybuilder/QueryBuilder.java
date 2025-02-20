@@ -94,8 +94,8 @@ public class QueryBuilder {
       var whereOrAnd = where ? WHERE : " AND";
       String sql;
       if (source == RecordsSource.MARC) {
-        sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
-          RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC);
+        sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
+          RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC, RecordsSource.LINKED_DATA);
       } else {
         sql = format(SOURCE + " OR inst.source = '%s') ", whereOrAnd + " (", source, RecordsSource.CONSORTIUM_FOLIO);
       }

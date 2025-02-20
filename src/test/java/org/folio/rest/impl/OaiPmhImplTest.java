@@ -1630,7 +1630,7 @@ class OaiPmhImplTest {
       totalRecords += oaipmh.getListRecords().getRecords().size();
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
-    assertThat(totalRecords, is(66));
+    assertThat(totalRecords, is(67));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
   }
@@ -2740,7 +2740,7 @@ class OaiPmhImplTest {
 
     // Statistics API verification
     var requestMetadataCollection = getRequestMetadataCollection(REQUEST_METADATA_QUERY_LIMIT);
-    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 63, 0, 0, 0);
+    verifyRequestMetadataStatistics(requestMetadataCollection, 0, 0, 64, 0, 0, 0);
 
     failedInstancesEndpoints.forEach(path -> {
       var uuidCollection = getUuidCollection(requestMetadataCollection.getRequestMetadataCollection().get(0).getRequestId(), path);

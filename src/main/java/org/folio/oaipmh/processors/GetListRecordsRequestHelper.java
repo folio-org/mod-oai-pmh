@@ -444,7 +444,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
       .filter(rec -> {
 
         // Keep FOLIO and shared as well as all deleted records.
-        if (!rec.getString(SOURCE).equals(RecordsSource.MARC.name()) || Boolean.TRUE.equals(rec.getBoolean("deleted"))) {
+        if (!rec.getString(SOURCE).equals(RecordsSource.MARC.name()) && !rec.getString(SOURCE).equals(RecordsSource.LINKED_DATA.name())
+          || Boolean.TRUE.equals(rec.getBoolean("deleted"))) {
           return true;
         }
 

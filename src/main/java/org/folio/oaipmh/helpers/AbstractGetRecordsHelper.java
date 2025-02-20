@@ -651,7 +651,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
       source = "(source==FOLIO OR source==CONSORTIUM-FOLIO)";
     } else if (recordsSource == RecordsSource.MARC) {
-      source = "(source==MARC OR source==CONSORTIUM-MARC)";
+      source = "(source==MARC OR source==CONSORTIUM-MARC OR source==LINKED_DATA)";
     }
     var and = nonNull(listOfIds) || !source.isEmpty() ? "and" : EMPTY;
     var queryFrom = nonNull(updatedAfter) ?

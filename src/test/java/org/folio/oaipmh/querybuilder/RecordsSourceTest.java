@@ -14,4 +14,10 @@ class RecordsSourceTest {
     assertEquals(expectedMarc, RecordsSource.getSource("CONSORTIUM-MARC"));
     assertEquals(expectedFolio, RecordsSource.getSource("CONSORTIUM-FOLIO"));
   }
+
+  @Test
+  void shouldReturnCorrectSourceForLinkedData() {
+    RecordsSource expectedSource = RecordsSource.LINKED_DATA;
+    assertEquals(expectedSource, RecordsSource.getSource("LINKED_DATA"));
+  }
 }
