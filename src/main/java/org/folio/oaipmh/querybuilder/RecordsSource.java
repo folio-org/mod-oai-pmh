@@ -1,7 +1,7 @@
 package org.folio.oaipmh.querybuilder;
 
 public enum RecordsSource {
-  FOLIO, MARC, FOLIO_SHARED, MARC_SHARED, CONSORTIUM_MARC, CONSORTIUM_FOLIO, LINKED_DATA;
+  FOLIO, MARC, FOLIO_SHARED, MARC_SHARED, CONSORTIUM_MARC, CONSORTIUM_FOLIO, LINKED_DATA, CONSORTIUM_LINKED_DATA;
 
   public static RecordsSource getSource(String name) {
     if (name.equals("Inventory")) {
@@ -15,6 +15,8 @@ public enum RecordsSource {
       return CONSORTIUM_MARC;
     } else if (name.equals("CONSORTIUM-FOLIO")) {
       return CONSORTIUM_FOLIO;
+    } else if (name.equals("CONSORTIUM-LINKED_DATA")) {
+      return CONSORTIUM_LINKED_DATA;
     } else if (name.equals("LINKED_DATA")) {
       return LINKED_DATA;
     }
@@ -28,6 +30,8 @@ public enum RecordsSource {
       return "CONSORTIUM-MARC";
     } else if (res.equals("CONSORTIUM_FOLIO")) {
       return "CONSORTIUM-FOLIO";
+    } else if (res.equals("CONSORTIUM_LINKED_DATA")) {
+      return "CONSORTIUM-LINKED_DATA";
     }
     return res;
   }

@@ -649,9 +649,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
     String source = EMPTY;
     if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
-      source = "(source==FOLIO OR source==CONSORTIUM-FOLIO)";
+      source = "(source==FOLIO OR source==CONSORTIUM-FOLIO OR source==LINKED_DATA OR source==CONSORTIUM-LINKED_DATA)";
     } else if (recordsSource == RecordsSource.MARC) {
-      source = "(source==MARC OR source==CONSORTIUM-MARC OR source==LINKED_DATA)";
+      source = "(source==MARC OR source==CONSORTIUM-MARC OR source==LINKED_DATA OR source==CONSORTIUM-LINKED_DATA)";
     }
     var and = nonNull(listOfIds) || !source.isEmpty() ? "and" : EMPTY;
     var queryFrom = nonNull(updatedAfter) ?
