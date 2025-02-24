@@ -1,9 +1,9 @@
 {
   "instances": [
     {
-      "id": "linked-data-identifier",
+      "id": "no-srs-identifier",
       "hrid": "in000001",
-      "source": "LINKED_DATA",
+      "source": "FOLIO",
       "title": "ABA Journal",
       "alternativeTitles": [],
       "series": [],
