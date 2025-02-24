@@ -199,6 +199,8 @@ public class OkapiMockServer {
   private static final String INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "instance.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "enriched_instance.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA = "enriched_instance_invalid_data.json";
+  private static final String INSTANCE_LINKED_DATA = "/instance_linked_data.json";
+  private static final String SRS_RECORD_LINKED_DATA = "/linked_data_srs_record.json";
 
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA = "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
   private static final String INSTANCE_ID_WITHOUT_SRS_RECORD = "3a6a47ab-597d-4abe-916d-e31c723426d3";
@@ -209,6 +211,7 @@ public class OkapiMockServer {
   private static final String INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY = "00000000-0000-4000-a000-000000000111";
   private static final String INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY_INVALID_DATA = "12345000-0000-4000-a000-000000000111";
   private static final String INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO = "FOLIO";
+  private static final String INSTANCE_ID_WITH_LINKED_DATA = "linked-data-identifier";
 
 
   private static final String JSON_TEMPLATE_KEY_RECORDS = "replace_with_records";
@@ -407,6 +410,8 @@ public class OkapiMockServer {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY_INVALID_DATA)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA));
+    } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCE_LINKED_DATA));
     } else  if (uri.contains(INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI + INSTANCES_WITH_SOURCE_FOLIO));
     } else if (uri.contains(DATE_FOR_INSTANCES_10_PARTIALLY)) {
@@ -469,6 +474,8 @@ public class OkapiMockServer {
     if (uri != null) {
       if (uri.contains(DEFAULT_RECORD_DATE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + DEFAULT_SRS_RECORD));
+      } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + SRS_RECORD_LINKED_DATA));
       } else if (uri.contains(String.format("%s=%s", ID_PARAM, EXISTING_IDENTIFIER))
           || uri.contains(String.format("%s=%s", ID_PARAM, RECORD_IDENTIFIER_MARC21_WITH_HOLDINGS))) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI + INSTANCES_1));

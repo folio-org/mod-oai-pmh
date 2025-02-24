@@ -611,6 +611,29 @@ class OaiPmhImplTest {
   }
 
   @Test
+  void getOaiRecordWhenSourceIsLinkedDataAndNeedToExcludeInventoryRecordIfSrsIsPresent() {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS_AND_INVENTORY);
+    var maxRecords = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + "linked-data-identifier")
+      .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("linked-data-identifier"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
+  @Test
   void shouldBuildListRecordsIfOneInstanceReturn500FromInventoryItemsAndHoldingsEndpoint() {
     RequestSpecification request = createBaseRequest()
       .with()
