@@ -103,6 +103,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public String getInstanceRecordSource(JsonObject entry) {
+    logger.info("entry: {}", entry);
     return ofNullable(entry.getJsonObject(PARSED_RECORD))
       .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
       .map(JsonObject::encode)
