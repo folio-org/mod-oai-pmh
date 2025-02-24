@@ -540,6 +540,7 @@ public abstract class AbstractHelper implements VerbHelper {
     byte[] byteSource = metadataPrefix.convert(content);
     Object record = ResponseConverter.getInstance().bytesToObject(byteSource);
     metadata.setAny(record);
+    logger.info("metadata: {}", metadata);
     return metadata;
   }
 

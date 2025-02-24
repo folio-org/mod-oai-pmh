@@ -423,12 +423,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                               JsonObject srsRecords, Promise<Response> promise) {
     if (instancesHandler.succeeded()) {
       var inventoryRecords = instancesHandler.result();
+      logger.info("inventoryRecords: {}", inventoryRecords);
 
       // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
       // or verb is ListRecords (see MODOAIPMH-138).
       if ((srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
       && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
         generateRecordsOnTheFly(request, inventoryRecords);
+        logger.info("generated on the fly: {}", inventoryRecords);
       }
       processRecords(ctx, request, srsRecords, inventoryRecords)
         .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
@@ -517,7 +519,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     Map<String, RecordType> recordsMap = new ConcurrentHashMap<>();
-
+    logger.info("records: {}", records);
     if (jsonArrayNotEmpty(records)) {
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
@@ -532,6 +534,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               suppressedRecordsProcessingEnabled).compose(enrichedSrsRecord -> {
                 // Some repositories like SRS can return record source data along with other info
                 String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
+                logger.info("source: {}", source);
                 if (source != null && recordType.getHeader().getStatus() == null) {
                   source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord);
                   try {
