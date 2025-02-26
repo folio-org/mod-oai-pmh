@@ -118,9 +118,9 @@
     <ramlfiles_path>${basedir}/ramls</ramlfiles_path>
     <ramlfiles_util_path>${ramlfiles_path}/raml-util</ramlfiles_util_path>
 
-    <java.version>17</java.version>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <java.version>21</java.version>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <argLine>-Dfile.encoding=UTF-8</argLine>
@@ -401,11 +401,11 @@
 
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.12.1</version>
+        <version>3.14.0</version>
         <configuration>
           <compilerArgument>-Xlint:unchecked</compilerArgument>
           <encoding>${project.build.sourceEncoding}</encoding>
-          <release>17</release>
+          <release>21</release>
           <parameters>true</parameters>
         </configuration>
         <executions>
