@@ -169,11 +169,12 @@
     <junit.version>5.10.2</junit.version>
     <netty.version>4.1.107.Final</netty.version>
     <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
-    <generate-marc-utils-version>1.9.0</generate-marc-utils-version>
+    <generate-marc-utils-version>1.11.0-SNAPSHOT</generate-marc-utils-version>
     <postgres.image>postgres:12-alpine</postgres.image>
-    <folio-s3-client.version>2.2.0</folio-s3-client.version>
+    <folio-s3-client.version>2.4.0-SNAPSHOT</folio-s3-client.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
     <aws.sdk.version>2.25.12</aws.sdk.version>
+    <json-smart.version>2.5.2</json-smart.version>
 
   </properties>
 
@@ -387,6 +388,13 @@
       <artifactId>jaxb-impl</artifactId>
       <version>${jaxb-impl.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>net.minidev</groupId>
+      <artifactId>json-smart</artifactId>
+      <version>${json-smart.version}</version>
+    </dependency>
+
   </dependencies>
 
   <build>
