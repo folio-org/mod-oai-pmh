@@ -610,6 +610,53 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
   }
 
+  @ParameterizedTest
+  @MethodSource("metadataPrefixAndRecordsSource")
+  void getOaiRecordWhenSourceIsLinkedDataAndNeedToExcludeInventoryRecordIfSrsIsPresent(MetadataPrefix metadataPrefix, String recordsSource) {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
+    var maxRecords = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + "linked-data-identifier")
+      .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("linked-data-identifier"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
+  @Test
+  void getOaiRecordWhenSourceSrsAndInventoryAndNoSrsRecord() {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS_AND_INVENTORY);
+    var maxRecords = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "50");
+
+    RequestSpecification request = createBaseRequest()
+      .with()
+      .param(VERB_PARAM, GET_RECORD.value())
+      .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + "no-srs-identifier")
+      .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+
+    OAIPMH oaiPmhResponseWithExistingIdentifier = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponseWithExistingIdentifier.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+      Collections.singletonList("no-srs-identifier"));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponseWithExistingIdentifier.getErrors(), is(empty()));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
   @Test
   void shouldBuildListRecordsIfOneInstanceReturn500FromInventoryItemsAndHoldingsEndpoint() {
     RequestSpecification request = createBaseRequest()

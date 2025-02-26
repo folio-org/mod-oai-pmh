@@ -430,6 +430,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
         generateRecordsOnTheFly(request, inventoryRecords);
       }
+      // Exclude inventory instance if srs is present.
+      if (request.getVerb() == VerbType.GET_RECORD && !srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty()) {
+        inventoryRecords = null;
+      }
       processRecords(ctx, request, srsRecords, inventoryRecords)
         .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
     } else {
