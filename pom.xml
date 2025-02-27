@@ -943,6 +943,24 @@
         </executions>
       </plugin>
 
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>2.16.1</version>
+        <executions>
+          <execution>
+            <id>display-dependency</id>
+            <phase>package</phase>
+            <goals>
+              <goal>display-dependency-updates</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <generateBackupPoms>false</generateBackupPoms>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
 </project>
