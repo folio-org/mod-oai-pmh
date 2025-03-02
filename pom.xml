@@ -173,7 +173,7 @@
     <postgres.image>postgres:12-alpine</postgres.image>
     <folio-s3-client.version>2.4.0-SNAPSHOT</folio-s3-client.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
-    <aws.sdk.version>2.25.12</aws.sdk.version>
+    <aws.sdk.version>2.29.9</aws.sdk.version>
     <json-smart.version>2.5.2</json-smart.version>
 
   </properties>
