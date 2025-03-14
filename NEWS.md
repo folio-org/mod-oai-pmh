@@ -1,4 +1,17 @@
-## 3.15.0 - Unreleased
+## 3.16.0 - Unreleased
+
+## 3.15.0 (Released)
+
+This release includes functionality for LINKED_DATA instances harvesting and migration to Java 21.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.13.0...v3.14.0)
+
+### Stories
+* [MODOAIPMH-594](https://folio-org.atlassian.net/browse/MODOAIPMH-594) Update to mod-oai-pmh Java 21
+
+### Technical tasks
+* [MODOAIPMH-587](https://folio-org.atlassian.net/browse/MODOAIPMH-587) Include FOLIO location in addition to Discovery Display Name
+* [MODOAIPMH-581](https://folio-org.atlassian.net/browse/MODOAIPMH-581) Harvesting instances with LINKED_DATA source
 
 ## 3.14.3 (Released)
 
