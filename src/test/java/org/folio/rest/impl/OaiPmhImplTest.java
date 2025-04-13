@@ -180,6 +180,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.isEmptyString;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -1843,7 +1844,7 @@ class OaiPmhImplTest {
   private void verifyBaseResponse(OAIPMH oaipmhFromString, VerbType verb) {
     assertThat(oaipmhFromString, is(notNullValue()));
     assertThat(oaipmhFromString.getResponseDate(), is(notNullValue()));
-    assertThat(oaipmhFromString.getResponseDate().isBefore(Instant.now()), is(true));
+    assertThat(oaipmhFromString.getResponseDate(), is(lessThanOrEqualTo(Instant.now())));
     assertThat(oaipmhFromString.getRequest(), is(notNullValue()));
     assertThat(oaipmhFromString.getRequest().getValue(), is(notNullValue()));
     assertThat(oaipmhFromString.getRequest().getVerb(), equalTo(verb));
