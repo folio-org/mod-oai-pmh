@@ -147,20 +147,19 @@
     <jaxb-impl.version>2.3.4</jaxb-impl.version>
     <jaxb-osgi.version>4.0.3</jaxb-osgi.version>
     <marc4j.version>2.9.6</marc4j.version>
-    <mod-configuration-client.version>5.9.2</mod-configuration-client.version>
-    <mod-source-record-storage-client.version>5.4.0</mod-source-record-storage-client.version>
-    <restassured.version>5.4.0</restassured.version>
-    <junit.jupiter.version>5.9.0-M1</junit.jupiter.version>
-    <jooq.version>3.19.6</jooq.version>
-    <vertx-jooq.generator.version>6.5.4</vertx-jooq.generator.version>
-    <vertx-jooq.classic-reactive.version>6.5.4</vertx-jooq.classic-reactive.version>
-    <postgres.version>42.7.2</postgres.version>
-    <lombok.version>1.18.36</lombok.version>
-    <log4j.version>2.23.1</log4j.version>
-    <testcontainers.version>1.19.7</testcontainers.version>
-    <mockito-junit-jupiter.version>5.2.0</mockito-junit-jupiter.version>
-    <junit.version>5.10.2</junit.version>
-    <netty.version>4.1.107.Final</netty.version>
+    <mod-configuration-client.version>5.12.0</mod-configuration-client.version>
+    <mod-source-record-storage-client.version>5.10.1</mod-source-record-storage-client.version>
+    <restassured.version>5.5.1</restassured.version>
+    <jooq.version>3.20.3</jooq.version>
+    <vertx-jooq.generator.version>6.5.5</vertx-jooq.generator.version>
+    <vertx-jooq.classic-reactive.version>6.5.5</vertx-jooq.classic-reactive.version>
+    <postgres.version>42.7.5</postgres.version>
+    <lombok.version>1.18.38</lombok.version>
+    <log4j.version>2.24.3</log4j.version>
+    <testcontainers.version>1.20.6</testcontainers.version>
+    <mockito-junit-jupiter.version>5.17.0</mockito-junit-jupiter.version>
+    <junit.version>5.12.2</junit.version>
+    <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
     <generate-marc-utils-version>1.10.0</generate-marc-utils-version>
     <postgres.image>postgres:16-alpine</postgres.image>
     <folio-s3-client.version>2.3.0</folio-s3-client.version>
