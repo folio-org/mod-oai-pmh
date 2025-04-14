@@ -3,25 +3,21 @@ package org.folio.rest.impl;
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.when;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.model.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.MockServerContainer;
+import org.testcontainers.containers.NginxContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -44,10 +40,11 @@ class ModTenantAPIIT {
       .withEnv("DB_PORT", "5432")
       .withEnv("DB_USERNAME", "username")
       .withEnv("DB_PASSWORD", "password")
-      .withEnv("DB_DATABASE", "postgres");
+      .withEnv("DB_DATABASE", "postgres")
+      .withLogConsumer(new Slf4jLogConsumer(LOGGER, true).withPrefix("module"));
 
   @Container
-  private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:12-alpine")
+  private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
     .withNetwork(network)
     .withNetworkAliases("postgres")
     .withExposedPorts(5432)
@@ -57,26 +54,30 @@ class ModTenantAPIIT {
     .withInitScript("sql/init_database.sql");
 
   @Container
-  private static final MockServerContainer okapi =
-    new MockServerContainer(DockerImageName.parse("mockserver/mockserver:mockserver-5.15.0"))
-      .withNetwork(network)
-      .withNetworkAliases("okapi")
-      .withExposedPorts(1080);
+  private static final NginxContainer<?> okapi = new NginxContainer<>("nginx:stable-alpine-slim")
+    .withNetwork(network)
+    .withNetworkAliases("okapi")
+    .withExposedPorts(8080)
+    .withLogConsumer(new Slf4jLogConsumer(LOGGER, true).withPrefix("okapi"))
+    .withCopyToContainer(Transferable.of("""
+        server {
+          listen unix:/tmp/backend.sock;
+          default_type application/json;
+          location /GET/  { return 200 '{ "configs": []}'; }
+          location /POST/ { return 201; }
+        }
+        server {
+          listen 8080;
+          location / { proxy_pass http://unix:/tmp/backend.sock:/$request_method$request_uri; }
+        }
+        """), "/etc/nginx/conf.d/default.conf");
 
   @BeforeAll
   static void beforeAll() {
-    module.followOutput(new Slf4jLogConsumer(LOGGER).withSeparateOutputStreams());
     RestAssured.baseURI = "http://" + module.getHost() + ":" + module.getFirstMappedPort();
-
-    var mockServerClient = new MockServerClient(okapi.getHost(), okapi.getServerPort());
-    mockServerClient.when(request().withMethod("POST"))
-      .respond(response().withStatusCode(201));
-    mockServerClient.when(request().withMethod("GET"))
-      .respond(response().withStatusCode(200).withBody("{\"configs\":[]}", MediaType.JSON_UTF_8));
-
     RestAssured.requestSpecification = new RequestSpecBuilder()
       .addHeader("x-okapi-tenant", OAI_TEST_TENANT)
-      .addHeader("x-okapi-url", "http://okapi:1080")
+      .addHeader("x-okapi-url", "http://okapi:8080")
       .setContentType(ContentType.JSON)
       .build();
   }
