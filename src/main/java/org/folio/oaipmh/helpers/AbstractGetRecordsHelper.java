@@ -198,36 +198,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     Promise<JsonObject> central = Promise.promise();
 
     var centralTenantId = consortiaService.getCentralTenantId(request);
-    try (var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId))) {
-      if (StringUtils.isNotEmpty(centralTenantId)) {
-        client.getSourceStorageSourceRecords(
-          null,
-          null,
-          null,
-          null,
-          request.getIdentifier() != null ? request.getStorageIdentifier() : null,
-          null,
-          null,
-          null,
-          "MARC_BIB",
-          //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-          suppressedRecordsSupport ? null : false,
-          deletedRecordsSupport,
-          null,
-          updatedAfter,
-          updatedBefore,
-          null,
-          request.getOffset(),
-          request.isFromInventory() ? 0 : batchSize + 1,
-          getSrsCollectingHandler(request, central));
-      } else {
-        central.complete(new JsonObject());
-      }
-    } catch (Exception e) {
-      central.fail(e);
-    }
-
-    try (var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request)) {
+    if (StringUtils.isNotEmpty(centralTenantId)) {
+      var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId));
       client.getSourceStorageSourceRecords(
         null,
         null,
@@ -238,7 +210,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         null,
         null,
         "MARC_BIB",
-        // NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
         suppressedRecordsSupport ? null : false,
         deletedRecordsSupport,
         null,
@@ -247,10 +219,38 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         null,
         request.getOffset(),
         request.isFromInventory() ? 0 : batchSize + 1,
-        getSrsCollectingHandler(request, local));
-    } catch (Exception e) {
-      local.fail(e);
+        asyncResult -> {
+          client.close();
+          getSrsCollectingHandler(request, central).handle(asyncResult);
+        });
+    } else {
+      central.complete(new JsonObject());
     }
+
+    var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
+    client.getSourceStorageSourceRecords(
+      null,
+      null,
+      null,
+      null,
+      request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+      null,
+      null,
+      null,
+      "MARC_BIB",
+      // NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+      suppressedRecordsSupport ? null : false,
+      deletedRecordsSupport,
+      null,
+      updatedAfter,
+      updatedBefore,
+      null,
+      request.getOffset(),
+      request.isFromInventory() ? 0 : batchSize + 1,
+      asyncResult -> {
+        client.close();
+        getSrsCollectingHandler(request, local).handle(asyncResult);
+      });
 
 
     CompositeFuture.join(local.future(), central.future())
