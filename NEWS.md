@@ -1,5 +1,15 @@
 ## 3.16.0 - Unreleased
 
+## 3.15.1 (Released)
+
+This release includes dependencies updating.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.0...v3.15.1)
+
+### Technical tasks
+* [MODOAIPMH-612](https://folio-org.atlassian.net/browse/MODOAIPMH-612) Replace MockServerContainer with NginxContainer
+* [MODOAIPMH-611](https://folio-org.atlassian.net/browse/MODOAIPMH-611) Update dependencies for Sunflower fixing vulns
+
 ## 3.15.0 (Released)
 
 This release includes functionality for LINKED_DATA instances harvesting and migration to Java 21.
