@@ -26,9 +26,9 @@ public class QueryBuilder {
     "LIMIT %d;";
 
   private static final String DELETED_INSTANCES = " %s %s_mod_inventory_storage.strToTimestamp\n" +
-    " (instance_created_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
+    " (instance_updated_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
     " AND \n" +
-    " %s_mod_inventory_storage.strToTimestamp(instance_created_date::text) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+    " %s_mod_inventory_storage.strToTimestamp(instance_updated_date::text) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
 
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";

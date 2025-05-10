@@ -4,6 +4,11 @@
       "run": "after",
       "snippetPath": "create_views.sql",
       "fromModuleVersion": "mod-oai-pmh-3.12.0"
+    },
+    {
+      "run": "after",
+      "snippetPath": "update_instance_deleted.sql",
+      "fromModuleVersion": "mod-oai-pmh-3.15.1"
     }
   ]
 }
