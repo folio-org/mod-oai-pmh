@@ -1,5 +1,15 @@
 ## 3.16.0 - Unreleased
 
+## 3.15.2 (Released)
+
+This release includes bug fixes after introducing "deleted" flag in Instance.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.1...v3.15.2)
+
+### Bug fixes
+* [MODOAIPMH-613](https://folio-org.atlassian.net/browse/MODOAIPMH-613) Set for deletion MARC Instances are not harvested with ListRecords, ListIdentifiers requests
+* [MODOAIPMH-614](https://folio-org.atlassian.net/browse/MODOAIPMH-614) Set for deletion FOLIO Instances are harvested with ListRecords, ListIdentifiers requests as not deleted
+
 ## 3.15.1 (Released)
 
 This release includes dependencies updating.
