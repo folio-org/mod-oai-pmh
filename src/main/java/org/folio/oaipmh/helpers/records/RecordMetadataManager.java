@@ -314,6 +314,8 @@ public class RecordMetadataManager {
   }
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
+    log.debug("itemData JSON: " + itemData.encodePrettily());
+    log.info("itemData JSON: " + itemData.encodePrettily());
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
 
     JsonObject locationGroup = null;
