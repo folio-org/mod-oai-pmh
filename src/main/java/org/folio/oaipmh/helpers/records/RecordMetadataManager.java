@@ -318,9 +318,13 @@ public class RecordMetadataManager {
 
     JsonObject locationGroup = null;
     JsonObject outerLocation = itemData.getJsonObject(LOCATION);
+    log.info(outerLocation + "ol");
+    log.debug(outerLocation + "ol");
     if (outerLocation != null) {
       if (outerLocation.containsKey(LOCATION) && outerLocation.getValue(LOCATION) instanceof JsonObject) {
         locationGroup = outerLocation.getJsonObject(LOCATION);
+        log.info(locationGroup + "lg");
+        log.debug(locationGroup + "lg");
       } else {
         locationGroup = outerLocation;
       }
