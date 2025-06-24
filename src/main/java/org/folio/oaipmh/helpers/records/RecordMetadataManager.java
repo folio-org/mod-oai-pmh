@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +36,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Is used for manipulating with record metadata. Updates, constructs the new fields or already presented fields.
  */
+@Log4j2
 public class RecordMetadataManager {
 
   private static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
@@ -330,25 +332,46 @@ public class RecordMetadataManager {
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
 
-    JsonObject locationWrapper = itemData.getJsonObject(LOCATION);
-    JsonObject locationGroup = null;
+    // Log input data
+    log.debug("Starting constructEffectiveLocationSubFieldsMap with itemData: {}", itemData);
+    log.info("Starting constructEffectiveLocationSubFieldsMap with itemData: {}", itemData);
 
-    if (nonNull(locationWrapper)) {
-      locationGroup = locationWrapper.getJsonObject(LOCATION);
-      if (locationGroup == null) {
-        locationGroup = locationWrapper;
-      }
-    }
+    JsonObject locationGroup = ofNullable(itemData.getJsonObject(LOCATION))
+      .map(wrapper -> ofNullable(wrapper.getJsonObject(LOCATION)).orElse(wrapper))
+      .orElse(null);
+    log.debug("Extracted locationGroup: {}", locationGroup);
+    log.info("Extracted locationGroup: {}", locationGroup);
 
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
+    log.debug("Extracted callNumberGroup: {}", callNumberGroup);
+    log.info("Extracted callNumberGroup: {}", callNumberGroup);
+    // Add subfields
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
+    log.debug("Added location subfields: {}", effectiveLocationSubFields);
+    log.info("Added location subfields: {}", effectiveLocationSubFields);
+
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
+    log.debug("Added call number subfields: {}", effectiveLocationSubFields);
+    log.info("Added call number subfields: {}", effectiveLocationSubFields);
+
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
+    log.debug("Added simple subfields: {}", effectiveLocationSubFields);
+    log.info("Added simple subfields: {}", effectiveLocationSubFields);
 
+    // Update subfields with additional data
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
-    addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
-    addLocationNameSubfield(itemData, effectiveLocationSubFields);
+    log.debug("Updated subfields with loan type: {}", effectiveLocationSubFields);
 
+    addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
+    log.debug("Added location discovery display name or location name subfield: {}", effectiveLocationSubFields);
+    log.info("Added location discovery display name or location name subfield: {}", effectiveLocationSubFields);
+
+    addLocationNameSubfield(itemData, effectiveLocationSubFields);
+    log.debug("Added location name subfield: {}", effectiveLocationSubFields);
+    log.info("Added location name subfield: {}", effectiveLocationSubFields);
+
+    log.debug("Finished constructEffectiveLocationSubFieldsMap with effectiveLocationSubFields: {}", effectiveLocationSubFields);
+    log.info("Finished constructEffectiveLocationSubFieldsMap with effectiveLocationSubFields: {}", effectiveLocationSubFields);
     return effectiveLocationSubFields;
   }
 
