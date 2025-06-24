@@ -144,8 +144,6 @@ public class RecordMetadataManager {
     log.info("holdings " + holdings);
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      log.debug("fieldsList: " + fieldsList);
-      log.info("fieldsList: " + fieldsList);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       if (nonNull(holdings)) {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
