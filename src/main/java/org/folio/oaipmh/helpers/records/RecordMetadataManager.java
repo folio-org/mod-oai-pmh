@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import io.vertx.core.json.Json;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -134,11 +135,18 @@ public class RecordMetadataManager {
       return srsInstance;
     }
     JsonObject itemsAndHoldings = (JsonObject) value;
+    log.debug("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
+    log.info("itemsAndHoldings " + itemsAndHoldings.encodePrettily());
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
+    log.debug("items: " + items.encodePrettily());
+    log.info("items " + items.encodePrettily());
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
-
+    log.debug("holdings: " + holdings.encodePrettily());
+    log.info("holdings " + holdings.encodePrettily());
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
+      log.debug("fieldsList: " + Json.encodePrettily(fieldsList));
+      log.info("fieldsList: " + Json.encodePrettily(fieldsList));
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       if (nonNull(holdings)) {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
@@ -148,8 +156,6 @@ public class RecordMetadataManager {
   }
 
   private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
-    log.debug("itemData JSON for populateItemsAndAddIllPolicy: " + items.encodePrettily());
-    log.info("itemData JSON for populateItemsAndAddIllPolicy " + items.encodePrettily());
     getItemsFromItems(items).forEach(item -> {
       var illPolicyOpt = nonNull(holdings) ?
         holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
@@ -243,8 +249,6 @@ public class RecordMetadataManager {
                                                           boolean suppressedRecordsProcessing,
                                                           Optional<String> illPolicy) {
 
-    log.debug("itemData JSON for updateFieldsWithItemEffectiveLocationField: " + itemData.encodePrettily());
-    log.info("itemData JSON for updateFieldsWithItemEffectiveLocationField " + itemData.encodePrettily());
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
