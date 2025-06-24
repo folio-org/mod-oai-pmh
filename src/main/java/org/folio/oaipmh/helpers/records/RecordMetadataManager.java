@@ -317,7 +317,6 @@ public class RecordMetadataManager {
     log.info("itemData JSON: " + itemData.encodePrettily());
     log.debug("itemData JSON: " + itemData.encodePrettily());
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
-
     JsonObject locationGroup = null;
     JsonObject outerLocation = itemData.getJsonObject(LOCATION);
     log.info(outerLocation + "ol");
