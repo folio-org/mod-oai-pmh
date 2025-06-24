@@ -128,27 +128,39 @@ public class RecordMetadataManager {
                                                   boolean suppressedRecordsProcessing) {
 
     log.debug("itemData JSON populateMetadataWithItemsData: " + inventoryInstance.encodePrettily());
-    log.info("itemData JSON populateMetadataWithItemsData " + inventoryInstance.encodePrettily());
+    log.info("itemData JSON populateMetadataWithItemsData: " + inventoryInstance.encodePrettily());
+
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
+      log.debug("ITEMS_AND_HOLDINGS_FIELDS value is not a JsonObject, returning srsInstance as is.");
       return srsInstance;
     }
+
     JsonObject itemsAndHoldings = (JsonObject) value;
     log.debug("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
-    log.info("itemsAndHoldings " + itemsAndHoldings.encodePrettily());
+    log.info("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
+
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
-    log.debug("items: " + items);
-    log.info("items " + items.);
+    log.debug("items: " + (items != null ? items.encodePrettily() : "null"));
+    log.info("items: " + (items != null ? items.encodePrettily() : "null"));
+
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
-    log.debug("holdings: " + holdings);
-    log.info("holdings " + holdings);
+    log.debug("holdings: " + (holdings != null ? holdings.encodePrettily() : "null"));
+    log.info("holdings: " + (holdings != null ? holdings.encodePrettily() : "null"));
+
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
+      log.debug("fieldsList: " + fieldsList);
+      log.info("fieldsList: " + fieldsList);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       if (nonNull(holdings)) {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       }
+    } else {
+      log.debug("No items to process or items list is empty.");
+      log.info("No items to process or items list is empty.");
     }
+
     return srsInstance;
   }
 
