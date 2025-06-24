@@ -313,68 +313,31 @@ public class RecordMetadataManager {
     }
   }
 
-//  private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
-//    Map<String, Object> effectiveLocationSubFields = new HashMap<>();
-//    JsonObject locationGroup = null;
-//    if(nonNull(itemData.getJsonObject(LOCATION))) {
-//      locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
-//    }
-//    JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
-//    addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
-//    addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
-//    addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
-//    updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
-//    addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
-//    addLocationNameSubfield(itemData, effectiveLocationSubFields);
-//    return effectiveLocationSubFields;
-//  }
-
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
 
-    // Log input data
-    log.debug("Starting constructEffectiveLocationSubFieldsMap with itemData: {}", itemData);
-    log.info("Starting constructEffectiveLocationSubFieldsMap with itemData: {}", itemData);
-
-    JsonObject locationGroup = ofNullable(itemData.getJsonObject(LOCATION))
-      .map(wrapper -> ofNullable(wrapper.getJsonObject(LOCATION)).orElse(wrapper))
-      .orElse(null);
-    log.debug("Extracted locationGroup: {}", locationGroup);
-    log.info("Extracted locationGroup: {}", locationGroup);
+    JsonObject locationGroup = null;
+    JsonObject outerLocation = itemData.getJsonObject(LOCATION);
+    if (outerLocation != null) {
+      if (outerLocation.containsKey(LOCATION) && outerLocation.getValue(LOCATION) instanceof JsonObject) {
+        locationGroup = outerLocation.getJsonObject(LOCATION);
+      } else {
+        locationGroup = outerLocation;
+      }
+    }
 
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
-    log.debug("Extracted callNumberGroup: {}", callNumberGroup);
-    log.info("Extracted callNumberGroup: {}", callNumberGroup);
-    // Add subfields
+
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
-    log.debug("Added location subfields: {}", effectiveLocationSubFields);
-    log.info("Added location subfields: {}", effectiveLocationSubFields);
-
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
-    log.debug("Added call number subfields: {}", effectiveLocationSubFields);
-    log.info("Added call number subfields: {}", effectiveLocationSubFields);
-
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
-    log.debug("Added simple subfields: {}", effectiveLocationSubFields);
-    log.info("Added simple subfields: {}", effectiveLocationSubFields);
 
-    // Update subfields with additional data
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
-    log.debug("Updated subfields with loan type: {}", effectiveLocationSubFields);
-
     addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
-    log.debug("Added location discovery display name or location name subfield: {}", effectiveLocationSubFields);
-    log.info("Added location discovery display name or location name subfield: {}", effectiveLocationSubFields);
-
     addLocationNameSubfield(itemData, effectiveLocationSubFields);
-    log.debug("Added location name subfield: {}", effectiveLocationSubFields);
-    log.info("Added location name subfield: {}", effectiveLocationSubFields);
 
-    log.debug("Finished constructEffectiveLocationSubFieldsMap with effectiveLocationSubFields: {}", effectiveLocationSubFields);
-    log.info("Finished constructEffectiveLocationSubFieldsMap with effectiveLocationSubFields: {}", effectiveLocationSubFields);
     return effectiveLocationSubFields;
   }
-
 
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
