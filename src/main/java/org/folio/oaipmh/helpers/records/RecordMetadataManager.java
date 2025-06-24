@@ -311,21 +311,48 @@ public class RecordMetadataManager {
     }
   }
 
+//  private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
+//    Map<String, Object> effectiveLocationSubFields = new HashMap<>();
+//    JsonObject locationGroup = null;
+//    if(nonNull(itemData.getJsonObject(LOCATION))) {
+//      locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
+//    }
+//    JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
+//    addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
+//    addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
+//    addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
+//    updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
+//    addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
+//    addLocationNameSubfield(itemData, effectiveLocationSubFields);
+//    return effectiveLocationSubFields;
+//  }
+
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
+
+    JsonObject locationWrapper = itemData.getJsonObject(LOCATION);
     JsonObject locationGroup = null;
-    if(nonNull(itemData.getJsonObject(LOCATION))) {
-      locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
+
+    if (nonNull(locationWrapper)) {
+      locationGroup = locationWrapper.getJsonObject(LOCATION);
+      if (locationGroup == null) {
+        locationGroup = locationWrapper;
+      }
     }
+
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
+
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
     addLocationNameSubfield(itemData, effectiveLocationSubFields);
+
     return effectiveLocationSubFields;
   }
+
+
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
