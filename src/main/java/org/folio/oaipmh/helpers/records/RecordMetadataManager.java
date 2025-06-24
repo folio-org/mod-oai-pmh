@@ -126,6 +126,9 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
                                                   JsonObject inventoryInstance,
                                                   boolean suppressedRecordsProcessing) {
+
+    log.debug("itemData JSON populateMetadataWithItemsData: " + inventoryInstance.encodePrettily());
+    log.info("itemData JSON populateMetadataWithItemsData " + inventoryInstance.encodePrettily());
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
       return srsInstance;
@@ -145,6 +148,8 @@ public class RecordMetadataManager {
   }
 
   private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList, boolean suppressedRecordsProcessing) {
+    log.debug("itemData JSON for populateItemsAndAddIllPolicy: " + items.encodePrettily());
+    log.info("itemData JSON for populateItemsAndAddIllPolicy " + items.encodePrettily());
     getItemsFromItems(items).forEach(item -> {
       var illPolicyOpt = nonNull(holdings) ?
         holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
@@ -237,6 +242,9 @@ public class RecordMetadataManager {
                                                           List<Object> marcRecordFields,
                                                           boolean suppressedRecordsProcessing,
                                                           Optional<String> illPolicy) {
+
+    log.debug("itemData JSON for updateFieldsWithItemEffectiveLocationField: " + itemData.encodePrettily());
+    log.info("itemData JSON for updateFieldsWithItemEffectiveLocationField " + itemData.encodePrettily());
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
