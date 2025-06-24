@@ -137,11 +137,11 @@ public class RecordMetadataManager {
     log.debug("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
     log.info("itemsAndHoldings " + itemsAndHoldings.encodePrettily());
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
-    log.debug("items: " + items.encodePrettily());
-    log.info("items " + items.encodePrettily());
+    log.debug("items: " + items);
+    log.info("items " + items.);
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
-    log.debug("holdings: " + holdings.encodePrettily());
-    log.info("holdings " + holdings.encodePrettily());
+    log.debug("holdings: " + holdings);
+    log.info("holdings " + holdings);
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       log.debug("fieldsList: " + fieldsList);
