@@ -332,6 +332,7 @@ public class RecordMetadataManager {
       }
     }
 
+
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
 
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
