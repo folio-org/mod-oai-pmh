@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import io.vertx.core.json.Json;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -145,8 +144,8 @@ public class RecordMetadataManager {
     log.info("holdings " + holdings.encodePrettily());
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      log.debug("fieldsList: " + Json.encodePrettily(fieldsList));
-      log.info("fieldsList: " + Json.encodePrettily(fieldsList));
+      log.debug("fieldsList: " + fieldsList);
+      log.info("fieldsList: " + fieldsList);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       if (nonNull(holdings)) {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
