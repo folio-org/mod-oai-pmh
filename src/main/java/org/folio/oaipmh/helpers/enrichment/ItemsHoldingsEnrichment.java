@@ -3,6 +3,7 @@ package org.folio.oaipmh.helpers.enrichment;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.parsetools.JsonParser;
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -119,15 +120,46 @@ public class ItemsHoldingsEnrichment {
   }
 
   private void updateItems(JsonObject instance) {
-    JsonArray itemsJson = instance.getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
+    JsonArray itemsJson = instance
+      .getJsonObject(ITEMS_AND_HOLDINGS_FIELDS)
       .getJsonArray(ITEMS);
+
     for (Object item : itemsJson) {
       JsonObject itemJson = (JsonObject) item;
-      itemJson.getJsonObject(LOCATION).put(NAME, itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).getString(NAME));
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(NAME);
-      itemJson.getJsonObject(LOCATION).getJsonObject(LOCATION).remove(CODE);
-      itemJson.getJsonObject(LOCATION).remove(TEMPORARY_LOCATION);
-      itemJson.getJsonObject(LOCATION).remove(PERMANENT_LOCATION);
+      JsonObject locationJson = itemJson.getJsonObject(LOCATION);
+
+      if (locationJson == null) {
+        continue; // Skip if no location info
+      }
+
+      JsonObject resolvedLocation = locationJson.getJsonObject(LOCATION);
+      String locationName = null;
+
+      // Step 1: Try to get name from nested location (location.location.name)
+      if (resolvedLocation != null) {
+        locationName = resolvedLocation.getString(NAME);
+      }
+
+      // Step 2: Fallback to outer location's name if missing
+      if (StringUtils.isBlank(locationName)) {
+        locationName = locationJson.getString(NAME);
+      }
+
+      // Step 3: Fallback to location id if name is still missing
+      if (StringUtils.isBlank(locationName)) {
+        locationName = locationJson.getString("id");
+      }
+
+      // Step 4: Final fallback
+      locationJson.put(NAME, locationName != null ? locationName : "[Unknown]");
+
+      // Step 5: Cleanup unwanted fields
+      if (resolvedLocation != null) {
+        resolvedLocation.remove(NAME);
+        resolvedLocation.remove(CODE);
+      }
+      locationJson.remove(TEMPORARY_LOCATION);
+      locationJson.remove(PERMANENT_LOCATION);
     }
   }
 }
