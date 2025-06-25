@@ -331,31 +331,24 @@ public class RecordMetadataManager {
       return Arrays.asList(indicatorsInString.split(","));
     } else {
       return Collections.emptyList();
+
     }
   }
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     log.debug("itemData JSON: " + itemData.encodePrettily());
     log.info("itemData JSON: " + itemData.encodePrettily());
+
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
 
-    JsonObject locationGroup = null;
-    JsonObject outerLocation = itemData.getJsonObject(LOCATION);
-    log.info(outerLocation + "ol");
-    log.debug(outerLocation + "ol");
-    if (outerLocation != null) {
-      if (outerLocation.containsKey(LOCATION) && outerLocation.getValue(LOCATION) instanceof JsonObject) {
-        locationGroup = outerLocation.getJsonObject(LOCATION);
-        log.info(locationGroup + "lg");
-        log.debug(locationGroup + "lg");
-      } else {
-        locationGroup = outerLocation;
-      }
-    }
-
+    // Get the outer location object
+    JsonObject locationGroup = itemData.getJsonObject(LOCATION);
+    log.info("Effective locationGroup: " + (locationGroup != null ? locationGroup.encodePrettily() : "null"));
+    log.debug("Effective locationGroup: " + (locationGroup != null ? locationGroup.encodePrettily() : "null"));
 
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
 
+    // Always use outer 'location' object directly to handle both active/inactive locations
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
@@ -366,6 +359,8 @@ public class RecordMetadataManager {
 
     return effectiveLocationSubFields;
   }
+
+
 
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
