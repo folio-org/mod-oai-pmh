@@ -268,6 +268,62 @@ class RecordMetadataManagerTest {
     assertEquals("test ill policy value", value);
   }
 
+  @Test
+  void shouldIncludeInactiveLocationsInEffectiveLocationField() {
+    // This test verifies that location data is included even for inactive locations
+    // Test data should include a location with isActive: false
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    
+    // Create test data with inactive location
+    JsonObject inventoryInstance = new JsonObject()
+      .put("instanceId", "2f7f23be-81a6-4227-85ba-7c1c81272ee1")
+      .put("updateddate", "2020-06-01T10:56:10.118Z")
+      .put("deleted", "false")
+      .put("itemsandholdingsfields", new JsonObject()
+        .put("items", new JsonArray()
+          .add(new JsonObject()
+            .put("id", "13807cda-b618-4c37-8fe0-df03eed83b4f")
+            .put("volume", "Volume 1_2_1")
+            .put("location", new JsonObject()
+              .put("name", "testName")
+              .put("location", new JsonObject()
+                .put("name", "testName")
+                .put("campusId", "62cf76b7-cca5-4d33-9217-edf42ce1a848")
+                .put("libraryId", "5d78803e-ca04-4b4a-aeae-2c63b924518b")
+                .put("campusName", "City Campus")
+                .put("libraryName", "Datalogisk Institut")
+                .put("institutionId", "40ee00ca-a518-4b49-be01-0638d0a4ac57")
+                .put("institutionName", "Københavns Universitet")
+                .put("locationName", "testName")
+                .put("isActive", false) // This is the key - inactive location
+              )
+            )
+            .put("materialType", "book")
+            .put("barcode", "testBarcode")
+          )
+        )
+      );
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    
+    // Should have 952 field even when location is inactive
+    assertEquals(1, effectiveLocationFields.size());
+    
+    // Verify that the field contains the expected data
+    JsonObject field = effectiveLocationFields.get(0);
+    assertTrue(field.containsKey(EFFECTIVE_LOCATION_FILED));
+    
+    // Verify that institution name is present
+    JsonObject fieldContent = field.getJsonObject(EFFECTIVE_LOCATION_FILED);
+    JsonArray subFields = fieldContent.getJsonArray(SUBFIELDS);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) subFields.getList();
+    assertTrue(verifySubFieldValuePresence(subFieldsList, "a", "Københavns Universitet", true));
+  }
+
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));

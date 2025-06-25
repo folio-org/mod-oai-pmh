@@ -47,6 +47,8 @@ public class InventoryClient {
   private static final Logger logger = LogManager.getLogger(InventoryClient.class);
   private static final int REFERENCE_DATA_LIMIT = 1000;
   private static final String ENDPOINT_PATTERN = "%s%s?limit=%d";
+  private static final String ENDPOINT_PATTERN_WITH_QUERY = "%s%s?limit=%d&query=%s";
+  
   public Map<String, JsonObject> getAlternativeTitleTypes(Request request) {
     return get(request, ALTERNATIVE_TITLE_TYPES_URI, "alternativeTitleTypes");
   }
@@ -84,7 +86,12 @@ public class InventoryClient {
   }
 
   public Map<String, JsonObject> getLocations(Request request) {
-    return get(request, LOCATION_URI, "locations");
+    // Include both active and inactive locations
+    // First try: get all records without filtering
+    // Alternative query options:
+    // - "isActive==true OR isActive==false" to explicitly include both
+    // - "cql.allRecords=1" to get all records
+    return getWithQuery(request, LOCATION_URI, "locations", "isActive==true OR isActive==false");
   }
 
   public Map<String, JsonObject> getLoanTypes(Request request) {
@@ -126,6 +133,26 @@ public class InventoryClient {
       jsonArray.forEach(json -> map.put(((JsonObject) json).getString("id"), (JsonObject) json));
     } catch (Exception exception) {
       logger.error("Exception while calling {}", httpGet.getURI(), exception);
+    }
+    return map;
+  }
+
+  private Map<String, JsonObject> getWithQuery(Request request, String endpoint, String key, String query) {
+    Map<String, JsonObject> map = new HashMap<>();
+    try {
+      String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
+      endpoint = format(ENDPOINT_PATTERN_WITH_QUERY, request.getOkapiUrl(), endpoint, REFERENCE_DATA_LIMIT, encodedQuery);
+      HttpGet httpGet = httpGet(request, endpoint);
+      logger.info("Calling GET {}", endpoint);
+      try (CloseableHttpResponse response = HttpClients.createDefault().execute(httpGet)) {
+        var jsonObject = getResponseEntity(response);
+        var jsonArray = jsonObject.getJsonArray(key);
+        jsonArray.forEach(json -> map.put(((JsonObject) json).getString("id"), (JsonObject) json));
+      } catch (Exception exception) {
+        logger.error("Exception while calling {}", httpGet.getURI(), exception);
+      }
+    } catch (Exception e) {
+      logger.error("Error encoding query parameter: {}", query, e);
     }
     return map;
   }
