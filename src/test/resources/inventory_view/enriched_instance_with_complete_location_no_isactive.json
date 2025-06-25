@@ -1,0 +1,62 @@
+{
+  "instanceId": "00000000-0000-4a89-a2f9-78ce3145e4fc",
+  "source": "MARC",
+  "modeOfIssuance": "single unit",
+  "natureOfContent": [],
+  "itemsandholdingsfields": {
+    "items": [
+      {
+        "id": "2b94c631-fca9-4892-a730-03ee529ffe2a",
+        "barcode": "12345678901234",
+        "copyNumber": "copy 1",
+        "enumeration": "vol. 1",
+        "chronology": "2023",
+        "volume": "1",
+        "status": {
+          "name": "Available"
+        },
+        "materialType": "Book",
+        "permanentLoanType": "Can circulate",
+        "temporaryLoanType": "Reading room",
+        "holdingsRecordId": "6bd89306-c546-4d3e-9597-d5d41dd1e463",
+        "suppressFromDiscovery": false,
+        "location": {
+          "name": "Complete Location Without IsActive Field",
+          "code": "CLWIF",
+          "institutionName": "Test University",
+          "campusName": "Main Campus", 
+          "libraryName": "Central Library",
+          "location": {
+            "name": "Complete Nested Location",
+            "code": "CNL",
+            "institutionName": "Test University",
+            "campusName": "Main Campus", 
+            "libraryName": "Central Library"
+          }
+        },
+        "callNumber": {
+          "callNumber": "QA76.73.J38 S67 2023",
+          "prefix": "Book",
+          "suffix": "c.1",
+          "typeName": "Library of Congress classification"
+        }
+      }
+    ],
+    "holdings": [
+      {
+        "id": "6bd89306-c546-4d3e-9597-d5d41dd1e463",
+        "notes": [],
+        "location": {
+          "effectiveLocation": {
+            "code": "CLWIF",
+            "name": "Complete Location Without IsActive Field",
+            "campusName": "Main Campus",
+            "libraryName": "Central Library",
+            "institutionName": "Test University"
+          }
+        },
+        "illPolicy": "Will lend"
+      }
+    ]
+  }
+}

@@ -369,6 +369,162 @@ class RecordMetadataManagerTest {
     assertTrue(allLocationFieldsPrefixed, "All location subfields (a, b, c, d) should have 'Inactive' prefix");
   }
 
+  @Test
+  void shouldUpdateRecordMetadataWithInactiveLocationPrefix_whenLocationIsInactive() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile("/inventory_view/enriched_instance_with_inactive_location.json")));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+        inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    assertEquals(1, effectiveLocationFields.size());
+
+    JsonObject effectiveLocationField = effectiveLocationFields.get(0);
+    Map<String, Object> fieldMap = effectiveLocationField.getMap();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> effectiveLocationData = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> subfieldsList = (List<Map<String, Object>>) effectiveLocationData.get(SUBFIELDS);
+
+    // Verify that all location subfields have "Inactive" prefix
+    boolean hasInactiveInstitution = subfieldsList.stream()
+        .anyMatch(subfield -> "a".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveCampus = subfieldsList.stream()
+        .anyMatch(subfield -> "b".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLibrary = subfieldsList.stream()
+        .anyMatch(subfield -> "c".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLocationName = subfieldsList.stream()
+        .anyMatch(subfield -> ("d".equals(subfield.get("code")) || "s".equals(subfield.get("code"))) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    assertTrue(hasInactiveInstitution, "Institution name should have 'Inactive' prefix");
+    assertTrue(hasInactiveCampus, "Campus name should have 'Inactive' prefix");
+    assertTrue(hasInactiveLibrary, "Library name should have 'Inactive' prefix");
+    assertTrue(hasInactiveLocationName, "Location name should have 'Inactive' prefix");
+
+    // Log the subfields for debugging
+    logger.info("Effective location subfields for inactive location test:");
+    subfieldsList.forEach(subfield -> logger.info("  Subfield {}: {}", subfield.get("code"), subfield.get("value")));
+  }
+
+  @Test
+  void shouldTreatMissingIsActiveFieldAsInactive() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile("/inventory_view/enriched_instance_with_missing_isactive.json")));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+        inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    assertEquals(1, effectiveLocationFields.size());
+
+    JsonObject effectiveLocationField = effectiveLocationFields.get(0);
+    Map<String, Object> fieldMap = effectiveLocationField.getMap();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> effectiveLocationData = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> subfieldsList = (List<Map<String, Object>>) effectiveLocationData.get(SUBFIELDS);
+
+    // Since this location has missing isActive field, it should be treated as
+    // inactive and have "Inactive" prefix
+    boolean hasInactiveInstitution = subfieldsList.stream()
+        .anyMatch(subfield -> "a".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveCampus = subfieldsList.stream()
+        .anyMatch(subfield -> "b".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLibrary = subfieldsList.stream()
+        .anyMatch(subfield -> "c".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLocationName = subfieldsList.stream()
+        .anyMatch(subfield -> ("d".equals(subfield.get("code")) || "s".equals(subfield.get("code"))) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    assertTrue(hasInactiveInstitution, "Institution name should have 'Inactive' prefix when isActive is missing");
+    assertTrue(hasInactiveCampus, "Campus name should have 'Inactive' prefix when isActive is missing");
+    assertTrue(hasInactiveLibrary, "Library name should have 'Inactive' prefix when isActive is missing");
+    assertTrue(hasInactiveLocationName, "Location name should have 'Inactive' prefix when isActive is missing");
+
+    // Log the subfields for debugging
+    logger.info("Effective location subfields for missing isActive field test:");
+    subfieldsList.forEach(subfield -> logger.info("  Subfield {}: {}", subfield.get("code"), subfield.get("value")));
+  }
+
+  @Test
+  void shouldTreatCompleteLocationWithMissingIsActiveAsActive() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(
+            getJsonObjectFromFile("/inventory_view/enriched_instance_with_complete_location_no_isactive.json")));
+
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+        inventoryInstance,
+        true);
+
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    assertEquals(1, effectiveLocationFields.size());
+
+    JsonObject effectiveLocationField = effectiveLocationFields.get(0);
+    Map<String, Object> fieldMap = effectiveLocationField.getMap();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> effectiveLocationData = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> subfieldsList = (List<Map<String, Object>>) effectiveLocationData.get(SUBFIELDS);
+
+    // Since this location has complete data but missing isActive field, it should
+    // be treated as active (no "Inactive" prefix)
+    boolean hasInactiveInstitution = subfieldsList.stream()
+        .anyMatch(subfield -> "a".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveCampus = subfieldsList.stream()
+        .anyMatch(subfield -> "b".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLibrary = subfieldsList.stream()
+        .anyMatch(subfield -> "c".equals(subfield.get("code")) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    boolean hasInactiveLocationName = subfieldsList.stream()
+        .anyMatch(subfield -> ("d".equals(subfield.get("code")) || "s".equals(subfield.get("code"))) &&
+            subfield.get("value").toString().startsWith("Inactive"));
+
+    // For complete locations with missing isActive, should NOT have "Inactive"
+    // prefix
+    assertFalse(hasInactiveInstitution,
+        "Institution name should NOT have 'Inactive' prefix for complete location with missing isActive");
+    assertFalse(hasInactiveCampus,
+        "Campus name should NOT have 'Inactive' prefix for complete location with missing isActive");
+    assertFalse(hasInactiveLibrary,
+        "Library name should NOT have 'Inactive' prefix for complete location with missing isActive");
+    assertFalse(hasInactiveLocationName,
+        "Location name should NOT have 'Inactive' prefix for complete location with missing isActive");
+
+    // Log the subfields for debugging
+    logger.info("Effective location subfields for complete location with missing isActive test:");
+    subfieldsList.forEach(subfield -> logger.info("  Subfield {}: {}", subfield.get("code"), subfield.get("value")));
+  }
+
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder

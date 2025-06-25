@@ -336,8 +336,40 @@ public class RecordMetadataManager {
     }
 
     log.debug("Outer Location: {}", outerLocation.encodePrettily());
-    boolean isLocationActive = outerLocation.getBoolean("isActive", true);
-    log.debug("Location isActive status: {}", isLocationActive);
+
+    // More robust handling of isActive field
+    Boolean isActiveValue = null;
+    if (outerLocation.containsKey("isActive")) {
+      isActiveValue = outerLocation.getBoolean("isActive");
+    }
+
+    // Determine if location is active based on explicit value or heuristics
+    boolean isLocationActive;
+    if (isActiveValue != null) {
+      // Explicit value exists - use it
+      isLocationActive = isActiveValue;
+      log.debug("Location isActive status (explicit): {}", isLocationActive);
+    } else {
+      // Missing isActive field - apply heuristics
+      // If nested location is empty or missing key data, treat as inactive
+      JsonObject nestedLocation = outerLocation.getJsonObject(LOCATION);
+      boolean hasCompleteData = outerLocation.containsKey("name") &&
+          StringUtils.isNotBlank(outerLocation.getString("name"));
+
+      if (nestedLocation != null && nestedLocation.isEmpty()) {
+        // Empty nested location often indicates inactive location
+        isLocationActive = false;
+        log.debug("Location isActive status (inferred from empty nested location): {}", isLocationActive);
+      } else if (!hasCompleteData) {
+        // Missing basic location data suggests inactive location
+        isLocationActive = false;
+        log.debug("Location isActive status (inferred from incomplete data): {}", isLocationActive);
+      } else {
+        // Default to active if we have complete data and no explicit isActive field
+        isLocationActive = true;
+        log.debug("Location isActive status (default with complete data): {}", isLocationActive);
+      }
+    }
 
     // Handle nested location structure (when outer location contains inner
     // location)
@@ -354,6 +386,8 @@ public class RecordMetadataManager {
         if (locationGroup.isEmpty() && !isLocationActive) {
           log.debug("Found empty nested location for inactive location. " +
               "Copying fields from outer location to ensure display.");
+          // For completely empty nested locations, use the outer location data
+          locationGroup = new JsonObject(outerLocation.getMap());
         }
 
         // Copy key fields from outer location to location group for consistency
@@ -366,6 +400,8 @@ public class RecordMetadataManager {
         copyFieldIfMissing(outerLocation, locationGroup, "campusName");
         copyFieldIfMissing(outerLocation, locationGroup, "libraryName");
         copyFieldIfMissing(outerLocation, locationGroup, "name");
+        copyFieldIfMissing(outerLocation, locationGroup, "locationName");
+        copyFieldIfMissing(outerLocation, locationGroup, "code");
       } else {
         log.debug("Inner location exists but is not a JSON object: {}",
             nestedLocationObj != null ? nestedLocationObj.toString() : "null");
@@ -392,14 +428,44 @@ public class RecordMetadataManager {
 
     // Special handling for locationName/LOCATION_NAME_SUBFIELD_CODE - ensure it has
     // data
-    if (outerLocation != null && outerLocation.containsKey("name") && !isLocationActive) {
-      // If we have a name in the outer location but no locationName in the inner
-      // location,
+    if (outerLocation != null && !isLocationActive) {
+      // If we have a name in the outer location but no locationName in the effective
+      // location subfields,
       // use the outer name as a fallback for the locationName (s) subfield
       String name = outerLocation.getString("name");
-      if (!effectiveLocationSubFields.containsKey(LOCATION_NAME_SUBFIELD_CODE) && name != null) {
+      if (!effectiveLocationSubFields.containsKey(LOCATION_NAME_SUBFIELD_CODE) && StringUtils.isNotBlank(name)) {
         effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, "Inactive " + name);
         log.debug("Fallback: Added location name from outer location to subfield s: Inactive {}", name);
+      }
+
+      // Also ensure the display name subfield (d) has data for inactive locations
+      if (!effectiveLocationSubFields.containsKey(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE)
+          && StringUtils.isNotBlank(name)) {
+        effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
+            "Inactive " + name);
+        log.debug("Fallback: Added location display name from outer location to subfield d: Inactive {}", name);
+      }
+
+      // Ensure other location fields are also populated for inactive locations
+      if (!effectiveLocationSubFields.containsKey("a")
+          && StringUtils.isNotBlank(outerLocation.getString("institutionName"))) {
+        effectiveLocationSubFields.put("a", "Inactive " + outerLocation.getString("institutionName"));
+        log.debug("Fallback: Added institution name from outer location to subfield a: Inactive {}",
+            outerLocation.getString("institutionName"));
+      }
+
+      if (!effectiveLocationSubFields.containsKey("b")
+          && StringUtils.isNotBlank(outerLocation.getString("campusName"))) {
+        effectiveLocationSubFields.put("b", "Inactive " + outerLocation.getString("campusName"));
+        log.debug("Fallback: Added campus name from outer location to subfield b: Inactive {}",
+            outerLocation.getString("campusName"));
+      }
+
+      if (!effectiveLocationSubFields.containsKey("c")
+          && StringUtils.isNotBlank(outerLocation.getString("libraryName"))) {
+        effectiveLocationSubFields.put("c", "Inactive " + outerLocation.getString("libraryName"));
+        log.debug("Fallback: Added library name from outer location to subfield c: Inactive {}",
+            outerLocation.getString("libraryName"));
       }
     }
 
@@ -408,7 +474,11 @@ public class RecordMetadataManager {
 
   private void copyFieldIfMissing(JsonObject source, JsonObject target, String fieldName) {
     if (!target.containsKey(fieldName) && source.containsKey(fieldName)) {
-      target.put(fieldName, source.getString(fieldName));
+      String value = source.getString(fieldName);
+      if (StringUtils.isNotBlank(value)) {
+        target.put(fieldName, value);
+        log.debug("Copied field '{}' from outer location to nested location: {}", fieldName, value);
+      }
     }
   }
 
@@ -417,7 +487,41 @@ public class RecordMetadataManager {
     ofNullable(itemData.getJsonObject(LOCATION))
         .ifPresent(jo -> {
           String value = jo.getString(NAME);
-          boolean isActive = jo.getBoolean("isActive", true);
+
+          // More robust isActive determination
+          Boolean isActiveValue = null;
+          if (jo.containsKey("isActive")) {
+            isActiveValue = jo.getBoolean("isActive");
+          }
+
+          boolean isActive;
+          if (isActiveValue != null) {
+            isActive = isActiveValue;
+          } else {
+            // Apply same heuristics as in main method
+            JsonObject nestedLocation = jo.getJsonObject(LOCATION);
+            boolean hasCompleteData = StringUtils.isNotBlank(value);
+
+            if (nestedLocation != null && nestedLocation.isEmpty()) {
+              isActive = false;
+            } else if (!hasCompleteData) {
+              isActive = false;
+            } else {
+              isActive = true;
+            }
+          }
+
+          // If the nested location name is empty but we have an outer location name, use
+          // that instead
+          if (StringUtils.isBlank(value) && !isActive) {
+            // Try to get the name from the outer location object if it exists
+            JsonObject outerLocation = itemData.getJsonObject(LOCATION);
+            if (outerLocation != null && outerLocation.containsKey(NAME)) {
+              value = outerLocation.getString(NAME);
+              log.debug("Using outer location name for inactive location display name subfield (d): {}", value);
+            }
+          }
+
           if (StringUtils.isNotBlank(value)) {
             if (!isActive) {
               value = "Inactive " + value;
@@ -425,28 +529,74 @@ public class RecordMetadataManager {
             }
             effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE, value);
           } else {
-            log.debug("Location display name (d) is blank or missing in the location data: {}", jo.encodePrettily());
+            log.debug("Location display name (d) is blank or missing in the location data: {}",
+                jo != null ? jo.encodePrettily() : "null");
           }
         });
   }
 
   private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
-    ofNullable(itemData.getJsonObject(LOCATION))
-        .map(jo -> jo.getJsonObject(LOCATION))
-        .ifPresent(jo -> {
-          String value = jo.getString(LOCATION_NAME);
-          boolean isActive = jo.getBoolean("isActive", true);
-          if (StringUtils.isNotBlank(value)) {
-            if (!isActive) {
-              value = "Inactive " + value;
-              log.debug("Adding 'Inactive' prefix to location name subfield (s): {}", value);
-            }
-            effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value);
-          } else {
-            log.debug("Location name (s) is blank or missing in the nested location data: {}",
-                jo != null ? jo.encodePrettily() : "null");
-          }
-        });
+    JsonObject outerLocation = itemData.getJsonObject(LOCATION);
+    if (outerLocation == null) {
+      return;
+    }
+
+    // More robust isActive determination
+    Boolean isActiveValue = null;
+    if (outerLocation.containsKey("isActive")) {
+      isActiveValue = outerLocation.getBoolean("isActive");
+    }
+
+    boolean isActive;
+    if (isActiveValue != null) {
+      isActive = isActiveValue;
+    } else {
+      // Apply same heuristics as in main method
+      JsonObject nestedLocation = outerLocation.getJsonObject(LOCATION);
+      boolean hasCompleteData = outerLocation.containsKey("name") &&
+          StringUtils.isNotBlank(outerLocation.getString("name"));
+
+      if (nestedLocation != null && nestedLocation.isEmpty()) {
+        isActive = false;
+      } else if (!hasCompleteData) {
+        isActive = false;
+      } else {
+        isActive = true;
+      }
+    }
+
+    // Try to get location name from nested location first
+    JsonObject nestedLocation = outerLocation.getJsonObject(LOCATION);
+    String value = null;
+
+    if (nestedLocation != null) {
+      value = nestedLocation.getString(LOCATION_NAME);
+      if (StringUtils.isBlank(value)) {
+        // Try alternative field names in nested location
+        value = nestedLocation.getString(NAME);
+      }
+    }
+
+    // If nested location is empty or doesn't have the value, and this is an
+    // inactive location,
+    // try to use the outer location's name as fallback
+    if (StringUtils.isBlank(value) && !isActive) {
+      value = outerLocation.getString(NAME);
+      if (StringUtils.isNotBlank(value)) {
+        log.debug("Using outer location name as fallback for location name subfield (s): {}", value);
+      }
+    }
+
+    if (StringUtils.isNotBlank(value)) {
+      if (!isActive) {
+        value = "Inactive " + value;
+        log.debug("Adding 'Inactive' prefix to location name subfield (s): {}", value);
+      }
+      effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value);
+    } else {
+      log.debug("Location name (s) is blank or missing in both nested and outer location data for {}active location",
+          isActive ? "" : "in");
+    }
   }
 
   private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {
@@ -467,13 +617,30 @@ public class RecordMetadataManager {
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
-        if (isNotEmpty(subFieldValue)) {
-          // Check if this is a location field (institution, campus, library, location
-          // name)
-          // or if this is a location with isActive=false
-          boolean isLocationField = EffectiveLocationSubFields.getLocationValues().contains(pair);
-          boolean isInactive = itemData.containsKey("isActive") && !itemData.getBoolean("isActive", true);
 
+        // Check if this is a location field (institution, campus, library, location
+        // name)
+        // or if this is a location with isActive=false
+        boolean isLocationField = EffectiveLocationSubFields.getLocationValues().contains(pair);
+
+        // More robust inactive determination
+        boolean isInactive = false;
+        if (itemData.containsKey("isActive")) {
+          isInactive = !itemData.getBoolean("isActive");
+        } else if (isLocationField) {
+          // For location fields, apply heuristics when isActive is missing
+          JsonObject nestedLocation = itemData.getJsonObject(LOCATION);
+          boolean hasCompleteData = itemData.containsKey("name") &&
+              StringUtils.isNotBlank(itemData.getString("name"));
+
+          if (nestedLocation != null && nestedLocation.isEmpty()) {
+            isInactive = true;
+          } else if (!hasCompleteData) {
+            isInactive = true;
+          }
+        }
+
+        if (isNotEmpty(subFieldValue)) {
           // Add "Inactive" prefix for any location field if the location is inactive
           if (isLocationField && isInactive) {
             subFieldValue = "Inactive " + subFieldValue;
@@ -481,6 +648,11 @@ public class RecordMetadataManager {
           }
 
           effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+        } else if (isLocationField && isInactive) {
+          // For inactive locations with empty nested data, try to get the value from the
+          // parent location
+          log.debug("Subfield {} is empty for inactive location, checking if we can use fallback data", subFieldCode);
+          // This will be handled by the specific location subfield methods below
         } else {
           log.debug("Skipping subfield {} because value is empty or null. JSON path: {}",
               subFieldCode, pair.getJsonPropertyPath());
