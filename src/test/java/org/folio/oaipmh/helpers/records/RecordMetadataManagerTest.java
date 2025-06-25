@@ -285,6 +285,11 @@ class RecordMetadataManagerTest {
   @Test
   void shouldDisplayInactivePrefixIn952FieldForInactiveLocation() {
     JsonObject srsInstance = new JsonObject(); // Minimal SRS instance for test
+    // Add required structure to SRS instance
+    srsInstance.put(PARSED_RECORD, new JsonObject()
+        .put(CONTENT, new JsonObject()
+            .put(FIELDS, new JsonArray())));
+            
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile("/metadata-manager/inventory_instance_with_inactive_location_item.json")));
 
@@ -297,6 +302,102 @@ class RecordMetadataManagerTest {
     boolean foundInactive = subfields.stream()
         .anyMatch(sf -> ((JsonObject) sf).getString("d", "").startsWith("Inactive "));
     assertTrue(foundInactive, "952 field should have location name prefixed with 'Inactive '");
+  }
+
+  @Test
+  void shouldPrefixInactiveLocationWithInactiveLabel_whenLocationIsInactive() {
+    // Create test data with an inactive location
+    JsonObject srsInstance = new JsonObject();
+    // Add required structure to SRS instance with proper fields array to hold 952 fields
+    JsonArray fieldsArray = new JsonArray();
+    srsInstance.put(PARSED_RECORD, new JsonObject()
+        .put(CONTENT, new JsonObject()
+            .put(FIELDS, fieldsArray)));
+    
+    // Create a custom inventory instance with inactive location following the structure expected by the code
+    JsonObject inventoryInstance = new JsonObject();
+    JsonObject itemsAndHoldingsFields = new JsonObject();
+    JsonArray items = new JsonArray();
+    JsonObject item = new JsonObject();
+    
+    // Create a nested location structure as expected by the code
+    JsonObject outerLocation = new JsonObject();
+    JsonObject innerLocation = new JsonObject();
+    
+    // Set location values at outer level
+    outerLocation.put("institutionName", "Test Institution");
+    outerLocation.put("campusName", "Test Campus");
+    outerLocation.put("libraryName", "Test Library");
+    outerLocation.put("name", "Test Location");
+    outerLocation.put("code", "TEST_LOC");
+    outerLocation.put("isActive", false);
+    
+    // Set inner location values (to make sure it's a valid location object)
+    innerLocation.put("name", "Inner Location");
+    innerLocation.put("code", "INNER_LOC");
+    innerLocation.put("isActive", false);
+    
+    // Set up nested location structure
+    outerLocation.put("location", innerLocation);
+    
+    // Add additional required fields to item
+    item.put("materialType", "Book");
+    item.put("barcode", "123456789");
+    
+    // Add location to the item
+    item.put("location", outerLocation);
+    items.add(item);
+    
+    // Add items to itemsAndHoldingsFields (lowercase key name as used in the real code)
+    items.add(item);
+    itemsAndHoldingsFields.put("items", items);
+    
+    // Add itemsAndHoldingsFields to inventoryInstance (lowercase key as used in real code)
+    inventoryInstance.put("itemsandholdingsfields", itemsAndHoldingsFields);
+    
+    // Add instance ID to make sure it's recognized correctly
+    inventoryInstance.put("instanceId", UUID.randomUUID().toString());
+
+    // Process the data
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+        inventoryInstance,
+        true);
+
+    // Debug output to see what was generated
+    System.out.println("Populated SRS Instance: " + populatedWithItemsDataSrsInstance.encodePrettily());
+
+    // Verify the results
+    JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    
+    // Make sure we found at least one effective location field
+    assertEquals(1, effectiveLocationFields.size(), "Should have exactly one effective location field");
+    
+    // Extract subfields from the 952 field
+    JsonObject effectiveLocationField = effectiveLocationFields.get(0);
+    JsonObject field952 = effectiveLocationField.getJsonObject(EFFECTIVE_LOCATION_FILED);
+    JsonArray subfields = field952.getJsonArray(SUBFIELDS);
+    
+    // Create a flag to track if we found at least one location subfield with "Inactive" prefix
+    boolean foundInactiveLocationSubfield = false;
+    
+    // Check location subfields to ensure they have the "Inactive" prefix
+    for (int i = 0; i < subfields.size(); i++) {
+      JsonObject subfield = subfields.getJsonObject(i);
+      String code = subfield.fieldNames().iterator().next();
+      String value = subfield.getString(code);
+      
+      // Location fields should have "Inactive" prefix
+      if (code.equals("a") || code.equals("b") || code.equals("c") || code.equals("d")) {
+        System.out.println("Found location subfield " + code + " with value: " + value);
+        if (value.startsWith("Inactive ")) {
+          foundInactiveLocationSubfield = true;
+        }
+      }
+    }
+    
+    // Verify that we found at least one location subfield with "Inactive" prefix
+    assertTrue(foundInactiveLocationSubfield, "Should have at least one location subfield (a, b, c, or d) with 'Inactive' prefix");
   }
 
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {

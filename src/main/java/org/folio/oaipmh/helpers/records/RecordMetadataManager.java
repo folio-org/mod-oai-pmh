@@ -337,6 +337,11 @@ public class RecordMetadataManager {
         locationGroup = outerLocation.getJsonObject(LOCATION);
         log.info(locationGroup + "lg");
         log.debug(locationGroup + "lg");
+        
+        // Copy isActive status from outer location to location group if it exists
+        if (outerLocation.containsKey("isActive")) {
+          locationGroup.put("isActive", outerLocation.getBoolean("isActive"));
+        }
       } else {
         locationGroup = outerLocation;
       }
@@ -404,6 +409,13 @@ public class RecordMetadataManager {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
+          // Check if this is a location field and handle inactive status
+          if (EffectiveLocationSubFields.getLocationValues().contains(pair) && itemData.containsKey("isActive")) {
+            boolean isActive = itemData.getBoolean("isActive", true);
+            if (!isActive) {
+              subFieldValue = "Inactive " + subFieldValue;
+            }
+          }
           effectiveLocationSubFields.put(subFieldCode, subFieldValue);
         }
       });
