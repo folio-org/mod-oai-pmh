@@ -333,14 +333,28 @@ public class RecordMetadataManager {
     log.info(outerLocation + "ol");
     log.debug(outerLocation + "ol");
     if (outerLocation != null) {
+      // Handle nested location structure (when outer location contains inner location)
       if (outerLocation.containsKey(LOCATION) && outerLocation.getValue(LOCATION) instanceof JsonObject) {
         locationGroup = outerLocation.getJsonObject(LOCATION);
         log.info(locationGroup + "lg");
         log.debug(locationGroup + "lg");
         
-        // Copy isActive status from outer location to location group if it exists
+        // Copy key fields from outer location to location group for consistency
         if (outerLocation.containsKey("isActive")) {
           locationGroup.put("isActive", outerLocation.getBoolean("isActive"));
+        }
+        // Copy name field values if they don't exist in the inner location
+        if (!locationGroup.containsKey("institutionName") && outerLocation.containsKey("institutionName")) {
+          locationGroup.put("institutionName", outerLocation.getString("institutionName"));
+        }
+        if (!locationGroup.containsKey("campusName") && outerLocation.containsKey("campusName")) {
+          locationGroup.put("campusName", outerLocation.getString("campusName"));
+        }
+        if (!locationGroup.containsKey("libraryName") && outerLocation.containsKey("libraryName")) {
+          locationGroup.put("libraryName", outerLocation.getString("libraryName"));
+        }
+        if (!locationGroup.containsKey("name") && outerLocation.containsKey("name")) {
+          locationGroup.put("name", outerLocation.getString("name"));
         }
       } else {
         locationGroup = outerLocation;
@@ -409,13 +423,16 @@ public class RecordMetadataManager {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
-          // Check if this is a location field and handle inactive status
-          if (EffectiveLocationSubFields.getLocationValues().contains(pair) && itemData.containsKey("isActive")) {
-            boolean isActive = itemData.getBoolean("isActive", true);
-            if (!isActive) {
-              subFieldValue = "Inactive " + subFieldValue;
-            }
+          // Check if this is a location field (institution, campus, library, location name) 
+          // or if this is a location with isActive=false
+          boolean isLocationField = EffectiveLocationSubFields.getLocationValues().contains(pair);
+          boolean isInactive = itemData.containsKey("isActive") && !itemData.getBoolean("isActive", true);
+          
+          // Add "Inactive" prefix for any location field if the location is inactive
+          if (isLocationField && isInactive) {
+            subFieldValue = "Inactive " + subFieldValue;
           }
+          
           effectiveLocationSubFields.put(subFieldCode, subFieldValue);
         }
       });
@@ -521,6 +538,7 @@ public class RecordMetadataManager {
     INSTITUTION_NAME("a", "institutionName"),
     CAMPUS_NAME("b", "campusName"),
     LIBRARY_NAME("c", "libraryName"),
+    LOCATION_NAME("d", "name"),
     CALL_NUMBER("e", "callNumber"),
     CALL_NUMBER_PREFIX("f", "prefix"),
     CALL_NUMBER_SUFFIX("g", "suffix"),
@@ -541,7 +559,7 @@ public class RecordMetadataManager {
     }
 
     public static List<EffectiveLocationSubFields> getLocationValues() {
-      return Arrays.asList(INSTITUTION_NAME, CAMPUS_NAME, LIBRARY_NAME);
+      return Arrays.asList(INSTITUTION_NAME, CAMPUS_NAME, LIBRARY_NAME, LOCATION_NAME);
     }
 
     public static List<EffectiveLocationSubFields> getCallNumberValues() {
