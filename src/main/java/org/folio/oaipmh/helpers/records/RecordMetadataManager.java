@@ -372,7 +372,6 @@ public class RecordMetadataManager {
 
   private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
-      .map(jo -> jo.getJsonObject(LOCATION))
       .map(jo -> jo.getString(LOCATION_NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
