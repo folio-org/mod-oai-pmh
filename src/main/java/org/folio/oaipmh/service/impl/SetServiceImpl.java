@@ -103,63 +103,31 @@ public class SetServiceImpl implements SetService {
     return promise.future();
   }
 
-//  private Future<JsonObject> getFilteringConditionValues(String requestUri, WebClient webClient,
-//      Map<String, String> okapiHeaders) {
-//    Promise<JsonObject> promise = Promise.promise();
-//    requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
-//
-//    String okapiUrl = okapiHeaders.get(OKAPI_URL);
-//    String tenant = okapiHeaders.get(OKAPI_TENANT);
-//    String token = okapiHeaders.get(OKAPI_TOKEN);
-//
-//    HttpRequest<Buffer> httpRequest = webClient.getAbs(okapiUrl + requestUri)
-//      .putHeader(OKAPI_TOKEN, token)
-//      .putHeader(OKAPI_TENANT, tenant)
-//      .putHeader(ACCEPT, APPLICATION_JSON);
-//
-//    httpRequest.send().onSuccess(response -> {
-//      if(response.statusCode() == 200) {
-//        promise.complete(response.bodyAsJsonObject());
-//      } else {
-//        String msg = format("Invalid response obtained. Status code %s, message: %s.", response.statusCode(), response.statusMessage());
-//        promise.fail(new IllegalStateException(msg));
-//      }
-//    }).onFailure(promise::fail);
-//
-//    return promise.future();
-//  }
-private Future<JsonObject> getFilteringConditionValues(String requestUri, WebClient webClient,
-                                                       Map<String, String> okapiHeaders) {
-  Promise<JsonObject> promise = Promise.promise();
+  private Future<JsonObject> getFilteringConditionValues(String requestUri, WebClient webClient,
+      Map<String, String> okapiHeaders) {
+    Promise<JsonObject> promise = Promise.promise();
+    requestUri = requestUri + "?" + "offset=" + 0 + "&" + "limit=" + Integer.MAX_VALUE;
 
-  // Apply full query only for LOCATION_URI to fetch both active and inactive locations
-  if (LOCATION_URI.equals(requestUri)) {
-    requestUri += "?query=cql.allRecords=1&offset=0&limit=" + Integer.MAX_VALUE;
-  } else {
-    requestUri += "?offset=0&limit=" + Integer.MAX_VALUE;
+    String okapiUrl = okapiHeaders.get(OKAPI_URL);
+    String tenant = okapiHeaders.get(OKAPI_TENANT);
+    String token = okapiHeaders.get(OKAPI_TOKEN);
+
+    HttpRequest<Buffer> httpRequest = webClient.getAbs(okapiUrl + requestUri)
+      .putHeader(OKAPI_TOKEN, token)
+      .putHeader(OKAPI_TENANT, tenant)
+      .putHeader(ACCEPT, APPLICATION_JSON);
+
+    httpRequest.send().onSuccess(response -> {
+      if(response.statusCode() == 200) {
+        promise.complete(response.bodyAsJsonObject());
+      } else {
+        String msg = format("Invalid response obtained. Status code %s, message: %s.", response.statusCode(), response.statusMessage());
+        promise.fail(new IllegalStateException(msg));
+      }
+    }).onFailure(promise::fail);
+
+    return promise.future();
   }
-
-  String okapiUrl = okapiHeaders.get(OKAPI_URL);
-  String tenant = okapiHeaders.get(OKAPI_TENANT);
-  String token = okapiHeaders.get(OKAPI_TOKEN);
-
-  HttpRequest<Buffer> httpRequest = webClient.getAbs(okapiUrl + requestUri)
-    .putHeader(OKAPI_TOKEN, token)
-    .putHeader(OKAPI_TENANT, tenant)
-    .putHeader(ACCEPT, APPLICATION_JSON);
-
-  httpRequest.send().onSuccess(response -> {
-    if (response.statusCode() == 200) {
-      promise.complete(response.bodyAsJsonObject());
-    } else {
-      String msg = format("Invalid response obtained. Status code %s, message: %s.", response.statusCode(), response.statusMessage());
-      promise.fail(new IllegalStateException(msg));
-    }
-  }).onFailure(promise::fail);
-
-  return promise.future();
-}
-
 
   private SetsFilteringCondition jsonObjectToSetsFilteringCondition(JsonObject fkValues, String fkType,
       String filteringConditionName) {

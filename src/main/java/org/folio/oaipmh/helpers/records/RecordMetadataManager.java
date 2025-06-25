@@ -126,10 +126,6 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
                                                   JsonObject inventoryInstance,
                                                   boolean suppressedRecordsProcessing) {
-
-    log.debug("itemData JSON populateMetadataWithItemsData: " + inventoryInstance.encodePrettily());
-    log.info("itemData JSON populateMetadataWithItemsData: " + inventoryInstance.encodePrettily());
-
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
       log.debug("ITEMS_AND_HOLDINGS_FIELDS value is not a JsonObject, returning srsInstance as is.");
@@ -137,30 +133,15 @@ public class RecordMetadataManager {
     }
 
     JsonObject itemsAndHoldings = (JsonObject) value;
-    log.debug("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
-    log.info("itemsAndHoldings: " + itemsAndHoldings.encodePrettily());
-
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
-    log.debug("items: " + (items != null ? items.encodePrettily() : "null"));
-    log.info("items: " + (items != null ? items.encodePrettily() : "null"));
-
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
-    log.debug("holdings: " + (holdings != null ? holdings.encodePrettily() : "null"));
-    log.info("holdings: " + (holdings != null ? holdings.encodePrettily() : "null"));
-
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      log.debug("fieldsList: " + fieldsList);
-      log.info("fieldsList: " + fieldsList);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       if (nonNull(holdings)) {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       }
-    } else {
-      log.debug("No items to process or items list is empty.");
-      log.info("No items to process or items list is empty.");
     }
-
     return srsInstance;
   }
 
@@ -331,24 +312,31 @@ public class RecordMetadataManager {
       return Arrays.asList(indicatorsInString.split(","));
     } else {
       return Collections.emptyList();
-
     }
   }
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
     log.debug("itemData JSON: " + itemData.encodePrettily());
-    log.info("itemData JSON: " + itemData.encodePrettily());
 
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
 
-    // Get the outer location object
-    JsonObject locationGroup = itemData.getJsonObject(LOCATION);
-    log.info("Effective locationGroup: " + (locationGroup != null ? locationGroup.encodePrettily() : "null"));
-    log.debug("Effective locationGroup: " + (locationGroup != null ? locationGroup.encodePrettily() : "null"));
+    JsonObject outerLocation = itemData.getJsonObject(LOCATION);
+    JsonObject locationGroup = null;
+
+    // Try resolved location object (nested)
+    if (outerLocation != null) {
+      locationGroup = outerLocation.getJsonObject(LOCATION);
+
+      // Fallback to outer if nested not resolved
+      if (locationGroup == null || locationGroup.isEmpty()) {
+        locationGroup = outerLocation;
+        log.warn("Using fallback locationGroup (likely inactive): " + locationGroup.encodePrettily());
+      }
+    }
 
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
 
-    // Always use outer 'location' object directly to handle both active/inactive locations
+    // Add location subfields even if inactive
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
@@ -362,7 +350,6 @@ public class RecordMetadataManager {
 
 
 
-
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
       .map(jo -> jo.getString(NAME))
@@ -372,6 +359,7 @@ public class RecordMetadataManager {
 
   private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
+      .map(jo -> jo.getJsonObject(LOCATION))
       .map(jo -> jo.getString(LOCATION_NAME))
       .filter(StringUtils::isNotBlank)
       .ifPresent(value -> effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, value));
