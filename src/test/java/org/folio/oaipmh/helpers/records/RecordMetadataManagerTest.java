@@ -73,6 +73,8 @@ class RecordMetadataManagerTest {
   private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE = "/metadata-manager/item_only_permanent_loan_type.json";
   private static final String ITEM_EMPTY_LOAN_TYPE = "/metadata-manager/item_empty_loan_type.json";
 
+  private static final String INVENTORY_INSTANCE_WITH_ITEM_WITH_NULL_LOCATION_GROUP = "/metadata-manager/ABC.json" ;
+
   private static final String ELECTRONIC_ACCESS_FILED = "856";
   private static final String GENERAL_INFO_FIELD = "999";
   private static final String EFFECTIVE_LOCATION_FILED = "952";
@@ -230,6 +232,24 @@ class RecordMetadataManagerTest {
     int value = getSuppressedFromDiscoveryValue(effectiveLocationFields);
     assertEquals(0, value);
   }
+
+  @Test
+  void shouldNotPopulateLocationSubfields_whenLocationGroupIsNull() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject inventoryInstance = new JsonObject(
+      requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ITEM_WITH_NULL_LOCATION_GROUP)));
+
+    // Call your method that populates metadata with inventory items data
+    JsonObject updatedInstance = metadataManager.populateMetadataWithItemsData(srsInstance, inventoryInstance, true);
+
+    // Extract fields from updated instance
+    JsonArray fields = getContentFieldsArray(updatedInstance);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+
+    // For each effective location field, verify that location subfields (a,b,c,d,s) are NOT present
+    effectiveLocationFields.forEach(field -> verifyEffectiveLocationFieldHasCorrectData(field, false, true));
+  }
+
 
   @Test
   void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemSuppressedFromDiscovery() {
