@@ -1,0 +1,28 @@
+{
+  "itemsandholdingsfields": {
+    "items": [
+      {
+        "id": "item-1",
+        "effectiveLocation": null,
+        "permanentLocation": null,
+        "temporaryLocation": null,
+        "callNumber": "Call number 1",
+        "callNumberPrefix": "prefix",
+        "callNumberSuffix": "suffix",
+        "barcode": "1234567890",
+        "copyNumber": "1",
+        "chronology": "Vol. 1",
+        "materialType": "book",
+        "discoverySuppress": false,
+        "holdingsRecordId": "holding-1"
+      }
+    ],
+    "holdings": [
+      {
+        "id": "holding-1",
+        "location": null,
+        "illPolicy": "standard"
+      }
+    ]
+  }
+}

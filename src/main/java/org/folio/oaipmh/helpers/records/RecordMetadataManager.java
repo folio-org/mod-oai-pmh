@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -35,6 +36,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Is used for manipulating with record metadata. Updates, constructs the new fields or already presented fields.
  */
+@Log4j2
 public class RecordMetadataManager {
 
   private static final String GENERAL_INFO_FIELD_TAG_NUMBER = "999";
@@ -126,12 +128,13 @@ public class RecordMetadataManager {
                                                   boolean suppressedRecordsProcessing) {
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
+      log.debug("ITEMS_AND_HOLDINGS_FIELDS value is not a JsonObject, returning srsInstance as is.");
       return srsInstance;
     }
+
     JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
-
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
       populateItemsAndAddIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
@@ -235,6 +238,7 @@ public class RecordMetadataManager {
                                                           List<Object> marcRecordFields,
                                                           boolean suppressedRecordsProcessing,
                                                           Optional<String> illPolicy) {
+
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE, calculateDiscoverySuppressedSubfieldValue(itemData));
@@ -312,20 +316,39 @@ public class RecordMetadataManager {
   }
 
   private Map<String, Object> constructEffectiveLocationSubFieldsMap(JsonObject itemData) {
+    log.debug("itemData JSON: " + itemData.encodePrettily());
+
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
+
+    JsonObject outerLocation = itemData.getJsonObject(LOCATION);
     JsonObject locationGroup = null;
-    if(nonNull(itemData.getJsonObject(LOCATION))) {
-      locationGroup = itemData.getJsonObject(LOCATION).getJsonObject(LOCATION);
+
+    // Try resolved location object (nested)
+    if (outerLocation != null) {
+      locationGroup = outerLocation.getJsonObject(LOCATION);
+
+      // Fallback to outer if nested not resolved
+      if (locationGroup == null || locationGroup.isEmpty()) {
+        locationGroup = outerLocation;
+        log.warn("Using fallback locationGroup (likely inactive): " + locationGroup.encodePrettily());
+      }
     }
+
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
+
+    // Add location subfields even if inactive
     addSubFieldGroup(effectiveLocationSubFields, locationGroup, EffectiveLocationSubFields.getLocationValues());
     addSubFieldGroup(effectiveLocationSubFields, callNumberGroup, EffectiveLocationSubFields.getCallNumberValues());
     addSubFieldGroup(effectiveLocationSubFields, itemData, EffectiveLocationSubFields.getSimpleValues());
+
     updateSubfieldsMapWithItemLoanTypeSubfield(effectiveLocationSubFields, itemData);
     addLocationDiscoveryDisplayNameOrLocationNameSubfield(itemData, effectiveLocationSubFields);
     addLocationNameSubfield(itemData, effectiveLocationSubFields);
+
     return effectiveLocationSubFields;
   }
+
+
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
