@@ -290,7 +290,7 @@ class RecordMetadataManagerTest {
     srsInstance.put(PARSED_RECORD, new JsonObject()
         .put(CONTENT, new JsonObject()
             .put(FIELDS, new JsonArray())));
-            
+
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile("/metadata-manager/inventory_instance_with_inactive_location_item.json")));
 
@@ -309,10 +309,10 @@ class RecordMetadataManagerTest {
   void shouldPrefixInactiveLocationWithInactiveLabel_whenLocationIsInactive() {
     // Use the test file that we've updated with proper structure
     JsonObject srsInstance = new JsonObject()
-      .put(PARSED_RECORD, new JsonObject()
-          .put(CONTENT, new JsonObject()
-              .put(FIELDS, new JsonArray())));
-            
+        .put(PARSED_RECORD, new JsonObject()
+            .put(CONTENT, new JsonObject()
+                .put(FIELDS, new JsonArray())));
+
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile("/metadata-manager/inventory_instance_with_inactive_location_item.json")));
 
@@ -327,25 +327,25 @@ class RecordMetadataManagerTest {
     // Verify the results
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
-    
+
     // Make sure we found at least one effective location field
     assertEquals(1, effectiveLocationFields.size(), "Should have exactly one effective location field");
-    
+
     // Extract subfields from the 952 field
     JsonObject field952 = effectiveLocationFields.get(0).getJsonObject(EFFECTIVE_LOCATION_FILED);
     JsonArray subfields = field952.getJsonArray(SUBFIELDS);
-    
+
     // Check each location subfield to ensure it has the "Inactive" prefix
     Map<String, Boolean> locationSubfieldsPrefixed = new HashMap<>();
     locationSubfieldsPrefixed.put("a", false); // institution
     locationSubfieldsPrefixed.put("b", false); // campus
     locationSubfieldsPrefixed.put("c", false); // library
     locationSubfieldsPrefixed.put("d", false); // location name
-    
+
     // Scan all subfields
     // We need to extract all subfields from the JSON array
     Map<String, String> extractedSubfields = new HashMap<>();
-    
+
     for (int i = 0; i < subfields.size(); i++) {
       JsonObject subfield = subfields.getJsonObject(i);
       for (String code : subfield.fieldNames()) {
@@ -354,7 +354,7 @@ class RecordMetadataManagerTest {
         System.out.println("Found subfield " + code + " with value: " + value);
       }
     }
-    
+
     // Check if each location subfield has the "Inactive" prefix
     for (String code : locationSubfieldsPrefixed.keySet()) {
       String value = extractedSubfields.get(code);
@@ -364,7 +364,7 @@ class RecordMetadataManagerTest {
         System.out.println("Subfield " + code + " was not found or didn't have 'Inactive' prefix");
       }
     }
-    
+
     boolean allLocationFieldsPrefixed = locationSubfieldsPrefixed.values().stream().allMatch(Boolean::booleanValue);
     assertTrue(allLocationFieldsPrefixed, "All location subfields (a, b, c, d) should have 'Inactive' prefix");
   }
