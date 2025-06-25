@@ -728,7 +728,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instancesMap.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request, isSkipSuppressed(request));
+    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request, isSkipSuppressed(request), referenceDataProvider);
     var jsonParser = itemsHoldingsEnrichment.getJsonParser();
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))

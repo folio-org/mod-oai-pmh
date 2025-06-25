@@ -319,16 +319,29 @@ public class RecordMetadataManager {
     Map<String, Object> effectiveLocationSubFields = new HashMap<>();
     JsonObject locationGroup = null;
     JsonObject outerLocation = itemData.getJsonObject(LOCATION);
-    log.info(outerLocation + "ol");
-    log.debug(outerLocation + "ol");
+    log.info("outerLocation: " + outerLocation);
+    log.debug("outerLocation: " + outerLocation);
     if (outerLocation != null) {
       if (outerLocation.containsKey(LOCATION) && outerLocation.getValue(LOCATION) instanceof JsonObject) {
         locationGroup = outerLocation.getJsonObject(LOCATION);
-        log.info(locationGroup + "lg");
-        log.debug(locationGroup + "lg");
+        log.info("locationGroup (inner): " + locationGroup);
+        log.debug("locationGroup (inner): " + locationGroup);
       } else {
         locationGroup = outerLocation;
+        log.info("locationGroup (outer): " + locationGroup);
+        log.debug("locationGroup (outer): " + locationGroup);
       }
+      
+      // Log location hierarchy availability
+      if (locationGroup != null) {
+        log.info("Location hierarchy check - institutionName: {}, campusName: {}, libraryName: {}, isActive: {}", 
+          locationGroup.getString("institutionName"),
+          locationGroup.getString("campusName"), 
+          locationGroup.getString("libraryName"),
+          locationGroup.getBoolean("isActive"));
+      }
+    } else {
+      log.warn("No location data found in itemData");
     }
 
     JsonObject callNumberGroup = itemData.getJsonObject(CALL_NUMBER);
@@ -375,13 +388,20 @@ public class RecordMetadataManager {
   private void addSubFieldGroup(Map<String, Object> effectiveLocationSubFields, JsonObject itemData,
                                 List<EffectiveLocationSubFields> subFieldGroupProperties) {
     if(nonNull(itemData)) {
+      log.info("Processing subfield group with data: {}", itemData.encodePrettily());
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
+        log.info("Checking subfield {} (path: {}) = '{}'", subFieldCode, pair.getJsonPropertyPath(), subFieldValue);
         if (isNotEmpty(subFieldValue)) {
           effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+          log.info("Added subfield {} with value '{}'", subFieldCode, subFieldValue);
+        } else {
+          log.warn("Subfield {} (path: {}) is empty or null", subFieldCode, pair.getJsonPropertyPath());
         }
       });
+    } else {
+      log.warn("itemData is null for subfield group");
     }
   }
 
