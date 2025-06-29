@@ -128,13 +128,22 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
       JsonObject inventoryInstance,
       boolean suppressedRecordsProcessing) {
+    log.info("Starting populateMetadataWithItemsData");
+    log.info("Input srsInstance: {}", srsInstance.encodePrettily());
+    log.info("Input inventoryInstance: {}", inventoryInstance.encodePrettily());
+    log.info("suppressedRecordsProcessing: {}", suppressedRecordsProcessing);
+
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
     if (!(value instanceof JsonObject)) {
       return srsInstance;
     }
     JsonObject itemsAndHoldings = (JsonObject) value;
+    log.info("itemsAndHoldings: {}", itemsAndHoldings.encodePrettily());
+
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
+    log.info("Extracted items: {}", items != null ? items.encodePrettily() : "null");
+    log.info("Extracted holdings: {}", holdings != null ? holdings.encodePrettily() : "null");
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
@@ -143,17 +152,26 @@ public class RecordMetadataManager {
         populateHoldingsWithIllPolicy(items, holdings, fieldsList, suppressedRecordsProcessing);
       }
     }
+    log.info("Finished populateMetadataWithItemsData");
+    log.info("Output srsInstance: {}", srsInstance.encodePrettily());
     return srsInstance;
   }
 
   private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings, List<Object> fieldsList,
       boolean suppressedRecordsProcessing) {
+    log.info("Starting populateItemsAndAddIllPolicy");
+    log.info("Input items: {}", items != null ? items.encodePrettily() : "null");
+    log.info("Input holdings: {}", holdings != null ? holdings.encodePrettily() : "null");
+    log.info("Initial fieldsList: {}", fieldsList);
+    log.info("suppressedRecordsProcessing: {}", suppressedRecordsProcessing);
+
     getItemsFromItems(items).forEach(item -> {
       var illPolicyOpt = nonNull(holdings)
           ? holdings.stream().map(JsonObject.class::cast).filter(hold -> hold.getString("id")
               .equals(item.getString(HOLDINGS_RECORD_ID)) && StringUtils.isNotBlank(hold.getString(ILL_POLICY)))
               .map(hold -> hold.getString(ILL_POLICY)).findFirst()
           : Optional.<String>empty();
+
       updateFieldsWithItemEffectiveLocationField(item, fieldsList, suppressedRecordsProcessing, illPolicyOpt);
       updateFieldsWithElectronicAccessField(item, fieldsList, suppressedRecordsProcessing);
     });
@@ -243,6 +261,8 @@ public class RecordMetadataManager {
       List<Object> marcRecordFields,
       boolean suppressedRecordsProcessing,
       Optional<String> illPolicy) {
+
+    log.info("Updating fields with item effective location field for item: {}", itemData.encodePrettily());
     Map<String, Object> effectiveLocationSubFields = constructEffectiveLocationSubFieldsMap(itemData);
     if (suppressedRecordsProcessing) {
       effectiveLocationSubFields.put(DISCOVERY_SUPPRESSED_SUBFIELD_CODE,
@@ -258,6 +278,9 @@ public class RecordMetadataManager {
         .withSubFields(effectiveLocationSubFields)
         .build();
     marcRecordFields.add(effectiveLocationField);
+    log.info("Built marcRecordFields: {}", marcRecordFields);
+    log.info("Added effectiveLocationField to marcRecordFields. Current size: {}", marcRecordFields.size());
+
   }
 
   /**
