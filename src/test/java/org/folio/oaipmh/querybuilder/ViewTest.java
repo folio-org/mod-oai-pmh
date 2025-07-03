@@ -18,7 +18,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -90,6 +89,8 @@ class ViewTest {
       false, true, 200);
     LOGGER.debug("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
+    // At the moment, in init_database_with_data.sql there are no deleted instances with FOLIO source
+    // and "deleted": true.
     assertEquals(Files.readString(EXPECTED_FOLIO_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
 
@@ -108,7 +109,7 @@ class ViewTest {
   void shouldReturnMarcDeletedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
       false, true, 200);
-    LOGGER.debug("\n" + query);
+    LOGGER.info("\n" + query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
   }

@@ -2494,9 +2494,9 @@ class OaiPmhImplTest {
     verifyListResponse(oaipmh, verb, 1);
 
     if (verb.equals(LIST_RECORDS)) {
-      assertThat(oaipmh.getListRecords().getRecords().get(0).getHeader().getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListRecords().getRecords().getFirst().getHeader().getStatus(), is(StatusType.DELETED));
     } else {
-      assertThat(oaipmh.getListIdentifiers().getHeaders().get(0).getStatus(), is(StatusType.DELETED));
+      assertThat(oaipmh.getListIdentifiers().getHeaders().getFirst().getStatus(), is(StatusType.DELETED));
     }
 
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, repositorySuppressDiscovery);
