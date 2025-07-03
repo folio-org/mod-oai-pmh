@@ -109,7 +109,7 @@ class ViewTest {
   void shouldReturnMarcDeletedInstances() {
     var query = QueryBuilder.build("oaitest", null, null, null, RecordsSource.MARC,
       false, true, 200);
-    LOGGER.info("\n" + query);
+      LOGGER.info("\n{}", query);
     var actualResponse = doQuery(query, "instance_id");
     assertEquals(Files.readString(EXPECTED_MARC_DELETED_INSTANCE_IDS).trim(), actualResponse.trim());
   }
