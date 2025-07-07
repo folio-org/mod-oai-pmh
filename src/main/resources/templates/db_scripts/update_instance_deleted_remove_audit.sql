@@ -1,3 +1,5 @@
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted CASCADE;
+
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
 SELECT (jsonb ->> 'id')::uuid                                                                                              instance_id,
       marc_record.content                                                                                                     marc_record,
