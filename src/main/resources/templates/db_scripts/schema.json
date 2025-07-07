@@ -13,7 +13,7 @@
     {
       "run": "after",
       "snippetPath": "update_instance_deleted_remove_audit.sql",
-      "fromModuleVersion": "mod-oai-pmh-3.15.1"
+      "fromModuleVersion": "mod-oai-pmh-3.16.0"
     }
   ]
 }
