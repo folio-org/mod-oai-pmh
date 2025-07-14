@@ -342,24 +342,11 @@ public class RecordMetadataManager {
       Map<String, Object> effectiveLocationSubFields) {
   ofNullable(itemData.getJsonObject(LOCATION))
       .ifPresent(loc -> {
-        // Get the original discoveryDisplayName (before COALESCE)
-        String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
         String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
 
         if (StringUtils.isNotBlank(displayName)) {
-          String finalDisplayName;
-
-          // Check if the displayName actually came from discoveryDisplayName
-          if (StringUtils.isNotBlank(originalDiscoveryDisplayName) &&
-              displayName.equals(originalDiscoveryDisplayName)) {
-            // The displayName is the discoveryDisplayName, check if location is inactive and add prefix
-            boolean isActive = loc.getBoolean("isActive", false); // fixed: check directly from loc
-
-            finalDisplayName = isActive ? displayName : "Inactive " + displayName;
-          } else {
-            // The displayName is the fallback location name, use it without inactive prefix
-            finalDisplayName = displayName;
-          }
+          boolean isActive = loc.getBoolean("isActive", false);
+          String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
 
           effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
               finalDisplayName);
