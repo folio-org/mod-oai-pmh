@@ -342,13 +342,23 @@ public class RecordMetadataManager {
       Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
         .ifPresent(loc -> {
-          String displayName = loc.getString(NAME);
+          // Get the actual discoveryDisplayName from the database (before COALESCE)
+          String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
+          String displayName = loc.getString(NAME); // This is the COALESCE result
+          
           // Check if isActive field exists, if not check nested location for status
           boolean isActive = loc.containsKey("isActive") ? loc.getBoolean("isActive", true)
               : ofNullable(loc.getJsonObject(LOCATION))
                   .map(nestedLoc -> nestedLoc.getBoolean("isActive", true))
                   .orElse(true);
-          if (StringUtils.isNotBlank(displayName)) {
+          
+          if (StringUtils.isNotBlank(originalDiscoveryDisplayName)) {
+            // Use discoveryDisplayName with inactive prefix if needed
+            String finalDisplayName = isActive ? originalDiscoveryDisplayName : "Inactive " + originalDiscoveryDisplayName;
+            effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
+                finalDisplayName);
+          } else if (StringUtils.isNotBlank(displayName)) {
+            // discoveryDisplayName is null, use location name with inactive prefix if needed
             String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
             effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
                 finalDisplayName);
