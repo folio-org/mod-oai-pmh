@@ -348,10 +348,22 @@ public class RecordMetadataManager {
               : ofNullable(loc.getJsonObject(LOCATION))
                   .map(nestedLoc -> nestedLoc.getBoolean("isActive", true))
                   .orElse(true);
+          
           if (StringUtils.isNotBlank(displayName)) {
             String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
             effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
                 finalDisplayName);
+          } else if (!isActive) {
+            // If discovery display name is null/blank but location is inactive, 
+            // use location name with "Inactive" prefix
+            ofNullable(loc.getJsonObject(LOCATION))
+                .ifPresent(nestedLoc -> {
+                  String locationName = nestedLoc.getString(LOCATION_NAME);
+                  if (StringUtils.isNotBlank(locationName)) {
+                    effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
+                        "Inactive " + locationName);
+                  }
+                });
           }
         });
   }
