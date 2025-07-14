@@ -349,8 +349,10 @@ public class RecordMetadataManager {
           if (StringUtils.isNotBlank(displayName)) {
             String finalDisplayName;
             
-            if (StringUtils.isNotBlank(originalDiscoveryDisplayName)) {
-              // Original discoveryDisplayName exists, check if location is inactive and add prefix
+            // Check if the displayName actually came from discoveryDisplayName
+            if (StringUtils.isNotBlank(originalDiscoveryDisplayName) && 
+                displayName.equals(originalDiscoveryDisplayName)) {
+              // The displayName is the discoveryDisplayName, check if location is inactive and add prefix
               boolean isActive;
               if (loc.containsKey("isActive")) {
                 isActive = loc.getBoolean("isActive", true);
@@ -362,7 +364,7 @@ public class RecordMetadataManager {
               }
               finalDisplayName = isActive ? displayName : "Inactive " + displayName;
             } else {
-              // Original discoveryDisplayName is null, use location name without inactive prefix
+              // The displayName is the fallback location name, use it without inactive prefix
               finalDisplayName = displayName;
             }
             
