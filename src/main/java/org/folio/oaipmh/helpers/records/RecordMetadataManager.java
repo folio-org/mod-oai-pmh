@@ -340,50 +340,47 @@ public class RecordMetadataManager {
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData,
       Map<String, Object> effectiveLocationSubFields) {
-    ofNullable(itemData.getJsonObject(LOCATION))
-        .ifPresent(loc -> {
-          // Get the original discoveryDisplayName (before COALESCE)
-          String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
-          String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
-          
-          if (StringUtils.isNotBlank(displayName)) {
-            String finalDisplayName;
-            
-            // Check if the displayName actually came from discoveryDisplayName
-            if (StringUtils.isNotBlank(originalDiscoveryDisplayName) && 
-                displayName.equals(originalDiscoveryDisplayName)) {
-              // The displayName is the discoveryDisplayName, check if location is inactive and add prefix
-              // Check isActive in the nested location object (same as addLocationNameSubfield)
-              boolean isActive = ofNullable(loc.getJsonObject(LOCATION))
-                  .map(nestedLoc -> nestedLoc.getBoolean("isActive", false))
-                  .orElse(false); // If isActive flag is missing, assume location is inactive
-              
-              finalDisplayName = isActive ? displayName : "Inactive " + displayName;
-            } else {
-              // The displayName is the fallback location name, use it without inactive prefix
-              finalDisplayName = displayName;
-            }
-            
-            effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-                finalDisplayName);
-          }
-        });
-  }
+  ofNullable(itemData.getJsonObject(LOCATION))
+      .ifPresent(loc -> {
+        // Get the original discoveryDisplayName (before COALESCE)
+        String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
+        String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
 
-  private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
-    ofNullable(itemData.getJsonObject(LOCATION))
-        .map(loc -> loc.getJsonObject(LOCATION))
-        .ifPresent(effectiveLoc -> {
-          String locationName = effectiveLoc.getString(LOCATION_NAME);
-          if (StringUtils.isNotBlank(locationName)) {
-            // If isActive flag is missing, assume location is inactive
-            boolean isActive = effectiveLoc.getBoolean("isActive", false); // default to false if missing
-            
-            String finalName = isActive ? locationName : "Inactive " + locationName;
-            effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
+        if (StringUtils.isNotBlank(displayName)) {
+          String finalDisplayName;
+
+          // Check if the displayName actually came from discoveryDisplayName
+          if (StringUtils.isNotBlank(originalDiscoveryDisplayName) &&
+              displayName.equals(originalDiscoveryDisplayName)) {
+            // The displayName is the discoveryDisplayName, check if location is inactive and add prefix
+            boolean isActive = loc.getBoolean("isActive", false); // fixed: check directly from loc
+
+            finalDisplayName = isActive ? displayName : "Inactive " + displayName;
+          } else {
+            // The displayName is the fallback location name, use it without inactive prefix
+            finalDisplayName = displayName;
           }
-        });
-  }
+
+          effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
+              finalDisplayName);
+        }
+      });
+}
+
+private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
+  ofNullable(itemData.getJsonObject(LOCATION))
+      .map(loc -> loc.getJsonObject(LOCATION))
+      .ifPresent(effectiveLoc -> {
+        String locationName = effectiveLoc.getString(LOCATION_NAME);
+        if (StringUtils.isNotBlank(locationName)) {
+          boolean isActive = effectiveLoc.getBoolean("isActive", false); // default to false if missing
+
+          String finalName = isActive ? locationName : "Inactive " + locationName;
+          effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
+        }
+      });
+}
+
 
   private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {
     String permanentLoanType = itemData.getString(PERMANENT_LOAN_TYPE);
