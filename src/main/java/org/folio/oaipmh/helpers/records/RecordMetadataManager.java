@@ -340,43 +340,49 @@ public class RecordMetadataManager {
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData,
       Map<String, Object> effectiveLocationSubFields) {
-    ofNullable(itemData.getJsonObject(LOCATION))
-        .ifPresent(loc -> {
-          String displayName = loc.getString(NAME);
-          // Check if isActive field exists, if not check nested location for status
-          boolean isActive = loc.containsKey("isActive") ? loc.getBoolean("isActive", true)
-              : ofNullable(loc.getJsonObject(LOCATION))
-                  .map(nestedLoc -> nestedLoc.getBoolean("isActive", true))
-                  .orElse(true);
-          
-          if (StringUtils.isNotBlank(displayName)) {
-            String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
-            effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-                finalDisplayName);
-          } else if (!isActive) {
-            // If discovery display name is null/blank but location is inactive, 
-            // use location name with "Inactive" prefix
-            ofNullable(loc.getJsonObject(LOCATION))
-                .ifPresent(nestedLoc -> {
-                  String locationName = nestedLoc.getString(LOCATION_NAME);
-                  if (StringUtils.isNotBlank(locationName)) {
-                    effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-                        "Inactive " + locationName);
-                  }
-                });
+  ofNullable(itemData.getJsonObject(LOCATION))
+      .ifPresent(loc -> {
+        String displayName = loc.getString(NAME);
+        JsonObject nestedLoc = loc.getJsonObject(LOCATION);
+
+        // Check isActive at both levels - if either is false, consider location inactive
+        boolean locIsActive = loc.getBoolean("isActive", true);
+        boolean nestedLocIsActive = ofNullable(nestedLoc).map(n -> n.getBoolean("isActive", true)).orElse(true);
+        boolean isActive = locIsActive && nestedLocIsActive;
+
+        String finalValue = null;
+
+        if (StringUtils.isNotBlank(displayName)) {
+          finalValue = isActive ? displayName : "Inactive " + displayName;
+        } else if (nestedLoc != null) {
+          String fallbackName = nestedLoc.getString(LOCATION_NAME);
+          if (StringUtils.isNotBlank(fallbackName)) {
+            finalValue = isActive ? fallbackName : "Inactive " + fallbackName;
           }
-        });
-  }
+        }
+
+        if (finalValue != null) {
+          effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE, finalValue);
+        }
+      });
+}
+
 
   private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
-        .map(loc -> loc.getJsonObject(LOCATION))
-        .ifPresent(effectiveLoc -> {
-          String locationName = effectiveLoc.getString(LOCATION_NAME);
-          if (StringUtils.isNotBlank(locationName)) {
-            boolean isActive = effectiveLoc.getBoolean("isActive", true); // default to true
-            String finalName = isActive ? locationName : "Inactive " + locationName;
-            effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
+        .ifPresent(loc -> {
+          JsonObject nestedLoc = loc.getJsonObject(LOCATION);
+          if (nestedLoc != null) {
+            String locationName = nestedLoc.getString(LOCATION_NAME);
+            if (StringUtils.isNotBlank(locationName)) {
+              // Check isActive at both levels - if either is false, consider location inactive
+              boolean locIsActive = loc.getBoolean("isActive", true);
+              boolean nestedLocIsActive = nestedLoc.getBoolean("isActive", true);
+              boolean isActive = locIsActive && nestedLocIsActive;
+              
+              String finalName = isActive ? locationName : "Inactive " + locationName;
+              effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
+            }
           }
         });
   }
