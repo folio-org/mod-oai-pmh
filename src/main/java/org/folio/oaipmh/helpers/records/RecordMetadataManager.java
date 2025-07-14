@@ -353,15 +353,11 @@ public class RecordMetadataManager {
             if (StringUtils.isNotBlank(originalDiscoveryDisplayName) && 
                 displayName.equals(originalDiscoveryDisplayName)) {
               // The displayName is the discoveryDisplayName, check if location is inactive and add prefix
-              boolean isActive;
-              if (loc.containsKey("isActive")) {
-                isActive = loc.getBoolean("isActive", true);
-              } else {
-                // If isActive is not present at the top level, check nested location
-                isActive = ofNullable(loc.getJsonObject(LOCATION))
-                    .map(nestedLoc -> nestedLoc.getBoolean("isActive", false))
-                    .orElse(false); // If isActive flag is missing, assume location is inactive
-              }
+              // Check isActive in the nested location object (same as addLocationNameSubfield)
+              boolean isActive = ofNullable(loc.getJsonObject(LOCATION))
+                  .map(nestedLoc -> nestedLoc.getBoolean("isActive", false))
+                  .orElse(false); // If isActive flag is missing, assume location is inactive
+              
               finalDisplayName = isActive ? displayName : "Inactive " + displayName;
             } else {
               // The displayName is the fallback location name, use it without inactive prefix
