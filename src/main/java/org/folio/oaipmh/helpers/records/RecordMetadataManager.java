@@ -342,23 +342,27 @@ public class RecordMetadataManager {
       Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
         .ifPresent(loc -> {
-          // Get the actual discoveryDisplayName from the database (before COALESCE)
-          String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
-          String displayName = loc.getString(NAME); // This is the COALESCE result
+          String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
           
           // Check if isActive field exists, if not check nested location for status
-          boolean isActive = loc.containsKey("isActive") ? loc.getBoolean("isActive", true)
-              : ofNullable(loc.getJsonObject(LOCATION))
-                  .map(nestedLoc -> nestedLoc.getBoolean("isActive", true))
-                  .orElse(true);
+          boolean isActive;
+          if (loc.containsKey("isActive")) {
+            isActive = loc.getBoolean("isActive", true);
+          } else {
+            // If isActive is not present at the top level, check nested location
+            isActive = ofNullable(loc.getJsonObject(LOCATION))
+                .map(nestedLoc -> nestedLoc.getBoolean("isActive", true))
+                .orElse(true);
+          }
           
-          if (StringUtils.isNotBlank(originalDiscoveryDisplayName)) {
-            // Use discoveryDisplayName with inactive prefix if needed
-            String finalDisplayName = isActive ? originalDiscoveryDisplayName : "Inactive " + originalDiscoveryDisplayName;
-            effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-                finalDisplayName);
-          } else if (StringUtils.isNotBlank(displayName)) {
-            // discoveryDisplayName is null, use location name with inactive prefix if needed
+          // Special handling for DCB or locations that might be inactive by default
+          // If the location name/code suggests it might be a special inactive location
+          if (!loc.containsKey("isActive") && 
+              (displayName != null && (displayName.equals("DCB") || displayName.startsWith("Inactive")))) {
+            isActive = false;
+          }
+          
+          if (StringUtils.isNotBlank(displayName)) {
             String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
             effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
                 finalDisplayName);
@@ -373,6 +377,13 @@ public class RecordMetadataManager {
           String locationName = effectiveLoc.getString(LOCATION_NAME);
           if (StringUtils.isNotBlank(locationName)) {
             boolean isActive = effectiveLoc.getBoolean("isActive", true); // default to true
+            
+            // Special handling for DCB or locations that might be inactive by default
+            if (!effectiveLoc.containsKey("isActive") && 
+                (locationName.equals("DCB") || locationName.startsWith("Inactive"))) {
+              isActive = false;
+            }
+            
             String finalName = isActive ? locationName : "Inactive " + locationName;
             effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
           }
