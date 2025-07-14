@@ -342,12 +342,32 @@ public class RecordMetadataManager {
       Map<String, Object> effectiveLocationSubFields) {
     ofNullable(itemData.getJsonObject(LOCATION))
         .ifPresent(loc -> {
+          // Get the original discoveryDisplayName (before COALESCE)
+          String originalDiscoveryDisplayName = loc.getString("discoveryDisplayName");
           String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
           
           if (StringUtils.isNotBlank(displayName)) {
-            // No inactive prefix for discovery display name (subfield d)
+            String finalDisplayName;
+            
+            if (StringUtils.isNotBlank(originalDiscoveryDisplayName)) {
+              // Original discoveryDisplayName exists, check if location is inactive and add prefix
+              boolean isActive;
+              if (loc.containsKey("isActive")) {
+                isActive = loc.getBoolean("isActive", true);
+              } else {
+                // If isActive is not present at the top level, check nested location
+                isActive = ofNullable(loc.getJsonObject(LOCATION))
+                    .map(nestedLoc -> nestedLoc.getBoolean("isActive", false))
+                    .orElse(false); // If isActive flag is missing, assume location is inactive
+              }
+              finalDisplayName = isActive ? displayName : "Inactive " + displayName;
+            } else {
+              // Original discoveryDisplayName is null, use location name without inactive prefix
+              finalDisplayName = displayName;
+            }
+            
             effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-                displayName);
+                finalDisplayName);
           }
         });
   }
