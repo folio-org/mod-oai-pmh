@@ -339,8 +339,8 @@ public class RecordMetadataManager {
   }
 
   private void addLocationDiscoveryDisplayNameOrLocationNameSubfield(JsonObject itemData,
-      Map<String, Object> effectiveLocationSubFields) {
-  ofNullable(itemData.getJsonObject(LOCATION))
+                                                                     Map<String, Object> effectiveLocationSubFields) {
+    ofNullable(itemData.getJsonObject(LOCATION))
       .ifPresent(loc -> {
         String displayName = loc.getString(NAME); // This is the COALESCE result from SQL
 
@@ -349,24 +349,24 @@ public class RecordMetadataManager {
           String finalDisplayName = isActive ? displayName : "Inactive " + displayName;
 
           effectiveLocationSubFields.put(LOCATION_DISCOVERY_DISPLAY_NAME_OR_LOCATION_NAME_SUBFIELD_CODE,
-              finalDisplayName);
+            finalDisplayName);
         }
       });
-}
+  }
 
-private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
-  ofNullable(itemData.getJsonObject(LOCATION))
+  private void addLocationNameSubfield(JsonObject itemData, Map<String, Object> effectiveLocationSubFields) {
+    ofNullable(itemData.getJsonObject(LOCATION))
       .map(loc -> loc.getJsonObject(LOCATION))
       .ifPresent(effectiveLoc -> {
         String locationName = effectiveLoc.getString(LOCATION_NAME);
         if (StringUtils.isNotBlank(locationName)) {
-          boolean isActive = effectiveLoc.getBoolean("isActive", false); // default to false if missing
-
+          boolean isActive = effectiveLoc.getBoolean("isActive", false);
           String finalName = isActive ? locationName : "Inactive " + locationName;
           effectiveLocationSubFields.put(LOCATION_NAME_SUBFIELD_CODE, finalName);
         }
       });
-}
+  }
+
 
 
   private void updateSubfieldsMapWithItemLoanTypeSubfield(Map<String, Object> subFields, JsonObject itemData) {

@@ -412,7 +412,7 @@ class RecordMetadataManagerTest {
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
     List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
 
-    effectiveLocationFields.forEach(this::verifyActiveLocationSubfields);
+    effectiveLocationFields.forEach(this::verifyInactiveLocationSubfields);
   }
 
   @SuppressWarnings("unchecked")
@@ -453,11 +453,11 @@ class RecordMetadataManagerTest {
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
     JsonObject item = inventoryInstance.getJsonObject("itemsandholdingsfields")
-        .getJsonArray("items")
-        .getJsonObject(0);
+      .getJsonArray("items")
+      .getJsonObject(0);
 
-    item.getJsonObject("location").remove("isActive");
-    item.getJsonObject("location").getJsonObject("location").remove("isActive");
+    item.getJsonObject("location").put("isActive", true);
+    item.getJsonObject("location").getJsonObject("location").put("isActive", true);
 
     return inventoryInstance;
   }
