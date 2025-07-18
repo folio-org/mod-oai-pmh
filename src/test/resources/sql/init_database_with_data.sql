@@ -1484,6 +1484,10 @@ SELECT instance_record.id                                                       
       true                                                                                                                         deleted
       FROM oaitest_mod_oai_pmh.get_instances_from_inventory_deleted instance_record;
 
+CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_inventory AS
+SELECT * FROM oaitest_mod_inventory_storage.instance
+WHERE jsonb ->> 'deleted' IS NULL OR jsonb ->> 'deleted' = 'false';
+
 UPDATE oaitest_mod_inventory_storage.instance
 SET jsonb = jsonb || '{"deleted": "false"}'
 WHERE jsonb ->> 'deleted' IS NULL;
