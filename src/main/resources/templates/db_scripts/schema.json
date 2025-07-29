@@ -9,6 +9,11 @@
       "run": "after",
       "snippetPath": "update_instance_deleted.sql",
       "fromModuleVersion": "mod-oai-pmh-3.15.1"
+    },
+    {
+      "run": "after",
+      "snippetPath": "add_null_check_for_deleted.sql",
+      "fromModuleVersion": "mod-oai-pmh-3.16.0"
     }
   ]
 }

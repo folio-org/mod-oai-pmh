@@ -1,5 +1,14 @@
 ## 3.16.0 - Unreleased
 
+## 3.15.3 (Released)
+
+This release includes check for possible absence of instance.jsonb.deleted flag.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.2...v3.15.3)
+
+### Bug fixes
+* [MODOAIPMH-624](https://folio-org.atlassian.net/browse/MODOAIPMH-624) Add check for possible absence of instance.jsonb.deleted
+
 ## 3.15.2 (Released)
 
 This release includes bug fixes after introducing "deleted" flag in Instance.
