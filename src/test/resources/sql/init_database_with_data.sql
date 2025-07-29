@@ -1411,6 +1411,10 @@ SELECT (jsonb -> 'record' ->> 'id')::uuid                                       
       true                                                                                                                    deleted
       FROM oaitest_mod_oai_pmh.get_deleted_instances instance_record;
 
+CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_inventory AS
+SELECT * FROM oaitest_mod_inventory_storage.instance
+WHERE jsonb ->> 'deleted' IS NULL OR jsonb ->> 'deleted' = 'false';
+
   GRANT oaitest_mod_inventory_storage TO oaitest_mod_oai_pmh;
   GRANT oaitest_mod_source_record_storage TO oaitest_mod_oai_pmh;
 
