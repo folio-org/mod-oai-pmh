@@ -1,0 +1,1 @@
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_deleted_instances CASCADE;

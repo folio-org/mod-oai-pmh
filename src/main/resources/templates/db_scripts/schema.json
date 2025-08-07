@@ -19,6 +19,11 @@
       "run": "after",
       "snippetPath": "add_null_check_for_deleted.sql",
       "fromModuleVersion": "mod-oai-pmh-3.16.0"
+    },
+    {
+      "run": "after",
+      "snippetPath": "remove_audit_dependencies.sql",
+      "fromModuleVersion": "mod-oai-pmh-3.16.0"
     }
   ]
 }
