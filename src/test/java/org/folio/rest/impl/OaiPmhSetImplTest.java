@@ -457,6 +457,52 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     });
   }
 
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInGetSetById(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
+      RequestSpecification request = createBaseRequest(getSetPathWithId("invalid-id-for-exception"), null);
+      request.when()
+          .get()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInPutSetById(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
+      FolioSet folioSet = new FolioSet().withName("name").withSetSpec("spec");
+      RequestSpecification request = createBaseRequest(getSetPathWithId("invalid-id-for-exception"), ContentType.JSON)
+          .body(folioSet);
+      request.when()
+          .put()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInGetOaiPmhSets(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing invalid query parameters
+      RequestSpecification request = createBaseRequest(SET_PATH, null)
+          .param("offset", "-1")
+          .param("limit", "-1");
+      request.when()
+          .get()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
   private RequestSpecification createBaseRequest(String path, ContentType contentType) {
     RequestSpecification requestSpecification = RestAssured.given()
         .header(okapiUrlHeader)

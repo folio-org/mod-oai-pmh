@@ -170,26 +170,6 @@ public class OaiPmhImpl implements Oai {
         });
   }
 
-  private Future<Response> getFutureWithErrorResponse(Throwable t, Request request) {
-    final Response errorResponse;
-    logger.error("getOaiRecords::  RequestId {} completed with error {}",
-        request.getRequestId(), t.getMessage());
-    if (t instanceof IllegalArgumentException) {
-      final ResponseHelper rh = ResponseHelper.getInstance();
-      OAIPMH oaipmh = rh.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
-          RESUMPTION_TOKEN_FORMAT_ERROR);
-      errorResponse = rh.buildFailureResponse(oaipmh, request);
-    } else {
-      errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(t.getMessage());
-    }
-    return succeededFuture(errorResponse);
-  }
-
-  private Future<Response> getFutureWithErrorResponse(String errorMessage) {
-    Response errorResponse = GetOaiRecordsResponse.respond500WithTextPlain(errorMessage);
-    return succeededFuture(errorResponse);
-  }
-
   private void addParamToMapIfNotEmpty(String paramName, String paramValue,
       Map<String, String> map) {
     if (StringUtils.isNotEmpty(paramValue)) {
