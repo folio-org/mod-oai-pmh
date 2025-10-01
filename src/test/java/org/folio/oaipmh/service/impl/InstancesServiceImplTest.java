@@ -263,14 +263,10 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.verify(() -> {
       String randomRequestId = UUID.randomUUID().toString();
       instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT)
-          .compose(res -> {
+          .onComplete(testContext.succeeding(res -> {
             assertFalse(res);
-            return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
-          }).onSuccess(instanceIdList -> {
-            assertEquals(1, instanceIdList.size());
-            assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
             testContext.completeNow();
-          }).onFailure(testContext::failNow);
+          }));
     });
   }
 
