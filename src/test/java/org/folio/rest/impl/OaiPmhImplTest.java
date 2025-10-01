@@ -131,6 +131,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -3172,9 +3173,9 @@ class OaiPmhImplTest {
   }
 
   private List<HeaderType> getHeadersListDependOnVerbType(VerbType verb, OAIPMH oaipmh) {
-    return verb.equals(LIST_RECORDS)
+    return new ArrayList<>(verb.equals(LIST_RECORDS)
         ? oaipmh.getListRecords().getRecords().stream().map(RecordType::getHeader).toList()
-        : oaipmh.getListIdentifiers().getHeaders();
+        : oaipmh.getListIdentifiers().getHeaders());
   }
 
   @Test
