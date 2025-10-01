@@ -2,10 +2,8 @@ package org.folio.oaipmh.helpers.enrichment;
 
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import org.folio.oaipmh.service.ErrorsService;
-
 import java.util.List;
-
+import org.folio.oaipmh.service.ErrorsService;
 
 public class ItemsHoldingsErrorResponseResolver {
 
@@ -19,7 +17,8 @@ public class ItemsHoldingsErrorResponseResolver {
     this.executor = new ItemsHoldingsRequestWithDelayExecutor(itemsHoldingsEnrichment);
   }
 
-  public void processAfterErrors(Promise<List<JsonObject>> enrichInstancesPromise, ErrorsService errorsService) {
+  public void processAfterErrors(Promise<List<JsonObject>> enrichInstancesPromise,
+      ErrorsService errorsService) {
     long delay = 1L;
     for (String instanceId : itemsHoldingsEnrichment.getInstancesMap().keySet()) {
       executor.execute(delay, instanceId, enrichInstancesPromise, errorsService);

@@ -1,83 +1,5 @@
 package org.folio.oaipmh.helpers;
 
-import com.google.common.io.Resources;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.codec.BodyCodec;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.MetadataPrefix;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.WebClientProvider;
-import org.folio.oaipmh.exception.BuildOaiMetadataException;
-import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
-import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
-import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
-import org.folio.oaipmh.helpers.records.RecordMetadataManager;
-import org.folio.oaipmh.helpers.referencedata.ReferenceData;
-import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
-import org.folio.oaipmh.helpers.response.ResponseHelper;
-import org.folio.oaipmh.processors.TranslationsFunctionHolder;
-import org.folio.oaipmh.querybuilder.RecordsSource;
-import org.folio.oaipmh.service.ConsortiaService;
-import org.folio.oaipmh.service.MetricsCollectingService;
-import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
-import org.folio.okapi.common.GenericCompositeFuture;
-import org.folio.oaipmh.processors.RuleProcessor;
-import org.folio.processor.referencedata.JsonObjectWrapper;
-import org.folio.processor.referencedata.ReferenceDataWrapper;
-import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
-import org.folio.processor.rule.Rule;
-import org.folio.reader.EntityReader;
-import org.folio.reader.JPathSyntaxEntityReader;
-import org.folio.rest.tools.utils.TenantTool;
-import org.folio.spring.SpringContextUtil;
-import org.folio.writer.RecordWriter;
-import org.folio.writer.impl.JsonRecordWriter;
-import org.openarchives.oai._2.ListIdentifiersType;
-import org.openarchives.oai._2.ListRecordsType;
-import org.openarchives.oai._2.OAIPMH;
-import org.openarchives.oai._2.OAIPMHerrorType;
-import org.openarchives.oai._2.RecordType;
-import org.openarchives.oai._2.ResumptionTokenType;
-import org.openarchives.oai._2.StatusType;
-import org.openarchives.oai._2.VerbType;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static java.util.Optional.ofNullable;
@@ -113,6 +35,83 @@ import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.
 import static org.folio.rest.tools.client.Response.isSuccess;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
+import com.google.common.io.Resources;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.codec.BodyCodec;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.core.Response;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.MetadataPrefix;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.exception.BuildOaiMetadataException;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingInventoryRequestFactory;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsEnrichment;
+import org.folio.oaipmh.helpers.enrichment.ItemsHoldingsErrorResponseResolver;
+import org.folio.oaipmh.helpers.records.RecordMetadataManager;
+import org.folio.oaipmh.helpers.referencedata.ReferenceData;
+import org.folio.oaipmh.helpers.referencedata.ReferenceDataProvider;
+import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.processors.RuleProcessor;
+import org.folio.oaipmh.processors.TranslationsFunctionHolder;
+import org.folio.oaipmh.querybuilder.RecordsSource;
+import org.folio.oaipmh.service.ConsortiaService;
+import org.folio.oaipmh.service.MetricsCollectingService;
+import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
+import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.processor.referencedata.JsonObjectWrapper;
+import org.folio.processor.referencedata.ReferenceDataWrapper;
+import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
+import org.folio.processor.rule.Rule;
+import org.folio.reader.EntityReader;
+import org.folio.reader.JPathSyntaxEntityReader;
+import org.folio.rest.tools.utils.TenantTool;
+import org.folio.spring.SpringContextUtil;
+import org.folio.writer.RecordWriter;
+import org.folio.writer.impl.JsonRecordWriter;
+import org.openarchives.oai._2.ListIdentifiersType;
+import org.openarchives.oai._2.ListRecordsType;
+import org.openarchives.oai._2.OAIPMH;
+import org.openarchives.oai._2.OAIPMHerrorType;
+import org.openarchives.oai._2.RecordType;
+import org.openarchives.oai._2.ResumptionTokenType;
+import org.openarchives.oai._2.StatusType;
+import org.openarchives.oai._2.VerbType;
+import org.springframework.beans.factory.annotation.Autowired;
+
 public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
 
@@ -121,21 +120,34 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   public static final String INSTANCE_IDS_ENRICH_PARAM_NAME = "instanceIds";
 
 
-  protected static final String MOD_INVENTORY_STORAGE_ERROR = "mod-inventory-storage didn't respond for %s tenant with status 200. Status code was %s";
-  private static  final String MOD_SOURCE_RECORD_STORAGE_ERROR = "mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s";
-  private static final String ERROR_FROM_STORAGE = "Got error response from %s, uri: '%s' message: %s";
-  private static final String ENRICH_INSTANCES_MISSED_PERMISSION = "Cannot get holdings and items due to lack of permission, permission required - inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
-  private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE = "Cannot get instance by id %s. Status code: %s; status message: %s .";
-  private static final String GET_INSTANCES_INVALID_RESPONSE = "Cannot get instances. Status code: %s; status message: %s .";
-  private static final String CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR = "Cannot get instance by id, instanceId - ";
+  protected static final String MOD_INVENTORY_STORAGE_ERROR =
+      "mod-inventory-storage didn't respond for %s tenant with status 200. Status code was %s";
+  private static  final String MOD_SOURCE_RECORD_STORAGE_ERROR =
+      "mod-source-record-storage didn't respond for %s tenant with status 200. Status code was %s";
+  private static final String ERROR_FROM_STORAGE =
+      "Got error response from %s, uri: '%s' message: %s";
+  private static final String ENRICH_INSTANCES_MISSED_PERMISSION =
+      "Cannot get holdings and items due to lack of permission, permission required - "
+      + "inventory-storage.inventory-hierarchy.items-and-holdings.collection.post";
+  private static final String GET_INSTANCE_BY_ID_INVALID_RESPONSE =
+      "Cannot get instance by id %s. Status code: %s; status message: %s .";
+  private static final String GET_INSTANCES_INVALID_RESPONSE =
+      "Cannot get instances. Status code: %s; status message: %s .";
+  private static final String CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR =
+      "Cannot get instance by id, instanceId - ";
   private static final String CANNOT_GET_INSTANCES_REQUEST_ERROR = "Cannot get instances";
-  private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR = "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
-  private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE = "Skipping problematic record due the conversion error. Source record id - {}.";
-  private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR = "Error occurred while converting record to xml representation. {}.";
+  private static final String FAILED_TO_ENRICH_SRS_RECORD_ERROR =
+      "Failed to enrich srs record with inventory data, srs record id - %s. Reason - %s";
+  private static final String SKIPPING_PROBLEMATIC_RECORD_MESSAGE =
+      "Skipping problematic record due the conversion error. Source record id - {}.";
+  private static final String FAILED_TO_CONVERT_SRS_RECORD_ERROR =
+      "Error occurred while converting record to xml representation. {}.";
   private static final String INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE = "(%s%s%s%s%s)";
 
-  private final MetricsCollectingService metricsCollectingService = MetricsCollectingService.getInstance();
-  private final RuleProcessor ruleProcessor = new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
+  private final MetricsCollectingService metricsCollectingService =
+      MetricsCollectingService.getInstance();
+  private final RuleProcessor ruleProcessor =
+      new RuleProcessor(TranslationsFunctionHolder.SET_VALUE);
 
   private static final Logger logger = LogManager.getLogger(AbstractGetRecordsHelper.class);
 
@@ -160,47 +172,116 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (!errors.isEmpty()) {
         return buildResponseWithErrors(request, promise, errors);
       }
-      logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
+      logger.info("handle:: Process records from srs for requestId {}",
+          request.getRequestId());
       requestAndProcessSrsRecords(request, ctx, promise, false);
     } catch (Exception e) {
-      logger.error("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
+      logger.error("handle:: Request failed for requestId {} with error {}",
+          request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
-    return promise.future().onComplete(responseAsyncResult -> metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
+    return promise.future().onComplete(responseAsyncResult ->
+        metricsCollectingService.endMetric(request.getRequestId(), SEND_REQUEST));
   }
 
-  protected void handleInventoryResponse(AsyncResult<JsonObject> handler, Request request, Context ctx, Promise<Response> promise) {
+  protected void handleInventoryResponse(AsyncResult<JsonObject> handler, Request request,
+      Context ctx, Promise<Response> promise) {
     if (handler.succeeded()) {
       var inventoryRecords = handler.result();
       generateRecordsOnTheFly(request, inventoryRecords);
       processRecords(ctx, request, null, inventoryRecords)
-        .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+          .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
     } else {
       logger.error("Request from inventory has been failed.", handler.cause());
       var oaipmhResponse = getResponseHelper().buildBaseOaipmhResponse(request);
-      promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request, handler.cause().getMessage()));
+      promise.complete(buildNoRecordsFoundOaiResponse(oaipmhResponse, request,
+          handler.cause().getMessage()));
     }
   }
 
-  protected void requestAndProcessSrsRecords(Request request, Context ctx, Promise<Response> promise, boolean withInventory) {
+  private void handleInventoryResponse(Request request, Context ctx,
+      AsyncResult<JsonObject> instancesHandler, JsonObject srsRecords,
+      Promise<Response> promise) {
+    if (instancesHandler.succeeded()) {
+      var inventoryRecords = instancesHandler.result();
 
-    final boolean deletedRecordsSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
-    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
+      // or verb is ListRecords (see MODOAIPMH-138).
+      if ((srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty()
+          || request.getVerb() == VerbType.LIST_RECORDS)
+          && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
+        generateRecordsOnTheFly(request, inventoryRecords);
+      }
+      // Exclude inventory instance if srs is present.
+      if (request.getVerb() == VerbType.GET_RECORD
+          && !srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty()) {
+        inventoryRecords = null;
+      }
+      processRecords(ctx, request, srsRecords, inventoryRecords)
+          .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+    } else {
+      logger.error(
+          "handleInventoryResponse:: For requestId {} Request to inventory failed with errors {}",
+          request.getRequestId(), instancesHandler.cause().getMessage());
+      promise.fail(instancesHandler.cause());
+    }
+  }
 
-    final Date updatedAfter = request.getFrom() == null ? null : convertStringToDate(request.getFrom(), false, true);
-    final Date updatedBefore = request.getUntil() == null ? null : convertStringToDate(request.getUntil(), true, true);
+  protected void requestAndProcessSrsRecords(Request request, Context ctx,
+      Promise<Response> promise, boolean withInventory) {
+
+    final boolean deletedRecordsSupport =
+        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+    final boolean suppressedRecordsSupport =
+        getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    final Date updatedAfter = request.getFrom() == null
+        ? null : convertStringToDate(request.getFrom(), false, true);
+    final Date updatedBefore = request.getUntil() == null
+        ? null : convertStringToDate(request.getUntil(), true, true);
 
     int batchSize = Integer.parseInt(
-      RepositoryConfigurationUtil.getProperty(request.getRequestId(),
-        REPOSITORY_MAX_RECORDS_PER_RESPONSE));
+        RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+            REPOSITORY_MAX_RECORDS_PER_RESPONSE));
 
     Promise<JsonObject> local = Promise.promise();
     Promise<JsonObject> central = Promise.promise();
 
     var centralTenantId = consortiaService.getCentralTenantId(request);
     if (StringUtils.isNotEmpty(centralTenantId)) {
-      var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(new Request(request, centralTenantId));
+      var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(
+          new Request(request, centralTenantId));
       client.getSourceStorageSourceRecords(
+          null,
+          null,
+          null,
+          null,
+          request.getIdentifier() != null ? request.getStorageIdentifier() : null,
+          null,
+          null,
+          null,
+          "MARC_BIB",
+          // 1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED
+          // FALSE = ONLY NOT SUPPRESSED
+          suppressedRecordsSupport ? null : false,
+          deletedRecordsSupport,
+          null,
+          updatedAfter,
+          updatedBefore,
+          null,
+          request.getOffset(),
+          request.isFromInventory() ? 0 : batchSize + 1,
+          asyncResult -> {
+            client.close();
+            getSrsCollectingHandler(request, central).handle(asyncResult);
+          });
+    } else {
+      central.complete(new JsonObject());
+    }
+
+    var client = SourceStorageSourceRecordsClientWrapper
+        .getSourceStorageSourceRecordsClient(request);
+    client.getSourceStorageSourceRecords(
         null,
         null,
         null,
@@ -210,7 +291,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         null,
         null,
         "MARC_BIB",
-        //1. NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
+        // NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED
+        // FALSE = ONLY NOT SUPPRESSED
         suppressedRecordsSupport ? null : false,
         deletedRecordsSupport,
         null,
@@ -218,92 +300,79 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         updatedBefore,
         null,
         request.getOffset(),
-        request.isFromInventory() ? 0 : batchSize + 1,
-        asyncResult -> {
+        request.isFromInventory() ? 0 : batchSize + 1, asyncResult -> {
           client.close();
-          getSrsCollectingHandler(request, central).handle(asyncResult);
+          getSrsCollectingHandler(request, local).handle(asyncResult);
         });
-    } else {
-      central.complete(new JsonObject());
-    }
-
-    var client = SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
-    client.getSourceStorageSourceRecords(
-      null,
-      null,
-      null,
-      null,
-      request.getIdentifier() != null ? request.getStorageIdentifier() : null,
-      null,
-      null,
-      null,
-      "MARC_BIB",
-      // NULL if we want suppressed and not suppressed, TRUE = ONLY SUPPRESSED FALSE = ONLY NOT SUPPRESSED
-      suppressedRecordsSupport ? null : false,
-      deletedRecordsSupport,
-      null,
-      updatedAfter,
-      updatedBefore,
-      null,
-      request.getOffset(),
-      request.isFromInventory() ? 0 : batchSize + 1,
-      asyncResult -> {
-        client.close();
-        getSrsCollectingHandler(request, local).handle(asyncResult);
-      });
 
 
     CompositeFuture.join(local.future(), central.future())
-      .map(CompositeFuture::list)
-      .map(results -> results.stream()
-        .map(JsonObject.class::cast)
-        .reduce((resultLocal, resultCentral) -> {
-          JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
-          JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
-          logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
-                  nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0, sourceRecordsLocal.size());
-          if (nonNull(sourceRecordsCentral)) {
-            if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
-              sourceRecordsLocal.clear();
-            }
-            sourceRecordsLocal.addAll(sourceRecordsCentral);
-          }
-          var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
-          var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS)).orElse(0);
-          resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, totalLocal + totalCentral);
-          try {
-            return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal.getString(TOTAL_RECORDS_PARAM)));
-          } catch (Exception exc) {
-            logger.error("totalRecords is invalid: {}", exc.getMessage());
-            return resultLocal.put(TOTAL_RECORDS_PARAM, resultLocal.getJsonArray(TOTAL_RECORDS_PARAM).size());
-          }
-        }).get()
-      ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory, batchSize + 1));
+        .map(CompositeFuture::list)
+        .map(results -> results.stream()
+            .map(JsonObject.class::cast)
+            .reduce((resultLocal, resultCentral) -> {
+              JsonArray sourceRecordsLocal = resultLocal.getJsonArray(SOURCE_RECORDS);
+              JsonArray sourceRecordsCentral = resultCentral.getJsonArray(SOURCE_RECORDS);
+              logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
+                  nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0,
+                  sourceRecordsLocal.size());
+              if (nonNull(sourceRecordsCentral)) {
+                if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
+                  sourceRecordsLocal.clear();
+                }
+                sourceRecordsLocal.addAll(sourceRecordsCentral);
+              }
+              var totalLocal = ofNullable(resultLocal.getInteger(TOTAL_RECORDS)).orElse(0);
+              var totalCentral = ofNullable(resultCentral.getInteger(TOTAL_RECORDS))
+                  .orElse(0);
+              resultLocal.put(SOURCE_RECORDS, sourceRecordsLocal).put(TOTAL_RECORDS, totalLocal
+                  + totalCentral);
+              try {
+                return resultLocal.put(TOTAL_RECORDS, Integer.parseInt(resultLocal
+                    .getString(TOTAL_RECORDS_PARAM)));
+              } catch (Exception exc) {
+                logger.error("totalRecords is invalid: {}", exc.getMessage());
+                return resultLocal.put(TOTAL_RECORDS_PARAM,
+                    resultLocal.getJsonArray(TOTAL_RECORDS_PARAM).size());
+              }
+            }).get()
+        ).onComplete(getSrsRecordsBodyHandler(request, ctx, promise, withInventory,
+          batchSize + 1));
   }
 
-  protected void requestAndProcessInventoryRecords(Request request, Context ctx, Promise<Response> promise) {
+  protected void requestAndProcessInventoryRecords(Request request, Context ctx,
+      Promise<Response> promise) {
     int batchSize = Integer.parseInt(
-      RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+        RepositoryConfigurationUtil.getProperty(request.getRequestId(),
         REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true).onComplete(handler -> {
-      try {
-        if (handler.succeeded()) {
-          var inventoryRecords = handler.result();
-          processRecords(ctx, request, null, inventoryRecords).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-        } else {
-          String verbName = request.getVerb().value();
-          logger.error("requestAndProcessInventoryRecords:: {} response from Inventory for requestId {}", verbName, request.getRequestId());
-          throw new IllegalStateException(handler.cause());
-        }
-      } catch (DecodeException ex) {
-        logger.error("requestAndProcessInventoryRecords:: Cannot parse response from inventory to json for requestId {}, errors message {}", request.getRequestId(), ex.getMessage());
-        promise.fail(new IllegalStateException("Cannot parse response from inventory to json", ex));
-      } catch (Exception ex) {
-        logger.error("requestAndProcessInventoryRecords:: Exception getting {} for requestId {}, errors message {}", request.getVerb()
-          .value(), request.getRequestId(), ex.getMessage());
-        promise.fail(ex);
-      }
-    });
+    requestFromInventory(request, batchSize + 1, request.getIdentifier() != null
+        ? List.of(request.getStorageIdentifier()) : null, false, false, true)
+        .onComplete(handler -> {
+          try {
+            if (handler.succeeded()) {
+              var inventoryRecords = handler.result();
+              processRecords(ctx, request, null, inventoryRecords)
+                  .onComplete(oaiResponse ->
+                      promise.complete(oaiResponse.result()));
+            } else {
+              String verbName = request.getVerb().value();
+              logger.error("requestAndProcessInventoryRecords:: {} response from "
+                  + "Inventory for requestId {}", verbName, request.getRequestId());
+              throw new IllegalStateException(handler.cause());
+            }
+          } catch (DecodeException ex) {
+            logger.error("requestAndProcessInventoryRecords:: Cannot parse response "
+                + "from inventory to json for requestId {}, errors message {}",
+                request.getRequestId(), ex.getMessage());
+            promise.fail(new IllegalStateException("Cannot parse response from inventory to json",
+                ex));
+          } catch (Exception ex) {
+            logger.error("requestAndProcessInventoryRecords:: Exception getting {} "
+                + "for requestId {}, errors message {}", request.getVerb().value(),
+                request.getRequestId(), ex.getMessage());
+            promise.fail(ex);
+          }
+        });
   }
 
   protected void generateRecordsOnTheFly(Request request, JsonObject inventoryRecords) {
@@ -316,10 +385,14 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       ReferenceData referenceData = referenceDataProvider.get(request);
       ReferenceDataWrapper referenceDataWrapper = getReferenceDataWrapper(referenceData);
       List<Rule> rules = getDefaultRulesFromFile();
-      String processedRecord = ruleProcessor.process(entityReader, recordWriter, referenceDataWrapper, rules, (translationException -> {
-        errorsService.log(request.getTenant(), request.getRequestId(), ((JsonObject) item).getString("id"), translationException.getMessage());
-        logger.error("generateRecordsOnTheFly:: Exception occurred for requestId {} while mapping, exception: {}, inventory instance: {}", request.getRequestId(), translationException.getCause(), instance);
-      }));
+      String processedRecord = ruleProcessor.process(entityReader, recordWriter,
+          referenceDataWrapper, rules, (translationException -> {
+            errorsService.log(request.getTenant(), request.getRequestId(),
+                ((JsonObject) item).getString("id"), translationException.getMessage());
+            logger.error("generateRecordsOnTheFly:: Exception occurred for requestId {} "
+                + "while mapping, exception: {}, inventory instance: {}", request.getRequestId(),
+                translationException.getCause(), instance);
+          }));
       enrichWithParsedRecord((JsonObject) item, processedRecord);
     });
   }
@@ -352,13 +425,18 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (referenceData == null) {
       return null;
     }
-    Map<String, Map<String, JsonObjectWrapper>> referenceDataWrapper = referenceData.getReferenceData().entrySet().stream()
-      .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, value -> new JsonObjectWrapper(value.getValue().getMap())))));
+    Map<String, Map<String, JsonObjectWrapper>> referenceDataWrapper =
+        referenceData.getReferenceData().entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey,
+                entry -> entry.getValue().entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                        value ->
+                            new JsonObjectWrapper(value.getValue().getMap())))));
     return new ReferenceDataWrapperImpl(referenceDataWrapper);
   }
 
-  private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsCollectingHandler(Request request, Promise<JsonObject> promise) {
+  private Handler<AsyncResult<HttpResponse<Buffer>>> getSrsCollectingHandler(Request request,
+      Promise<JsonObject> promise) {
     return asyncResult -> {
       try {
         if (asyncResult.succeeded()) {
@@ -369,27 +447,36 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();
             int statusCode = response.statusCode();
-            logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from SRS status code: {}: {}",request.getRequestId(),  verbName, statusMessage, statusCode);
-            var errorMessage = String.format(MOD_SOURCE_RECORD_STORAGE_ERROR, request.getTenant(), statusCode);
+            logger.error("getSrsRecordsBodyHandler:: For requestId {} {} response from "
+                + "SRS status code: {}: {}", request.getRequestId(),
+                verbName, statusMessage, statusCode);
+            var errorMessage = String.format(MOD_SOURCE_RECORD_STORAGE_ERROR, request.getTenant(),
+                statusCode);
             promise.fail(errorMessage);
           }
         } else {
-          logger.error("getSrsRecordsBodyHandler:: Cannot obtain srs records for requestId {}. Got failed async result", request.getRequestId());
-          promise.fail(new IllegalStateException("Cannot obtain srs records. Got failed async result.", asyncResult.cause()));
+          logger.error("getSrsRecordsBodyHandler:: Cannot obtain srs records for "
+              + "requestId {}. Got failed async result", request.getRequestId());
+          promise.fail(new IllegalStateException("Cannot obtain srs records. Got failed "
+              + "async result.", asyncResult.cause()));
         }
       } catch (DecodeException ex) {
-        logger.error("getSrsRecordsBodyHandler:: Invalid json from SRS, cannot parse it for requestId {}. Errors message {}", request.getRequestId(), ex.getMessage());
-        promise.fail(new IllegalStateException("Invalid json has been returned from SRS, cannot parse response to json.", ex));
+        logger.error("getSrsRecordsBodyHandler:: Invalid json from SRS, cannot "
+            + "parse it for requestId {}. Errors message {}", request.getRequestId(),
+            ex.getMessage());
+        promise.fail(new IllegalStateException(
+            "Invalid json has been returned from SRS, cannot parse response to json.", ex));
       } catch (Exception ex) {
-        logger.error("getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}", request.getRequestId(), request.getVerb()
-          .value(), ex.getMessage());
+        logger.error("getSrsRecordsBodyHandler:: For requestId {} exception "
+            + "getting {}, errors message {}", request.getRequestId(), request.getVerb().value(),
+            ex.getMessage());
         promise.fail(ex);
       }
     };
   }
 
-  private Handler<AsyncResult<JsonObject>> getSrsRecordsBodyHandler(Request request, Context ctx,
-      Promise<Response> promise, boolean withInventory, int limit) {
+  private Handler<AsyncResult<JsonObject>> getSrsRecordsBodyHandler(Request request,
+      Context ctx, Promise<Response> promise, boolean withInventory, int limit) {
     return asyncResult -> {
       try {
         if (asyncResult.failed()) {
@@ -404,46 +491,32 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               request.setInventoryOffsetShift(-numOfReturnedSrsRecords);
               request.setFromInventory(true);
             }
-            requestFromInventory(request, limit - numOfReturnedSrsRecords, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-              .onComplete(instancesHandler ->
-              handleInventoryResponse(request, ctx, instancesHandler, srsRecords, promise));
+            requestFromInventory(request, limit - numOfReturnedSrsRecords,
+                request.getIdentifier() != null
+                    ? List.of(request.getStorageIdentifier())
+                    : null, false, false, true)
+                  .onComplete(instancesHandler ->
+                      handleInventoryResponse(request, ctx, instancesHandler, srsRecords,
+                          promise));
           } else {
-            processRecords(ctx, request, srsRecords, null).onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
+            processRecords(ctx, request, srsRecords, null)
+                .onComplete(oaiResponse ->
+                    promise.complete(oaiResponse.result()));
           }
         }
       } catch (Exception ex) {
-        logger.error("getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}", request.getRequestId(), request.getVerb()
-          .value(), ex.getMessage());
+        logger.error(
+            "getSrsRecordsBodyHandler:: For requestId {} exception getting {}, errors message {}",
+            request.getRequestId(), request.getVerb().value(), ex.getMessage());
         promise.fail(ex);
       }
     };
   }
 
-  private void handleInventoryResponse(Request request, Context ctx, AsyncResult<JsonObject> instancesHandler,
-                              JsonObject srsRecords, Promise<Response> promise) {
-    if (instancesHandler.succeeded()) {
-      var inventoryRecords = instancesHandler.result();
 
-      // Case only for SRS+Inventory when record not found in SRS (see MODOAIPMH-224),
-      // or verb is ListRecords (see MODOAIPMH-138).
-      if ((srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty() || request.getVerb() == VerbType.LIST_RECORDS)
-      && request.getVerb() != VerbType.LIST_IDENTIFIERS) {
-        generateRecordsOnTheFly(request, inventoryRecords);
-      }
-      // Exclude inventory instance if srs is present.
-      if (request.getVerb() == VerbType.GET_RECORD && !srsRecords.getJsonArray(SOURCE_RECORDS_PARAM).isEmpty()) {
-        inventoryRecords = null;
-      }
-      processRecords(ctx, request, srsRecords, inventoryRecords)
-        .onComplete(oaiResponse -> promise.complete(oaiResponse.result()));
-    } else {
-      logger.error("handleInventoryResponse:: For requestId {} Request to inventory failed with errors {}", request.getRequestId(), instancesHandler.cause().getMessage());
-      promise.fail(instancesHandler.cause());
-    }
-  }
 
-  protected Future<Response> processRecords(Context ctx, Request request,
-                                    JsonObject srsRecords, JsonObject inventoryRecords) {
+  protected Future<Response> processRecords(Context ctx, Request request, JsonObject srsRecords,
+      JsonObject inventoryRecords) {
     JsonArray items = new JsonArray();
     Integer totalRecords = 0;
 
@@ -467,9 +540,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     logger.debug("{} entries retrieved out of {}.", items.size(), totalRecords);
 
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, items)) {
-      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType()
-        .withCode(BAD_RESUMPTION_TOKEN)
-        .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
+      OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request)
+          .withErrors(new OAIPMHerrorType()
+          .withCode(BAD_RESUMPTION_TOKEN)
+          .withValue(RESUMPTION_TOKEN_FLOW_ERROR));
       Response response = getResponseHelper().buildFailureResponse(oaipmh, request);
       return Future.succeededFuture(response);
     }
@@ -477,8 +551,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     ResumptionTokenType resumptionToken = buildResumptionToken(request, items, totalRecords);
 
     /*
-     * According to OAI-PMH guidelines: it is recommended that the responseDate reflect the time of the repository's clock at the start
-     * of any database query or search function necessary to answer the list request, rather than when the output is written.
+     * According to OAI-PMH guidelines: it is recommended that the responseDate reflect
+     * the time of the repository's clock at the start of any database query or search
+     * function necessary to answer the list request, rather than when the output is written.
      */
     final OAIPMH oaipmh = getResponseHelper().buildBaseOaipmhResponse(request);
     Promise<Response> oaiResponsePromise = Promise.promise();
@@ -496,7 +571,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       if (throwable instanceof BuildOaiMetadataException) {
         oaiResponsePromise.complete(conversionIntoJaxbObjectIssueResponse(oaipmh, request));
       } else {
-        oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request, throwable.getMessage()));
+        oaiResponsePromise.complete(buildNoRecordsFoundOaiResponse(oaipmh, request,
+            throwable.getMessage()));
       }
     });
     return oaiResponsePromise.future();
@@ -506,19 +582,21 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     return recordsMap.isEmpty();
   }
 
-  private boolean jsonArrayNotEmpty(JsonArray ja){
+  private boolean jsonArrayNotEmpty(JsonArray ja) {
     return ja != null && !ja.isEmpty();
   }
 
   /**
-   * Builds {@link Map} with storage id as key and {@link RecordType} with populated header if there is any,
-   * otherwise empty map is returned
+   * Builds {@link Map} with storage id as key and {@link RecordType} with populated
+   * header if there is any, otherwise empty map is returned.
    */
-  private Future<Map<String, RecordType>> buildRecords(Context context, Request request, JsonArray records) {
+  private Future<Map<String, RecordType>> buildRecords(Context context, Request request,
+      JsonArray records) {
     Promise<Map<String, RecordType>> enrichedRecordsPromise = Promise.promise();
     List<Future<JsonObject>> futures = new ArrayList<>();
 
-    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    final boolean suppressedRecordsProcessingEnabled = getBooleanProperty(request.getRequestId(),
+        REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     Map<String, RecordType> recordsMap = new ConcurrentHashMap<>();
 
@@ -526,52 +604,57 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
       // Using LinkedHashMap just to rely on order returned by storage service
       records.stream()
-        .map(JsonObject.class::cast)
-        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
-        .forEach(jsonRecord -> {
-          String recordId = storageHelper.getRecordId(jsonRecord);
-          String instanceId = storageHelper.getIdentifierId(jsonRecord);
-          RecordType recordType = createRecord(request, jsonRecord, instanceId);
-          Future<JsonObject> enrichedRecordFuture = enrichRecordIfRequired(request, jsonRecord, recordType, instanceId,
-              suppressedRecordsProcessingEnabled).compose(enrichedSrsRecord -> {
-                // Some repositories like SRS can return record source data along with other info
-                String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
-                if (source != null && recordType.getHeader().getStatus() == null) {
-                  source = enrichSource(source, suppressedRecordsProcessingEnabled, metadataManager, enrichedSrsRecord);
-                  try {
-                    recordType.withMetadata(buildOaiMetadata(request, source));
-                  } catch (Exception e) {
-                    logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
-                    logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
-                    errorsService.log(request.getTenant(), request.getRequestId(), instanceId, e.getMessage());
-                    return Future.failedFuture(new BuildOaiMetadataException(e));
+          .map(JsonObject.class::cast)
+          .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
+          .forEach(jsonRecord -> {
+            String recordId = storageHelper.getRecordId(jsonRecord);
+            String instanceId = storageHelper.getIdentifierId(jsonRecord);
+            RecordType recordType = createRecord(request, jsonRecord, instanceId);
+            Future<JsonObject> enrichedRecordFuture = enrichRecordIfRequired(request,
+                jsonRecord, recordType, instanceId,
+                suppressedRecordsProcessingEnabled).compose(enrichedSrsRecord -> {
+                  // Some repositories like SRS can return record source data along with other info
+                  String source = storageHelper.getInstanceRecordSource(enrichedSrsRecord);
+                  if (source != null && recordType.getHeader().getStatus() == null) {
+                    source = enrichSource(source, suppressedRecordsProcessingEnabled,
+                        metadataManager, enrichedSrsRecord);
+                    try {
+                      recordType.withMetadata(buildOaiMetadata(request, source));
+                    } catch (Exception e) {
+                      logger.error(FAILED_TO_CONVERT_SRS_RECORD_ERROR, e.getMessage(), e);
+                      logger.debug(SKIPPING_PROBLEMATIC_RECORD_MESSAGE, recordId);
+                      errorsService.log(request.getTenant(), request.getRequestId(),
+                          instanceId, e.getMessage());
+                      return Future.failedFuture(new BuildOaiMetadataException(e));
+                    }
+                  } else {
+                    context.put(recordId, jsonRecord);
                   }
-                } else {
-                  context.put(recordId, jsonRecord);
-                }
-                if (filterInstance(request, jsonRecord)) {
-                  recordsMap.put(recordId, recordType);
-                }
+                  if (filterInstance(request, jsonRecord)) {
+                    recordsMap.put(recordId, recordType);
+                  }
 
-                return Future.succeededFuture();
-              },
-              throwable -> {
-                String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR, recordId, throwable.getMessage());
-                errorsService.log(request.getTenant(), request.getRequestId(), instanceId, throwable.getMessage());
-                logger.error(errorMsg, throwable);
-                return Future.failedFuture(new IllegalStateException(errorMsg));
-              }
-              );
-          futures.add(enrichedRecordFuture);
-        });
+                  return Future.succeededFuture();
+                },
+                  throwable -> {
+                    String errorMsg = format(FAILED_TO_ENRICH_SRS_RECORD_ERROR,
+                        recordId, throwable.getMessage());
+                    errorsService.log(request.getTenant(), request.getRequestId(),
+                        instanceId, throwable.getMessage());
+                    logger.error(errorMsg, throwable);
+                    return Future.failedFuture(new IllegalStateException(errorMsg));
+                  }
+                );
+            futures.add(enrichedRecordFuture);
+          });
 
       GenericCompositeFuture.all(futures).onComplete(res -> {
-          if (res.succeeded()) {
-            enrichedRecordsPromise.complete(recordsMap);
-          } else {
-            enrichedRecordsPromise.fail(res.cause());
-          }
-        });
+        if (res.succeeded()) {
+          enrichedRecordsPromise.complete(recordsMap);
+        } else {
+          enrichedRecordsPromise.fail(res.cause());
+        }
+      });
       return enrichedRecordsPromise.future();
     }
     enrichedRecordsPromise.complete(recordsMap);
@@ -579,10 +662,12 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   private String enrichSource(String source, boolean suppressedRecordsProcessingEnabled,
-                                      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord) {
+      RecordMetadataManager metadataManager, JsonObject enrichedSrsRecord) {
     if (suppressedRecordsProcessingEnabled) {
-      source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, enrichedSrsRecord);
-      return metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, enrichedSrsRecord);
+      source = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source,
+          enrichedSrsRecord);
+      return metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source,
+          enrichedSrsRecord);
     }
     return source;
   }
@@ -590,9 +675,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   protected RecordType createRecord(Request request, JsonObject srsRecord, String identifierId) {
     String identifierPrefix = request.getIdentifierPrefix();
     RecordType record = new RecordType()
-      .withHeader(createHeader(srsRecord, request)
+        .withHeader(createHeader(srsRecord, request)
         .withIdentifier(getIdentifier(identifierPrefix, identifierId)));
-    if (isDeletedRecordsEnabled(request.getRequestId()) && storageHelper.isRecordMarkAsDeleted(srsRecord)) {
+    if (isDeletedRecordsEnabled(request.getRequestId())
+        && storageHelper.isRecordMarkAsDeleted(srsRecord)) {
       record.getHeader().setStatus(StatusType.DELETED);
     }
     return record;
@@ -614,74 +700,98 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
 
   protected abstract List<OAIPMHerrorType> validateRequest(Request request);
 
-  private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich, RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
+  private Future<JsonObject> enrichRecordIfRequired(Request request, JsonObject srsRecordToEnrich,
+      RecordType recordType, String instanceId, boolean shouldProcessSuppressedRecords) {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
-      return requestFromInventory(request, 1, List.of(instanceId), false, false, true).compose(instance -> {
-        JsonObject instanceRequiredFieldsOnly = new JsonObject();
-        instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
-        instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY, instance.getString("discoverySuppress"));
-        return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
-      })
-        .compose(oneItemList -> Future.succeededFuture(oneItemList.iterator().next()))
-        .compose(instanceWithHoldingsAndItems -> {
-          RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
-          boolean deletedRecordSupport = RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
-          JsonObject updatedSrsWithItemsData = metadataManager.populateMetadataWithItemsData(srsRecordToEnrich,
-              instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
-          JsonObject updatedSrsRecord = metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData,
-              instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
-          if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
-            recordType.getHeader().setStatus(StatusType.DELETED);
-          }
-          return Future.succeededFuture(updatedSrsRecord);
-        });
+      return requestFromInventory(request, 1, List.of(instanceId),
+          false, false, true).compose(instance -> {
+            JsonObject instanceRequiredFieldsOnly = new JsonObject();
+            instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
+            instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY,
+                instance.getString("discoverySuppress"));
+            return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
+          })
+          .compose(oneItemList ->
+              Future.succeededFuture(oneItemList.iterator().next()))
+          .compose(instanceWithHoldingsAndItems -> {
+            RecordMetadataManager metadataManager = RecordMetadataManager.getInstance();
+            boolean deletedRecordSupport =
+                RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+            JsonObject updatedSrsWithItemsData =
+                metadataManager.populateMetadataWithItemsData(srsRecordToEnrich,
+                instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
+            JsonObject updatedSrsRecord =
+                metadataManager.populateMetadataWithHoldingsData(updatedSrsWithItemsData,
+                instanceWithHoldingsAndItems, shouldProcessSuppressedRecords);
+            if (deletedRecordSupport && storageHelper.isRecordMarkAsDeleted(updatedSrsRecord)) {
+              recordType.getHeader().setStatus(StatusType.DELETED);
+            }
+            return Future.succeededFuture(updatedSrsRecord);
+          });
     } else {
       return Future.succeededFuture(srsRecordToEnrich);
     }
   }
 
-  protected Future<JsonObject> requestFromInventory(Request request, int limit, List<String> listOfIds, boolean ignoreDate,
-                                                    boolean ignoreOffset, boolean ignoreSource) {
-    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(), REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+  protected Future<JsonObject> requestFromInventory(Request request, int limit,
+      List<String> listOfIds, boolean ignoreDate, boolean ignoreOffset, boolean ignoreSource) {
+    final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(),
+        REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
-    final Date updatedAfter = request.getFrom() == null || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
-    final Date updatedBefore = request.getUntil() == null || ignoreDate ? null : convertStringToDate(request.getUntil(), true, true);
+    final Date updatedAfter = request.getFrom() == null
+        || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);
+    final Date updatedBefore = request.getUntil() == null
+        || ignoreDate ? null : convertStringToDate(request.getUntil(), true, true);
 
-    Promise<JsonObject> promise = Promise.promise();
-
-    var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds) + ")" : EMPTY;
-    var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE));
+    var queryId = nonNull(listOfIds) ? " and (id==" + String.join(" or id==", listOfIds)
+        + ")" : EMPTY;
+    var recordsSource = RecordsSource.getSource(getProperty(request.getRequestId(),
+        REPOSITORY_RECORDS_SOURCE));
     String source = EMPTY;
     if (ignoreSource || recordsSource == RecordsSource.FOLIO) {
-      source = "(source==FOLIO OR source==CONSORTIUM-FOLIO OR source==LINKED_DATA OR source==CONSORTIUM-LINKED_DATA)";
+      source = "(source==FOLIO OR source==CONSORTIUM-FOLIO OR source==LINKED_DATA OR "
+          + "source==CONSORTIUM-LINKED_DATA)";
     } else if (recordsSource == RecordsSource.MARC) {
-      source = "(source==MARC OR source==CONSORTIUM-MARC OR source==LINKED_DATA OR source==CONSORTIUM-LINKED_DATA)";
+      source = "(source==MARC OR source==CONSORTIUM-MARC OR source==LINKED_DATA OR "
+          + "source==CONSORTIUM-LINKED_DATA)";
     }
     var and = nonNull(listOfIds) || !source.isEmpty() ? "and" : EMPTY;
-    var queryFrom = nonNull(updatedAfter) ?
-      format(" %s metadata.updatedDate>=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedAfter.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
+    var queryFrom = nonNull(updatedAfter)
+        ? format(" %s metadata.updatedDate>=", and)
+            + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(
+                  updatedAfter.toInstant(), ZoneId.of("UTC")))
+        : EMPTY;
     and = nonNull(listOfIds) || nonNull(updatedAfter) || !source.isEmpty() ? "and" : EMPTY;
-    var queryUntil = nonNull(updatedBefore) ?
-      format(" %s metadata.updatedDate<=", and) + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC"))) :
-      EMPTY;
-    and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty() ? "and" : EMPTY;
-    var querySuppressFromDiscovery = suppressedRecordsSupport ? EMPTY : format(" %s discoverySuppress==false", and);
-    String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty() || !queryUntil.isEmpty()
-      || !querySuppressFromDiscovery.isEmpty() ? "&query=" +
-      URLEncoder.encode(format(INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE, source, queryId, queryFrom, queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
-      : EMPTY;
-    String query = "limit=" + limit + (ignoreOffset ? EMPTY : "&offset=" + request.getOffset()) + queryParam;
+    var queryUntil = nonNull(updatedBefore)
+        ? format(" %s metadata.updatedDate<=", and)
+            + DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
+                ZonedDateTime.ofInstant(updatedBefore.toInstant(), ZoneId.of("UTC")))
+        : EMPTY;
+    and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
+        || !queryUntil.isEmpty() ? "and" : EMPTY;
+    var querySuppressFromDiscovery = suppressedRecordsSupport
+        ? EMPTY : format(" %s discoverySuppress==false", and);
+    String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
+        || !queryUntil.isEmpty()
+        || !querySuppressFromDiscovery.isEmpty()
+            ? "&query=" + URLEncoder.encode(format(
+                INSTANCE_STORAGE_INSTANCES_QUERY_TEMPLATE, source, queryId, queryFrom,
+                queryUntil, querySuppressFromDiscovery), Charset.defaultCharset())
+            : EMPTY;
+    String query = "limit=" + limit + (ignoreOffset
+        ? EMPTY : "&offset=" + request.getOffset()) + queryParam;
     String uri = request.getOkapiUrl() + INSTANCES_STORAGE_ENDPOINT + "?" + query;
 
     logger.info("Inventory uri: {}", uri);
 
+    Promise<JsonObject> promise = Promise.promise();
     processRequest(uri, request, promise, listOfIds);
 
     return promise.future();
   }
 
-  private void processRequest(String uri, Request request, Promise<JsonObject> promise, List<String> listOfIds) {
+  private void processRequest(String uri, Request request, Promise<JsonObject> promise,
+      List<String> listOfIds) {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.getAbs(uri);
     if (request.getOkapiUrl().contains(HTTPS)) {
@@ -690,25 +800,31 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
-    httpRequest.send().onSuccess(response -> {
-        if (response.statusCode() == 200) {
-          promise.complete(response.bodyAsJsonObject());
-        } else {
-          String errorMsg = nonNull(listOfIds) ?
-            format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds), response.statusCode(), response.statusMessage()) :
-            format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(), response.statusMessage());
-          logger.error(errorMsg);
-          errorsService.log(request.getTenant(), request.getRequestId(), "", errorMsg);
-          errorMsg = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(), response.statusCode());
-          promise.fail(new IllegalStateException(errorMsg));
-        }
-      })
-      .onFailure(throwable -> {
-        logger.error(nonNull(String.join(", ", listOfIds)) ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds) :
-          CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
-        errorsService.log(request.getTenant(), request.getRequestId(), "", CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds));
-        promise.fail(throwable);
-      });
+    httpRequest.send()
+        .onSuccess(response -> {
+          if (response.statusCode() == 200) {
+            promise.complete(response.bodyAsJsonObject());
+          } else {
+            String errorMsg = nonNull(listOfIds)
+                ? format(GET_INSTANCE_BY_ID_INVALID_RESPONSE, String.join(", ", listOfIds),
+                    response.statusCode(), response.statusMessage())
+                : format(GET_INSTANCES_INVALID_RESPONSE, response.statusCode(),
+                    response.statusMessage());
+            logger.error(errorMsg);
+            errorsService.log(request.getTenant(), request.getRequestId(), "", errorMsg);
+            errorMsg = String.format(MOD_INVENTORY_STORAGE_ERROR, request.getTenant(),
+                response.statusCode());
+            promise.fail(new IllegalStateException(errorMsg));
+          }
+        })
+        .onFailure(throwable -> {
+          logger.error(nonNull(String.join(", ", listOfIds))
+              ? CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds)
+              : CANNOT_GET_INSTANCES_REQUEST_ERROR, throwable);
+          errorsService.log(request.getTenant(), request.getRequestId(), "",
+              CANNOT_GET_INSTANCE_BY_ID_REQUEST_ERROR + String.join(", ", listOfIds));
+          promise.fail(throwable);
+        });
   }
 
   protected Future<List<JsonObject>> enrichInstances(List<JsonObject> instances, Request request) {
@@ -719,44 +835,52 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       return promise.future();
     }
     Map<String, JsonObject> instancesMap = instances.stream()
-      .collect(LinkedHashMap::new, (map, instance) ->
-        map.put(ofNullable(instance.getString(INSTANCE_ID_FIELD_NAME))
-          .orElse(instance.getString("instance_id")), instance), Map::putAll);
+        .collect(LinkedHashMap::new, (map, instance) ->
+            map.put(ofNullable(instance.getString(INSTANCE_ID_FIELD_NAME))
+                .orElse(instance.getString("instance_id")), instance), Map::putAll);
 
-    var httpRequest = ItemsHoldingInventoryRequestFactory.getItemsHoldingsInventoryRequest(request);
+    var httpRequest = ItemsHoldingInventoryRequestFactory
+        .getItemsHoldingsInventoryRequest(request);
     JsonObject entries = new JsonObject();
-    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME, new JsonArray(new ArrayList<>(instancesMap.keySet())));
+    entries.put(INSTANCE_IDS_ENRICH_PARAM_NAME,
+        new JsonArray(new ArrayList<>(instancesMap.keySet())));
     entries.put(SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS, isSkipSuppressed(request));
 
-    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request, isSkipSuppressed(request));
+    var itemsHoldingsEnrichment = new ItemsHoldingsEnrichment(instancesMap, request,
+        isSkipSuppressed(request));
     var jsonParser = itemsHoldingsEnrichment.getJsonParser();
 
     httpRequest.as(BodyCodec.jsonStream(jsonParser))
-      .sendBuffer(entries.toBuffer())
-      .onSuccess(response -> {
-        switch (response.statusCode()) {
-          case 200:
-            promise.complete(new ArrayList<>(instancesMap.values()));
-            break;
-          case 403: {
-            String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE, request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, ENRICH_INSTANCES_MISSED_PERMISSION);
-            logger.error(errorMsg);
-            promise.fail(new IllegalStateException(errorMsg));
-            break;
+        .sendBuffer(entries.toBuffer())
+        .onSuccess(response -> {
+          switch (response.statusCode()) {
+            case 200:
+              promise.complete(new ArrayList<>(instancesMap.values()));
+              break;
+            case 403:
+              {
+                String errorMsg = getErrorFromStorageMessage(INVENTORY_STORAGE,
+                    request.getOkapiUrl()
+                    + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, ENRICH_INSTANCES_MISSED_PERMISSION);
+                logger.error(errorMsg);
+                promise.fail(new IllegalStateException(errorMsg));
+                break;
+              }
+            default:
+              {
+                String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
+                    request.getOkapiUrl()
+                    + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
+                logger.error("{}, status {}", errorFromStorageMessage, response.statusCode());
+                var errorResolver = new ItemsHoldingsErrorResponseResolver(itemsHoldingsEnrichment);
+                errorResolver.processAfterErrors(promise, errorsService);
+              }
           }
-          default: {
-            String errorFromStorageMessage = getErrorFromStorageMessage(INVENTORY_STORAGE,
-              request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT, response.statusMessage());
-            logger.error("{}, status {}", errorFromStorageMessage, response.statusCode());
-            var errorResolver = new ItemsHoldingsErrorResponseResolver(itemsHoldingsEnrichment);
-            errorResolver.processAfterErrors(promise, errorsService);
-          }
-        }
-      })
-      .onFailure(e -> {
-        logger.error(e.getMessage());
-        promise.fail(e);
-      });
+        })
+        .onFailure(e -> {
+          logger.error(e.getMessage());
+          promise.fail(e);
+        });
     return promise.future();
   }
 
@@ -765,15 +889,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   /**
-   * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}
+   * Builds {@link ListIdentifiersType} with headers if there is any item or {@code null}.
    *
    * @param request           request
    * @param srsRecords the response from the SRS storage which contains items
    * @param inventoryRecords the response from the Inventory storage which contains items
    * @return {@link ListIdentifiersType} with headers if there is any or {@code null}
    */
-  protected OAIPMH buildListIdentifiers(Request request, JsonObject srsRecords, JsonObject inventoryRecords) {
-    ResponseHelper responseHelper = getResponseHelper();
+  protected OAIPMH buildListIdentifiers(Request request, JsonObject srsRecords,
+      JsonObject inventoryRecords) {
     JsonArray instances = new JsonArray();
     Integer totalRecords = 0;
     if (nonNull(srsRecords)) {
@@ -793,36 +917,40 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       totalRecords = request.getTotalRecords();
     }
 
+    ResponseHelper responseHelper = getResponseHelper();
     if (request.isRestored() && !canResumeRequestSequence(request, totalRecords, instances)) {
-      return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN, RESUMPTION_TOKEN_FLOW_ERROR);
+      return responseHelper.buildOaipmhResponseWithErrors(request, BAD_RESUMPTION_TOKEN,
+          RESUMPTION_TOKEN_FLOW_ERROR);
     }
     if (!instances.isEmpty()) {
       logger.debug("{} entries retrieved out of {}.", instances.size(), totalRecords);
 
       ListIdentifiersType identifiers = new ListIdentifiersType()
-        .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
+            .withResumptionToken(buildResumptionToken(request, instances, totalRecords));
 
       String identifierPrefix = request.getIdentifierPrefix();
       instances.stream()
-        .map(JsonObject.class::cast)
-        .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
-        .filter(instance -> filterInstance(request, instance))
-        .map(instance -> addHeader(identifierPrefix, request, instance))
-        .forEach(identifiers::withHeaders);
+          .map(JsonObject.class::cast)
+          .filter(instance -> isNotEmpty(storageHelper.getIdentifierId(instance)))
+          .filter(instance -> filterInstance(request, instance))
+          .map(instance -> addHeader(identifierPrefix, request, instance))
+          .forEach(identifiers::withHeaders);
 
       if (identifiers.getHeaders().isEmpty()) {
         OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request);
         return oaipmh.withErrors(createNoRecordsFoundError());
       }
       ResumptionTokenType resumptionToken = buildResumptionToken(request, instances, totalRecords);
-      OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request).withListIdentifiers(identifiers);
+      OAIPMH oaipmh = responseHelper.buildBaseOaipmhResponse(request)
+          .withListIdentifiers(identifiers);
       addResumptionTokenToOaiResponse(oaipmh, resumptionToken);
       return oaipmh;
     }
     return responseHelper.buildOaipmhResponseWithErrors(request, createNoRecordsFoundError());
   }
 
-  protected String getErrorFromStorageMessage(String errorSource, String uri, String responseMessage) {
+  protected String getErrorFromStorageMessage(String errorSource, String uri,
+      String responseMessage) {
     return format(ERROR_FROM_STORAGE, errorSource, uri, responseMessage);
   }
 
@@ -835,7 +963,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     }
   }
 
-  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh,
+      ResumptionTokenType resumptionToken) {
     throw new NotImplementedException();
   }
 

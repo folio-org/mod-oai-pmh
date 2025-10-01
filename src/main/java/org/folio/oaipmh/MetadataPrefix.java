@@ -1,33 +1,33 @@
 package org.folio.oaipmh;
 
-import org.folio.oaipmh.mappers.Mapper;
-import org.folio.oaipmh.mappers.MarcXmlMapper;
-import org.folio.oaipmh.mappers.XSLTMapper;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
+import org.folio.oaipmh.mappers.Mapper;
+import org.folio.oaipmh.mappers.MarcXmlMapper;
+import org.folio.oaipmh.mappers.XsltMapper;
 
 /**
  * Enum that represents the metadata formats supported by the repository.
  */
 public enum MetadataPrefix {
-  /** Refer to <a href="http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm">OAI-PMH guidelines for MARCXML</a> */
+  /** Refer to <a href="http://www.openarchives.org/OAI/2.0/guidelines-marcxml.htm">
+   * OAI-PMH guidelines for MARCXML</a>. */
   MARC21XML("marc21",
-    new MarcXmlMapper(),
-    "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
-    "http://www.loc.gov/MARC21/slim"),
-  /** Refer to <a href="https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore">Dublin Core</a> section of OAI-PMH specification */
+      new MarcXmlMapper(),
+      "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
+      "http://www.loc.gov/MARC21/slim"),
+  /** Refer to <a href="https://www.openarchives.org/OAI/openarchivesprotocol.html#dublincore">
+   * Dublin Core</a> section of OAI-PMH specification. */
   DC("oai_dc",
-    new XSLTMapper("xslt/MARC21slim2OAIDC.xsl"),
-    "http://www.openarchives.org/OAI/2.0/oai_dc.xsd",
-    "http://www.openarchives.org/OAI/2.0/oai_dc/"),
+      new XsltMapper("xslt/MARC21slim2OAIDC.xsl"),
+      "http://www.openarchives.org/OAI/2.0/oai_dc.xsd",
+      "http://www.openarchives.org/OAI/2.0/oai_dc/"),
   MARC21WITHHOLDINGS("marc21_withholdings",
-    new MarcXmlMapper(),
-    "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
-    "http://www.loc.gov/MARC21/slim");
+      new MarcXmlMapper(),
+      "http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd",
+      "http://www.loc.gov/MARC21/slim");
 
   private String name;
   private Mapper mapper;

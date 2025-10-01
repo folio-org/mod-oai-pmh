@@ -30,19 +30,19 @@ public class FieldBuilder {
     return this;
   }
 
-  public FieldBuilder withSubFields(Map<String ,Object> subFields) {
+  public FieldBuilder withSubFields(Map<String, Object> subFields) {
     this.subFields.putAll(subFields);
     return this;
   }
 
   public Map<String, Object> build() {
-    Map<String, Object> field = new LinkedHashMap<>();
     Map<String, Object> fieldContent = new LinkedHashMap<>();
     List<Object> subfields = new ArrayList<>();
 
     subfields.add(this.subFields);
     indicators.forEach(fieldContent::put);
     fieldContent.put(SUBFIELDS, subfields);
+    Map<String, Object> field = new LinkedHashMap<>();
     field.put(fieldTagNumber, fieldContent);
     return field;
   }

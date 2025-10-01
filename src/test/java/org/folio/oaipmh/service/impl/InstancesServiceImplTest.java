@@ -6,12 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-
 import javax.ws.rs.NotFoundException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -34,11 +36,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(VertxExtension.class)
@@ -84,20 +81,23 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   @Test
   void shouldReturnFutureWithEmptyList_whenThereNoExpiredRequestIds(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, ZERO_EXPIRED_INSTANCES_TIME)
-      .onComplete(testContext.succeeding(ids -> {
-        assertTrue(ids.isEmpty());
-        testContext.completeNow();
-      })));
+    testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID,
+          ZERO_EXPIRED_INSTANCES_TIME)
+        .onComplete(testContext.succeeding(ids -> {
+          assertTrue(ids.isEmpty());
+          testContext.completeNow();
+        })));
   }
 
   @Test
-  void shouldReturnFutureWithExpiredIds_whenExpiredRequestIdsArePresented(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
-      .onComplete(testContext.succeeding(ids -> {
-        assertTrue(ids.contains(EXPIRED_REQUEST_ID));
-        testContext.completeNow();
-      })));
+  void shouldReturnFutureWithExpiredIds_whenExpiredRequestIdsArePresented(
+      VertxTestContext testContext) {
+    testContext.verify(() ->
+        instancesService.cleanExpiredInstances(TEST_TENANT_ID, EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME)
+        .onComplete(testContext.succeeding(ids -> {
+          assertTrue(ids.contains(EXPIRED_REQUEST_ID));
+          testContext.completeNow();
+        })));
   }
 
   @Test
@@ -109,172 +109,200 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
       instancesService.saveRequestMetadata(requestMetadata, OAI_TEST_TENANT)
-        .onComplete(testContext.succeeding(requestMetadataLb -> {
-          assertNotNull(requestMetadataLb.getRequestId());
-          instancesService.deleteRequestMetadataByRequestId(id.toString(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
-            if (res) {
-              testContext.completeNow();
-            } else {
-              testContext.failNow(new IllegalStateException("Cannot delete test request metadata with request id: " + id.toString()));
-            }
+          .onComplete(testContext.succeeding(requestMetadataLb -> {
+            assertNotNull(requestMetadataLb.getRequestId());
+            instancesService.deleteRequestMetadataByRequestId(id.toString(), OAI_TEST_TENANT)
+                .onComplete(testContext.succeeding(res -> {
+                  if (res) {
+                    testContext.completeNow();
+                  } else {
+                    testContext.failNow(new IllegalStateException(
+                        "Cannot delete test request metadata with request id: " + id.toString()));
+                  }
+                }));
           }));
-        }));
     });
   }
 
   @Test
-  void shouldUpdateRequestMetadataUpdatedDate_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
+  void shouldUpdateRequestMetadataUpdatedDateWhenMetadataWithRequestIdExists(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
-      instancesService.updateRequestUpdatedDateAndStatistics(requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(), new StatisticsHolder(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
-        assertNotNull(res);
-        testContext.completeNow();
-      }));
+      instancesService.updateRequestUpdatedDateAndStatistics(
+          requestMetadata.getRequestId().toString(), requestMetadata.getLastUpdatedDate(),
+          new StatisticsHolder(), OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+            assertNotNull(res);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnFailedFuture_whenUpdateRequestMetadataUpdatedDateWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenUpdateRequestMetadataUpdatedDateWithRequestIdWhichDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() ->
-      instancesService.updateRequestUpdatedDateAndStatistics(nonExistentRequestMetadata.getRequestId().toString(),nonExistentRequestMetadata.getLastUpdatedDate(), new StatisticsHolder(), OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
-        assertTrue(throwable instanceof NotFoundException);
-        testContext.completeNow();
-      }))
+        instancesService.updateRequestUpdatedDateAndStatistics(
+          nonExistentRequestMetadata.getRequestId().toString(),
+          nonExistentRequestMetadata.getLastUpdatedDate(), new StatisticsHolder(), OAI_TEST_TENANT)
+              .onComplete(testContext.failing(throwable -> {
+                assertTrue(throwable instanceof NotFoundException);
+                testContext.completeNow();
+              }))
     );
   }
 
   @Test
-  void shouldUpdateRequestMetadataStreamEnded_whenMetadataWithRequestIdExists(VertxTestContext testContext) {
+  void shouldUpdateRequestMetadataStreamEndedWhenMetadataWithRequestIdExists(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       OffsetDateTime date = OffsetDateTime.now();
       requestMetadata.setLastUpdatedDate(date);
-      instancesService.updateRequestStreamEnded(requestMetadata.getRequestId().toString(), true, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
-        assertNotNull(res);
-        testContext.completeNow();
-      }));
+      instancesService.updateRequestStreamEnded(requestMetadata.getRequestId().toString(),
+          true, OAI_TEST_TENANT).onComplete(testContext.succeeding(res -> {
+            assertNotNull(res);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnFailedFuture_whenUpdateRequestMetadataStreamEndedWithRequestIdWhichDoesNotExist(VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenUpdateRequestMetadataStreamEndedWithRequestIdWhichDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() ->
-      instancesService.updateRequestStreamEnded(nonExistentRequestMetadata.getRequestId().toString(), true, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
-        assertTrue(throwable instanceof NotFoundException);
-        testContext.completeNow();
-      }))
+        instancesService.updateRequestStreamEnded(
+          nonExistentRequestMetadata.getRequestId().toString(), true, OAI_TEST_TENANT)
+            .onComplete(testContext.failing(throwable -> {
+              assertTrue(throwable instanceof NotFoundException);
+              testContext.completeNow();
+            }))
     );
   }
 
   @Test
-  void shouldReturnFailedFuture_whenSaveRequestMetadataWithEmptyRequestId(VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenSaveRequestMetadataWithEmptyRequestId(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now()).setStartedDate(OffsetDateTime.now());
-      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
-        assertTrue(throwable instanceof IllegalStateException);
-        testContext.completeNow();
-      }));
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb()
+          .setLastUpdatedDate(OffsetDateTime.now()).setStartedDate(OffsetDateTime.now());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT)
+          .onComplete(testContext.failing(throwable -> {
+            assertTrue(throwable instanceof IllegalStateException);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnFailedFuture_whenSaveRequestMetadataWithoutStartedDate(VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenSaveRequestMetadataWithoutStartedDate(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(OffsetDateTime.now())
-        .setRequestId(UUID.randomUUID());
-      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT).onComplete(testContext.failing(throwable -> {
-        assertTrue(throwable instanceof IllegalStateException);
-        testContext.completeNow();
-      }));
+      RequestMetadataLb requestMetadataLb = new RequestMetadataLb().setLastUpdatedDate(
+          OffsetDateTime.now()).setRequestId(UUID.randomUUID());
+      instancesService.saveRequestMetadata(requestMetadataLb, OAI_TEST_TENANT)
+          .onComplete(testContext.failing(throwable -> {
+            assertTrue(throwable instanceof IllegalStateException);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnSucceededFuture_whenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataExists(VertxTestContext testContext) {
+  void shouldReturnSucceededFutureWhenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataExists(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesService.deleteRequestMetadataByRequestId(REQUEST_ID, OAI_TEST_TENANT)
-        .onComplete(testContext.succeeding(deleted -> {
-          assertTrue(deleted);
-          testContext.completeNow();
-        }));
+          .onComplete(testContext.succeeding(deleted -> {
+            assertTrue(deleted);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnFailedFuture_whenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataDoesNotExist(
-    VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenDeleteRequestMetadataByRequestIdAndSuchRequestMetadataDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesService.deleteRequestMetadataByRequestId(NON_EXISTENT_REQUEST_ID, OAI_TEST_TENANT)
-        .onComplete(testContext.failing(throwable -> {
-          assertTrue(throwable instanceof NotFoundException);
-          testContext.completeNow();
-        }));
+          .onComplete(testContext.failing(throwable -> {
+            assertTrue(throwable instanceof NotFoundException);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(VertxTestContext testContext) {
+  void shouldReturnSucceedFutureWithTrueValue_whenDeleteInstancesByIdsAndSuchInstancesExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesService.deleteInstancesById(instancesIds, REQUEST_ID, OAI_TEST_TENANT)
-        .onSuccess(res -> {
-          assertTrue(res);
-          testContext.completeNow();
-        })
-        .onFailure(testContext::failNow);
+          .onSuccess(res -> {
+            assertTrue(res);
+            testContext.completeNow();
+          })
+          .onFailure(testContext::failNow);
     });
   }
 
   @Test
-  void shouldReturnSucceedFutureWithFalseValue_whenDeleteInstancesByIdsAndSuchInstancesDoNotExist(VertxTestContext testContext) {
+  void shouldReturnSucceedFutureWithFalseValueWhenDeleteInstancesByIdsAndSuchInstancesDoNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesService.deleteInstancesById(nonExistentInstancesIds, REQUEST_ID, OAI_TEST_TENANT)
-        .onComplete(testContext.succeeding(res -> {
-          assertFalse(res);
-          testContext.completeNow();
-        }));
+          .onComplete(testContext.succeeding(res -> {
+            assertFalse(res);
+            testContext.completeNow();
+          }));
     });
   }
 
   @Test
-  void shouldReturnSucceedFutureWithFalseValue_whenDeletingExistentInstanceIdWithIncorrectRequestId(VertxTestContext testContext) {
+  void shouldReturnSucceedFutureWithFalseValueWhenDeletingExistentInstanceIdWithIncorrectRequestId(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       String randomRequestId = UUID.randomUUID().toString();
-      instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT).compose(res -> {
-        assertFalse(res);
-        return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
-      }).onSuccess(instanceIdList -> {
-        assertEquals(1, instanceIdList.size());
-        assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
-        testContext.completeNow();
-      }).onFailure(testContext::failNow);
+      instancesService.deleteInstancesById(List.of(INSTANCE_ID), randomRequestId, OAI_TEST_TENANT)
+          .compose(res -> {
+            assertFalse(res);
+            return instancesService.getInstancesList(1, REQUEST_ID, OAI_TEST_TENANT);
+          }).onSuccess(instanceIdList -> {
+            assertEquals(1, instanceIdList.size());
+            assertEquals(INSTANCE_ID, instanceIdList.get(0).getInstanceId().toString());
+            testContext.completeNow();
+          }).onFailure(testContext::failNow);
     });
   }
 
   @Test
-  void shouldReturnSucceededFuture_whenSaveInstances(VertxTestContext testContext) {
+  void shouldReturnSucceededFutureWhenSaveInstances(VertxTestContext testContext) {
     testContext.verify(() -> {
       instancesList.forEach(elem -> elem.setInstanceId(UUID.randomUUID()));
       instancesService.saveInstances(instancesList, OAI_TEST_TENANT)
-        .onComplete(testContext.succeeding(res -> testContext.completeNow()));
+          .onComplete(testContext.succeeding(res -> testContext.completeNow()));
     });
   }
 
   @Test
-  void shouldReturnSucceedFutureWithInstancesList_whenGetInstancesListAndSomeInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> instancesService.getInstancesList(100,  REQUEST_ID, OAI_TEST_TENANT)
-      .onComplete(testContext.succeeding(instancesList -> {
-        assertFalse(instancesList.isEmpty());
-        testContext.completeNow();
-      })));
+  void shouldReturnSucceedFutureWithInstancesListWhenGetInstancesListAndSomeInstancesExist(
+      VertxTestContext testContext) {
+    testContext.verify(() -> instancesService.getInstancesList(100,
+          REQUEST_ID, OAI_TEST_TENANT)
+        .onComplete(testContext.succeeding(instancesList -> {
+          assertFalse(instancesList.isEmpty());
+          testContext.completeNow();
+        })));
   }
 
   @Test
-  void shouldReturnSucceedFutureWithEmptyList_whenGetInstancesListAndThereNoAnyInstancesExist(VertxTestContext testContext) {
-    testContext.verify(() -> cleanData().compose(res -> instancesService.getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT))
-      .onComplete(testContext.succeeding(instancesList -> {
-        assertTrue(instancesList.isEmpty());
-        testContext.completeNow();
-      })));
+  void shouldReturnSucceedFutureWithEmptyListWhenGetInstancesListAndThereNoAnyInstancesExist(
+      VertxTestContext testContext) {
+    testContext.verify(() -> cleanData().compose(res -> instancesService
+        .getInstancesList(100, REQUEST_ID, OAI_TEST_TENANT))
+        .onComplete(testContext.succeeding(instancesList -> {
+          assertTrue(instancesList.isEmpty());
+          testContext.completeNow();
+        })));
   }
 
   @Override

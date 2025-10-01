@@ -4,7 +4,6 @@ import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.UUID;
-
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Disabled;

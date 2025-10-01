@@ -20,6 +20,8 @@ public class ViewsServiceImpl implements ViewsService {
   @Override
   public Future<JsonArray> query(String query, String tenantId) {
     long t1 = System.nanoTime();
-    return viewsDao.query(query, tenantId).onComplete(hand -> logger.info("Total time for query: {} sec", (System.nanoTime() - t1) / 1_000_000_000));
+    return viewsDao.query(query, tenantId).onComplete(hand ->
+        logger.info("Total time for query: {} sec",
+            (System.nanoTime() - t1) / 1_000_000_000));
   }
 }

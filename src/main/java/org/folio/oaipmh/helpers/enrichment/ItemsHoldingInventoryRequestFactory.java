@@ -1,11 +1,5 @@
 package org.folio.oaipmh.helpers.enrichment;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.client.HttpRequest;
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.WebClientProvider;
-import org.folio.rest.tools.utils.TenantTool;
-
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -13,16 +7,23 @@ import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.WebClientProvider;
+import org.folio.rest.tools.utils.TenantTool;
+
 public class ItemsHoldingInventoryRequestFactory {
-  public static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT = "/inventory-hierarchy/items-and-holdings";
+  public static final String INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT =
+      "/inventory-hierarchy/items-and-holdings";
 
   private ItemsHoldingInventoryRequestFactory() {}
 
   public static HttpRequest<Buffer> getItemsHoldingsInventoryRequest(Request request) {
     var webClient = WebClientProvider.getWebClient();
-    var httpRequest = webClient.postAbs(request.getOkapiUrl() + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
-    if (request.getOkapiUrl()
-      .contains(HTTPS)) {
+    var httpRequest = webClient.postAbs(request.getOkapiUrl()
+        + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
+    if (request.getOkapiUrl().contains(HTTPS)) {
       httpRequest.ssl(true);
     }
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());

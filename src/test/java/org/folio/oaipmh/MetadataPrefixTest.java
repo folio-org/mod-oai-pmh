@@ -1,12 +1,12 @@
 package org.folio.oaipmh;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import org.junit.jupiter.api.Test;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.Test;
 
 class MetadataPrefixTest {
 
@@ -24,7 +24,8 @@ class MetadataPrefixTest {
   @Test
   void testUnmodifiableFormats() {
     logger.info("=== Test if Set of metadata prefixes is unmodifiable ===");
-    assertThrows(UnsupportedOperationException.class, () -> MetadataPrefix.getAllMetadataFormats().add("new_format"));
+    assertThrows(UnsupportedOperationException.class, () ->
+        MetadataPrefix.getAllMetadataFormats().add("new_format"));
   }
 
 }

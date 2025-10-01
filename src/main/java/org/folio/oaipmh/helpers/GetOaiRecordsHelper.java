@@ -1,8 +1,17 @@
 package org.folio.oaipmh.helpers;
 
+import static org.folio.oaipmh.Constants.INVENTORY;
+import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
+import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
+import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
+import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import java.util.Collection;
+import java.util.List;
+import javax.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
@@ -12,19 +21,6 @@ import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
 
-import javax.ws.rs.core.Response;
-import java.util.Collection;
-import java.util.List;
-
-import static org.folio.oaipmh.Constants.INVENTORY;
-import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
-import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
-import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
-
-/**
- * @deprecated
- */
 @Deprecated(forRemoval = true)
 public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
 
@@ -41,12 +37,14 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
         int batchSize = Integer.parseInt(
-          RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+            RepositoryConfigurationUtil.getProperty(request.getRequestId(),
             REPOSITORY_MAX_RECORDS_PER_RESPONSE));
-        requestFromInventory(request, batchSize + 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
+        requestFromInventory(request, batchSize + 1, request.getIdentifier() != null
+            ? List.of(request.getStorageIdentifier()) : null, false, false, true)
+            .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
-        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
+        requestAndProcessSrsRecords(request, ctx, promise,
+            recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
       handleException(promise, e);
@@ -70,10 +68,10 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh,
+      ResumptionTokenType resumptionToken) {
     if (oaipmh.getListRecords() != null) {
-      oaipmh.getListRecords()
-            .withResumptionToken(resumptionToken);
+      oaipmh.getListRecords().withResumptionToken(resumptionToken);
     }
   }
 }

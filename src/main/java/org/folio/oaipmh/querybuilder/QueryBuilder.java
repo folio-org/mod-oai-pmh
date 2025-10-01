@@ -1,12 +1,12 @@
 package org.folio.oaipmh.querybuilder;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class QueryBuilder {
 
@@ -15,26 +15,32 @@ public class QueryBuilder {
   private static final String MAX_DATE = "2050-12-31";
   private static final String MIN_DATE = "1970-01-01";
 
-  private static final String QUERY = "SELECT * FROM %s_mod_oai_pmh.%s inst\n" +
-    "%s" + // last instance id
-    "%s" + // discovery suppress
-    "%s" + // source
-    "%s" + // deleted
-    "%s" + // date from
-    "%s" + // date until
-    "ORDER BY instance_id\n" +
-    "LIMIT %d;";
+  private static final String QUERY = "SELECT * FROM %s_mod_oai_pmh.%s inst\n"
+      + "%s" // last instance id
+      + "%s" // discovery suppress
+      + "%s" // source
+      + "%s" // deleted
+      + "%s" // date from
+      + "%s" // date until
+      + "ORDER BY instance_id\n"
+      + "LIMIT %d;";
 
-  private static final String DELETED_INSTANCES = " %s %s_mod_inventory_storage.strToTimestamp\n" +
-    " (instance_updated_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-    " AND \n" +
-    " %s_mod_inventory_storage.strToTimestamp(instance_updated_date::text) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DELETED_INSTANCES = " %s %s_mod_inventory_storage.strToTimestamp\n"
+      + " (instance_updated_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n"
+      + " AND \n"
+      + " %s_mod_inventory_storage.strToTimestamp(instance_updated_date::text) <= "
+      + "%s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
 
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
-  private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
-  private static final String DATE_UNTIL_FOLIO = "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
-  private static final String DATE_FROM_FOLIO = "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
-  private static final String DISCOVERY_SUPPRESS = "   %s COALESCE(inst.suppress_from_discovery_srs, false) = false AND COALESCE(inst.suppress_from_discovery_inventory, false) = false\n";
+  private static final String BASE_QUERY_DELETED_TEMPLATE =
+      "get_instances_with_marc_records_deleted";
+  private static final String DATE_UNTIL_FOLIO =
+      "   %s inst.instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DATE_FROM_FOLIO =
+      "   %s inst.instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n";
+  private static final String DISCOVERY_SUPPRESS =
+      "   %s COALESCE(inst.suppress_from_discovery_srs, false) = false AND COALESCE(inst"
+      + ".suppress_from_discovery_inventory, false) = false\n";
   private static final String SOURCE = "   %s inst.source = '%s'\n";
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
 
@@ -42,8 +48,9 @@ public class QueryBuilder {
 
   private QueryBuilder() {}
 
-  public static String build(String tenant, String lastInstanceId, String from, String until, RecordsSource source,
-                             boolean skipSuppressedFromDiscovery, boolean deletedRecords, int limit) throws QueryException {
+  public static String build(String tenant, String lastInstanceId, String from, String until,
+      RecordsSource source, boolean skipSuppressedFromDiscovery, boolean deletedRecords,
+      int limit) throws QueryException {
     if (isNull(tenant)) {
       var errorMsg = "tenant parameter cannot be null";
       logger.error(errorMsg);
@@ -60,9 +67,12 @@ public class QueryBuilder {
       buildLastInstanceId(lastInstanceId),
       buildSuppressFromDiscovery(skipSuppressedFromDiscovery, isNull(lastInstanceId)),
       buildSource(source, isNull(lastInstanceId) && !skipSuppressedFromDiscovery),
-      buildDateFrom(tenant, from, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
-      buildDateUntil(tenant, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
-      buildDeleted(tenant, from, until, isNull(lastInstanceId)  && !skipSuppressedFromDiscovery && isNull(source), deletedRecords ),
+      buildDateFrom(tenant, from, isNull(lastInstanceId)
+          && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
+      buildDateUntil(tenant, until, isNull(lastInstanceId)
+          && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
+      buildDeleted(tenant, from, until, isNull(lastInstanceId)
+          && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
       limit);
   }
 
@@ -71,7 +81,8 @@ public class QueryBuilder {
     return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, where, lastInstanceId) : EMPTY;
   }
 
-  private static String buildDateFrom(String tenant, String from, boolean where, boolean deletedSupport) {
+  private static String buildDateFrom(String tenant, String from, boolean where,
+      boolean deletedSupport) {
     if (nonNull(from) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
       var dateFromTemplate = DATE_FROM_FOLIO;
@@ -80,7 +91,8 @@ public class QueryBuilder {
     return EMPTY;
   }
 
-  private static String buildDateUntil(String tenant, String until, boolean where, boolean deletedSupport) {
+  private static String buildDateUntil(String tenant, String until, boolean where,
+      boolean deletedSupport) {
     if (nonNull(until) && !deletedSupport) {
       var whereOrAnd = where ? WHERE : " AND";
       var dateUntilTemplate = DATE_UNTIL_FOLIO;
@@ -94,23 +106,30 @@ public class QueryBuilder {
       var whereOrAnd = where ? WHERE : " AND";
       String sql;
       if (source == RecordsSource.MARC) {
-        sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s' OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
-          RecordsSource.MARC_SHARED, RecordsSource.CONSORTIUM_MARC, RecordsSource.LINKED_DATA, RecordsSource.CONSORTIUM_LINKED_DATA);
+        sql = format(SOURCE
+            + " OR inst.source = '%s' OR inst.source = '%s' OR inst.source = "
+            + "'%s' OR inst.source = '%s') ", whereOrAnd + " (", source, RecordsSource.MARC_SHARED,
+            RecordsSource.CONSORTIUM_MARC, RecordsSource.LINKED_DATA,
+            RecordsSource.CONSORTIUM_LINKED_DATA);
       } else {
-        sql = format(SOURCE + " OR inst.source = '%s' OR inst.source = '%s' OR inst.source = '%s') ", whereOrAnd + " (", source,
-          RecordsSource.CONSORTIUM_FOLIO, RecordsSource.LINKED_DATA, RecordsSource.CONSORTIUM_LINKED_DATA);
+        sql = format(SOURCE
+            + " OR inst.source = '%s' OR inst.source = '%s' OR inst.source = '%s') ",
+            whereOrAnd + " (", source, RecordsSource.CONSORTIUM_FOLIO, RecordsSource.LINKED_DATA,
+            RecordsSource.CONSORTIUM_LINKED_DATA);
       }
       return sql;
     }
     return EMPTY;
   }
 
-  private static String buildSuppressFromDiscovery(boolean skipSuppressedFromDiscovery, boolean where) {
+  private static String buildSuppressFromDiscovery(boolean skipSuppressedFromDiscovery,
+      boolean where) {
     var whereOrAnd = where ? WHERE : " AND";
     return skipSuppressedFromDiscovery ? format(DISCOVERY_SUPPRESS, whereOrAnd) : EMPTY;
   }
 
-  private static String buildDeleted(String tenant, String from, String until, boolean where, boolean deletedSupport) {
+  private static String buildDeleted(String tenant, String from, String until, boolean where,
+      boolean deletedSupport) {
     if ((nonNull(from) || nonNull(until)) && deletedSupport) {
       if (isNull(from)) {
         from = MIN_DATE;

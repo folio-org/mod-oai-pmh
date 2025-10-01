@@ -3,6 +3,8 @@ package org.folio.oaipmh.helpers.configuration;
 import static java.lang.String.format;
 import static org.folio.oaipmh.Constants.VALUE;
 
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,18 +13,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.springframework.stereotype.Component;
 
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-
 /**
- * Is used for reading json configuration files from resources and mapping them to {@link JsonObject} instances.
- * As well allows to parse configuration keys/values from json entry to Map.
+ * Is used for reading json configuration files from resources and mapping them
+ * to {@link JsonObject} instances. As well allows to parse configuration keys/values from
+ * json entry to Map.
  */
 @Component
 public class ConfigurationHelper {
@@ -31,10 +30,10 @@ public class ConfigurationHelper {
 
   private static ConfigurationHelper instance;
 
-  public ConfigurationHelper(){}
+  public ConfigurationHelper() {}
 
   public static ConfigurationHelper getInstance() {
-    if(Objects.nonNull(instance)){
+    if (Objects.nonNull(instance)) {
       return instance;
     }
     instance = new ConfigurationHelper();
@@ -42,7 +41,7 @@ public class ConfigurationHelper {
   }
 
   /**
-   * Reads json file under the resource folder and maps it to {@link JsonObject}
+   * Reads json file under the resource folder and maps it to {@link JsonObject}.
    *
    * @param dirPath      - path to directory which holds configuration json file
    * @param jsonFileName - name of json configuration file
@@ -52,7 +51,7 @@ public class ConfigurationHelper {
   public JsonObject getJsonConfigFromResources(String dirPath, String jsonFileName) {
     String configJsonPath = buildConfigPath(dirPath, jsonFileName);
     try (InputStream is = getClass().getClassLoader()
-      .getResourceAsStream(configJsonPath)) {
+        .getResourceAsStream(configJsonPath)) {
       if (is == null) {
         String message = format("Unable open the resource file %s", configJsonPath);
         logger.error(message);
@@ -61,7 +60,7 @@ public class ConfigurationHelper {
       try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
           BufferedReader reader = new BufferedReader(isr)) {
         String config = reader.lines()
-          .collect(Collectors.joining(System.lineSeparator()));
+            .collect(Collectors.joining(System.lineSeparator()));
         return new JsonObject(config);
       }
     } catch (IOException | IllegalArgumentException ex) {
@@ -71,8 +70,7 @@ public class ConfigurationHelper {
   }
 
   private String buildConfigPath(String dirPath, String configJsonName) {
-    return dirPath.concat("/")
-      .concat(configJsonName);
+    return dirPath.concat("/").concat(configJsonName);
   }
 
   /**
@@ -80,19 +78,26 @@ public class ConfigurationHelper {
    *
    * @param configurationEntry - json configuration entry
    * @return {@link Map}
-   * @throws IllegalArgumentException when configurationEntry doesn't contain the value field or value field has incorrect structure
+   * @throws IllegalArgumentException when configurationEntry doesn't contain the value field
+   *                                  or value field has incorrect structure
    */
-  public Map<String, String> getConfigKeyValueMapFromJsonEntryValueField(JsonObject configurationEntry) {
+  public Map<String, String> getConfigKeyValueMapFromJsonEntryValueField(
+      JsonObject configurationEntry) {
     try {
       JsonObject configKeyValueSet = new JsonObject(configurationEntry.getString(VALUE));
       return configKeyValueSet.getMap()
-        .entrySet()
-        .stream()
-        .collect(Collectors.toMap(entry -> PropertyNameMapper.mapFrontendKeyToServerKey(entry.getKey()), entry -> entry.getValue().toString()));
+          .entrySet()
+          .stream()
+          .collect(Collectors.toMap(entry ->
+              PropertyNameMapper.mapFrontendKeyToServerKey(entry.getKey()),
+              entry -> entry.getValue().toString()));
     } catch (NullPointerException ex) {
-      throw new IllegalArgumentException("Incorrect JsonObject. JsonObject doesn't contain the \'value\' field", ex);
+      throw new IllegalArgumentException(
+          "Incorrect JsonObject. JsonObject doesn't contain the \'value\' field", ex);
     } catch (DecodeException ex) {
-      throw new IllegalArgumentException(format("Incorrect JsonObject. JsonObject \'value\' field has incorrect structure: %s", ex.getMessage()), ex);
+      throw new IllegalArgumentException(format(
+          "Incorrect JsonObject. JsonObject \'value\' field has incorrect structure: %s",
+          ex.getMessage()), ex);
     }
   }
 

@@ -8,6 +8,12 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Map;
+import javax.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.service.ErrorsService;
@@ -17,13 +23,6 @@ import org.folio.rest.jaxrs.resource.OaiPmhCleanUpInstances;
 import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import javax.ws.rs.core.Response;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Map;
 
 public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
 
@@ -43,38 +42,41 @@ public class CleanUpErrorLogs implements OaiPmhCleanUpErrorLogs {
   }
 
   @Override
-  public void postOaiPmhCleanUpErrorLogs(Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
+  public void postOaiPmhCleanUpErrorLogs(Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
     logger.debug("Running cleaning up error logs");
     long interval = Long.parseLong(System.getProperty(REPOSITORY_FETCHING_CLEAN_ERRORS_INTERVAL));
 
     OffsetDateTime offsetDateTime = ZonedDateTime
-      .ofInstant(Instant.now(), ZoneId.of("UTC"))
-      .minusDays(interval)
-      .toOffsetDateTime();
+        .ofInstant(Instant.now(), ZoneId.of("UTC"))
+        .minusDays(interval)
+        .toOffsetDateTime();
 
     var tenant = okapiHeaders.get(OKAPI_TENANT);
 
     vertxContext.runOnContext(v ->
-      instancesService.getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(tenant, offsetDateTime)
-        .onComplete(result -> {
-          if (result.succeeded()) {
-            if (!result.result().isEmpty()) {
-              result.result().forEach(id -> {
-                instancesService.updateRequestMetadataByPathToError(id, tenant, null);
-                instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
-                folioS3Client.remove(id + "-error.csv");
-                errorsService.deleteErrorsByRequestId(tenant, id);
-              });
-            } else {
-              logger.debug("Nothing to clean (error logs)");
-            }
-          } else {
-            logger.error("Error occurred while selecting getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3");
-          }
-        })
-        .map(OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond204())
-        .map(Response.class::cast)
-        .otherwise(throwable -> respond500WithTextPlain(throwable.getMessage()))
-        .onComplete(asyncResultHandler));
+        instancesService.getRequestMetadataIdsByStartedDateAndExistsByPathToErrorFileInS3(
+            tenant, offsetDateTime)
+            .onComplete(result -> {
+              if (result.succeeded()) {
+                if (!result.result().isEmpty()) {
+                  result.result().forEach(id -> {
+                    instancesService.updateRequestMetadataByPathToError(id, tenant, null);
+                    instancesService.updateRequestMetadataByLinkToError(id, tenant, null);
+                    folioS3Client.remove(id + "-error.csv");
+                    errorsService.deleteErrorsByRequestId(tenant, id);
+                  });
+                } else {
+                  logger.debug("Nothing to clean (error logs)");
+                }
+              } else {
+                logger.error("Error occurred while selecting getRequestMetadataIdsByStarted"
+                    + "DateAndExistsByPathToErrorFileInS3");
+              }
+            })
+            .map(OaiPmhCleanUpInstances.PostOaiPmhCleanUpInstancesResponse.respond204())
+            .map(Response.class::cast)
+            .otherwise(throwable -> respond500WithTextPlain(throwable.getMessage()))
+            .onComplete(asyncResultHandler));
   }
 }

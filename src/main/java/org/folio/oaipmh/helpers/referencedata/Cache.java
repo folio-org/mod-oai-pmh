@@ -1,7 +1,6 @@
 package org.folio.oaipmh.helpers.referencedata;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -27,7 +26,8 @@ public class Cache<K, V> {
    * cached value for the {@code key}.
    *
    * @param key the key whose associated value is to be returned
-   * @return the value to which the specified key is mapped, or {@code null} if this map contains no mapping for the key
+   * @return the value to which the specified key is mapped, or {@code null} if this map
+   *         contains no mapping for the key
    * @throws NullPointerException if the specified key is null
    */
   public V get(K key) {

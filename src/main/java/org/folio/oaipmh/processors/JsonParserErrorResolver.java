@@ -34,7 +34,9 @@ public class JsonParserErrorResolver {
     var substring = data.substring(0, end);
     int lastIndexOfInstanceId = substring.lastIndexOf(INSTANCE_ID_FIELD);
     int start = lastIndexOfInstanceId - ERROR_VALUE_RANGE;
-    if (start < 0) start = 0;
+    if (start < 0) {
+      start = 0;
+    }
 
     errorPart = substring.substring(start);
     errorPosition = positionFromErrorMessage - start;
@@ -42,7 +44,7 @@ public class JsonParserErrorResolver {
 
   private int getLocalizedMessageErrorPosition() {
     var substring =  StringUtils.substringBefore(StringUtils
-      .substringAfterLast(localizedMessage, ERROR_COLUMN), ERROR_MESSAGE_CLOSE_SIGN).trim();
+        .substringAfterLast(localizedMessage, ERROR_COLUMN), ERROR_MESSAGE_CLOSE_SIGN).trim();
     return Integer.parseInt(substring);
   }
 }

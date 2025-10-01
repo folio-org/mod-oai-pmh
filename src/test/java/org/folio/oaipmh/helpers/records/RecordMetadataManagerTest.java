@@ -7,10 +7,15 @@ import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.REPOSITORY_SUPPRESSED_RECORDS_PROCESSING;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -25,7 +30,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.helpers.storage.RecordStorageHelper;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.folio.rest.impl.OkapiMockServer;
@@ -35,47 +41,61 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-
 @ExtendWith(VertxExtension.class)
 class RecordMetadataManagerTest {
 
   private static final Logger logger = LogManager.getLogger(OkapiMockServer.class);
 
-  private static final String SRS_INSTANCE_JSON_PATH = "/metadata-manager/srs_instance.json";
-  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS = "/metadata-manager/srs_instance_with_electronic_access.json";
-  private static final String SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/srs_instance_with_two_electronic_accesses.json";
-  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE = "/metadata-manager/srs_instance_with_electronic_access_with_suppress_value.json";
-  private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH = "/metadata-manager/inventory_instance_with_1_item.json";
-  private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH = "/metadata-manager/inventory_instance_with_2_items.json";
-  private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES = "/metadata-manager/inventory_instance_2_electronic_accesses.json";
-  private static final String INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM = "/metadata-manager/inventory_instance_with_not_suppressed_from_discovery_item.json";
-  private static final String INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM = "/metadata-manager/inventory_instance_with_suppressed_from_discovery_item.json";
-  private static final String INVENTORY_INSTANCE_WHIT_ITEM_WITHOUT_LOCATION = "/metadata-manager/inventory_instance_whit_item_without_location.json";
-  private static final String INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER = "/metadata-manager/inventory_instance_with_item_without_call_number.json";
+  private static final String SRS_INSTANCE_JSON_PATH =
+      "/metadata-manager/srs_instance.json";
+  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS =
+      "/metadata-manager/srs_instance_with_electronic_access.json";
+  private static final String SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES =
+      "/metadata-manager/srs_instance_with_two_electronic_accesses.json";
+  private static final String SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE =
+      "/metadata-manager/srs_instance_with_electronic_access_with_suppress_value.json";
+  private static final String INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH =
+      "/metadata-manager/inventory_instance_with_1_item.json";
+  private static final String INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH =
+      "/metadata-manager/inventory_instance_with_2_items.json";
+  private static final String INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES =
+      "/metadata-manager/inventory_instance_2_electronic_accesses.json";
+  private static final String INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM =
+      "/metadata-manager/inventory_instance_with_not_suppressed_from_discovery_item.json";
+  private static final String INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM =
+      "/metadata-manager/inventory_instance_with_suppressed_from_discovery_item.json";
+  private static final String INVENTORY_INSTANCE_WHIT_ITEM_WITHOUT_LOCATION =
+      "/metadata-manager/inventory_instance_whit_item_without_location.json";
+  private static final String INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER =
+      "/metadata-manager/inventory_instance_with_item_without_call_number.json";
 
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY = "/metadata-manager/electronic_access-empty.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED = "/metadata-manager/electronic_access-no_display_constant_generated.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_RELATED_RESOURCE = "/metadata-manager/electronic_access-related_resource.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE = "/metadata-manager/electronic_access-resource.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_resource.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP = "/metadata-manager/electronic_access-new_relationship.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-component_parts_of_resource.json";
-  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE = "/metadata-manager/electronic_access-version_of_component_parts_of_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY =
+      "/metadata-manager/electronic_access-empty.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED =
+      "/metadata-manager/electronic_access-no_display_constant_generated.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_RELATED_RESOURCE =
+      "/metadata-manager/electronic_access-related_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE =
+      "/metadata-manager/electronic_access-resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE =
+      "/metadata-manager/electronic_access-version_of_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP =
+      "/metadata-manager/electronic_access-new_relationship.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE =
+      "/metadata-manager/electronic_access-component_parts_of_resource.json";
+  private static final String ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE =
+      "/metadata-manager/electronic_access-version_of_component_parts_of_resource.json";
 
-  private static final String ITEM_BOTH_LOAN_TYPES = "/metadata-manager/item_both_loan_types.json";
-  private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE = "/metadata-manager/item_only_permanent_loan_type.json";
-  private static final String ITEM_EMPTY_LOAN_TYPE = "/metadata-manager/item_empty_loan_type.json";
+  private static final String ITEM_BOTH_LOAN_TYPES =
+      "/metadata-manager/item_both_loan_types.json";
+  private static final String ITEM_ONLY_PERMANENT_LOAN_TYPE =
+      "/metadata-manager/item_only_permanent_loan_type.json";
+  private static final String ITEM_EMPTY_LOAN_TYPE =
+      "/metadata-manager/item_empty_loan_type.json";
 
   private static final String ELECTRONIC_ACCESS_FILED = "856";
   private static final String GENERAL_INFO_FIELD = "999";
-  private static final String EFFECTIVE_LOCATION_FILED = "952";
+  private static final String EFFECTIVE_LOCATION_FIELD = "952";
   private static final int FIRST_INDICATOR_INDEX = 0;
   private static final int SECOND_INDICATOR_INDEX = 1;
 
@@ -84,45 +104,54 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldUpdateRecordMetadataWithInventoryItemsDataAndItemsArrayHasOneElement() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance =
+        metadataManager.populateMetadataWithItemsData(srsInstance,
         inventoryInstance,
         true);
     verifySrsInstanceSuccessfullyUpdated(populatedWithItemsDataSrsInstance);
   }
 
   @Test
-  void shouldUpdateRecordMetadataWithTwoEffectiveLocationFields_whenInventoryItemsArrayHasTwoElements() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+  void shouldUpdateRecordMetadataWithTwoEffectiveLocationFieldsWhenInventoryItemsArrayHasTwoElements() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ITEMS_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     assertEquals(2, effectiveLocationFields.size());
-    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, true, true));
+    effectiveLocationFields.forEach(element ->
+        verifyEffectiveLocationFieldHasCorrectData(element, true, true));
   }
 
   @Test
-  void shouldUpdateRecordMetadataWithTwoElectronicAccessFields_whenInventoryItemHasElectronicAccessArrayWithTwoItems() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+  void shouldUpdateRecordMetadataWithTwoElectronicAccessFieldsWhenInventoryItemHasElectronicAccessArrayWithTwoItems() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
+    List<JsonObject> electronicAccessFields = getFieldsFromFieldsListByTagNumber(fields,
+        ELECTRONIC_ACCESS_FILED);
 
     // 2 from inventory, 1 from srs
     assertEquals(3, electronicAccessFields.size());
@@ -131,15 +160,20 @@ class RecordMetadataManagerTest {
 
   @ParameterizedTest
   @MethodSource(value = "electronicAccessRelationshipsAndExpectedIndicatorValues")
-  void shouldCorrectlyResolveElectronicAccessIndicatorsValues(String jsonFilePath, List<String> expectedIndicators) {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
-    JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
+  void shouldCorrectlyResolveElectronicAccessIndicatorsValues(String jsonFilePath,
+      List<String> expectedIndicators) {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(requireNonNull(
+        getJsonObjectFromFile(jsonFilePath)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
+    JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields,
+        ELECTRONIC_ACCESS_FILED);
     JsonObject fieldContent = electronicAccessField.getJsonObject(ELECTRONIC_ACCESS_FILED);
     String firstIndicator = fieldContent.getString("ind1");
     String secondIndicator = fieldContent.getString("ind2");
@@ -150,112 +184,145 @@ class RecordMetadataManagerTest {
   @SuppressWarnings("unchecked")
   @ParameterizedTest
   @MethodSource(value = "itemsWithDifferentLoanTypesAndExpectedSubfieldValues")
-  void shouldCorrectlySetLoanType(String jsonFilePath, String expectedValues, boolean subfieldShouldExist) {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
-    JsonObject inventoryInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(jsonFilePath)));
+  void shouldCorrectlySetLoanType(String jsonFilePath, String expectedValues,
+      boolean subfieldShouldExist) {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(requireNonNull(
+        getJsonObjectFromFile(jsonFilePath)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    JsonObject effectiveLocation = getFieldFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    JsonObject effectiveLocation = getFieldFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
     Map<String, Object> fieldMap = effectiveLocation.getMap();
-    Map<String, Object> effectiveLocationField = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
-    List<Map<String, Object>> subfieldsList = (List<Map<String, Object>>) effectiveLocationField.get(SUBFIELDS);
-    assertTrue(verifySubFieldValuePresence(subfieldsList, "p", expectedValues, subfieldShouldExist));
+    Map<String, Object> effectiveLocationField = (Map<String, Object>) fieldMap.get(
+        EFFECTIVE_LOCATION_FIELD);
+    List<Map<String, Object>> subfieldsList =
+        (List<Map<String, Object>>) effectiveLocationField.get(SUBFIELDS);
+    assertTrue(verifySubFieldValuePresence(subfieldsList, "p", expectedValues,
+        subfieldShouldExist));
   }
 
   @Test
-  void shouldUpdateFieldsWithDiscoverySuppressedData_whenSettingIsON(Vertx vertx, VertxTestContext testContext) {
+  void shouldUpdateFieldsWithDiscoverySuppressedDataWhenSettingIsOn(Vertx vertx,
+      VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(
           requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_TWO_ELECTRONIC_ACCESSES)));
       String source = storageHelper.getInstanceRecordSource(record);
-      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(source, record);
-      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getGeneralInfoFieldPredicate(),
+      String updatedSource = metadataManager.updateMetadataSourceWithDiscoverySuppressedData(
+          source, record);
+      verifySourceWasUpdatedWithNewSubfield(updatedSource,
+          metadataManager.getGeneralInfoFieldPredicate(),
           GENERAL_INFO_FIELD);
-      updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
-      verifySourceWasUpdatedWithNewSubfield(updatedSource, metadataManager.getElectronicAccessPredicate(),
+      updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(
+          source, record);
+      verifySourceWasUpdatedWithNewSubfield(updatedSource,
+          metadataManager.getElectronicAccessPredicate(),
           ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
   }
 
   @Test
-  void shouldSkipDiscoverySuppressedCodeAddingIfAlreadyExist(Vertx vertx, VertxTestContext testContext) {
+  void shouldSkipDiscoverySuppressedCodeAddingIfAlreadyExist(Vertx vertx,
+      VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
       JsonObject record = new JsonObject(
-          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE)));
+          requireNonNull(getJsonObjectFromFile(
+              SRS_INSTANCE_WITH_ELECTRONIC_ACCESS_WITH_SUPPRESS_VALUE)));
       String source = storageHelper.getInstanceRecordSource(record);
-      String updatedSource = metadataManager.updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
-      verifyCountOfSuppressedValueField(updatedSource, metadataManager.getElectronicAccessPredicate(),
+      String updatedSource = metadataManager
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+      verifyCountOfSuppressedValueField(updatedSource,
+          metadataManager.getElectronicAccessPredicate(),
           ELECTRONIC_ACCESS_FILED);
       testContext.completeNow();
     }));
   }
 
   @Test
-  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutLocationsSubfieldGroup_whenInstanceHasItemWithoutLocationData() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutLocationsSubfieldGroupWhenInstanceHasItemWithoutLocationData() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WHIT_ITEM_WITHOUT_LOCATION)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
-    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, false, true));
+    effectiveLocationFields.forEach(element ->
+        verifyEffectiveLocationFieldHasCorrectData(element, false, true));
   }
 
   @Test
-  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutCallNumberSubfieldGroup_whenInstanceHasItemWithoutCallNumber() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutCallNumberSubfieldGroupWhenInstanceHasItemWithoutCallNumber() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
-    effectiveLocationFields.forEach(element -> verifyEffectiveLocationFieldHasCorrectData(element, true, false));
+    effectiveLocationFields.forEach(element ->
+        verifyEffectiveLocationFieldHasCorrectData(element, true, false));
   }
 
   @Test
-  void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemNotSuppressedFromDiscovery() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+  void shouldCorrectlySetTheSuppressDiscoveryValueWhenItemNotSuppressedFromDiscovery() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
-        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+        requireNonNull(getJsonObjectFromFile(
+            INVENTORY_INSTANCE_WITH_NOT_SUPPRESSED_FROM_DISCOVERY_ITEM)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
     int value = getSuppressedFromDiscoveryValue(effectiveLocationFields);
     assertEquals(0, value);
   }
 
   @Test
   void shouldCorrectlySetTheSuppressDiscoveryValue_whenItemSuppressedFromDiscovery() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
-        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+        requireNonNull(getJsonObjectFromFile(
+            INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance,
         true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     int value = getSuppressedFromDiscoveryValue(effectiveLocationFields);
     assertEquals(1, value);
@@ -263,20 +330,27 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldCorrectlySetTheIllPolicyValue_whenItExistsInHoldings() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
-        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
+        requireNonNull(getJsonObjectFromFile(
+            INVENTORY_INSTANCE_WITH_SUPPRESSED_FROM_DISCOVERY_ITEM)));
     String holdingsId = UUID.randomUUID().toString();
-    JsonObject holdings = new JsonObject().put("id", holdingsId).put("illPolicy", "test ill policy value");
-    inventoryInstance.getJsonObject("itemsandholdingsfields").put("holdings", new JsonArray().add(holdings));
-    inventoryInstance.getJsonObject("itemsandholdingsfields").getJsonArray("items").getJsonObject(0)
+    JsonObject holdings = new JsonObject().put("id", holdingsId).put("illPolicy",
+        "test ill policy value");
+    inventoryInstance.getJsonObject("itemsandholdingsfields").put("holdings",
+        new JsonArray().add(holdings));
+    inventoryInstance.getJsonObject("itemsandholdingsfields").getJsonArray("items")
+        .getJsonObject(0)
         .put("holdingsRecordId", holdingsId);
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     String value = getIllPolicyValue(effectiveLocationFields);
     assertEquals("test ill policy value", value);
@@ -285,22 +359,31 @@ class RecordMetadataManagerTest {
   private static Stream<Arguments> electronicAccessRelationshipsAndExpectedIndicatorValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
     builder
-        .add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED, Arrays.asList("4", "8"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_EMPTY, Arrays.asList("4", " "))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RELATED_RESOURCE, Arrays.asList("4", "2"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE, Arrays.asList("4", "0"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE, Arrays.asList("4", "1"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP, Arrays.asList("4", " "))));
+        .add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED,
+            Arrays.asList("4", "8"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_EMPTY,
+        Arrays.asList("4", " "))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RELATED_RESOURCE,
+        Arrays.asList("4", "2"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_RESOURCE,
+        Arrays.asList("4", "0"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_RESOURCE,
+        Arrays.asList("4", "1"))));
+    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_NEW_RELATIONSHIP,
+        Arrays.asList("4", " "))));
     builder
-        .add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE, Arrays.asList("4", "3"))));
-    builder.add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE,
+        .add((Arguments.arguments(ITEM_WITH_ELECTRONIC_ACCESS_COMPONENT_PARTS_OF_RESOURCE,
+            Arrays.asList("4", "3"))));
+    builder.add((Arguments.arguments(
+        ITEM_WITH_ELECTRONIC_ACCESS_VERSION_OF_COMPONENT_PARTS_OF_RESOURCE,
         Arrays.asList("4", "4"))));
     return builder.build();
   }
 
   private static Stream<Arguments> itemsWithDifferentLoanTypesAndExpectedSubfieldValues() {
     Stream.Builder<Arguments> builder = Stream.builder();
-    builder.add((Arguments.arguments(ITEM_ONLY_PERMANENT_LOAN_TYPE, "permanentLoanType value", true)));
+    builder.add((Arguments.arguments(ITEM_ONLY_PERMANENT_LOAN_TYPE, "permanentLoanType value",
+        true)));
     builder.add((Arguments.arguments(ITEM_BOTH_LOAN_TYPES, "temporaryLoanType value", true)));
     builder.add((Arguments.arguments(ITEM_EMPTY_LOAN_TYPE, "", false)));
     return builder.build();
@@ -308,22 +391,27 @@ class RecordMetadataManagerTest {
 
   private void verifySrsInstanceSuccessfullyUpdated(JsonObject srsInstance) {
     JsonArray fields = getContentFieldsArray(srsInstance);
-    JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields, ELECTRONIC_ACCESS_FILED);
-    JsonObject effectiveLocationField = getFieldFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
-    verifyEffectiveLocationFieldHasCorrectData(effectiveLocationField, true, true);
+    JsonObject electronicAccessField = getFieldFromFieldsListByTagNumber(fields,
+        ELECTRONIC_ACCESS_FILED);
+    JsonObject effectiveLocationField = getFieldFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+    verifyEffectiveLocationFieldHasCorrectData(effectiveLocationField,
+        true, true);
     verifyElectronicAccessFieldHasCorrectData(electronicAccessField);
   }
 
   @SuppressWarnings("unchecked")
   private void verifyElectronicAccessFieldHasCorrectData(JsonObject field) {
     Map<String, Object> fieldMap = field.getMap();
-    Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(ELECTRONIC_ACCESS_FILED);
+    Map<String, Object> fieldContentMap =
+        (Map<String, Object>) fieldMap.get(ELECTRONIC_ACCESS_FILED);
     String firstIndicator = (String) fieldContentMap.get("ind1");
     String secondIndicator = (String) fieldContentMap.get("ind2");
     assertEquals("4", firstIndicator);
     assertEquals("0", secondIndicator);
 
-    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
+    List<Map<String, Object>> subFieldsList =
+        (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
     assertTrue(verifySubFieldValuePresence(subFieldsList, "u", "test.com", true));
     assertTrue(verifySubFieldValuePresence(subFieldsList, "y", "GS demo Holding 1_2", true));
     assertTrue(verifySubFieldValuePresence(subFieldsList, "3", "Materials specified", true));
@@ -331,15 +419,18 @@ class RecordMetadataManagerTest {
   }
 
   @SuppressWarnings("unchecked")
-  private void verifyEffectiveLocationFieldHasCorrectData(JsonObject field, boolean locationGroupMustBePresented,
+  private void verifyEffectiveLocationFieldHasCorrectData(JsonObject field,
+      boolean locationGroupMustBePresented,
       boolean callNumberGroupMustBePresented) {
     Map<String, Object> fieldMap = field.getMap();
-    Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
+    Map<String, Object> fieldContentMap =
+        (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FIELD);
     String firstIndicator = (String) fieldContentMap.get("ind1");
     String secondIndicator = (String) fieldContentMap.get("ind2");
     assertEquals("f", firstIndicator);
     assertEquals("f", secondIndicator);
-    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
+    List<Map<String, Object>> subFieldsList =
+        (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
     if (locationGroupMustBePresented) {
       assertTrue(verifySubFieldValuePresence(subFieldsList, "a", "Københavns Universitet", true));
       assertTrue(verifySubFieldValuePresence(subFieldsList, "b", "City Campus", true));
@@ -357,12 +448,14 @@ class RecordMetadataManagerTest {
       assertTrue(verifySubFieldValuePresence(subFieldsList, "e", "Call number 1_2_1", true));
       assertTrue(verifySubFieldValuePresence(subFieldsList, "f", "prefix", true));
       assertTrue(verifySubFieldValuePresence(subFieldsList, "g", "suffix", true));
-      assertTrue(verifySubFieldValuePresence(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "h",
+          "512173a7-bd09-490e-b773-17d83f2b63fe", true));
     } else {
       assertFalse(verifySubFieldValuePresence(subFieldsList, "e", "Call number 1_2_1", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "f", "prefix", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "g", "suffix", true));
-      assertFalse(verifySubFieldValuePresence(subFieldsList, "h", "512173a7-bd09-490e-b773-17d83f2b63fe", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "h",
+          "512173a7-bd09-490e-b773-17d83f2b63fe", true));
     }
     assertTrue(verifySubFieldValuePresence(subFieldsList, "i", "book", true));
     assertTrue(verifySubFieldValuePresence(subFieldsList, "j", "Volume 1_2_1", true));
@@ -374,43 +467,52 @@ class RecordMetadataManagerTest {
 
   @Test
   void shouldPrefixLocationNameWithInactive_whenLocationIsInactive() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = createInventoryInstanceWithInactiveLocation();
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     effectiveLocationFields.forEach(this::verifyInactiveLocationSubfields);
   }
 
   @Test
   void shouldNotPrefixLocationName_whenLocationIsActive() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(
         requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     effectiveLocationFields.forEach(this::verifyActiveLocationSubfields);
   }
 
   @Test
   void shouldDefaultToActive_whenIsActiveFieldIsMissing() {
-    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_JSON_PATH)));
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = createInventoryInstanceWithoutIsActiveField();
 
-    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(srsInstance,
+    JsonObject populatedWithItemsDataSrsInstance = metadataManager.populateMetadataWithItemsData(
+        srsInstance,
         inventoryInstance, true);
 
     JsonArray fields = getContentFieldsArray(populatedWithItemsDataSrsInstance);
-    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields, EFFECTIVE_LOCATION_FILED);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
 
     effectiveLocationFields.forEach(this::verifyActiveLocationSubfields);
   }
@@ -418,8 +520,10 @@ class RecordMetadataManagerTest {
   @SuppressWarnings("unchecked")
   private void verifyInactiveLocationSubfields(JsonObject field) {
     Map<String, Object> fieldMap = field.getMap();
-    Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
-    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
+    Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(
+        EFFECTIVE_LOCATION_FIELD);
+    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(
+        SUBFIELDS);
 
     assertTrue(verifySubFieldValuePresence(subFieldsList, "d", "Inactive testName", true));
     assertTrue(verifySubFieldValuePresence(subFieldsList, "s", "Inactive testName", true));
@@ -428,8 +532,10 @@ class RecordMetadataManagerTest {
   @SuppressWarnings("unchecked")
   private void verifyActiveLocationSubfields(JsonObject field) {
     Map<String, Object> fieldMap = field.getMap();
-    Map<String, Object> fieldContentMap = (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FILED);
-    List<Map<String, Object>> subFieldsList = (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
+    Map<String, Object> fieldContentMap =
+        (Map<String, Object>) fieldMap.get(EFFECTIVE_LOCATION_FIELD);
+    List<Map<String, Object>> subFieldsList =
+        (List<Map<String, Object>>) fieldContentMap.get(SUBFIELDS);
 
     assertTrue(verifySubFieldValuePresence(subFieldsList, "d", "testName", true));
     assertTrue(verifySubFieldValuePresence(subFieldsList, "s", "testName", true));
@@ -468,15 +574,17 @@ class RecordMetadataManagerTest {
     return content.getJsonArray(FIELDS);
   }
 
-  private boolean verifySubFieldValuePresence(List<Map<String, Object>> subFieldsList, String subFieldCode,
-      String subFieldValue, boolean subfieldShouldPresent) {
+  private boolean verifySubFieldValuePresence(List<Map<String, Object>> subFieldsList,
+      String subFieldCode, String subFieldValue, boolean subfieldShouldPresent) {
     if (subfieldShouldPresent) {
       return subFieldsList.stream()
-          .anyMatch(subField -> subField.containsKey(subFieldCode) && subField.get(subFieldCode)
+          .anyMatch(subField -> subField.containsKey(subFieldCode)
+              && subField.get(subFieldCode)
               .equals(subFieldValue));
     } else {
       return subFieldsList.stream()
-          .noneMatch(subField -> subField.containsKey(subFieldCode) && subField.get(subFieldCode)
+          .noneMatch(subField -> subField.containsKey(subFieldCode)
+              && subField.get(subFieldCode)
               .equals(subFieldValue));
     }
 
@@ -497,7 +605,8 @@ class RecordMetadataManagerTest {
         .collect(Collectors.toList());
   }
 
-  private void verifySourceWasUpdatedWithNewSubfield(String source, Predicate<JsonObject> predicate, String tagNumber) {
+  private void verifySourceWasUpdatedWithNewSubfield(String source,
+      Predicate<JsonObject> predicate, String tagNumber) {
     JsonObject jsonFromSource = new JsonObject(source);
     JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
     JsonObject generalInfoFiled = fields.stream()
@@ -515,7 +624,8 @@ class RecordMetadataManagerTest {
         .allMatch(i -> i == 0));
   }
 
-  private void verifyCountOfSuppressedValueField(String source, Predicate<JsonObject> predicate, String tagNumber) {
+  private void verifyCountOfSuppressedValueField(String source,
+      Predicate<JsonObject> predicate, String tagNumber) {
     JsonObject jsonFromSource = new JsonObject(source);
     JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
     JsonObject generalInfoField = fields.stream()
@@ -533,7 +643,8 @@ class RecordMetadataManagerTest {
   }
 
   private int getSuppressedFromDiscoveryValue(List<JsonObject> effectiveLocationFields) {
-    Optional<JsonObject> optionalSuppressFromDiscoverySubfield = effectiveLocationFields.iterator()
+    Optional<JsonObject> optionalSuppressFromDiscoverySubfield =
+        effectiveLocationFields.iterator()
         .next()
         .getJsonObject("952")
         .getJsonArray("subfields")
@@ -567,7 +678,7 @@ class RecordMetadataManagerTest {
   }
 
   /**
-   * Creates {@link JsonObject} from the json file
+   * Creates {@link JsonObject} from the json file.
    *
    * @param path path to json file to read
    * @return json as string from the json file

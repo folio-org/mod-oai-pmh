@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+  "-//Checkstyle//DTD SuppressionFilter Configuration 1.0//EN"
+  "https://checkstyle.org/dtds/suppressions_1_0.dtd">
+<suppressions>
+  <!-- Suppress MissingJavadoc for all files in the project -->
+  <suppress checks="MissingJavadocType" files=".*"/>
+  <suppress checks="MissingJavadocMethod" files=".*"/>
+
+  <!-- line length -->
+  <suppress checks="LineLength"
+    files="OaiPmhImplTest.java"
+    lines="1066,2494,2539,2542,2590,2622,2619,2646,2704,2736,2942,2980"/>
+  <suppress checks="LineLength"
+    files="InitApisTest.java"
+    lines="105"/>
+  <suppress checks="LineLength"
+    files="StorageHelperTest.java"
+    lines="109"/>
+  <suppress checks="LineLength"
+    files="RecordMetadataManagerTest.java"
+    lines="120,141,251,271"/>
+  <suppress checks="LineLength"
+    files="ConfigurationHelperTest.java"
+    lines="82,93"/>
+  <suppress checks="LineLength"
+    files="InstancesServiceImplTest.java"
+    lines="224"/>
+
+  <!-- illegal token text -->
+  <suppress checks="IllegalTokenText"
+    files="ResponseConverterTest.java"/>
+</suppressions>

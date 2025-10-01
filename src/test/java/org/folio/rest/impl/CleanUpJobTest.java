@@ -6,10 +6,19 @@ import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -31,17 +40,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
@@ -75,17 +73,18 @@ class CleanUpJobTest extends AbstractInstancesTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
-      try {
-        Context context = vertx.getOrCreateContext();
-        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-        SpringContextUtil.autowireDependencies(this, context);
-        TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
-        new OkapiMockServer(vertx, mockPort).start(testContext);
-      } catch (Exception e) {
-        testContext.failNow(e);
-      }
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+        testContext.succeeding(v -> {
+          try {
+            Context context = vertx.getOrCreateContext();
+            SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+            SpringContextUtil.autowireDependencies(this, context);
+            TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
+            new OkapiMockServer(vertx, mockPort).start(testContext);
+          } catch (Exception e) {
+            testContext.failNow(e);
+          }
+        }));
   }
 
   @AfterAll
@@ -95,21 +94,24 @@ class CleanUpJobTest extends AbstractInstancesTest {
   }
 
   @Test
-  void shouldReturn204AndClearExpiredInstances_whenThereExpiredRequestsExist(VertxTestContext testContext) {
+  void shouldReturn204AndClearExpiredInstancesWhenThereExpiredRequestsExist(
+      VertxTestContext testContext) {
     RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null);
     request.when()
-      .post()
-      .then()
-      .statusCode(204);
+        .post()
+        .then()
+        .statusCode(204);
     verifyExpiredInstancesHasBeenCleared(testContext);
   }
 
   private void verifyExpiredInstancesHasBeenCleared(VertxTestContext testContext) {
-    instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT).onSuccess(instances -> {
-      List<String> instancesIds = instances.stream().map(Instances::getInstanceId).map(UUID::toString).collect(Collectors.toList());
-      assertFalse(instancesIds.contains(EXPIRED_INSTANCE_ID));
-      testContext.completeNow();
-    }).onFailure(testContext::failNow);
+    instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT)
+        .onSuccess(instances -> {
+          List<String> instancesIds = instances.stream().map(Instances::getInstanceId)
+              .map(UUID::toString).collect(Collectors.toList());
+          assertFalse(instancesIds.contains(EXPIRED_INSTANCE_ID));
+          testContext.completeNow();
+        }).onFailure(testContext::failNow);
   }
 
   @Override
@@ -119,10 +121,10 @@ class CleanUpJobTest extends AbstractInstancesTest {
 
   private RequestSpecification createBaseRequest(String path, ContentType contentType) {
     RequestSpecification requestSpecification = RestAssured.given()
-      .header(okapiUrlHeader)
-      .header(tenantHeader)
-      .header(okapiUserHeader)
-      .basePath(path);
+        .header(okapiUrlHeader)
+        .header(tenantHeader)
+        .header(okapiUserHeader)
+        .basePath(path);
     if (nonNull(contentType)) {
       requestSpecification.contentType(contentType);
     }

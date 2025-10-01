@@ -1,9 +1,8 @@
 package org.folio.oaipmh.dao;
 
 import io.vertx.core.Future;
-import org.folio.rest.jooq.tables.pojos.Errors;
-
 import java.util.List;
+import org.folio.rest.jooq.tables.pojos.Errors;
 
 public interface ErrorsDao {
 

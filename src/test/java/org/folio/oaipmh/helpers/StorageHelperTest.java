@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,14 +23,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.helpers.storage.StorageHelper;
 import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -37,7 +35,8 @@ class StorageHelperTest {
 
   private static final String INSTANCE_ID = "00000000-0000-4000-a000-000000000000";
 
-  private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+  private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
   private static final String SOURCE_STORAGE_RECORD_PATH = "/source-storage/source-records";
   private static final String STORAGE_RECORD_PATH = "/source-storage/records";
@@ -49,7 +48,8 @@ class StorageHelperTest {
 
   @Test
   void getItems() {
-    JsonObject entries = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instances_10_totalRecords_10.json");
+    JsonObject entries = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
+        + "/instances_10_totalRecords_10.json");
     JsonArray items = getStorageHelper(SOURCE_RECORD_STORAGE).getItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(10)));
@@ -58,25 +58,32 @@ class StorageHelperTest {
   @Test
   void lastModifiedDate() {
     JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
-    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(notNullValue()));
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item),
+        is(notNullValue()));
   }
 
   @Test
   void createdDate() {
-    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance_withCreatedDateOnly.json");
-    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(notNullValue()));
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
+        + "/instance_withCreatedDateOnly.json");
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item),
+        is(notNullValue()));
   }
 
   @Test
   void epochDate() {
-    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance_withoutMetadata.json");
-    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item), is(Instant.EPOCH));
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
+        + "/instance_withoutMetadata.json");
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getLastModifiedDate(item),
+        is(Instant.EPOCH));
   }
 
   @Test
   void getItemId() {
-    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
-    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getRecordId(item), not(isEmptyOrNullString()));
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
+        + "/instance.json");
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getRecordId(item),
+        not(isEmptyOrNullString()));
   }
 
   @Test
@@ -93,14 +100,15 @@ class StorageHelperTest {
   }
 
   @Test
-  void shouldReturnLinkedToRecordInstanceId_whenGetIdentifierAndStorageIsSRS(){
-    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH+"/instance.json");
+  void shouldReturnLinkedToRecordInstanceIdWhenGetIdentifierAndStorageIsSrs() {
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     assertEquals(INSTANCE_ID, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
   @Test
-  void shouldReturnEmptyString_whenGetIdentifierIdAndStorageIsSRSAndRecordHasNotExternalIdsHolderField(){
-    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH+"/instance_withoutExternalIdsHolderField.json");
+  void shouldReturnEmptyStringWhenGetIdentifierIdAndStorageIsSrsAndRecordHasNotExternalIdsHolderField() {
+    JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
+        + "/instance_withoutExternalIdsHolderField.json");
     assertEquals(EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));
   }
 
@@ -113,7 +121,8 @@ class StorageHelperTest {
 
   @Test
   void getRecordsItems() {
-    JsonObject entries = getJsonObjectFromFile(STORAGE_RECORD_PATH + "/marc-e567b8e2-a45b-45f1-a85a-6b6312bdf4d8.json");
+    JsonObject entries = getJsonObjectFromFile(STORAGE_RECORD_PATH
+        + "/marc-e567b8e2-a45b-45f1-a85a-6b6312bdf4d8.json");
     JsonArray items = getStorageHelper(SOURCE_RECORD_STORAGE).getRecordsItems(entries);
     assertThat(items, is(notNullValue()));
     assertThat(items, is(iterableWithSize(1)));
@@ -124,7 +133,8 @@ class StorageHelperTest {
   void shouldMarkRecordAsDeletedOnlyWhenLeader05IsD(Character character) {
     var leader = new StringBuilder("12345ccm a2200361   4500");
     leader.setCharAt(5, character);
-    JsonObject entry = new JsonObject(String.format("{ \"parsedRecord\": { \"content\": { \"leader\": \"%s\" } }, \"deleted\": false }", leader));
+    JsonObject entry = new JsonObject(String.format("{ \"parsedRecord\": { \"content\": { "
+        + "\"leader\": \"%s\" } }, \"deleted\": false }", leader));
     var isDeleted = getStorageHelper(SOURCE_RECORD_STORAGE).isRecordMarkAsDeleted(entry);
     assertThat(isDeleted, is(character.equals('d')));
   }
@@ -135,7 +145,8 @@ class StorageHelperTest {
   }
 
   /**
-   * Creates {@link JsonObject} from the json file
+   * Creates {@link JsonObject} from the json file.
+   *
    * @param path path to json file to read
    * @return {@link JsonObject} from the json file
    */

@@ -5,13 +5,12 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.parsetools.impl.JsonParserImpl;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class OaiPmhJsonParser extends JsonParserImpl {
 
@@ -38,7 +37,8 @@ public class OaiPmhJsonParser extends JsonParserImpl {
     } catch (DecodeException e) {
       var errorResolver = new JsonParserErrorResolver(normalized, e.getLocalizedMessage());
       logger.error(e.getLocalizedMessage());
-      logger.error("Decode parser exception: Error position at error part of json is {}", errorResolver.getErrorPosition());
+      logger.error("Decode parser exception: Error position at error part of json is {}",
+          errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
       errors.add(errorResolver.getErrorPart());
       if (handle(e)) {

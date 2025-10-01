@@ -1,32 +1,31 @@
 package org.folio.oaipmh.helpers.storage;
 
+import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
+import static org.folio.oaipmh.Constants.CONTENT;
+import static org.folio.oaipmh.Constants.INSTANCE_ID_FROM_VIEW_RESPONSE;
+import static org.folio.oaipmh.Constants.MARC_RECORD_FROM_VIEW_RESPONSE;
+import static org.folio.oaipmh.Constants.PARSED_RECORD;
+import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
+
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import static java.util.Objects.nonNull;
-import static java.util.Optional.ofNullable;
-import static org.folio.oaipmh.Constants.INSTANCE_ID_FROM_VIEW_RESPONSE;
-import static org.folio.oaipmh.Constants.MARC_RECORD_FROM_VIEW_RESPONSE;
-import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
-import static org.folio.oaipmh.Constants.PARSED_RECORD;
-import static org.folio.oaipmh.Constants.CONTENT;
 
 public class RecordStorageHelper implements StorageHelper {
 
   protected final Logger logger = LogManager.getLogger(getClass());
 
-  private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
-    "yyyy-MM-dd'T'HH:mm'Z'"};
+  private static final String[] patterns = {"yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", "yyyy-MM-dd'T'HH:mm'Z'"};
   private static final String RECORD_ID = "recordId";
   private static final String ID = "id";
   private static final String LEADER = "leader";
@@ -44,13 +43,15 @@ public class RecordStorageHelper implements StorageHelper {
   @Override
   public Instant getLastModifiedDate(JsonObject entry) {
     JsonObject metadata = ofNullable(entry.getJsonObject("metadata"))
-      .orElse(entry.containsKey(RECORD) ? entry.getJsonObject(RECORD).getJsonObject("metadata") :
-        null);
+        .orElse(entry.containsKey(RECORD)
+            ? entry.getJsonObject(RECORD).getJsonObject("metadata") : null);
     Instant instant = Instant.EPOCH;
-    String lastModifiedDate = nonNull(metadata) ? metadata.getString("updatedDate") : entry.getString("instance_updated_date");
+    String lastModifiedDate = nonNull(metadata)
+        ? metadata.getString("updatedDate") : entry.getString("instance_updated_date");
     if (lastModifiedDate == null) {
       // According to metadata.schema the createdDate is required so it should be always available
-      lastModifiedDate = nonNull(metadata) ? metadata.getString("createdDate") : entry.getString("instance_created_date");
+      lastModifiedDate = nonNull(metadata)
+          ? metadata.getString("createdDate") : entry.getString("instance_created_date");
     }
     if (lastModifiedDate != null) {
       try {
@@ -69,7 +70,8 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public JsonArray getItems(JsonObject entries) {
-    return ofNullable(entries.getJsonArray("sourceRecords")).orElse(entries.getJsonArray("instances"));
+    return ofNullable(entries.getJsonArray("sourceRecords"))
+        .orElse(entries.getJsonArray("instances"));
   }
 
   @Override
@@ -118,7 +120,8 @@ public class RecordStorageHelper implements StorageHelper {
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
     if (entry.containsKey("source")) {
       Boolean res;
-      if (entry.getString("source").contains("MARC") && nonNull(entry.getString(MARC_RECORD_FROM_VIEW_RESPONSE))) {
+      if (entry.getString("source").contains("MARC")
+          && nonNull(entry.getString(MARC_RECORD_FROM_VIEW_RESPONSE))) {
         res = entry.getBoolean("suppress_from_discovery_srs");
       } else {
         res = entry.getBoolean("suppress_from_discovery_inventory");
@@ -137,9 +140,9 @@ public class RecordStorageHelper implements StorageHelper {
 
   private String getLeaderValue(JsonObject entry) {
     return ofNullable(entry.getJsonObject(PARSED_RECORD))
-      .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
-      .map(content -> content.getString(LEADER))
-      .orElse("");
+        .map(jsonRecord -> jsonRecord.getJsonObject(CONTENT))
+        .map(content -> content.getString(LEADER))
+        .orElse("");
   }
 
   private boolean isLeaderValueContainsDeletedFlag(String leaderValue) {
@@ -153,7 +156,7 @@ public class RecordStorageHelper implements StorageHelper {
 
   private boolean getDeletedValue(JsonObject entry) {
     return ofNullable(entry.getValue(DELETED))
-      .map(value -> Boolean.parseBoolean(value.toString())).orElse(false);
+        .map(value -> Boolean.parseBoolean(value.toString())).orElse(false);
   }
 
   @Override
