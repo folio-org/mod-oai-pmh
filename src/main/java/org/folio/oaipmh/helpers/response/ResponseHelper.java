@@ -9,6 +9,7 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.NO_RECORDS_MATCH;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.SERVICE_UNAVAILABLE;
 
+import com.google.common.collect.ImmutableSet;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -16,9 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import javax.ws.rs.core.Response;
-
 import org.apache.http.HttpStatus;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.ResponseConverter;
@@ -27,26 +26,27 @@ import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.OAIPMHerrorcodeType;
 
-import com.google.common.collect.ImmutableSet;
-
 /**
- * Used for building base {@link OAIPMH} response or with particular {@link OAIPMHerrorType} error(s).
+ * Used for building base {@link OAIPMH} response or with particular {@link OAIPMHerrorType}
+ * error(s).
  * As well build success and failure {@link Response}.
  */
 public class ResponseHelper {
   /**
-   * Contains errors that should be responded with 400 http status code
+   * Contains errors that should be responded with 400 http status code.
    */
-  private final Set<OAIPMHerrorcodeType> badRequestStatusErrors = ImmutableSet.of(BAD_ARGUMENT, BAD_RESUMPTION_TOKEN, BAD_VERB);
+  private final Set<OAIPMHerrorcodeType> badRequestStatusErrors =
+      ImmutableSet.of(BAD_ARGUMENT, BAD_RESUMPTION_TOKEN, BAD_VERB);
   /**
-   * Contains errors that should be responded with 404 http status code
+   * Contains errors that should be responded with 404 http status code.
    */
-  private final Set<OAIPMHerrorcodeType> notFoundStatusErrors = ImmutableSet.of(ID_DOES_NOT_EXIST, NO_RECORDS_MATCH);
+  private final Set<OAIPMHerrorcodeType> notFoundStatusErrors =
+      ImmutableSet.of(ID_DOES_NOT_EXIST, NO_RECORDS_MATCH);
 
   private static ResponseHelper instance;
 
   public static ResponseHelper getInstance() {
-    if(Objects.nonNull(instance)){
+    if (Objects.nonNull(instance)) {
       return instance;
     }
     instance = new ResponseHelper();
@@ -54,15 +54,15 @@ public class ResponseHelper {
   }
 
   /**
-   * Creates basic {@link OAIPMH} with ResponseDate and Request details
+   * Creates basic {@link OAIPMH} with ResponseDate and Request details.
    *
    * @param request {@link Request}
    * @return basic {@link OAIPMH}
    */
   public OAIPMH buildBaseOaipmhResponse(Request request) {
     return new OAIPMH().withResponseDate(Instant.now()
-      .truncatedTo(ChronoUnit.SECONDS))
-      .withRequest(request.getOaiRequest());
+        .truncatedTo(ChronoUnit.SECONDS))
+        .withRequest(request.getOaiRequest());
   }
 
   /**
@@ -84,9 +84,10 @@ public class ResponseHelper {
    * @param message - error message
    * @return OAIPMH response with error
    */
-  public OAIPMH buildOaipmhResponseWithErrors(Request request, OAIPMHerrorcodeType errorCode, String message) {
+  public OAIPMH buildOaipmhResponseWithErrors(Request request, OAIPMHerrorcodeType errorCode,
+      String message) {
     return buildBaseOaipmhResponse(request).withErrors(new OAIPMHerrorType().withCode(errorCode)
-      .withValue(message));
+        .withValue(message));
   }
 
   /**
@@ -108,36 +109,39 @@ public class ResponseHelper {
    */
   public Response buildSuccessResponse(OAIPMH oaipmh) {
     return respondWithTextXml(HttpStatus.SC_OK, ResponseConverter.getInstance()
-      .convertToString(oaipmh));
+        .convertToString(oaipmh));
   }
 
   /**
-   * Builds 'failure' {@link Response} with OAIPMH as a body and with status code depending on repository.errorsProcessing setting.
-   * If setting has true value then errors that refers to OAIPMH level errors will be responded with 200 status code and with their
-   * particular 4** status code in opposite case. In all other cases the response with 500 status code is built as default one.
+   * Builds 'failure' {@link Response} with OAIPMH as a body and with status code depending
+   * on repository.errorsProcessing setting. If setting has true value then errors that refers
+   * to OAIPMH level errors will be responded with 200 status code and with their particular
+   * 4** status code in opposite case. In all other cases the response with 500 status code
+   * is built as default one.
    *
    * @param oaipmh - OAIPMH response
    * @param request - OAIPMH request
    * @return built response
    */
   public Response buildFailureResponse(OAIPMH oaipmh, Request request) {
-    String responseBody = ResponseConverter.getInstance()
-      .convertToString(oaipmh);
+    String responseBody = ResponseConverter.getInstance().convertToString(oaipmh);
     boolean shouldRespondWithStatusOk = shouldRespondWithStatusOk(request);
     Set<OAIPMHerrorcodeType> errorCodes = getErrorCodes(oaipmh);
-      // 400
+    // 400
     if (!Collections.disjoint(errorCodes, badRequestStatusErrors)) {
       int statusCode = shouldRespondWithStatusOk ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST;
       return respondWithTextXml(statusCode, responseBody);
-      // 404
+    // 404
     } else if (!Collections.disjoint(errorCodes, notFoundStatusErrors)) {
       int statusCode = shouldRespondWithStatusOk ? HttpStatus.SC_OK : HttpStatus.SC_NOT_FOUND;
       return respondWithTextXml(statusCode, responseBody);
-      // 422
+    // 422
     } else if (errorCodes.contains(CANNOT_DISSEMINATE_FORMAT)) {
-      int statusCode = shouldRespondWithStatusOk ? HttpStatus.SC_OK : HttpStatus.SC_UNPROCESSABLE_ENTITY;
+      int statusCode = shouldRespondWithStatusOk
+          ? HttpStatus.SC_OK
+          : HttpStatus.SC_UNPROCESSABLE_ENTITY;
       return respondWithTextXml(statusCode, responseBody);
-      // 503
+    // 503
     } else if (getErrorCodes(oaipmh).contains(SERVICE_UNAVAILABLE)) {
       return respondWithTextXml(HttpStatus.SC_SERVICE_UNAVAILABLE, responseBody);
     }
@@ -145,13 +149,14 @@ public class ResponseHelper {
   }
 
   /**
-   * The error codes required to define the http code to be returned in the http response
+   * The error codes required to define the http code to be returned in the http response.
    *
    * @param oai OAIPMH response with errors
    * @return set of error codes
    */
   private Set<OAIPMHerrorcodeType> getErrorCodes(OAIPMH oai) {
-    // According to oai-pmh.raml the service will return different http codes depending on the error
+    // According to oai-pmh.raml the service will return different http codes depending
+    // on the error
     return oai.getErrors()
       .stream()
       .map(OAIPMHerrorType::getCode)
@@ -159,13 +164,14 @@ public class ResponseHelper {
   }
 
   /**
-   * Returns value of repository.errorsProcessing setting
+   * Returns value of repository.errorsProcessing setting.
    *
    * @param request - OAIPMH request
    * @return boolean
    */
   private boolean shouldRespondWithStatusOk(Request request) {
-    String config = RepositoryConfigurationUtil.getProperty(request.getRequestId(), REPOSITORY_ERRORS_PROCESSING);
+    String config = RepositoryConfigurationUtil.getProperty(request.getRequestId(),
+        REPOSITORY_ERRORS_PROCESSING);
     return config.equals("200");
   }
 
@@ -179,7 +185,7 @@ public class ResponseHelper {
    */
   private Response respondWithTextXml(int statusCode, String responseBody) {
     Response.ResponseBuilder responseBuilder = Response.status(statusCode)
-      .header("Content-Type", "text/xml").entity(responseBody);
+        .header("Content-Type", "text/xml").entity(responseBody);
     return responseBuilder.build();
   }
 

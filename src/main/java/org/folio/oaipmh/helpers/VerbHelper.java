@@ -1,11 +1,9 @@
 package org.folio.oaipmh.helpers;
 
-import javax.ws.rs.core.Response;
-
-import org.folio.oaipmh.Request;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import javax.ws.rs.core.Response;
+import org.folio.oaipmh.Request;
 
 /**
  * Interface for all OAI-PMH verbs business logic implementations.

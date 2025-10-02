@@ -12,25 +12,22 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javax.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.MetadataPrefix;
 import org.folio.oaipmh.Request;
-
 import org.openarchives.oai._2.GetRecordType;
 import org.openarchives.oai._2.OAIPMH;
 import org.openarchives.oai._2.OAIPMHerrorType;
 import org.openarchives.oai._2.RecordType;
 import org.openarchives.oai._2.ResumptionTokenType;
-
-import javax.ws.rs.core.Response;
 
 public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
@@ -46,15 +43,21 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
       }
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
       if (recordsSource.equals(INVENTORY)) {
-        logger.info("handle:: Generate records from inventory by requestId {}", request.getRequestId());
-        requestFromInventory(request, 1, request.getIdentifier() != null ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-          .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
+        logger.info("handle:: Generate records from inventory by requestId {}",
+            request.getRequestId());
+        requestFromInventory(request, 1, request.getIdentifier() != null
+            ? List.of(request.getStorageIdentifier()) : null, false, false, true)
+            .onComplete(handler ->
+                handleInventoryResponse(handler, request, ctx, promise));
       } else {
-        logger.info("handle:: Process records from srs for requestId {}", request.getRequestId());
-        requestAndProcessSrsRecords(request, ctx, promise, recordsSource.equals(SRS_AND_INVENTORY));
+        logger.info("handle:: Process records from srs for requestId {}",
+            request.getRequestId());
+        requestAndProcessSrsRecords(request, ctx, promise,
+            recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
-      logger.error("handle:: Request failed for requestId {} with error {}", request.getRequestId(),  e.getMessage());
+      logger.error("handle:: Request failed for requestId {} with error {}",
+          request.getRequestId(),  e.getMessage());
       handleException(promise, e);
     }
     return promise.future();
@@ -64,17 +67,17 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   protected List<OAIPMHerrorType> validateRequest(Request request) {
     List<OAIPMHerrorType> errors = new ArrayList<>();
     if (!validateIdentifier(request)) {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue
-        (INVALID_IDENTIFIER_ERROR_MESSAGE));
+      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+          .withValue(INVALID_IDENTIFIER_ERROR_MESSAGE));
     }
     if (request.getMetadataPrefix() != null) {
       if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
-          .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
+            .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else {
-      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT).withValue
-        (RECORD_METADATA_PREFIX_PARAM_ERROR));
+      errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
+          .withValue(RECORD_METADATA_PREFIX_PARAM_ERROR));
     }
     return errors;
   }
@@ -89,9 +92,11 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   }
 
   @Override
-  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh, ResumptionTokenType resumptionToken) {
+  protected void addResumptionTokenToOaiResponse(OAIPMH oaipmh,
+      ResumptionTokenType resumptionToken) {
     if (resumptionToken != null) {
-      throw new UnsupportedOperationException("Control flow is not applicable for GetRecord verb.");
+      throw new UnsupportedOperationException(
+          "Control flow is not applicable for GetRecord verb.");
     }
   }
 

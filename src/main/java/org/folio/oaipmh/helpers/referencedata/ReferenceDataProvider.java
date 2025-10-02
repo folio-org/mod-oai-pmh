@@ -1,10 +1,5 @@
 package org.folio.oaipmh.helpers.referencedata;
 
-import org.folio.oaipmh.Request;
-import org.folio.oaipmh.helpers.client.InventoryClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import static org.folio.processor.referencedata.ReferenceDataConstants.ALTERNATIVE_TITLE_TYPES;
 import static org.folio.processor.referencedata.ReferenceDataConstants.CALL_NUMBER_TYPES;
 import static org.folio.processor.referencedata.ReferenceDataConstants.CAMPUSES;
@@ -18,6 +13,11 @@ import static org.folio.processor.referencedata.ReferenceDataConstants.LIBRARIES
 import static org.folio.processor.referencedata.ReferenceDataConstants.LOAN_TYPES;
 import static org.folio.processor.referencedata.ReferenceDataConstants.LOCATIONS;
 import static org.folio.processor.referencedata.ReferenceDataConstants.MATERIAL_TYPES;
+
+import org.folio.oaipmh.Request;
+import org.folio.oaipmh.helpers.client.InventoryClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 @Component
 public class ReferenceDataProvider {
@@ -47,9 +47,8 @@ public class ReferenceDataProvider {
   }
 
   /**
-   * This methods returns the reference data that is needed to map the fields to MARC , while generating marc records on the fly
-   *
-   * @param request
+   * These methods returns the reference data that is needed to map the fields to MARC,
+   * while generating marc records on the fly.
    */
   private ReferenceDataImpl load(Request request) {
     ReferenceDataImpl referenceData = new ReferenceDataImpl();
@@ -65,7 +64,8 @@ public class ReferenceDataProvider {
     referenceData.put(MATERIAL_TYPES, inventoryClient.getMaterialTypes(request));
     referenceData.put(INSTANCE_TYPES, inventoryClient.getInstanceTypes(request));
     referenceData.put(INSTANCE_FORMATS, inventoryClient.getInstanceFormats(request));
-    referenceData.put(ELECTRONIC_ACCESS_RELATIONSHIPS, inventoryClient.getElectronicAccessRelationships(request));
+    referenceData.put(ELECTRONIC_ACCESS_RELATIONSHIPS,
+        inventoryClient.getElectronicAccessRelationships(request));
     referenceData.put(ISSUANCE_MODES, inventoryClient.getModesOfIssuance(request));
     referenceData.put(CALL_NUMBER_TYPES, inventoryClient.getCallNumberTypes(request));
     referenceData.put(ITEM_NOTE_TYPES, inventoryClient.getItemNoteTypes(request));

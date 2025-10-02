@@ -12,17 +12,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.With;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @EnableScheduling
 @Log4j2
@@ -56,21 +54,26 @@ public class MetricsCollectingService {
     return Holder.service;
   }
 
-  @Scheduled(fixedDelay = METRICS_COLLECTION_DELAY_IN_MS, initialDelay = METRICS_COLLECTION_DELAY_IN_MS)
+  @Scheduled(fixedDelay = METRICS_COLLECTION_DELAY_IN_MS,
+      initialDelay = METRICS_COLLECTION_DELAY_IN_MS)
   public Map<String, DoubleSummaryStatistics> scheduledMetricsCollectionTask() {
     Map<String, DoubleSummaryStatistics> statistics = null;
     if (log.isDebugEnabled()) {
       if (!hits.isEmpty()) {
         statistics = hits.entrySet()
-          .stream()
-          .filter(e -> e.getValue().getEnd() != 0)
-          .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), hits.remove(e.getKey())))
-          .collect(groupingBy(e -> e.getKey().split("\\|")[0], Collectors.summarizingDouble(this::difference)));
+            .stream()
+            .filter(e -> e.getValue().getEnd() != 0)
+            .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(),
+                hits.remove(e.getKey())))
+            .collect(groupingBy(e -> e.getKey().split("\\|")[0],
+                Collectors.summarizingDouble(this::difference)));
         if (!statistics.isEmpty()) {
           log.debug("----------------- {} -----------------", LocalDateTime.now()
-            .format(DateTimeFormatter.ISO_DATE_TIME));
-          statistics.forEach((operation, statistic) -> log.debug("{}  ---> Avg. time: {} ms, min: {} ms, max: {} ms, cnt: {}",
-              operation, String.format("%.1f", statistic.getAverage()), statistic.getMin(), statistic.getMax(), statistic.getCount()));
+              .format(DateTimeFormatter.ISO_DATE_TIME));
+          statistics.forEach((operation, statistic) ->
+              log.debug("{}  ---> Avg. time: {} ms, min: {} ms, max: {} ms, cnt: {}",
+              operation, String.format("%.1f", statistic.getAverage()), statistic.getMin(),
+                  statistic.getMax(), statistic.getCount()));
         }
       }
       if (!hits.isEmpty()) {

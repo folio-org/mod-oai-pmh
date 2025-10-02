@@ -1,10 +1,22 @@
 package org.folio.oaipmh.helpers;
 
+import static java.lang.Boolean.parseBoolean;
+import static org.folio.oaipmh.Constants.CONFIGS;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
+import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
+import static org.folio.oaipmh.Constants.OKAPI_URL;
+import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
+import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
+import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,20 +25,12 @@ import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.rest.client.ConfigurationsClient;
 import org.openarchives.oai._2.DeletedRecordType;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import static java.lang.Boolean.parseBoolean;
-import static org.folio.oaipmh.Constants.*;
-import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
-import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
-
 public class RepositoryConfigurationUtil {
 
   private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
 
-  private static final String MOD_CONFIGURATION_ERROR = "mod-configuration didn't respond for %s tenant with status 200. Status code was %s";
+  private static final String MOD_CONFIGURATION_ERROR = "mod-configuration didn't respond for "
+      + "%s tenant with status 200. Status code was %s";
   private static final String QUERY = "module==OAIPMH";
   private static Map<String, JsonObject> configsMap = new HashMap<>();
   private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
@@ -34,57 +38,65 @@ public class RepositoryConfigurationUtil {
   private RepositoryConfigurationUtil() {}
 
   /**
-   * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these properties into context.
+   * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these
+   * properties into context.
    *
    * @param okapiHeaders - okapi headers
    * @param requestId - unique identifier for current request
    * @return empty CompletableFuture
    */
-  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders, String requestId) {
+  public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders,
+      String requestId) {
     Promise<Void> promise = Promise.promise();
 
-    String okapiURL = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
+    String okapiUrl = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
     String token = okapiHeaders.get(OKAPI_TOKEN);
 
     var client = WebClientProvider.getWebClient();
 
     try {
-      var configurationsClient = new ConfigurationsClient(okapiURL, tenant, token, client);
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null, null, result -> {
-        try {
-          if (result.succeeded()) {
-            HttpResponse<Buffer> response = result.result();
-            if (response.statusCode() != 200) {
-              var errorMessage = String.format(MOD_CONFIGURATION_ERROR, tenant, response.statusCode());
-              logger.error(errorMessage);
-              throw new IllegalStateException(errorMessage);
-            }
-            JsonObject body = response.bodyAsJsonObject();
-            JsonObject config = new JsonObject();
-            body.getJsonArray(CONFIGS)
-              .stream()
-              .map(object -> (JsonObject) object)
-              .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
-              .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
+      var configurationsClient = new ConfigurationsClient(okapiUrl, tenant, token, client);
+      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null,
+          null, result -> {
+          try {
+            if (result.succeeded()) {
+              HttpResponse<Buffer> response = result.result();
+              if (response.statusCode() != 200) {
+                var errorMessage = String.format(MOD_CONFIGURATION_ERROR, tenant,
+                    response.statusCode());
+                logger.error(errorMessage);
+                throw new IllegalStateException(errorMessage);
+              }
+              JsonObject body = response.bodyAsJsonObject();
+              JsonObject config = new JsonObject();
+              body.getJsonArray(CONFIGS)
+                  .stream()
+                  .map(object -> (JsonObject) object)
+                  .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
+                  .forEach(configKeyValueMap ->
+                      configKeyValueMap.forEach(config::put));
 
-            configsMap.put(requestId, config);
-            promise.complete(null);
+              configsMap.put(requestId, config);
+              promise.complete(null);
+            }
+          } catch (Exception e) {
+            logger.error("Error occurred while processing configuration for {} tenant.",
+                tenant, e);
+            promise.fail(e);
           }
-        } catch (Exception e) {
-          logger.error("Error occurred while processing configuration for {} tenant.", tenant, e);
-          promise.fail(e);
-        }
-      });
+        });
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant.", tenant, e);
+      logger.error("Error happened initializing mod-configurations client for {} tenant.",
+          tenant, e);
       promise.fail(e);
       return promise.future();
     }
     return promise.future();
   }
 
-  public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId, String existedRequestId) {
+  public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId,
+      String existedRequestId) {
     configsMap.put(existedRequestId, configsMap.remove(generatedRequestId));
   }
 
@@ -93,7 +105,8 @@ public class RepositoryConfigurationUtil {
    *
    * @param requestId requestId
    * @param name      config key
-   * @return value of the config either from shared config if present. Or from System properties as fallback.
+   * @return value of the config either from shared config if present. Or from System properties
+   *         as fallback.
    */
   public static String getProperty(String requestId, String name) {
     JsonObject configs = getConfig(requestId);

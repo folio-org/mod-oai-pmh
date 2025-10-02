@@ -1,13 +1,5 @@
 package org.folio.oaipmh.mappers;
 
-import org.xml.sax.SAXException;
-
-import javax.xml.XMLConstants;
-import javax.xml.transform.Source;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.validation.Schema;
-import javax.xml.validation.SchemaFactory;
-import javax.xml.validation.Validator;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +7,13 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import javax.xml.XMLConstants;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
+import org.xml.sax.SAXException;
 
 public class MapperTestHelper {
 
@@ -27,8 +26,8 @@ public class MapperTestHelper {
   static boolean validateDocumentAgainstSchema(byte[] byteSource, String shemaFilePath) {
     try {
       SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-      URL schemaURL = new File(shemaFilePath).toURI().toURL();
-      Schema schema = sf.newSchema(schemaURL);
+      URL schemaUrl = new File(shemaFilePath).toURI().toURL();
+      Schema schema = sf.newSchema(schemaUrl);
       Validator validator = schema.newValidator();
       Source source = new StreamSource(new ByteArrayInputStream(byteSource));
       validator.validate(source);

@@ -1,7 +1,6 @@
 package org.folio.oaipmh.helpers.referencedata;
 
 import io.vertx.core.json.JsonObject;
-
 import java.util.HashMap;
 import java.util.Map;
 

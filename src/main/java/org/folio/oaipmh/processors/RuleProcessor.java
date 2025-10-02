@@ -1,8 +1,12 @@
 package org.folio.oaipmh.processors;
 
-import java.util.List;
-import java.util.ArrayList;
+import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.reader.values.SimpleValue.SubType.LIST_OF_STRING;
+import static org.folio.reader.values.SimpleValue.SubType.STRING;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.folio.processor.error.ErrorHandler;
 import org.folio.processor.error.RecordInfo;
 import org.folio.processor.error.TranslationException;
@@ -22,15 +26,10 @@ import org.folio.reader.values.StringValue;
 import org.folio.writer.RecordWriter;
 import org.marc4j.marc.VariableField;
 
-import static java.util.Optional.ofNullable;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.folio.reader.values.SimpleValue.SubType.LIST_OF_STRING;
-import static org.folio.reader.values.SimpleValue.SubType.STRING;
-
 /**
  * RuleProcessor is a central part of mapping.
- * <p>
- * High-level algorithm:
+ *
+ * <p>High-level algorithm:
  * # read data by the given rule
  * # translate data
  * # write data
@@ -60,15 +59,18 @@ public final class RuleProcessor {
   }
 
   /**
-   * Reads and translates data by given rules, writes a marc record in specific format defined by RecordWriter.
+   * Reads and translates data by given rules, writes a marc record in specific format defined
+   * by RecordWriter.
    * Returns content of the generated marc record
    *
    * @return content of the generated marc record
    */
-  public String process(EntityReader reader, RecordWriter writer, ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
+  public String process(EntityReader reader, RecordWriter writer,
+      ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
     rules.forEach(rule -> {
       if (LEADER_FIELD.equals(rule.getField())) {
-        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
+        rule.getDataSources().forEach(dataSource ->
+            writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
       } else {
         processRule(reader, writer, referenceData, rule, errorHandler);
       }
@@ -78,15 +80,18 @@ public final class RuleProcessor {
   }
 
   /**
-   * Reads and translates data by given rules, writes a list of marc record fields in specific format defined by RecordWriter.
+   * Reads and translates data by given rules, writes a list of marc record fields in specific
+   * format defined by RecordWriter.
    * Returns the list of the generated VariableField of marc record
    *
    * @return the list of the generated VariableField of marc record
    */
-  public List<VariableField> processFields(EntityReader reader, RecordWriter writer, ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
+  public List<VariableField> processFields(EntityReader reader, RecordWriter writer,
+      ReferenceDataWrapper referenceData, List<Rule> rules, ErrorHandler errorHandler) {
     rules.forEach(rule -> {
       if (LEADER_FIELD.equals(rule.getField())) {
-        rule.getDataSources().forEach(dataSource -> writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
+        rule.getDataSources().forEach(dataSource ->
+            writer.writeLeader(dataSource.getTranslation(), rule.getMetadata()));
       } else {
         processRule(reader, writer, referenceData, rule, errorHandler);
       }
@@ -95,9 +100,10 @@ public final class RuleProcessor {
   }
 
   /**
-   * Processes the given mapping rule using reader and writer
+   * Processes the given mapping rule using reader and writer.
    */
-  private void processRule(EntityReader reader, RecordWriter writer, ReferenceDataWrapper referenceData, Rule rule, ErrorHandler errorHandler) {
+  private void processRule(EntityReader reader, RecordWriter writer,
+      ReferenceDataWrapper referenceData, Rule rule, ErrorHandler errorHandler) {
     RuleValue<?> ruleValue = reader.read(rule);
     switch (ruleValue.getType()) {
       case SIMPLE:
@@ -110,14 +116,15 @@ public final class RuleProcessor {
         translate(compositeValue, referenceData, rule.getMetadata(), errorHandler);
         writer.writeField(rule.getField(), compositeValue);
         break;
-      case MISSING:
+      default:
     }
   }
 
   /**
-   * Translates the given simple value
+   * Translates the given simple value.
    */
-  private <S extends SimpleValue> void translate(S simpleValue, ReferenceDataWrapper referenceData, Metadata metadata, ErrorHandler errorHandler) {
+  private <S extends SimpleValue> void translate(S simpleValue,
+      ReferenceDataWrapper referenceData, Metadata metadata, ErrorHandler errorHandler) {
     if (translationHolder != null) {
       if (STRING.equals(simpleValue.getSubType())) {
         applyTranslation((StringValue) simpleValue, referenceData, metadata, 0, errorHandler);
@@ -128,9 +135,10 @@ public final class RuleProcessor {
   }
 
   /**
-   * Translates the given composite value
+   * Translates the given composite value.
    */
-  private void translate(CompositeValue compositeValue, ReferenceDataWrapper referenceData, Metadata metadata, ErrorHandler errorHandler) {
+  private void translate(CompositeValue compositeValue, ReferenceDataWrapper referenceData,
+      Metadata metadata, ErrorHandler errorHandler) {
     if (translationHolder != null) {
       List<List<StringValue>> value = compositeValue.getValue();
       for (int currentIndex = 0; currentIndex < value.size(); currentIndex++) {
@@ -143,9 +151,10 @@ public final class RuleProcessor {
   }
 
   /**
-   *  Applies translation function for ListValue
+   *  Applies translation function for ListValue.
    */
-  private void applyTranslation(ListValue listValue, ReferenceDataWrapper referenceData, Metadata metadata, ErrorHandler errorHandler) {
+  private void applyTranslation(ListValue listValue, ReferenceDataWrapper referenceData,
+      Metadata metadata, ErrorHandler errorHandler) {
     Translation translation = listValue.getDataSource().getTranslation();
     if (translation != null) {
       for (int currentIndex = 0; currentIndex < listValue.getValue().size(); currentIndex++) {
@@ -153,11 +162,14 @@ public final class RuleProcessor {
         String readValue = stringValue.getValue();
         RecordInfo recordInfo = stringValue.getRecordInfo();
         try {
-          TranslationFunction translationFunction = translationHolder.lookup(translation.getFunction());
-          String translatedValue = translationFunction.apply(readValue, currentIndex, translation, referenceData, metadata);
+          TranslationFunction translationFunction = translationHolder.lookup(
+              translation.getFunction());
+          String translatedValue = translationFunction.apply(readValue, currentIndex, translation,
+              referenceData, metadata);
           stringValue.setValue(translatedValue);
         } catch (Exception e) {
-          populateFieldNameAndValue(recordInfo, getProperFieldName(stringValue.getDataSource().getFrom(), recordInfo), readValue);
+          populateFieldNameAndValue(recordInfo, getProperFieldName(
+              stringValue.getDataSource().getFrom(), recordInfo), readValue);
           handleError(recordInfo, e, errorHandler);
         }
       }
@@ -165,25 +177,30 @@ public final class RuleProcessor {
   }
 
   /**
-   *  Applies translation function for StringValue
+   *  Applies translation function for StringValue.
    */
-  private void applyTranslation(StringValue stringValue, ReferenceDataWrapper referenceData, Metadata metadata, int index, ErrorHandler errorHandler) {
+  private void applyTranslation(StringValue stringValue, ReferenceDataWrapper referenceData,
+      Metadata metadata, int index, ErrorHandler errorHandler) {
     Translation translation = stringValue.getDataSource().getTranslation();
     if (translation != null) {
       String readValue = stringValue.getValue();
       RecordInfo recordInfo = stringValue.getRecordInfo();
       try {
-        TranslationFunction translationFunction = translationHolder.lookup(translation.getFunction());
-        String translatedValue = translationFunction.apply(readValue, index, translation, referenceData, metadata);
+        TranslationFunction translationFunction =
+            translationHolder.lookup(translation.getFunction());
+        String translatedValue = translationFunction.apply(readValue, index, translation,
+            referenceData, metadata);
         stringValue.setValue(translatedValue);
       } catch (Exception e) {
-        populateFieldNameAndValue(recordInfo, getProperFieldName(stringValue.getDataSource().getFrom(), recordInfo), readValue);
+        populateFieldNameAndValue(recordInfo,
+            getProperFieldName(stringValue.getDataSource().getFrom(), recordInfo), readValue);
         handleError(recordInfo, e, errorHandler);
       }
     }
   }
 
-  private void populateFieldNameAndValue(RecordInfo recordInfo, String fieldName, String fieldValue) {
+  private void populateFieldNameAndValue(RecordInfo recordInfo, String fieldName,
+      String fieldValue) {
     if (recordInfo != null) {
       recordInfo.setFieldName(fieldName);
       recordInfo.setFieldValue(fieldValue);
@@ -197,8 +214,8 @@ public final class RuleProcessor {
         return nameWithoutDataFromBracket.replaceAll(INSTANCE_REGEX, EMPTY);
       }
       return recordInfo.getType().isHolding()
-        ? nameWithoutDataFromBracket.replaceAll(HOLDING_REGEX, EMPTY)
-        : nameWithoutDataFromBracket.replaceAll(ITEM_REGEX, EMPTY);
+          ? nameWithoutDataFromBracket.replaceAll(HOLDING_REGEX, EMPTY)
+          : nameWithoutDataFromBracket.replaceAll(ITEM_REGEX, EMPTY);
     }
     return EMPTY;
   }
@@ -218,10 +235,13 @@ public final class RuleProcessor {
 
   private boolean exceptionsEqual(TranslationException transExc1, TranslationException transExc2) {
     return transExc1.getErrorCode() == transExc2.getErrorCode()
-      && ofNullable(transExc1.getRecordInfo().getId()).orElse("").equals(ofNullable(transExc2.getRecordInfo().getId()).orElse(""))
-      && ofNullable(transExc1.getRecordInfo().getFieldValue()).orElse("").equals(ofNullable(transExc2.getRecordInfo().getFieldValue()).orElse(""))
-      && ofNullable(transExc1.getRecordInfo().getFieldName()).orElse("").equals(ofNullable(transExc2.getRecordInfo().getFieldName()).orElse(""))
-      && transExc1.getRecordInfo().getType() == transExc2.getRecordInfo().getType();
+        && ofNullable(transExc1.getRecordInfo().getId()).orElse("")
+            .equals(ofNullable(transExc2.getRecordInfo().getId()).orElse(""))
+        && ofNullable(transExc1.getRecordInfo().getFieldValue()).orElse("")
+            .equals(ofNullable(transExc2.getRecordInfo().getFieldValue()).orElse(""))
+        && ofNullable(transExc1.getRecordInfo().getFieldName()).orElse("")
+          .equals(ofNullable(transExc2.getRecordInfo().getFieldName()).orElse(""))
+        && transExc1.getRecordInfo().getType() == transExc2.getRecordInfo().getType();
   }
 
 }

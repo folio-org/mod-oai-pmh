@@ -1,9 +1,8 @@
 package org.folio.oaipmh.dao;
 
+import io.vertx.core.Future;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
-
-import io.vertx.core.Future;
 
 public interface SetDao {
 

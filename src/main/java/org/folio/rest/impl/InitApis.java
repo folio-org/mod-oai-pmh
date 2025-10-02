@@ -1,10 +1,17 @@
 package org.folio.rest.impl;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.ResponseConverter;
 import org.folio.oaipmh.WebClientProvider;
@@ -13,20 +20,11 @@ import org.folio.rest.resource.interfaces.InitAPI;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
- * The class initializes system properties and checks if required configs are specified
+ * The class initializes system properties and checks if required configs are specified.
  */
-public class InitAPIs implements InitAPI {
-  private final Logger logger = LogManager.getLogger(InitAPIs.class);
+public class InitApis implements InitAPI {
+  private final Logger logger = LogManager.getLogger(InitApis.class);
 
   private static final String CONFIGURATION_PATH = "configuration.path";
   private static final String CONFIGURATION_FILES = "configuration.files";
@@ -54,17 +52,24 @@ public class InitAPIs implements InitAPI {
     try {
       Properties systemProperties = System.getProperties();
       String configPath = systemProperties.getProperty(CONFIGURATION_PATH, DEFAULT_CONFIG_PATH);
-      String[] configFiles = systemProperties.getProperty(CONFIGURATION_FILES, DEFAULT_CONFIG_FILES).split(",");
+      String[] configFiles = systemProperties.getProperty(
+          CONFIGURATION_FILES, DEFAULT_CONFIG_FILES).split(",");
       List<String> configsSet = Arrays.asList(configFiles);
       configsSet.forEach(configName -> {
-        JsonObject jsonConfig = configurationHelper.getJsonConfigFromResources(configPath, configName);
-        Map<String, String> configKeyValueMap = configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfig);
+        JsonObject jsonConfig =
+            configurationHelper.getJsonConfigFromResources(configPath, configName);
+        Map<String, String> configKeyValueMap =
+            configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(jsonConfig);
         configKeyValueMap.forEach((key, value) -> {
           Object existing = systemProperties.putIfAbsent(key, value);
           if (logger.isInfoEnabled()) {
-            String message = (existing == null) ?
-              String.format("The '%s' property was loaded from config file with its default value '%s'.", key, value) :
-              String.format("The '%s' system property has '%s' value. The default '%s' value from config file is ignored.", key, existing, value);
+            String message = (existing == null)
+                ? String.format(
+                  "The '%s' property was loaded from config file with its default value '%s'.",
+                  key, value)
+                : String.format(
+                  "The '%s' system property has '%s' value. The default '%s' value from "
+                  + "config file is ignored.", key, existing, value);
             logger.info(message);
           }
         });
@@ -76,7 +81,7 @@ public class InitAPIs implements InitAPI {
   }
 
   private void verifyJaxbInitialized() {
-    if(!ResponseConverter.getInstance().isJaxbInitialized()) {
+    if (!ResponseConverter.getInstance().isJaxbInitialized()) {
       throw new IllegalStateException("The jaxb marshaller failed initialization.");
     }
   }

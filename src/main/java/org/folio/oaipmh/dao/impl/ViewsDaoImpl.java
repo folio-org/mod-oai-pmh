@@ -20,7 +20,7 @@ public class ViewsDaoImpl implements ViewsDao {
   public Future<JsonArray> query(String query, String tenantId) {
     var client = postgresClientFactory.getClient(tenantId);
     return client.query(query).execute()
-      .map(this::rowSetToString).onComplete(handler -> client.close());
+        .map(this::rowSetToString).onComplete(handler -> client.close());
   }
 
   private JsonArray rowSetToString(RowSet<Row> rowSet) {

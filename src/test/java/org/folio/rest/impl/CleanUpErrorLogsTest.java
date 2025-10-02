@@ -1,5 +1,14 @@
 package org.folio.rest.impl;
 
+import static java.lang.String.format;
+import static java.util.Objects.nonNull;
+import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.http.Header;
@@ -10,6 +19,13 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import javax.ws.rs.NotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -37,23 +53,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-
-import javax.ws.rs.NotFoundException;
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
-import static java.lang.String.format;
-import static java.util.Objects.nonNull;
-import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.TEST_USER_ID;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @ExtendWith(VertxExtension.class)
 @ExtendWith(MockitoExtension.class)
@@ -116,28 +115,29 @@ class CleanUpErrorLogsTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
-      try {
-        Context context = vertx.getOrCreateContext();
-        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-        SpringContextUtil.autowireDependencies(this, context);
-        TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
-        new OkapiMockServer(vertx, mockPort).start(testContext);
-      } catch (Exception e) {
-        testContext.failNow(e);
-      }
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+        testContext.succeeding(v -> {
+          try {
+            Context context = vertx.getOrCreateContext();
+            SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+            SpringContextUtil.autowireDependencies(this, context);
+            TestUtil.initializeTestContainerDbSchema(vertx, OAI_TEST_TENANT);
+            new OkapiMockServer(vertx, mockPort).start(testContext);
+          } catch (Exception e) {
+            testContext.failNow(e);
+          }
+        }));
   }
 
   static {
     s3 = new GenericContainer<>("minio/minio:latest")
-      .withEnv("MINIO_ACCESS_KEY", S3_ACCESS_KEY)
-      .withEnv("MINIO_SECRET_KEY", S3_SECRET_KEY)
-      .withCommand("server /data")
-      .withExposedPorts(S3_PORT)
-      .waitingFor(new HttpWaitStrategy().forPath("/minio/health/ready")
-        .forPort(S3_PORT)
-        .withStartupTimeout(Duration.ofSeconds(10))
+        .withEnv("MINIO_ACCESS_KEY", S3_ACCESS_KEY)
+        .withEnv("MINIO_SECRET_KEY", S3_SECRET_KEY)
+        .withCommand("server /data")
+        .withExposedPorts(S3_PORT)
+        .waitingFor(new HttpWaitStrategy().forPath("/minio/health/ready")
+            .forPort(S3_PORT)
+            .withStartupTimeout(Duration.ofSeconds(10))
       );
     s3.start();
     MINIO_ENDPOINT = format("http://%s:%s", s3.getHost(), s3.getFirstMappedPort());
@@ -154,82 +154,87 @@ class CleanUpErrorLogsTest {
     var requestId = UUID.randomUUID().toString();
     var instanceId1 = UUID.randomUUID().toString();
     var errorMsg1 = "some error msg 1";
-    var TEST_TENANT_ID = "oaiTest";
+    var testTenantId = "oaiTest";
 
     testContext.verify(() -> {
-      errorsService.log(TEST_TENANT_ID, requestId, instanceId1, errorMsg1);
+      errorsService.log(testTenantId, requestId, instanceId1, errorMsg1);
       List<String> csvErrorLines = new ArrayList<>();
       csvErrorLines.add(new StringBuilder().append("Request ID").append(",")
-        .append("Instance ID").append(",").append("Error message").toString());
+          .append("Instance ID").append(",").append("Error message").toString());
       csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-        .append(instanceId1).append(",").append(errorMsg1).toString());
+          .append(instanceId1).append(",").append(errorMsg1).toString());
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
       requestMetadata.setLinkToErrorFile("error-link");
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate().minusDays(365));
 
-      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
-        .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
-          errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID, requestId)
-            .onComplete(testContext.succeeding(requestMetadataUpdated -> {
-              instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
-                .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
-                  errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
-                    .onComplete(testContext.succeeding(errorList -> {
-                      assertEquals(1, errorList.size());
+      instancesDao.saveRequestMetadata(requestMetadata, testTenantId)
+          .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+            errorsService.saveErrorsAndUpdateRequestMetadata(testTenantId, requestId)
+                .onComplete(testContext.succeeding(requestMetadataUpdated -> {
+                  instancesDao.getRequestMetadataCollection(0, 10, testTenantId)
+                      .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
+                        errorsDao.getErrorsList(requestMetadata.getRequestId().toString(),
+                              testTenantId)
+                            .onComplete(testContext.succeeding(errorList -> {
+                              assertEquals(1, errorList.size());
 
-                      assertEquals(1, folioS3Client.list("").size());
+                              assertEquals(1, folioS3Client.list("").size());
 
-                      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
-                      request.when()
-                        .post()
-                        .then()
-                        .statusCode(204);
+                              RequestSpecification request = createBaseRequest(
+                                  CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+                              request.when()
+                                  .post()
+                                  .then()
+                                  .statusCode(204);
 
-                      errorsDao.getErrorsList(requestMetadata.getRequestId().toString(), TEST_TENANT_ID)
-                        .onComplete(testContext.succeeding(errorListNew -> {
-                          assertEquals(0, errorListNew.size());
-                        }));
+                              errorsDao.getErrorsList(requestMetadata.getRequestId().toString(),
+                                    testTenantId)
+                                  .onComplete(testContext.succeeding(errorListNew -> {
+                                    assertEquals(0, errorListNew.size());
+                                  }));
 
-                      assertEquals(0, folioS3Client.list("").size());
+                              assertEquals(0, folioS3Client.list("").size());
 
-                      instancesService.getRequestMetadataByRequestId(requestId, TEST_TENANT_ID).onComplete(result -> {
-                        if (result.succeeded()) {
-                          assertEquals("", result.result().getPathToErrorFileInS3());
-                          assertEquals("", result.result().getLinkToErrorFile());
-                        } else {
-                          assertThrows(NotFoundException.class, () -> {
-                            logger.error("request metadata not found");
-                          });
-                        }
-                      });
+                              instancesService.getRequestMetadataByRequestId(requestId,
+                                  testTenantId).onComplete(result -> {
+                                    if (result.succeeded()) {
+                                      assertEquals("", result.result().getPathToErrorFileInS3());
+                                      assertEquals("", result.result().getLinkToErrorFile());
+                                    } else {
+                                      assertThrows(NotFoundException.class, () -> {
+                                        logger.error("request metadata not found");
+                                      });
+                                    }
+                                  });
 
-                      instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
-                        assertThrows(NotFoundException.class, () -> {
-                          logger.error("request metadata not found");
-                        });
-                      });
+                              instancesService.getRequestMetadataByRequestId(UUID.randomUUID()
+                                  .toString(), testTenantId).onComplete(result -> {
+                                    assertThrows(NotFoundException.class, () -> {
+                                      logger.error("request metadata not found");
+                                    });
+                                  });
 
-                      testContext.completeNow();
-                    }));
+                              testContext.completeNow();
+                            }));
+                      }));
                 }));
-            }));
-        }));
+          }));
     });
   }
 
   @Test
   void shouldSucceedIfNoInstancesToSave(VertxTestContext testContext) {
 
-    var TEST_TENANT_ID = "oaiTest";
+    var testTenantId = "oaiTest";
 
     testContext.verify(() -> {
 
-      instancesService.saveInstances(Collections.emptyList(), TEST_TENANT_ID)
-          .onComplete(handler -> {
-            assertTrue(handler.succeeded());
-          });
+      instancesService.saveInstances(Collections.emptyList(), testTenantId)
+            .onComplete(handler -> {
+              assertTrue(handler.succeeded());
+            });
       testContext.completeNow();
     });
   }
@@ -238,27 +243,27 @@ class CleanUpErrorLogsTest {
   void shouldPassWhenNoErrorsFound(VertxTestContext testContext) {
 
     testContext.verify(() -> {
-
-      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null,
+          tenantHeader);
       request.when()
-        .post()
-        .then()
-        .statusCode(204);
-
+          .post()
+          .then()
+          .statusCode(204);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldThrowNotFoundExceptionWhenRequestIdNotFoundWhenCleanUpErrorLogs(VertxTestContext testContext) {
+  void shouldThrowNotFoundExceptionWhenRequestIdNotFoundWhenCleanUpErrorLogs(
+      VertxTestContext testContext) {
 
     testContext.verify(() -> {
 
       RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
       request.when()
-        .post()
-        .then()
-        .statusCode(204);
+          .post()
+          .then()
+          .statusCode(204);
 
       testContext.completeNow();
     });
@@ -269,11 +274,12 @@ class CleanUpErrorLogsTest {
 
     testContext.verify(() -> {
 
-      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeaderInvalid);
+      RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null,
+          tenantHeaderInvalid);
       request.when()
-        .post()
-        .then()
-        .statusCode(500);
+          .post()
+          .then()
+          .statusCode(500);
 
       testContext.completeNow();
     });
@@ -284,7 +290,7 @@ class CleanUpErrorLogsTest {
 
     testContext.verify(() -> {
 
-      var TEST_TENANT_ID = "oaiTest";
+
       var requestId = UUID.randomUUID().toString();
 
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
@@ -293,32 +299,36 @@ class CleanUpErrorLogsTest {
       requestMetadata.setLinkToErrorFile("error-link");
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate().minusDays(365));
 
-      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
-        .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+      var testTenantId = "oaiTest";
+      instancesDao.saveRequestMetadata(requestMetadata, testTenantId)
+          .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
 
-          RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null, tenantHeader);
-          request.when()
-            .post()
-            .then()
-            .statusCode(204);
+            RequestSpecification request = createBaseRequest(CLEAN_UP_INSTANCES_PATH, null,
+                tenantHeader);
+            request.when()
+                .post()
+                .then()
+                .statusCode(204);
 
-          instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(), TEST_TENANT_ID).onComplete(result -> {
-            assertThrows(NotFoundException.class, () -> {
-              logger.error("request metadata not found");
-            });
-          });
+            instancesService.getRequestMetadataByRequestId(UUID.randomUUID().toString(),
+                testTenantId).onComplete(result -> {
+                  assertThrows(NotFoundException.class, () -> {
+                    logger.error("request metadata not found");
+                  });
+                });
 
-          testContext.completeNow();
-        }));
+            testContext.completeNow();
+          }));
     });
   }
 
-  private RequestSpecification createBaseRequest(String path, ContentType contentType, Header tenantHeader) {
+  private RequestSpecification createBaseRequest(String path, ContentType contentType,
+      Header tenantHeader) {
     RequestSpecification requestSpecification = RestAssured.given()
-      .header(okapiUrlHeader)
-      .header(tenantHeader)
-      .header(okapiUserHeader)
-      .basePath(path);
+        .header(okapiUrlHeader)
+        .header(tenantHeader)
+        .header(okapiUserHeader)
+        .basePath(path);
     if (nonNull(contentType)) {
       requestSpecification.contentType(contentType);
     }

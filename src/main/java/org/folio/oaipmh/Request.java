@@ -1,21 +1,5 @@
 package org.folio.oaipmh;
 
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.folio.rest.tools.utils.TenantTool;
-import org.openarchives.oai._2.RequestType;
-import org.openarchives.oai._2.VerbType;
-import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
@@ -43,9 +27,25 @@ import static org.folio.oaipmh.Constants.TOTAL_RECORDS_PARAM;
 import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.folio.rest.tools.utils.TenantTool;
+import org.openarchives.oai._2.RequestType;
+import org.openarchives.oai._2.VerbType;
+import org.openarchives.oai._2_0.oai_identifier.OaiIdentifier;
+
 /**
  * Class that represents OAI-PMH request and holds http query arguments.
- * It implements builder pattern, so use {@link Builder} instance to build an instance of the request.
+ * It implements builder pattern, so use {@link Builder} instance to build an instance of
+ * the request.
  */
 public class Request {
   private static final char PARAMETER_SEPARATOR = '&';
@@ -90,8 +90,10 @@ public class Request {
    */
   private int inventoryTotalRecords;
   /**
-   * Defines by how much to decrease offset to retrieve from Inventory when records source is SRS + Inventory.
-   * It matters when number of records returned from SRS is less than {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
+   * Defines by how much to decrease offset to retrieve from Inventory when records source
+   * is SRS + Inventory.
+   * It matters when number of records returned from SRS is less than
+   * {@link Constants#REPOSITORY_MAX_RECORDS_PER_RESPONSE}.
    */
   private int inventoryOffsetShift;
   /**
@@ -103,7 +105,7 @@ public class Request {
   private String nextRecordId;
   private String lastInstanceId;
   private int completeListSize;
-   /** The id of the request. */
+  /** The id of the request. */
   private String requestId;
   /** The PK id of the first record in the next set of results used for partitioning. */
   private int nextInstancePkValue;
@@ -160,8 +162,8 @@ public class Request {
     }
 
 
-    public Builder baseURL(String baseURL) {
-      oaiRequest.setValue(baseURL);
+    public Builder baseUrl(String baseUrl) {
+      oaiRequest.setValue(baseUrl);
       return this;
     }
   }
@@ -177,7 +179,8 @@ public class Request {
 
   public Request(Request request, String tenant) {
     this.oaiRequest = request.getOaiRequest();
-    this.okapiHeaders = request.getOkapiHeaders().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    this.okapiHeaders = request.getOkapiHeaders().entrySet().stream()
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     this.okapiHeaders.put(OKAPI_TENANT, tenant);
     this.tenant = tenant;
     this.okapiToken = request.getOkapiToken();
@@ -201,11 +204,13 @@ public class Request {
 
 
   public String getMetadataPrefix() {
-    return restoredOaiRequest != null ? restoredOaiRequest.getMetadataPrefix() : oaiRequest.getMetadataPrefix();
+    return restoredOaiRequest != null
+        ? restoredOaiRequest.getMetadataPrefix() : oaiRequest.getMetadataPrefix();
   }
 
   public String getIdentifier() {
-    return restoredOaiRequest != null ? restoredOaiRequest.getIdentifier() : oaiRequest.getIdentifier();
+    return restoredOaiRequest != null
+        ? restoredOaiRequest.getIdentifier() : oaiRequest.getIdentifier();
   }
 
   public void setIdentifier(String identifier) {
@@ -241,7 +246,7 @@ public class Request {
   }
 
   public String getStorageIdentifier() {
-    return getIdentifier().substring(getIdentifierPrefix().length()) ;
+    return getIdentifier().substring(getIdentifierPrefix().length());
   }
 
   public String getIdentifierPrefix() {
@@ -251,8 +256,8 @@ public class Request {
       OaiIdentifier oaiIdentifier = new OaiIdentifier();
       oaiIdentifier.setRepositoryIdentifier(url.getHost());
       return oaiIdentifier.getScheme() + oaiIdentifier.getDelimiter()
-        + oaiIdentifier.getRepositoryIdentifier()
-        + oaiIdentifier.getDelimiter() + tenantId + "/";
+          + oaiIdentifier.getRepositoryIdentifier()
+          + oaiIdentifier.getDelimiter() + tenantId + "/";
     } catch (MalformedURLException e) {
       throw new IllegalStateException(e);
     }
@@ -372,30 +377,28 @@ public class Request {
 
   /**
    * Factory method returning an instance of the builder.
+   *
    * @return {@link Builder} instance
    */
   public static Builder builder() {
     return new Builder();
   }
 
-
-
-
   /**
    * Restores original request encoded in resumptionToken.
-   * The resumptionToken is exclusive param, so the request cannot be restored if some other params are provided
-   * in the request along with the resumptionToken.
+   * The resumptionToken is exclusive param, so the request cannot be restored if some
+   * other params are provided in the request along with the resumptionToken.
    *
    * @return true if the request was restored, false otherwise.
    */
   public boolean isResumptionTokenParsableAndValid() {
     try {
-    String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
-      StandardCharsets.UTF_8);
+      String resumptionToken = new String(Base64.getUrlDecoder()
+          .decode(oaiRequest.getResumptionToken()), StandardCharsets.UTF_8);
 
-    Map<String, String> params = URLEncodedUtils
-        .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
-        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+      Map<String, String> params = URLEncodedUtils
+          .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+          .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
       restoredOaiRequest = new RequestType();
       restoredOaiRequest.setMetadataPrefix(params.get(METADATA_PREFIX_PARAM));
@@ -408,12 +411,17 @@ public class Request {
       this.nextRecordId = params.get(NEXT_RECORD_ID_PARAM);
       this.requestId = params.get(REQUEST_ID_PARAM);
       this.fromInventory = Boolean.parseBoolean(params.get(REQUEST_FROM_INVENTORY_PARAM));
-      this.inventoryTotalRecords = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM)).orElse("0"));
-      this.inventoryOffsetShift = Integer.parseInt(ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
-      this.oldSrsOffset = Integer.parseInt(ofNullable(params.get(REQUEST_OLD_SRS_OFFSET_PARAM)).orElse("0"));
-      this.cursor = Integer.parseInt(ofNullable(params.get(REQUEST_CURSOR_PARAM)).orElse("0"));
-      this.completeListSize = Integer.parseInt(ofNullable(params.get(REQUEST_COMPLETE_LIST_SIZE_PARAM)).orElse("0"));
-      if(Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
+      this.inventoryTotalRecords = Integer.parseInt(
+          ofNullable(params.get(REQUEST_INVENTORY_TOTAL_RECORDS_PARAM)).orElse("0"));
+      this.inventoryOffsetShift = Integer.parseInt(
+          ofNullable(params.get(REQUEST_INVENTORY_OFFSET_SHIFT_PARAM)).orElse("0"));
+      this.oldSrsOffset = Integer.parseInt(
+          ofNullable(params.get(REQUEST_OLD_SRS_OFFSET_PARAM)).orElse("0"));
+      this.cursor = Integer.parseInt(ofNullable(params.get(REQUEST_CURSOR_PARAM))
+          .orElse("0"));
+      this.completeListSize = Integer.parseInt(ofNullable(
+          params.get(REQUEST_COMPLETE_LIST_SIZE_PARAM)).orElse("0"));
+      if (Objects.nonNull(params.get(NEXT_INSTANCE_PK_VALUE))) {
         this.nextInstancePkValue = Integer.parseInt(params.get(NEXT_INSTANCE_PK_VALUE));
       }
       if (Objects.nonNull(params.get(LAST_INSTANCE_ID_PARAM))) {
@@ -429,16 +437,17 @@ public class Request {
 
   public boolean isResumptionTokenTimeExpired() {
     try {
-      String resumptionToken = new String(Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
-        StandardCharsets.UTF_8);
+      String resumptionToken = new String(
+          Base64.getUrlDecoder().decode(oaiRequest.getResumptionToken()),
+          StandardCharsets.UTF_8);
 
       Map<String, String> params = URLEncodedUtils
-        .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
-        .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
+          .parse(resumptionToken, UTF_8, PARAMETER_SEPARATOR).stream()
+          .collect(toMap(NameValuePair::getName, NameValuePair::getValue));
 
       Instant expirationDate = Instant.parse(params.get(EXPIRATION_DATE_RESUMPTION_TOKEN_PARAM));
       Instant currentDate = Instant.now();
-        return expirationDate.isBefore(currentDate);
+      return expirationDate.isBefore(currentDate);
     } catch (Exception e) {
       return true;
     }
@@ -446,6 +455,7 @@ public class Request {
 
   /**
    * Indicates if this request is restored from resumptionToken.
+   *
    * @return true if restored from resumption token, false otherwise
    */
   public boolean isRestored() {
@@ -454,7 +464,8 @@ public class Request {
 
   /**
    * Serializes the request to resumptionToken string. Only original request params are serialized.
-   * All extra parameters required to support partitioning should be additionally passed to the method.
+   * All extra parameters required to support partitioning should be additionally passed to
+   * the method.
    *
    * @param extraParams extra parameters used to support partitioning
    * @return serialized resumptionToken
@@ -468,13 +479,13 @@ public class Request {
     appendParam(builder, TENANT_ID, getTenant());
 
     extraParams.entrySet().stream()
-      .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
-      .forEach(param -> builder.append(PARAMETER_SEPARATOR).append(param));
+        .map(e -> e.getKey() + PARAMETER_VALUE_SEPARATOR + e.getValue())
+        .forEach(param -> builder.append(PARAMETER_SEPARATOR).append(param));
 
     return Base64.getUrlEncoder()
-      .encodeToString(builder.toString().getBytes())
-      // this is to remove '=' or '==' at the end
-      .split("=")[0];
+        .encodeToString(builder.toString().getBytes())
+        // this is to remove '=' or '==' at the end
+        .split("=")[0];
   }
 
 

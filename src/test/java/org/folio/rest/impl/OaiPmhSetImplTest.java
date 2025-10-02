@@ -9,6 +9,16 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.specification.RequestSpecification;
+import io.vertx.core.Context;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -16,7 +26,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
@@ -39,17 +48,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import io.restassured.RestAssured;
-import io.restassured.http.ContentType;
-import io.restassured.http.Header;
-import io.restassured.specification.RequestSpecification;
-import io.vertx.core.Context;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
@@ -87,17 +85,18 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
-      try {
-        Context context = vertx.getOrCreateContext();
-        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-        SpringContextUtil.autowireDependencies(this, context);
-        new OkapiMockServer(vertx, mockPort).start(testContext);
-        testContext.completeNow();
-      } catch (Exception e) {
-        testContext.failNow(e);
-      }
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+        testContext.succeeding(v -> {
+          try {
+            Context context = vertx.getOrCreateContext();
+            SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+            SpringContextUtil.autowireDependencies(this, context);
+            new OkapiMockServer(vertx, mockPort).start(testContext);
+            testContext.completeNow();
+          } catch (Exception e) {
+            testContext.failNow(e);
+          }
+        }));
   }
 
   @AfterAll
@@ -107,16 +106,16 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldReturnSetItem_whenGetSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
+  void shouldReturnSetItemWhenGetSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null);
       String json = request.when()
-        .get()
-        .then()
-        .statusCode(200)
-        .contentType(ContentType.JSON)
-        .extract()
-        .asString();
+          .get()
+          .then()
+          .statusCode(200)
+          .contentType(ContentType.JSON)
+          .extract()
+          .asString();
       FolioSet set = jsonStringToFolioSet(json);
       verifyMainSetData(INITIAL_TEST_SET_ENTRY, set, true);
       verifyMetadata(set);
@@ -125,34 +124,36 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotReturnSetItem_whenGetSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
+  void shouldNotReturnSetItemWhenGetSetByIdAndItemWithSuchIdDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), null);
       request.when()
-        .get()
-        .then()
-        .statusCode(404)
-        .contentType(ContentType.TEXT);
+          .get()
+          .then()
+          .statusCode(404)
+          .contentType(ContentType.TEXT);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
+  void shouldUpdateSetItemWhenUpdateSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), ContentType.JSON).body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID),
+          ContentType.JSON).body(UPDATE_SET_ENTRY);
       request.when()
-        .put()
-        .then()
-        .statusCode(204);
+          .put()
+          .then()
+          .statusCode(204);
 
       String json = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null).when()
-        .get()
-        .then()
-        .statusCode(200)
-        .contentType(ContentType.JSON)
-        .extract()
-        .asString();
+          .get()
+          .then()
+          .statusCode(200)
+          .contentType(ContentType.JSON)
+          .extract()
+          .asString();
       FolioSet updatedSet = jsonStringToFolioSet(json);
       verifyMainSetData(UPDATE_SET_ENTRY, updatedSet, true);
       verifyMetadata(updatedSet);
@@ -161,88 +162,95 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotUpdateSetItem_whenUpdateSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
+  void shouldNotUpdateSetItemWhenUpdateSetByIdAndItemWithSuchIdDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
-        .body(UPDATE_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID),
+          ContentType.JSON).body(UPDATE_SET_ENTRY);
       request.when()
-        .put()
-        .then()
-        .statusCode(404)
-        .contentType(ContentType.TEXT);
+          .put()
+          .then()
+          .statusCode(404)
+          .contentType(ContentType.TEXT);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptyName(VertxTestContext testContext) {
+  void shouldNotUpdateSetItemWhenUpdateSetByIdWithEmptyName(VertxTestContext testContext) {
     testContext.verify(() -> {
       FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
-        .withName("")
-        .withDescription("description")
-        .withSetSpec("setSpec");
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
-        .body(folioSetWithEmptyName);
+          .withName("")
+          .withDescription("description")
+          .withSetSpec("setSpec");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID),
+          ContentType.JSON).body(folioSetWithEmptyName);
       request.when()
-        .put()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
-      testContext.completeNow();
-    });
-}
-
-  @Test
-  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptySetSpec(VertxTestContext testContext) {
-    testContext.verify(() -> {
-      FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
-        .withName("name")
-        .withDescription("description")
-        .withSetSpec("");
-      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), ContentType.JSON)
-        .body(folioSetWithEmptyName);
-      request.when()
-        .put()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+          .put()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "name")));
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotUpdateSetItem_whenUpdateSetByIdWithEmptyNameAndSetSpec(VertxTestContext testContext) {
+  void shouldNotUpdateSetItemWhenUpdateSetByIdWithEmptySetSpec(VertxTestContext testContext) {
     testContext.verify(() -> {
       FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
-        .withName("")
-        .withDescription("description")
-        .withSetSpec("");
-      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), ContentType.JSON)
-        .body(folioSetWithEmptyName);
+          .withName("name")
+          .withDescription("description")
+          .withSetSpec("");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID),
+          ContentType.JSON).body(folioSetWithEmptyName);
       request.when()
-        .put()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+          .put()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "setSpec")));
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldSaveSetItem_whenPostSet(VertxTestContext testContext) {
+  void shouldNotUpdateSetItemWhenUpdateSetByIdWithEmptyNameAndSetSpec(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
+      FolioSet folioSetWithEmptyName = new FolioSet().withId(EXISTENT_SET_ID)
+          .withName("")
+          .withDescription("description")
+          .withSetSpec("");
+      RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID),
+          ContentType.JSON).body(folioSetWithEmptyName);
+      request.when()
+          .put()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "name")))
+          .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "setSpec")));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldSaveSetItemWhenPostSet(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(POST_SET_ENTRY);
       String json = request.when()
-        .post()
-        .then()
-        .statusCode(201)
-        .contentType(ContentType.JSON)
-        .extract()
-        .asString();
+          .post()
+          .then()
+          .statusCode(201)
+          .contentType(ContentType.JSON)
+          .extract()
+          .asString();
       FolioSet savedSet = jsonStringToFolioSet(json);
       verifyMainSetData(POST_SET_ENTRY, savedSet, false);
       verifyMetadata(savedSet);
@@ -251,158 +259,172 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   }
 
   @Test
-  void shouldNotSaveSetItem_whenPostSetWithIdAndItemWithSuchIdAlreadyExists(VertxTestContext testContext) {
+  void shouldNotSaveSetItemWhenPostSetWithIdAndItemWithSuchIdAlreadyExists(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       POST_SET_ENTRY.setId(EXISTENT_SET_ID);
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(POST_SET_ENTRY);
       request.when()
-        .post()
-        .then()
-        .statusCode(400)
-        .contentType(ContentType.TEXT);
+          .post()
+          .then()
+          .statusCode(400)
+          .contentType(ContentType.TEXT);
       POST_SET_ENTRY.setId(null);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveSetItem_whenSaveSetWithEmptyName(VertxTestContext testContext) {
+  void shouldNotSaveSetItemWhenSaveSetWithEmptyName(VertxTestContext testContext) {
     testContext.verify(() -> {
       FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
-        .toString())
-        .withName("")
-        .withDescription("description")
-        .withSetSpec("setSpec");
+          .toString())
+          .withName("")
+          .withDescription("description")
+          .withSetSpec("setSpec");
 
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(folioSetWithEmptyName);
       request.when()
-        .post()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")));
+          .post()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "name")));
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveSetItem_whenSaveSetWithEmptyNameAndEmptySetSpec(VertxTestContext testContext) {
+  void shouldNotSaveSetItemWhenSaveSetWithEmptyNameAndEmptySetSpec(VertxTestContext testContext) {
     testContext.verify(() -> {
       FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
-        .toString())
-        .withName("")
-        .withDescription("description")
-        .withSetSpec("");
+          .toString())
+          .withName("")
+          .withDescription("description")
+          .withSetSpec("");
 
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(folioSetWithEmptyName);
       request.when()
-        .post()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "name")))
-        .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+          .post()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "name")))
+          .body("errors[1].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "setSpec")));
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveSetItem_whenSaveSetWithEmptySetSpec(VertxTestContext testContext) {
+  void shouldNotSaveSetItemWhenSaveSetWithEmptySetSpec(VertxTestContext testContext) {
     testContext.verify(() -> {
       FolioSet folioSetWithEmptyName = new FolioSet().withId(UUID.randomUUID()
-        .toString())
-        .withName("name")
-        .withDescription("description")
-        .withSetSpec("");
+          .toString())
+          .withName("name")
+          .withDescription("description")
+          .withSetSpec("");
 
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(folioSetWithEmptyName);
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(folioSetWithEmptyName);
       request.when()
-        .post()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE, "setSpec")));
+          .post()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(SET_FIELD_NULL_VALUE_ERROR_MSG_TEMPLATE,
+              "setSpec")));
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedSetSpecValue_CaseInsensitive(VertxTestContext testContext) {
+  void shouldNotSaveItemWhenSaveItemWithAlreadyExistedSetSpecValueCaseInsensitive(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
+      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
+          .body(POST_SET_ENTRY);
       request.when()
-        .post()
-        .then()
-        .statusCode(201)
-        .contentType(ContentType.JSON);
+          .post()
+          .then()
+          .statusCode(201)
+          .contentType(ContentType.JSON);
 
-      String oldNameValue = POST_SET_ENTRY.getName();
-      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
       POST_SET_ENTRY.setName("unique value for name");
-      POST_SET_ENTRY.setSetSpec(oldSetSpecValue.toUpperCase());
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
-        .post()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec", POST_SET_ENTRY.getSetSpec().toLowerCase())));
+          .post()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "setSpec",
+              POST_SET_ENTRY.getSetSpec().toLowerCase())));
+      String oldNameValue = POST_SET_ENTRY.getName();
       POST_SET_ENTRY.setName(oldNameValue);
+      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
       POST_SET_ENTRY.setSetSpec(oldSetSpecValue);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotSaveItem_whenSaveItemWithAlreadyExistedNameValue_CaseInsensitive(VertxTestContext testContext) {
+  void shouldNotSaveItemWhenSaveItemWithAlreadyExistedNameValueCaseInsensitive(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
-      RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
+      RequestSpecification request =
+          createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
-        .post()
-        .then()
-        .statusCode(201)
-        .contentType(ContentType.JSON);
+          .post()
+          .then()
+          .statusCode(201)
+          .contentType(ContentType.JSON);
 
-      String oldNameValue = POST_SET_ENTRY.getName();
-      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
-      POST_SET_ENTRY.setName(oldNameValue.toUpperCase());
       POST_SET_ENTRY.setSetSpec("unique value for setSpec");
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
-        .post()
-        .then()
-        .statusCode(422)
-        .contentType(ContentType.JSON)
-        .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG, "name", POST_SET_ENTRY.getName().toLowerCase())));
+          .post()
+          .then()
+          .statusCode(422)
+          .contentType(ContentType.JSON)
+          .body("errors[0].message", equalTo(format(DUPLICATED_VALUE_USER_ERROR_MSG,
+              "name", POST_SET_ENTRY.getName().toLowerCase())));
+      String oldNameValue = POST_SET_ENTRY.getName();
       POST_SET_ENTRY.setName(oldNameValue);
+      String oldSetSpecValue = POST_SET_ENTRY.getSetSpec();
       POST_SET_ENTRY.setSetSpec(oldSetSpecValue);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
+  void shouldDeleteSetItemWhenDeleteSetByIdAndItemWithSuchIdExists(VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(getSetPathWithId(EXISTENT_SET_ID), null);
       request.when()
-        .delete()
-        .then()
-        .statusCode(204);
+          .delete()
+          .then()
+          .statusCode(204);
       testContext.completeNow();
     });
   }
 
   @Test
-  void shouldNotDeleteSetItem_whenDeleteSetByIdAndItemWithSuchIdDoesNotExist(VertxTestContext testContext) {
+  void shouldNotDeleteSetItemWhenDeleteSetByIdAndItemWithSuchIdDoesNotExist(
+      VertxTestContext testContext) {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(getSetPathWithId(NONEXISTENT_SET_ID), null);
       request.when()
-        .delete()
-        .then()
-        .statusCode(404)
-        .contentType(ContentType.TEXT);
+          .delete()
+          .then()
+          .statusCode(404)
+          .contentType(ContentType.TEXT);
       testContext.completeNow();
     });
   }
@@ -412,11 +434,11 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(SET_PATH, null);
       request.when()
-        .get()
-        .then()
-        .statusCode(200)
-        .contentType(ContentType.JSON)
-        .body("$", hasKey("totalRecords"));
+          .get()
+          .then()
+          .statusCode(200)
+          .contentType(ContentType.JSON)
+          .body("$", hasKey("totalRecords"));
       testContext.completeNow();
     });
   }
@@ -426,21 +448,72 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     testContext.verify(() -> {
       RequestSpecification request = createBaseRequest(FILTERING_CONDITIONS_PATH, null);
       request.when()
-        .get()
-        .then()
-        .statusCode(200)
-        .contentType(ContentType.JSON)
-        .body("setsFilteringConditions.size()", is(5));
+          .get()
+          .then()
+          .statusCode(200)
+          .contentType(ContentType.JSON)
+          .body("setsFilteringConditions.size()", is(5));
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInGetSetById(
+      VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
+      RequestSpecification request = createBaseRequest(
+          getSetPathWithId("invalid-id-for-exception"), null);
+      request.when()
+          .get()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInPutSetById(
+      VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
+      FolioSet folioSet = new FolioSet().withName("name").withSetSpec("spec");
+      RequestSpecification request = createBaseRequest(
+          getSetPathWithId("invalid-id-for-exception"), ContentType.JSON)
+          .body(folioSet);
+      request.when()
+          .put()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnInternalServerErrorWhenExceptionOccursInGetOaiPmhSets(
+      VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Simulate an exception by passing invalid query parameters
+      RequestSpecification request = createBaseRequest(SET_PATH, null)
+          .param("offset", "-1")
+          .param("limit", "-1");
+      request.when()
+          .get()
+          .then()
+          .statusCode(500)
+          .contentType(ContentType.TEXT);
       testContext.completeNow();
     });
   }
 
   private RequestSpecification createBaseRequest(String path, ContentType contentType) {
     RequestSpecification requestSpecification = RestAssured.given()
-      .header(okapiUrlHeader)
-      .header(tenantHeader)
-      .header(okapiUserHeader)
-      .basePath(path);
+        .header(okapiUrlHeader)
+        .header(tenantHeader)
+        .header(okapiUserHeader)
+        .basePath(path);
     if (nonNull(contentType)) {
       requestSpecification.contentType(contentType);
     }
@@ -450,19 +523,19 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   private FolioSet jsonStringToFolioSet(String json) {
     JsonObject jsonObject = new JsonObject(json);
     List<FilteringCondition> fkList = jsonObject.getJsonArray("filteringConditions")
-      .stream()
-      .map(JsonObject.class::cast)
-      .map(this::jsonObjectToFilteringCondition)
-      .collect(Collectors.toList());
+        .stream()
+        .map(JsonObject.class::cast)
+        .map(this::jsonObjectToFilteringCondition)
+        .collect(Collectors.toList());
     return new FolioSet().withId(jsonObject.getString("id"))
-      .withName(jsonObject.getString("name"))
-      .withDescription(jsonObject.getString("description"))
-      .withSetSpec(jsonObject.getString("setSpec"))
-      .withFilteringConditions(fkList)
-      .withCreatedByUserId(jsonObject.getString("createdByUserId"))
-      .withCreatedDate(getDate(jsonObject, "createdDate"))
-      .withUpdatedByUserId(jsonObject.getString("updatedByUserId"))
-      .withUpdatedDate(getDate(jsonObject, "updatedDate"));
+        .withName(jsonObject.getString("name"))
+        .withDescription(jsonObject.getString("description"))
+        .withSetSpec(jsonObject.getString("setSpec"))
+        .withFilteringConditions(fkList)
+        .withCreatedByUserId(jsonObject.getString("createdByUserId"))
+        .withCreatedDate(getDate(jsonObject, "createdDate"))
+        .withUpdatedByUserId(jsonObject.getString("updatedByUserId"))
+        .withUpdatedDate(getDate(jsonObject, "updatedDate"));
   }
 
   private FilteringCondition jsonObjectToFilteringCondition(JsonObject jsonObject) {
@@ -473,9 +546,10 @@ class OaiPmhSetImplTest extends AbstractSetTest {
 
   private Date getDate(JsonObject jsonObject, String field) {
     String strDate = jsonObject.getValue(field)
-      .toString()
-      .split("\\.")[0];
-    LocalDateTime localDateTime = LocalDateTime.parse(strDate, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        .toString()
+        .split("\\.")[0];
+    LocalDateTime localDateTime = LocalDateTime.parse(strDate,
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
   }
 
