@@ -1,0 +1,35 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+  <changeSet id="2025-01-27--10-00-create-configuration-table" author="kjain110">
+    <comment>Create configuration_settings table for mod-configuration migration</comment>
+
+    <createTable tableName="configuration_settings" schemaName="${database.defaultSchemaName}">
+      <column name="config_name" type="VARCHAR(50)">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="config_value" type="TEXT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <insert tableName="configuration_settings" schemaName="${database.defaultSchemaName}">
+      <column name="config_name" value="technical"/>
+      <column name="config_value" value='{"enableValidation":"true","formattedOutput":"true","srsClientIdleTimeoutSec":"20","maxRecordsPerResponse":"50","srsHttpRequestRetryAttempts":"50","fetchingChunkSize":"5000","cleanErrorsInterval":"30"}'/>
+    </insert>
+
+    <insert tableName="configuration_settings" schemaName="${database.defaultSchemaName}">
+      <column name="config_name" value="behavioral"/>
+      <column name="config_value" value='{"suppressDiscovery":"false","enableCompression":"true","resumptionTokenTimeout":"300"}'/>
+    </insert>
+
+    <insert tableName="configuration_settings" schemaName="${database.defaultSchemaName}">
+      <column name="config_name" value="general"/>
+      <column name="config_value" value='{"repositoryName":"FOLIO_OAI_Repository","adminEmail":"admin@folio.org","baseUrl":"http://folio.org/oai","enableOaiService":"true"}'/>
+    </insert>
+  </changeSet>
+
+</databaseChangeLog>
