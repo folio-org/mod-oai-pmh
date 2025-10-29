@@ -15,7 +15,7 @@ public interface ConfigurationDao {
    */
   Future<JsonObject> getConfigurationByName(String configName, String tenantId);
 
-  /**
+  /*
    * Retrieves all configurations from the database.
    *
    * @param tenantId the tenant identifier
@@ -31,8 +31,8 @@ public interface ConfigurationDao {
    * @param tenantId    the tenant identifier
    * @return Future containing the updated configuration
    */
-  Future<JsonObject> updateConfiguration(String configName, JsonObject configValue, String tenantId);
-
+  Future<JsonObject> updateConfiguration(String configName, JsonObject configValue,
+                                         String tenantId);
   /**
    * Creates a new configuration entry.
    *
@@ -41,5 +41,7 @@ public interface ConfigurationDao {
    * @param tenantId    the tenant identifier
    * @return Future containing the created configuration
    */
-  Future<JsonObject> createConfiguration(String configName, JsonObject configValue, String tenantId);
+
+  Future<JsonObject> createConfiguration(String configName, JsonObject configValue,
+                                         String tenantId);
 }

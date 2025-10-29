@@ -25,7 +25,7 @@ public interface ConfigurationService {
   String getProperty(String requestId, String name);
 
   /**
-   * Gets boolean value of the config either from cached config or from System properties as a fallback.
+   * Gets boolean value of the config either from cached or from System properties as a fallback.
    *
    * @param requestId requestId
    * @param name      config key

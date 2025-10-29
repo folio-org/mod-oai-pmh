@@ -41,20 +41,22 @@ public class RepositoryConfigurationUtil {
 
     if (configurationService == null) {
       logger.error("ConfigurationService is not initialized");
-      return Future.failedFuture(new IllegalStateException("ConfigurationService is not initialized"));
+      return Future.failedFuture(new
+        IllegalStateException("ConfigurationService is not initialized"));
     }
 
     return configurationService.loadConfiguration(requestId, tenant)
         .<Void>map(config -> null)
         .onFailure(throwable -> {
-          logger.error("Error occurred while loading configuration for {} tenant.", tenant, throwable);
+          logger.error("Error occurred for {} tenant.", tenant, throwable);
         });
   }
 
   public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId,
       String existedRequestId) {
     if (configurationService != null) {
-      configurationService.replaceGeneratedConfigKeyWithExisted(generatedRequestId, existedRequestId);
+      configurationService.replaceGeneratedConfigKeyWithExisted(generatedRequestId,
+            existedRequestId);
     }
   }
 

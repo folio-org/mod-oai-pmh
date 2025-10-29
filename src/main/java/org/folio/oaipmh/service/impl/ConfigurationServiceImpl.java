@@ -35,24 +35,25 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     return configurationDao.getAllConfigurations(tenantId)
         .map(configMap -> {
           JsonObject mergedConfig = new JsonObject();
-          
+
           // Merge all configuration values into a single JsonObject
           configMap.forEach((configName, configValue) -> {
             configValue.forEach(entry -> {
               mergedConfig.put(entry.getKey(), entry.getValue());
             });
           });
-          
+
           configsMap.put(requestId, mergedConfig);
           return mergedConfig;
         })
         .onFailure(throwable -> {
-          logger.error("Error occurred while loading configuration for tenant: {}", tenantId, throwable);
+          logger.error("Error occurred: {}", tenantId, throwable);
         });
   }
 
   @Override
-  public void replaceGeneratedConfigKeyWithExisted(String generatedRequestId, String existedRequestId) {
+  public void replaceGeneratedConfigKeyWithExisted(String generatedRequestId,
+                                                   String existedRequestId) {
     configsMap.put(existedRequestId, configsMap.remove(generatedRequestId));
   }
 

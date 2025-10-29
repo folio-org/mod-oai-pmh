@@ -17,7 +17,6 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
-
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.tools.client.exceptions.ResponseException;
 import org.folio.spring.SpringContextUtil;

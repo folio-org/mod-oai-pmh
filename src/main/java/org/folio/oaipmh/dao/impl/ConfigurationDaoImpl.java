@@ -31,16 +31,16 @@ public class ConfigurationDaoImpl implements ConfigurationDao {
       return txQE.query(dslContext -> dslContext.selectFrom(CONFIGURATION_SETTINGS)
           .where(CONFIGURATION_SETTINGS.CONFIG_NAME.eq(configName))
           .limit(1))
-          .map(queryResult -> {
-            return queryResult.stream()
-                .findFirst()
-                .map(row -> {
-                  Row unwrappedRow = row.unwrap();
-                  String configValue = unwrappedRow.getString("config_value");
-                  return new JsonObject(configValue);
-                })
-                .orElse(null);
-          });
+        .map(queryResult -> {
+          return queryResult.stream()
+            .findFirst()
+            .map(row -> {
+              Row unwrappedRow = row.unwrap();
+              String configValue = unwrappedRow.getString("config_value");
+              return new JsonObject(configValue);
+            })
+            .orElse(null);
+        });
     });
   }
 
@@ -48,28 +48,31 @@ public class ConfigurationDaoImpl implements ConfigurationDao {
   public Future<Map<String, JsonObject>> getAllConfigurations(String tenantId) {
     return getQueryExecutor(tenantId).transaction(txQE -> {
       return txQE.query(dslContext -> dslContext.selectFrom(CONFIGURATION_SETTINGS))
-          .map(this::queryResultToConfigMap);
+        .map(this::queryResultToConfigMap);
     });
   }
 
   @Override
-  public Future<JsonObject> updateConfiguration(String configName, JsonObject configValue, String tenantId) {
+  public Future<JsonObject> updateConfiguration(String configName,
+                                                JsonObject configValue, String tenantId) {
     return getQueryExecutor(tenantId).transaction(txQE -> {
       JSONB jsonb = JSONB.valueOf(configValue.encode());
       return txQE.execute(dslContext -> dslContext.update(CONFIGURATION_SETTINGS)
           .set(CONFIGURATION_SETTINGS.CONFIG_VALUE, jsonb)
           .where(CONFIGURATION_SETTINGS.CONFIG_NAME.eq(configName)))
-          .compose(updateCount -> {
-            if (updateCount > 0) {
-              return Future.succeededFuture(configValue);
-            }
-            return Future.failedFuture(new RuntimeException("Configuration with name '" + configName + "' not found"));
-          });
+        .compose(updateCount -> {
+          if (updateCount > 0) {
+            return Future.succeededFuture(configValue);
+          }
+          return Future.failedFuture(
+            new RuntimeException("Configuration with name '" + configName + "' not found"));
+        });
     });
   }
 
   @Override
-  public Future<JsonObject> createConfiguration(String configName, JsonObject configValue, String tenantId) {
+  public Future<JsonObject> createConfiguration(String configName,
+                                                JsonObject configValue, String tenantId) {
     return getQueryExecutor(tenantId).transaction(txQE -> {
       ConfigurationSettingsRecord record = new ConfigurationSettingsRecord();
       record.setId(UUID.randomUUID());
@@ -78,7 +81,7 @@ public class ConfigurationDaoImpl implements ConfigurationDao {
 
       return txQE.executeAny(dslContext -> dslContext.insertInto(CONFIGURATION_SETTINGS)
           .set(record))
-          .map(result -> configValue);
+        .map(result -> configValue);
     });
   }
 
