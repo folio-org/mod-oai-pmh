@@ -66,7 +66,8 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
     logger.info("Creating configuration setting. Tenant: {}, User: {}", tenantId, userId);
 
-    configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity), tenantId, userId)
+    configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity),
+        tenantId, userId)
         .onSuccess(savedConfig -> {
           logger.info("Successfully created configuration setting with id: {}",
               savedConfig.getString("id"));
@@ -128,7 +129,8 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
     logger.info("Updating configuration setting by id: {}. Tenant: {}, User: {}",
         id, tenantId, userId);
 
-    configurationSettingsService.updateConfigurationSettingsById(id, JsonObject.mapFrom(entity), tenantId, userId)
+    configurationSettingsService.updateConfigurationSettingsById(id,
+        JsonObject.mapFrom(entity), tenantId, userId)
         .onSuccess(updatedConfig -> {
           logger.info("Successfully updated configuration setting: {}", updatedConfig.getString(
               "configName"));
