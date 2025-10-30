@@ -14,10 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.okapi.common.XOkapiHeaders;
+import org.folio.rest.jaxrs.model.ConfigurationSettings;
+import org.folio.rest.jaxrs.resource.OaiPmhConfigurationSettings;
 import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class ConfigurationSettingsImpl {
+public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
   private static final Logger logger = LogManager.getLogger(ConfigurationSettingsImpl.class);
   private static final String ERROR_MSG_TEMPLATE =
@@ -30,7 +32,7 @@ public class ConfigurationSettingsImpl {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
-  public void getOaiPmhConfigurationSettings(int offset, int limit, String lang,
+  public void getOaiPmhConfigurationSettings(String totalRecords, int offset, int limit,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
@@ -55,7 +57,7 @@ public class ConfigurationSettingsImpl {
         });
   }
 
-  public void postOaiPmhConfigurationSettings(String lang, JsonObject entity,
+  public void postOaiPmhConfigurationSettings(ConfigurationSettings entity,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
@@ -64,7 +66,7 @@ public class ConfigurationSettingsImpl {
 
     logger.info("Creating configuration setting. Tenant: {}, User: {}", tenantId, userId);
 
-    configurationSettingsService.saveConfigurationSettings(entity, tenantId, userId)
+    configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity), tenantId, userId)
         .onSuccess(savedConfig -> {
           logger.info("Successfully created configuration setting with id: {}",
               savedConfig.getString("id"));
@@ -86,7 +88,7 @@ public class ConfigurationSettingsImpl {
         });
   }
 
-  public void getOaiPmhConfigurationSettingsById(String id, String lang,
+  public void getOaiPmhConfigurationSettingsById(String id,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
@@ -116,7 +118,7 @@ public class ConfigurationSettingsImpl {
         });
   }
 
-  public void putOaiPmhConfigurationSettingsById(String id, String lang, JsonObject entity,
+  public void putOaiPmhConfigurationSettingsById(String id, ConfigurationSettings entity,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
@@ -126,7 +128,7 @@ public class ConfigurationSettingsImpl {
     logger.info("Updating configuration setting by id: {}. Tenant: {}, User: {}",
         id, tenantId, userId);
 
-    configurationSettingsService.updateConfigurationSettingsById(id, entity, tenantId, userId)
+    configurationSettingsService.updateConfigurationSettingsById(id, JsonObject.mapFrom(entity), tenantId, userId)
         .onSuccess(updatedConfig -> {
           logger.info("Successfully updated configuration setting: {}", updatedConfig.getString(
               "configName"));
@@ -148,7 +150,7 @@ public class ConfigurationSettingsImpl {
         });
   }
 
-  public void deleteOaiPmhConfigurationSettingsById(String id, String lang,
+  public void deleteOaiPmhConfigurationSettingsById(String id,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
