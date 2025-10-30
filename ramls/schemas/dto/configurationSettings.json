@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Configuration Setting DTO Schema",
   "title": "Configuration Settings Schema",
   "type": "object",
   "properties": {

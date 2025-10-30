@@ -26,12 +26,14 @@ public class ConfigurationSettingsServiceImpl implements ConfigurationSettingsSe
   }
 
   @Override
-  public Future<JsonObject> updateConfigurationSettingsById(String id, JsonObject entry, String tenantId, String userId) {
+  public Future<JsonObject> updateConfigurationSettingsById(String id, JsonObject entry,
+                                                            String tenantId, String userId) {
     return configurationSettingsDao.updateConfigurationSettingsById(id, entry, tenantId, userId);
   }
 
   @Override
-  public Future<JsonObject> saveConfigurationSettings(JsonObject entry, String tenantId, String userId) {
+  public Future<JsonObject> saveConfigurationSettings(JsonObject entry,
+                                                      String tenantId, String userId) {
     return configurationSettingsDao.saveConfigurationSettings(entry, tenantId, userId);
   }
 

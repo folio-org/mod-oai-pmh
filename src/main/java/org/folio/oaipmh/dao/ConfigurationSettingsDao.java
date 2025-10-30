@@ -9,7 +9,8 @@ public interface ConfigurationSettingsDao {
 
   Future<JsonObject> getConfigurationSettingsByName(String configName, String tenantId);
 
-  Future<JsonObject> updateConfigurationSettingsById(String id, JsonObject entry, String tenantId, String userId);
+  Future<JsonObject> updateConfigurationSettingsById(String id, JsonObject entry,
+                                                     String tenantId, String userId);
 
   Future<JsonObject> saveConfigurationSettings(JsonObject entry, String tenantId, String userId);
 

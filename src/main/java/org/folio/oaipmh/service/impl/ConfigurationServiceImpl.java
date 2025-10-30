@@ -60,14 +60,15 @@ public class ConfigurationServiceImpl implements ConfigurationService {
   }
 
   @Override
-  public Future<JsonObject> updateConfig(String configName, JsonObject configValue, String tenantId, String userId) {
+  public Future<JsonObject> updateConfig(String configName, JsonObject configValue,
+                                         String tenantId, String userId) {
     return configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
         .compose(existingConfig -> {
           // Update existing configuration
           JsonObject updatedConfig = new JsonObject()
               .put("configName", configName)
               .put("configValue", configValue);
-          
+
           return configurationSettingsService.updateConfigurationSettingsById(
               existingConfig.getString("id"), updatedConfig, tenantId, userId);
         })
@@ -77,8 +78,9 @@ public class ConfigurationServiceImpl implements ConfigurationService {
             JsonObject newConfig = new JsonObject()
                 .put("configName", configName)
                 .put("configValue", configValue);
-            
-            return configurationSettingsService.saveConfigurationSettings(newConfig, tenantId, userId);
+
+            return configurationSettingsService.saveConfigurationSettings(
+              newConfig, tenantId, userId);
           }
           return Future.failedFuture(throwable);
         });
