@@ -1,0 +1,220 @@
+#%RAML 1.0
+title: Configuration API
+version: v1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Configuration Management API
+    content: |
+      API for managing configuration entries in the OAI-PMH module.
+      Supports CRUD operations for different types of configurations.
+
+types:
+  configuration: !include schemas/dto/configuration.json
+  configurationCollection: !include schemas/dto/configurationCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+  pageable: !include raml-util/traits/pageable.raml
+  searchable: !include raml-util/traits/searchable.raml
+
+/oai-pmh/configurations:
+  displayName: Configurations
+  description: Manage OAI-PMH configurations
+  get:
+    description: Get a list of configurations
+    is: [
+      searchable: {description: "CQL query", example: "configName=general"},
+      pageable
+    ]
+    queryParameters:
+      configName:
+        description: Filter by configuration name
+        type: string
+        required: false
+      enabled:
+        description: Filter by enabled status
+        type: boolean
+        required: false
+    responses:
+      200:
+        description: "List of configurations retrieved successfully"
+        body:
+          application/json:
+            type: configurationCollection
+            example: !include examples/configurationCollection.sample
+      400:
+        description: "Bad request"
+        body:
+          application/json:
+            type: errors
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          text/plain:
+            example: "unable to list configurations -- unauthorized"
+      500:
+        description: "Internal server error"
+        body:
+          application/json:
+            type: errors
+  post:
+    description: Create a new configuration
+    is: [validate]
+    body:
+      application/json:
+        type: configuration
+        example: !include examples/configuration.sample
+    responses:
+      201:
+        description: "Configuration created successfully"
+        body:
+          application/json:
+            type: configuration
+      400:
+        description: "Bad request"
+        body:
+          application/json:
+            type: errors
+      401:
+        description: "Not authorized to perform requested action"
+        body:
+          text/plain:
+            example: "unable to create configuration -- unauthorized"
+      422:
+        description: "Unprocessable Entity"
+        body:
+          application/json:
+            type: errors
+      500:
+        description: "Internal server error"
+        body:
+          application/json:
+            type: errors
+
+  /{configurationId}:
+    displayName: Configuration
+    description: Manage a specific configuration by ID
+    get:
+      description: Get configuration by ID
+      responses:
+        200:
+          description: "Configuration retrieved successfully"
+          body:
+            application/json:
+              type: configuration
+              example: !include examples/configuration.sample
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              type: errors
+        401:
+          description: "Not authorized to perform requested action"
+          body:
+            text/plain:
+              example: "unable to read configuration -- unauthorized"
+        404:
+          description: "Configuration not found"
+          body:
+            text/plain:
+              example: "configuration not found"
+        500:
+          description: "Internal server error"
+          body:
+            application/json:
+              type: errors
+    put:
+      description: Update configuration by ID
+      is: [validate]
+      body:
+        application/json:
+          type: configuration
+          example: !include examples/configuration.sample
+      responses:
+        204:
+          description: "Configuration updated successfully"
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              type: errors
+        401:
+          description: "Not authorized to perform requested action"
+          body:
+            text/plain:
+              example: "unable to update configuration -- unauthorized"
+        404:
+          description: "Configuration not found"
+          body:
+            text/plain:
+              example: "configuration not found"
+        422:
+          description: "Unprocessable Entity"
+          body:
+            application/json:
+              type: errors
+        500:
+          description: "Internal server error"
+          body:
+            application/json:
+              type: errors
+    delete:
+      description: Delete configuration by ID
+      responses:
+        204:
+          description: "Configuration deleted successfully"
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              type: errors
+        401:
+          description: "Not authorized to perform requested action"
+          body:
+            text/plain:
+              example: "unable to delete configuration -- unauthorized"
+        404:
+          description: "Configuration not found"
+          body:
+            text/plain:
+              example: "configuration not found"
+        500:
+          description: "Internal server error"
+          body:
+            application/json:
+              type: errors
+
+  /by-name/{configName}:
+    displayName: Configuration by Name
+    description: Get configuration by name
+    get:
+      description: Get configuration by name (for backward compatibility)
+      responses:
+        200:
+          description: "Configuration retrieved successfully"
+          body:
+            application/json:
+              type: configuration
+              example: !include examples/configuration.sample
+        400:
+          description: "Bad request"
+          body:
+            application/json:
+              type: errors
+        401:
+          description: "Not authorized to perform requested action"
+          body:
+            text/plain:
+              example: "unable to read configuration -- unauthorized"
+        404:
+          description: "Configuration not found"
+          body:
+            text/plain:
+              example: "configuration not found"
+        500:
+          description: "Internal server error"
+          body:
+            application/json:
+              type: errors

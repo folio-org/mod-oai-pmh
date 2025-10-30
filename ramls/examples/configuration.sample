@@ -1,0 +1,19 @@
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "configName": "general",
+  "description": "General OAI-PMH repository configuration",
+  "enabled": true,
+  "value": {
+    "repository.name": "FOLIO_OAI_Repository",
+    "repository.baseURL": "http://folio.org/oai",
+    "repository.adminEmails": "oai-pmh@folio.org",
+    "repository.enableOaiService": "true",
+    "repository.timeGranularity": "YYYY-MM-DDThh:mm:ssZ"
+  },
+  "metadata": {
+    "createdDate": "2023-10-29T10:00:00.000Z",
+    "createdByUserId": "550e8400-e29b-41d4-a716-446655440001",
+    "updatedDate": "2023-10-29T15:30:00.000Z",
+    "updatedByUserId": "550e8400-e29b-41d4-a716-446655440002"
+  }
+}

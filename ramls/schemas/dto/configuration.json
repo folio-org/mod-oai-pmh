@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Configuration Schema",
+  "description": "Configuration entry for OAI-PMH module",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Configuration identifier",
+      "type": "string"
+    },
+    "configName": {
+      "description": "Name of the configuration (e.g., 'general', 'behavioral', 'technical')",
+      "type": "string"
+    },
+    "description": {
+      "description": "Description of the configuration",
+      "type": "string"
+    },
+    "enabled": {
+      "description": "Whether this configuration is enabled",
+      "type": "boolean",
+      "default": true
+    },
+    "value": {
+      "description": "Configuration value as JSON object",
+      "type": "object"
+    },
+    "metadata": {
+      "description": "Additional metadata for the configuration",
+      "type": "object",
+      "properties": {
+        "createdDate": {
+          "description": "Date when the configuration was created",
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdByUserId": {
+          "description": "ID of the user who created the configuration",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        },
+        "updatedDate": {
+          "description": "Date when the configuration was last updated",
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedByUserId": {
+          "description": "ID of the user who last updated the configuration",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        }
+      }
+    }
+  },
+  "required": [
+    "configName",
+    "value"
+  ]
+}

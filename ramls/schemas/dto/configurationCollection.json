@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Configuration Collection Schema",
+  "description": "Collection of configurations for OAI-PMH module",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "configurations": {
+      "description": "List of configurations",
+      "type": "array",
+      "items": {
+        "$ref": "configuration.json"
+      }
+    },
+    "totalRecords": {
+      "description": "Total number of configurations",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "configurations",
+    "totalRecords"
+  ]
+}
