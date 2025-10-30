@@ -1,0 +1,23 @@
+{
+  "configurationSettings": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "configName": "behavioral",
+      "configValue": {
+        "deletedRecordsSupport": "no",
+        "suppressedRecordsProcessing": false,
+        "errorsProcessing": "500",
+        "recordsSource": "Source record storage"
+      }
+    },
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174001",
+      "configName": "general",
+      "configValue": {
+        "enableOaiService": true,
+        "repositoryName": "FOLIO Repository"
+      }
+    }
+  ],
+  "totalRecords": 2
+}

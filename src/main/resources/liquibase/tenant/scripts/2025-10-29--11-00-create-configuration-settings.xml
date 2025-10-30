@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet id="2025-10-29--11-00-create-configuration-settings" author="kjain@ebsco.com">
+
+    <!-- Create configuration_settings table -->
+    <createTable schemaName="${database.defaultSchemaName}" tableName="configuration_settings">
+      <column name="id" type="UUID">
+        <constraints primaryKey="true" primaryKeyName="pk_configuration_settings" nullable="false"/>
+      </column>
+
+      <column name="config_name" type="VARCHAR(100)">
+        <constraints nullable="false" unique="true"/>
+      </column>
+
+      <column name="config_value" type="JSONB">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+
+    <!-- Insert initial configuration values -->
+
+    <insert schemaName="${database.defaultSchemaName}" tableName="configuration_settings">
+      <column name="id" valueComputed="gen_random_uuid()"/>
+      <column name="config_name" value="behavioral"/>
+      <column name="config_value" value="{
+        &quot;deletedRecordsSupport&quot;: &quot;no&quot;,
+        &quot;suppressedRecordsProcessing&quot;: false,
+        &quot;errorsProcessing&quot;: &quot;500&quot;,
+        &quot;recordsSource&quot;: &quot;Source record storage&quot;
+      }"/>
+    </insert>
+
+    <insert schemaName="${database.defaultSchemaName}" tableName="configuration_settings">
+      <column name="id" valueComputed="gen_random_uuid()"/>
+      <column name="config_name" value="general"/>
+      <column name="config_value" value="{
+        &quot;enableOaiService&quot;: true,
+        &quot;repositoryName&quot;: &quot;FOLIO Repository&quot;
+      }"/>
+    </insert>
+
+    <insert schemaName="${database.defaultSchemaName}" tableName="configuration_settings">
+      <column name="id" valueComputed="gen_random_uuid()"/>
+      <column name="config_name" value="technical"/>
+      <column name="config_value" value="{
+        &quot;maxRecordsPerResponse&quot;: 100,
+        &quot;enableLogging&quot;: true
+      }"/>
+    </insert>
+
+  </changeSet>
+
+</databaseChangeLog>

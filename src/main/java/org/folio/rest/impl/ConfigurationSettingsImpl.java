@@ -1,0 +1,196 @@
+package org.folio.rest.impl;
+
+import static java.lang.String.format;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import java.util.Map;
+import javax.ws.rs.core.Response;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
+import org.folio.okapi.common.XOkapiHeaders;
+import org.folio.spring.SpringContextUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+
+public class ConfigurationSettingsImpl {
+
+  private static final Logger logger = LogManager.getLogger(ConfigurationSettingsImpl.class);
+  private static final String ERROR_MSG_TEMPLATE = "ConfigurationSettings with id '%s' was not found";
+
+  @Autowired
+  private ConfigurationSettingsService configurationSettingsService;
+
+  public ConfigurationSettingsImpl() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
+
+  public void getOaiPmhConfigurationSettings(int offset, int limit, String lang, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    
+    logger.info("Retrieving configuration settings. Offset: {}, Limit: {}, Tenant: {}", offset, limit, tenantId);
+    
+    configurationSettingsService.getConfigurationSettingsList(offset, limit, tenantId)
+        .onSuccess(configSettings -> {
+          logger.info("Successfully retrieved {} configuration settings", 
+              configSettings.getJsonArray("configurationSettings").size());
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.ok().entity(configSettings.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to retrieve configuration settings", throwable);
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                  .entity("Failed to retrieve configuration settings: " + throwable.getMessage()).build()));
+        });
+  }
+
+  public void postOaiPmhConfigurationSettings(String lang, JsonObject entity, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
+    
+    logger.info("Creating configuration setting. Tenant: {}, User: {}", tenantId, userId);
+    
+    configurationSettingsService.saveConfigurationSettings(entity, tenantId, userId)
+        .onSuccess(savedConfig -> {
+          logger.info("Successfully created configuration setting with id: {}", savedConfig.getString("id"));
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.status(Response.Status.CREATED).entity(savedConfig.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to create configuration setting", throwable);
+          if (throwable instanceof IllegalArgumentException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.BAD_REQUEST)
+                    .entity(throwable.getMessage()).build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to create configuration setting: " + throwable.getMessage()).build()));
+          }
+        });
+  }
+
+  public void getOaiPmhConfigurationSettingsById(String id, String lang, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    
+    logger.info("Retrieving configuration setting by id: {}. Tenant: {}", id, tenantId);
+    
+    configurationSettingsService.getConfigurationSettingsById(id, tenantId)
+        .onSuccess(configSetting -> {
+          logger.info("Successfully retrieved configuration setting: {}", configSetting.getString("configName"));
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.ok().entity(configSetting.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to retrieve configuration setting by id: {}", id, throwable);
+          if (throwable instanceof javax.ws.rs.NotFoundException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.NOT_FOUND)
+                    .entity(format(ERROR_MSG_TEMPLATE, id)).build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to retrieve configuration setting: " + throwable.getMessage()).build()));
+          }
+        });
+  }
+
+  public void putOaiPmhConfigurationSettingsById(String id, String lang, JsonObject entity, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
+    
+    logger.info("Updating configuration setting by id: {}. Tenant: {}, User: {}", id, tenantId, userId);
+    
+    configurationSettingsService.updateConfigurationSettingsById(id, entity, tenantId, userId)
+        .onSuccess(updatedConfig -> {
+          logger.info("Successfully updated configuration setting: {}", updatedConfig.getString("configName"));
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.ok().entity(updatedConfig.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to update configuration setting by id: {}", id, throwable);
+          if (throwable instanceof javax.ws.rs.NotFoundException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.NOT_FOUND)
+                    .entity(format(ERROR_MSG_TEMPLATE, id)).build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to update configuration setting: " + throwable.getMessage()).build()));
+          }
+        });
+  }
+
+  public void deleteOaiPmhConfigurationSettingsById(String id, String lang, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    
+    logger.info("Deleting configuration setting by id: {}. Tenant: {}", id, tenantId);
+    
+    configurationSettingsService.deleteConfigurationSettingsById(id, tenantId)
+        .onSuccess(deleted -> {
+          logger.info("Successfully deleted configuration setting with id: {}", id);
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.status(Response.Status.NO_CONTENT).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to delete configuration setting by id: {}", id, throwable);
+          if (throwable instanceof javax.ws.rs.NotFoundException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.NOT_FOUND)
+                    .entity(format(ERROR_MSG_TEMPLATE, id)).build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to delete configuration setting: " + throwable.getMessage()).build()));
+          }
+        });
+  }
+
+  public void getOaiPmhConfigurationSettingsByName(String configName, String lang, 
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler, 
+      Context vertxContext) {
+    
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    
+    logger.info("Retrieving configuration setting by name: {}. Tenant: {}", configName, tenantId);
+    
+    configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
+        .onSuccess(configSetting -> {
+          logger.info("Successfully retrieved configuration setting: {}", configSetting.getString("configName"));
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.ok().entity(configSetting.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to retrieve configuration setting by name: {}", configName, throwable);
+          if (throwable instanceof javax.ws.rs.NotFoundException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.NOT_FOUND)
+                    .entity("Configuration setting with name '" + configName + "' was not found").build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to retrieve configuration setting: " + throwable.getMessage()).build()));
+          }
+        });
+  }
+}
