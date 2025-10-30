@@ -212,4 +212,36 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           }
         });
   }
+
+  public void getOaiPmhConfigurationSettingsNameByConfigName(String configName,
+      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
+      Context vertxContext) {
+
+    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+
+    logger.info("Retrieving configuration setting by name: {}. Tenant: {}", configName, tenantId);
+
+    configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
+        .onSuccess(configSetting -> {
+          logger.info("Successfully retrieved configuration setting: {}", configSetting.getString(
+              "configName"));
+          asyncResultHandler.handle(Future.succeededFuture(
+              Response.ok().entity(configSetting.encode()).build()));
+        })
+        .onFailure(throwable -> {
+          logger.error("Failed to retrieve configuration setting by name: {}",
+              configName, throwable);
+          if (throwable instanceof javax.ws.rs.NotFoundException) {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.NOT_FOUND)
+                    .entity("Configuration setting with name '" + configName + "' was not found")
+                  .build()));
+          } else {
+            asyncResultHandler.handle(Future.succeededFuture(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to retrieve configuration setting: "
+                      + throwable.getMessage()).build()));
+          }
+        });
+  }
 }
