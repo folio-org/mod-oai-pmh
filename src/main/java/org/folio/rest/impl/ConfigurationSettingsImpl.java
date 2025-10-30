@@ -37,17 +37,13 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Context vertxContext) {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    logger.info("Retrieving configuration settings. Offset: {}, Limit: {}, Tenant: {}",
-        offset, limit, tenantId);
 
     configurationSettingsService.getConfigurationSettingsList(offset, limit, tenantId)
         .onSuccess(configSettings -> {
-          logger.info("Successfully retrieved {} configuration settings",
-              configSettings.getJsonArray("configurationSettings").size());
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSettings.encode()).build()));
         })
-        .onFailure(throwable -> handleGenericFailure(throwable, 
+        .onFailure(throwable -> handleGenericFailure(throwable,
             "Failed to retrieve configuration settings", asyncResultHandler));
   }
 
@@ -57,13 +53,9 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
     String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
-    logger.info("Creating configuration setting. Tenant: {}, User: {}", tenantId, userId);
-
     configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity),
         tenantId, userId)
         .onSuccess(savedConfig -> {
-          logger.info("Successfully created configuration setting with id: {}",
-              savedConfig.getString("id"));
           asyncResultHandler.handle(Future.succeededFuture(
               Response.status(Response.Status.CREATED).entity(savedConfig.encode()).build()));
         })
@@ -75,17 +67,14 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Context vertxContext) {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    logger.info("Retrieving configuration setting by id: {}. Tenant: {}", id, tenantId);
 
     configurationSettingsService.getConfigurationSettingsById(id, tenantId)
         .onSuccess(configSetting -> {
-          logger.info("Successfully retrieved configuration: {}", configSetting.getString(
-              "configName"));
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSetting.encode()).build()));
         })
         .onFailure(throwable -> handleFailureWithNotFound(throwable, id,
-            "Failed to retrieve configuration setting by id: " + id, 
+            "Failed to retrieve configuration setting by id: " + id,
             "Failed to retrieve configuration setting", asyncResultHandler));
   }
 
@@ -95,14 +84,10 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
     String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
-    logger.info("Updating configuration setting by id: {}. Tenant: {}, User: {}",
-        id, tenantId, userId);
 
     configurationSettingsService.updateConfigurationSettingsById(id,
         JsonObject.mapFrom(entity), tenantId, userId)
         .onSuccess(updatedConfig -> {
-          logger.info("Successfully updated configuration setting: {}", updatedConfig.getString(
-              "configName"));
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(updatedConfig.encode()).build()));
         })
@@ -116,11 +101,9 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Context vertxContext) {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    logger.info("Deleting configuration setting by id: {}. Tenant: {}", id, tenantId);
 
     configurationSettingsService.deleteConfigurationSettingsById(id, tenantId)
         .onSuccess(deleted -> {
-          logger.info("Successfully deleted configuration setting with id: {}", id);
           asyncResultHandler.handle(Future.succeededFuture(
               Response.status(Response.Status.NO_CONTENT).build()));
         })
@@ -134,7 +117,6 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Context vertxContext) {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    logger.info("Retrieving configuration setting by name: {}. Tenant: {}", configName, tenantId);
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
@@ -143,7 +125,6 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Context vertxContext) {
 
     String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    logger.info("Retrieving configuration setting by name: {}. Tenant: {}", configName, tenantId);
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
@@ -152,8 +133,6 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
     configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
         .onSuccess(configSetting -> {
-          logger.info("Successfully retrieved configuration setting: {}", configSetting.getString(
-              "configName"));
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSetting.encode()).build()));
         })
@@ -176,7 +155,6 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
   private void handleGenericFailure(Throwable throwable, String errorMessage,
       Handler<AsyncResult<Response>> asyncResultHandler) {
-    logger.error(errorMessage, throwable);
     asyncResultHandler.handle(Future.succeededFuture(
         Response.status(Response.Status.INTERNAL_SERVER_ERROR)
             .entity(errorMessage + ": " + throwable.getMessage()).build()));
