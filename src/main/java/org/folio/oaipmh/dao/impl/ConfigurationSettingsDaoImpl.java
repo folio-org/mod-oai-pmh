@@ -131,13 +131,11 @@ public class ConfigurationSettingsDaoImpl implements ConfigurationSettingsDao {
   @Override
   public Future<JsonObject> getConfigurationSettingsList(int offset, int limit, String tenantId) {
     return getQueryExecutorReader(tenantId).transaction(txQE -> {
-      // Get the total count
       Future<Integer> countFuture = txQE.findOneRow(dslContext ->
           dslContext.selectCount()
               .from(CONFIGURATION_SETTINGS))
           .map(row -> row.getInteger(0));
 
-      // Get the data
       Future<JsonObject> dataFuture = txQE.findManyRow(dslContext ->
           dslContext.selectFrom(CONFIGURATION_SETTINGS)
               .orderBy(CONFIGURATION_SETTINGS.CONFIG_NAME)

@@ -223,4 +223,373 @@ class ConfigurationSettingsImplTest {
       testContext.completeNow();
     });
   }
+
+  @Test
+  void shouldGetConfigurationSettingById(VertxTestContext testContext) {
+    JsonObject config = createTestConfig("test-get-by-id");
+    String id = config.getString("id");
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      createBaseRequest(getConfigurationSettingsPathWithId(id), null)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("id", equalTo(id))
+          .body("configName", equalTo("test-get-by-id"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturn404WhenConfigurationSettingNotFound(VertxTestContext testContext) {
+    String nonExistentId = UUID.randomUUID().toString();
+
+    testContext.verify(() -> {
+      createBaseRequest(getConfigurationSettingsPathWithId(nonExistentId), null)
+          .when().get()
+          .then()
+          .statusCode(404);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturn404WhenUpdatingNonExistentConfiguration(VertxTestContext testContext) {
+    String nonExistentId = UUID.randomUUID().toString();
+    JsonObject updateConfig = new JsonObject()
+        .put("configName", "test-update")
+        .put("configValue", new JsonObject().put("enableOaiService", true));
+
+    testContext.verify(() -> {
+      createBaseRequest(getConfigurationSettingsPathWithId(nonExistentId), ContentType.JSON)
+          .body(updateConfig.encode())
+          .when().put()
+          .then()
+          .statusCode(404);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturn404WhenDeletingNonExistentConfiguration(VertxTestContext testContext) {
+    String nonExistentId = UUID.randomUUID().toString();
+
+    testContext.verify(() -> {
+      createBaseRequest(getConfigurationSettingsPathWithId(nonExistentId), null)
+          .when().delete()
+          .then()
+          .statusCode(404);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturn400WhenCreatingDuplicateConfiguration(VertxTestContext testContext) {
+    JsonObject config = createTestConfig("test-duplicate");
+
+    testContext.verify(() -> {
+      // Create first config
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      // Try to create duplicate
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode())
+          .when().post()
+          .then()
+          .statusCode(400);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldGetConfigurationSettingByName(VertxTestContext testContext) {
+    JsonObject config = createTestConfig("test-get-by-name");
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH + "/name/test-get-by-name", null)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("configName", equalTo("test-get-by-name"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturn404WhenGettingConfigurationByNonExistentName(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH + "/name/non-existent-name", null)
+          .when().get()
+          .then()
+          .statusCode(404);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldCreateConfigurationWithoutExplicitId(VertxTestContext testContext) {
+    JsonObject config = new JsonObject()
+        .put("configName", "test-auto-id")
+        .put("configValue", new JsonObject()
+            .put("enableOaiService", true)
+            .put("repositoryName", "Test Repository"));
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode())
+          .when().post()
+          .then()
+          .statusCode(201)
+          .body("configName", equalTo("test-auto-id"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldHandlePaginationWithOffset(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Create multiple configs
+      for (int i = 0; i < 5; i++) {
+        JsonObject config = createTestConfig("test-pagination-" + i);
+        createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+            .body(config.encode()).when().post().then().statusCode(201);
+      }
+
+      // Test pagination
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, null)
+          .queryParam("offset", 2)
+          .queryParam("limit", 2)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("configurationSettings.size()", equalTo(2));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnEmptyListWhenNoConfigurations(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, null)
+          .queryParam("offset", 0)
+          .queryParam("limit", 10)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("totalRecords", equalTo(0))
+          .body("configurationSettings.size()", equalTo(0));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldUpdateOnlyConfigValue(VertxTestContext testContext) {
+    JsonObject config = createTestConfig("test-partial-update");
+    String id = config.getString("id");
+
+    JsonObject partialUpdate = new JsonObject()
+        .put("configName", "test-partial-update")
+        .put("configValue", new JsonObject()
+            .put("maxRecordsPerResponse", 50)
+            .put("enableLogging", false));
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      createBaseRequest(getConfigurationSettingsPathWithId(id), ContentType.JSON)
+          .body(partialUpdate.encode())
+          .when().put()
+          .then()
+          .statusCode(200)
+          .body("configValue.maxRecordsPerResponse", equalTo(50));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldHandleComplexConfigValue(VertxTestContext testContext) {
+    JsonObject complexConfig = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("configName", "test-complex")
+        .put("configValue", new JsonObject()
+            .put("nested", new JsonObject()
+                .put("level1", new JsonObject()
+                    .put("level2", "value")))
+            .put("array", new JsonObject()
+                .put("items", new String[]{"item1", "item2", "item3"}))
+            .put("boolean", true)
+            .put("number", 123));
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(complexConfig.encode())
+          .when().post()
+          .then()
+          .statusCode(201)
+          .body("configValue.boolean", equalTo(true))
+          .body("configValue.number", equalTo(123));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldHandleSpecialCharactersInConfigName(VertxTestContext testContext) {
+    JsonObject config = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("configName", "test-config_with-special.chars")
+        .put("configValue", new JsonObject().put("key", "value"));
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode())
+          .when().post()
+          .then()
+          .statusCode(201)
+          .body("configName", equalTo("test-config_with-special.chars"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldReturnAllConfigurationsWithDefaultPagination(VertxTestContext testContext) {
+    testContext.verify(() -> {
+      // Create configs
+      for (int i = 0; i < 3; i++) {
+        JsonObject config = createTestConfig("test-default-pagination-" + i);
+        createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+            .body(config.encode()).when().post().then().statusCode(201);
+      }
+
+      // Get without explicit pagination params
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, null)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("configurationSettings.size()", equalTo(3));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldHandleLargeConfigValue(VertxTestContext testContext) {
+    StringBuilder largeValue = new StringBuilder();
+    for (int i = 0; i < 1000; i++) {
+      largeValue.append("data").append(i);
+    }
+
+    JsonObject config = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("configName", "test-large-value")
+        .put("configValue", new JsonObject().put("largeField", largeValue.toString()));
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode())
+          .when().post()
+          .then()
+          .statusCode(201);
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldUpdateConfigurationMultipleTimes(VertxTestContext testContext) {
+    JsonObject config = createTestConfig("test-multiple-updates");
+    String id = config.getString("id");
+
+    testContext.verify(() -> {
+      // Create
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      // Update 1
+      JsonObject update1 = new JsonObject()
+          .put("configName", "test-multiple-updates")
+          .put("configValue", new JsonObject().put("version", "1"));
+      createBaseRequest(getConfigurationSettingsPathWithId(id), ContentType.JSON)
+          .body(update1.encode()).when().put().then().statusCode(200);
+
+      // Update 2
+      JsonObject update2 = new JsonObject()
+          .put("configName", "test-multiple-updates")
+          .put("configValue", new JsonObject().put("version", "2"));
+      createBaseRequest(getConfigurationSettingsPathWithId(id), ContentType.JSON)
+          .body(update2.encode()).when().put().then().statusCode(200)
+          .body("configValue.version", equalTo("2"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldHandleEmptyConfigValue(VertxTestContext testContext) {
+    JsonObject config = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("configName", "test-empty-value")
+        .put("configValue", new JsonObject());
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode())
+          .when().post()
+          .then()
+          .statusCode(201)
+          .body("configName", equalTo("test-empty-value"));
+
+      testContext.completeNow();
+    });
+  }
+
+  @Test
+  void shouldGetConfigurationAndVerifyAllFields(VertxTestContext testContext) {
+    JsonObject config = new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("configName", "test-verify-fields")
+        .put("configValue", new JsonObject()
+            .put("field1", "value1")
+            .put("field2", true)
+            .put("field3", 42));
+
+    String id = config.getString("id");
+
+    testContext.verify(() -> {
+      createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
+          .body(config.encode()).when().post().then().statusCode(201);
+
+      createBaseRequest(getConfigurationSettingsPathWithId(id), null)
+          .when().get()
+          .then()
+          .statusCode(200)
+          .body("id", equalTo(id))
+          .body("configName", equalTo("test-verify-fields"))
+          .body("configValue.field1", equalTo("value1"))
+          .body("configValue.field2", equalTo(true))
+          .body("configValue.field3", equalTo(42));
+
+      testContext.completeNow();
+    });
+  }
 }

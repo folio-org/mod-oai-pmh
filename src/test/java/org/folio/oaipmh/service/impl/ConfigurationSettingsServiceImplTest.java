@@ -58,15 +58,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldGetConfigurationSettingsById(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.getConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID))
         .willReturn(Future.succeededFuture(testConfigurationSettings));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(TEST_CONFIG_ID, result.getString("id"));
@@ -78,15 +75,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldFailWhenGetConfigurationSettingsByIdNotFound(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.getConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID))
         .willReturn(Future.failedFuture(new NotFoundException("Configuration setting not found")));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.failing(throwable -> testContext.verify(() -> {
       assertTrue(throwable instanceof NotFoundException);
       assertEquals("Configuration setting not found", throwable.getMessage());
@@ -97,15 +91,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldGetConfigurationSettingsByName(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.getConfigurationSettingsByName(TEST_CONFIG_NAME, TEST_TENANT_ID))
         .willReturn(Future.succeededFuture(testConfigurationSettings));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsByName(TEST_CONFIG_NAME, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(TEST_CONFIG_ID, result.getString("id"));
@@ -118,15 +109,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldFailWhenGetConfigurationSettingsByNameNotFound(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.getConfigurationSettingsByName(TEST_CONFIG_NAME, TEST_TENANT_ID))
         .willReturn(Future.failedFuture(new NotFoundException("Configuration setting not found")));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsByName(TEST_CONFIG_NAME, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.failing(throwable -> testContext.verify(() -> {
       assertTrue(throwable instanceof NotFoundException);
       assertEquals("Configuration setting not found", throwable.getMessage());
@@ -138,16 +126,13 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldSaveConfigurationSettings(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.saveConfigurationSettings(
         any(JsonObject.class), eq(TEST_TENANT_ID), eq(TEST_USER_ID)))
         .willReturn(Future.succeededFuture(testConfigurationSettings));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .saveConfigurationSettings(testConfigurationSettings, TEST_TENANT_ID, TEST_USER_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(TEST_CONFIG_ID, result.getString("id"));
@@ -160,17 +145,14 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldFailWhenSaveConfigurationSettingsWithDuplicateId(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.saveConfigurationSettings(
         any(JsonObject.class), eq(TEST_TENANT_ID), eq(TEST_USER_ID)))
         .willReturn(Future.failedFuture(
             new IllegalArgumentException("Configuration setting already exists")));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .saveConfigurationSettings(testConfigurationSettings, TEST_TENANT_ID, TEST_USER_ID);
 
-    // then
     future.onComplete(testContext.failing(throwable -> testContext.verify(() -> {
       assertTrue(throwable instanceof IllegalArgumentException);
       assertEquals("Configuration setting already exists", throwable.getMessage());
@@ -182,7 +164,6 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldUpdateConfigurationSettingsById(VertxTestContext testContext) {
-    // given
     JsonObject updatedConfig = testConfigurationSettings.copy()
         .put("configValue", new JsonObject()
             .put("deletedRecordsSupport", "persistent")
@@ -192,12 +173,10 @@ class ConfigurationSettingsServiceImplTest {
         eq(TEST_CONFIG_ID), any(JsonObject.class), eq(TEST_TENANT_ID), eq(TEST_USER_ID)))
         .willReturn(Future.succeededFuture(updatedConfig));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .updateConfigurationSettingsById(TEST_CONFIG_ID,
           updatedConfig, TEST_TENANT_ID, TEST_USER_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(TEST_CONFIG_ID, result.getString("id"));
@@ -214,17 +193,14 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldFailWhenUpdateConfigurationSettingsByIdNotFound(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.updateConfigurationSettingsById(
         eq(TEST_CONFIG_ID), any(JsonObject.class), eq(TEST_TENANT_ID), eq(TEST_USER_ID)))
         .willReturn(Future.failedFuture(new NotFoundException("Configuration setting not found")));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .updateConfigurationSettingsById(TEST_CONFIG_ID, testConfigurationSettings,
             TEST_TENANT_ID, TEST_USER_ID);
 
-    // then
     future.onComplete(testContext.failing(throwable -> testContext.verify(() -> {
       assertTrue(throwable instanceof NotFoundException);
       assertEquals("Configuration setting not found", throwable.getMessage());
@@ -237,15 +213,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldDeleteConfigurationSettingsById(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.deleteConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID))
         .willReturn(Future.succeededFuture(true));
 
-    // when
     Future<Boolean> future = configurationSettingsService
         .deleteConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertTrue(result);
       verify(configurationSettingsDao)
@@ -256,15 +229,12 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldFailWhenDeleteConfigurationSettingsByIdNotFound(VertxTestContext testContext) {
-    // given
     given(configurationSettingsDao.deleteConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID))
         .willReturn(Future.failedFuture(new NotFoundException("Configuration setting not found")));
 
-    // when
     Future<Boolean> future = configurationSettingsService
         .deleteConfigurationSettingsById(TEST_CONFIG_ID, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.failing(throwable -> testContext.verify(() -> {
       assertTrue(throwable instanceof NotFoundException);
       assertEquals("Configuration setting not found", throwable.getMessage());
@@ -276,17 +246,14 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldGetConfigurationSettingsList(VertxTestContext testContext) {
-    // given
     int offset = 0;
     int limit = 10;
     given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, TEST_TENANT_ID))
         .willReturn(Future.succeededFuture(testConfigurationSettingsList));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(1, result.getInteger("totalRecords"));
@@ -303,7 +270,6 @@ class ConfigurationSettingsServiceImplTest {
 
   @Test
   void shouldGetEmptyConfigurationSettingsList(VertxTestContext testContext) {
-    // given
     int offset = 0;
     int limit = 10;
     JsonObject emptyList = new JsonObject()
@@ -313,11 +279,9 @@ class ConfigurationSettingsServiceImplTest {
     given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, TEST_TENANT_ID))
         .willReturn(Future.succeededFuture(emptyList));
 
-    // when
     Future<JsonObject> future = configurationSettingsService
         .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
 
-    // then
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
       assertEquals(0, result.getInteger("totalRecords"));
