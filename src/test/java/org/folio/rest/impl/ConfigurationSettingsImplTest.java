@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import io.restassured.RestAssured;
@@ -72,17 +71,24 @@ class ConfigurationSettingsImplTest {
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
 
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions, testContext.succeeding(v -> {
-      try {
-        Context context = vertx.getOrCreateContext();
-        SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-        SpringContextUtil.autowireDependencies(this, context);
-        new OkapiMockServer(vertx, mockPort).start(testContext);
-        testContext.completeNow();
-      } catch (Exception e) {
-        testContext.failNow(e);
-      }
-    }));
+    vertx.deployVerticle(
+          RestVerticle.class.getName(),
+          deploymentOptions,
+          testContext.succeeding(v -> {
+            try {
+              Context context = vertx.getOrCreateContext();
+              SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+              SpringContextUtil.autowireDependencies(this, context);
+
+              OkapiMockServer mockServer = new OkapiMockServer(vertx, mockPort);
+              mockServer.start(testContext);
+
+              testContext.completeNow();
+            } catch (Exception e) {
+              testContext.failNow(e);
+            }
+          })
+    );
   }
 
   @AfterAll
