@@ -7,6 +7,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgException;
+import java.util.Map;
 import java.util.UUID;
 import javax.ws.rs.NotFoundException;
 import org.folio.oaipmh.dao.ConfigurationSettingsDao;
@@ -163,11 +164,27 @@ public class ConfigurationSettingsDaoImpl implements ConfigurationSettingsDao {
     JsonObject config = new JsonObject();
     config.put("id", row.getUUID("id").toString());
     config.put("configName", row.getString("config_name"));
-    JsonObject configValueJson = new JsonObject(row.getString("config_value"));
+
+    Object rawValue = row.getValue("config_value");
+    JsonObject configValueJson;
+
+    if (rawValue instanceof JsonObject json) {
+      configValueJson = json;
+    } else if (rawValue instanceof String jsonString) {
+      configValueJson = new JsonObject(jsonString);
+    } else if (rawValue instanceof Map<?, ?> map) {
+      configValueJson = new JsonObject((Map<String, Object>) map);
+    } else {
+      throw new IllegalStateException(
+        "Unexpected JSONB type for config_value: " + rawValue.getClass()
+      );
+    }
+
     config.put("configValue", configValueJson);
 
     return config;
   }
+
 
   private ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
     return postgresClientFactory.getQueryExecutor(tenantId);
