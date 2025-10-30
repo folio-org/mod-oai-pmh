@@ -163,9 +163,9 @@ public class ConfigurationSettingsDaoImpl implements ConfigurationSettingsDao {
     JsonObject config = new JsonObject();
     config.put("id", row.getUUID("id").toString());
     config.put("configName", row.getString("config_name"));
-    // Parse the JSONB field as a Map to avoid JsonObject serialization issues
     JsonObject configValueJson = new JsonObject(row.getString("config_value"));
-    config.put("configValue", configValueJson.getMap());
+    config.put("configValue", configValueJson);
+
     return config;
   }
 
