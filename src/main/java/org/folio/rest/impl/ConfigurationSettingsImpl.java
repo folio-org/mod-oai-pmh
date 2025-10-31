@@ -1,6 +1,5 @@
 package org.folio.rest.impl;
 
-import static java.lang.String.format;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -12,6 +11,7 @@ import java.util.Map;
 import javax.ws.rs.core.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dataimport.util.ExceptionHelper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.ConfigurationSettings;
@@ -22,8 +22,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
 
   private static final Logger logger = LogManager.getLogger(ConfigurationSettingsImpl.class);
-  private static final String ERROR_MSG_TEMPLATE =
-        "ConfigurationSettings with id '%s' was not found";
+
+  private static final String ERROR_NOT_FOUND = "ConfigurationSettings was not found";
+
+  private static final String ERROR_RETRIEVE = "Failed to retrieve configuration settings";
+
+  private static final String ERROR_CREATE = "Failed to create configuration setting";
+
+  private static final String ERROR_UPDATE = "Failed to update configuration setting";
+
+  private static final String ERROR_DELETE = "Failed to delete configuration setting";
+
 
   @Autowired
   private ConfigurationSettingsService configurationSettingsService;
@@ -50,8 +59,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSettings.encode()).build()));
         })
-        .onFailure(throwable -> handleGenericFailure(throwable,
-            "Failed to retrieve configuration settings", asyncResultHandler));
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_RETRIEVE));
   }
 
   public void postOaiPmhConfigurationSettings(ConfigurationSettings entity,
@@ -65,7 +73,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.status(Response.Status.CREATED).entity(savedConfig.encode()).build()));
         })
-        .onFailure(throwable -> handleCreateFailure(throwable, asyncResultHandler));
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_CREATE));
   }
 
   public void getOaiPmhConfigurationSettingsById(String id,
@@ -79,9 +87,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSetting.encode()).build()));
         })
-        .onFailure(throwable -> handleFailureWithNotFound(throwable, id,
-            "Failed to retrieve configuration setting by id: " + id,
-            "Failed to retrieve configuration setting", asyncResultHandler));
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_NOT_FOUND));
   }
 
   public void putOaiPmhConfigurationSettingsById(String id, ConfigurationSettings entity,
@@ -96,9 +102,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(updatedConfig.encode()).build()));
         })
-        .onFailure(throwable -> handleFailureWithNotFound(throwable, id,
-            "Failed to update configuration setting by id: " + id,
-            "Failed to update configuration setting", asyncResultHandler));
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_UPDATE));
   }
 
   public void deleteOaiPmhConfigurationSettingsById(String id,
@@ -112,9 +116,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.status(Response.Status.NO_CONTENT).build()));
         })
-        .onFailure(throwable -> handleFailureWithNotFound(throwable, id,
-            "Failed to delete configuration setting by id: " + id,
-            "Failed to delete configuration setting", asyncResultHandler));
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_DELETE));
   }
 
   public void getOaiPmhConfigurationSettingsByName(String configName, String lang,
@@ -141,56 +143,15 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(configSetting.encode()).build()));
         })
-        .onFailure(throwable -> {
-          logger.error("Failed to retrieve configuration setting by name: {}",
-              configName, throwable);
-          if (throwable instanceof javax.ws.rs.NotFoundException) {
-            asyncResultHandler.handle(Future.succeededFuture(
-                Response.status(Response.Status.NOT_FOUND)
-                    .entity("Configuration setting with name '" + configName + "' was not found")
-                  .build()));
-          } else {
-            asyncResultHandler.handle(Future.succeededFuture(
-                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Failed to retrieve configuration setting: "
-                      + throwable.getMessage()).build()));
-          }
-        });
+        .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_RETRIEVE));
   }
 
-  private void handleGenericFailure(Throwable throwable, String errorMessage,
-      Handler<AsyncResult<Response>> asyncResultHandler) {
+  private void handleFailure(Handler<AsyncResult<Response>> asyncResultHandler,
+                             Throwable e, String errorMessage) {
+    logger.error(errorMessage, e);
     asyncResultHandler.handle(Future.succeededFuture(
-        Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(errorMessage + ": " + throwable.getMessage()).build()));
+        ExceptionHelper.mapExceptionToResponse(e)
+    ));
   }
 
-  private void handleCreateFailure(Throwable throwable,
-      Handler<AsyncResult<Response>> asyncResultHandler) {
-    logger.error("Failed to create configuration setting", throwable);
-    if (throwable instanceof IllegalArgumentException) {
-      asyncResultHandler.handle(Future.succeededFuture(
-          Response.status(Response.Status.BAD_REQUEST)
-              .entity(throwable.getMessage()).build()));
-    } else {
-      asyncResultHandler.handle(Future.succeededFuture(
-          Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity("Failed to create configuration setting: "
-                + throwable.getMessage()).build()));
-    }
-  }
-
-  private void handleFailureWithNotFound(Throwable throwable, String id, String logMessage,
-      String errorPrefix, Handler<AsyncResult<Response>> asyncResultHandler) {
-    logger.error(logMessage, throwable);
-    if (throwable instanceof javax.ws.rs.NotFoundException) {
-      asyncResultHandler.handle(Future.succeededFuture(
-          Response.status(Response.Status.NOT_FOUND)
-              .entity(format(ERROR_MSG_TEMPLATE, id)).build()));
-    } else {
-      asyncResultHandler.handle(Future.succeededFuture(
-          Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-              .entity(errorPrefix + ": " + throwable.getMessage()).build()));
-    }
-  }
 }
