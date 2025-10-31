@@ -24,6 +24,7 @@ import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.ConfigurationSettingsDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
 import org.folio.rest.jaxrs.model.ConfigValue;
@@ -44,7 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 class ConfigurationSettingsImplTest {
 
   @Autowired
-  ConfigurationSettingsDao configurationSettingsDao;
+  private ConfigurationSettingsService configurationSettingsService;
 
   private static final Logger logger = LogManager.getLogger(ConfigurationSettingsImplTest.class);
 
@@ -608,9 +609,9 @@ class ConfigurationSettingsImplTest {
         .put("enableOaiService", true)
         .put("repositoryName", "Test Repository"));
 
-    configurationSettingsDao.saveConfigurationSettings(jsonConfig,
+    configurationSettingsService.saveConfigurationSettings(jsonConfig,
         OAI_TEST_TENANT, "test-user")
-          .compose(saved -> configurationSettingsDao
+          .compose(saved -> configurationSettingsService
             .getConfigurationSettingsById(config.getId(), OAI_TEST_TENANT))
           .onComplete(ar -> {
             if (ar.succeeded()) {
