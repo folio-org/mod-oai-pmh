@@ -49,108 +49,107 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
   }
 
   public void getOaiPmhConfigurationSettings(String totalRecords, int offset, int limit,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+                                             Map<String, String> okapiHeaders,
+                                             Handler<AsyncResult<Response>> asyncResultHandler,
+                                             Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.getConfigurationSettingsList(offset, limit, tenantId)
-        .onSuccess(configSettings -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.ok().entity(configSettings.encode()).build()));
-        })
+      .onSuccess(configSettings -> handleSuccess(asyncResultHandler,
+        configSettings.encode(), Response.Status.OK))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_RETRIEVE));
   }
 
   public void postOaiPmhConfigurationSettings(ConfigurationSettings entity,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+                                              Map<String, String> okapiHeaders,
+                                              Handler<AsyncResult<Response>> asyncResultHandler,
+                                              Context vertxContext) {
 
     OkapiContext ctx = extractOkapiContext(okapiHeaders);
     configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity),
         ctx.tenantId, ctx.userId)
-        .onSuccess(savedConfig -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.status(Response.Status.CREATED).entity(savedConfig.encode()).build()));
-        })
+      .onSuccess(savedConfig -> handleSuccess(asyncResultHandler, savedConfig.encode(),
+        Response.Status.CREATED))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_CREATE));
   }
 
   public void getOaiPmhConfigurationSettingsById(String id,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+                                                 Map<String, String> okapiHeaders,
+                                                 Handler<AsyncResult<Response>> asyncResultHandler,
+                                                 Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.getConfigurationSettingsById(id, tenantId)
-        .onSuccess(configSetting -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.ok().entity(configSetting.encode()).build()));
-        })
+      .onSuccess(configSetting -> handleSuccess(asyncResultHandler,
+        configSetting.encode(), Response.Status.OK))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_NOT_FOUND));
   }
 
   public void putOaiPmhConfigurationSettingsById(String id, ConfigurationSettings entity,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+                                                 Map<String, String> okapiHeaders,
+                                                 Handler<AsyncResult<Response>> asyncResultHandler,
+                                                 Context vertxContext) {
 
     OkapiContext ctx = extractOkapiContext(okapiHeaders);
 
     configurationSettingsService.updateConfigurationSettingsById(id,
         JsonObject.mapFrom(entity), ctx.tenantId, ctx.userId)
-        .onSuccess(updatedConfig -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.ok().entity(updatedConfig.encode()).build()));
-        })
+      .onSuccess(updatedConfig -> handleSuccess(asyncResultHandler,
+        updatedConfig.encode(), Response.Status.OK))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_UPDATE));
   }
 
-  public void deleteOaiPmhConfigurationSettingsById(String id,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+  public void deleteOaiPmhConfigurationSettingsById(
+      String id, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.deleteConfigurationSettingsById(id, tenantId)
-        .onSuccess(deleted -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.status(Response.Status.NO_CONTENT).build()));
-        })
+      .onSuccess(v -> handleSuccess(asyncResultHandler, "", Response.Status.NO_CONTENT))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_DELETE));
   }
 
-  public void getOaiPmhConfigurationSettingsByName(String configName, String lang,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+  public void getOaiPmhConfigurationSettingsByName(
+      String configName, String lang, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
-  public void getOaiPmhConfigurationSettingsNameByConfigName(String configName,
-      Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
-      Context vertxContext) {
+  public void getOaiPmhConfigurationSettingsNameByConfigName(
+      String configName, Map<String, String> okapiHeaders,
+      Handler<AsyncResult<Response>> asyncResultHandler, Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
   private void getConfigurationByName(String configName, String tenantId,
-      Handler<AsyncResult<Response>> asyncResultHandler) {
+                                      Handler<AsyncResult<Response>> asyncResultHandler) {
 
     configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
-        .onSuccess(configSetting -> {
-          asyncResultHandler.handle(Future.succeededFuture(
-              Response.ok().entity(configSetting.encode()).build()));
-        })
+      .onSuccess(configSetting -> handleSuccess(asyncResultHandler, configSetting.encode(),
+        Response.Status.OK))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_RETRIEVE));
   }
+
 
   private void handleFailure(Handler<AsyncResult<Response>> asyncResultHandler,
                              Throwable e, String errorMessage) {
     logger.error(errorMessage, e);
     asyncResultHandler.handle(Future.succeededFuture(
         ExceptionHelper.mapExceptionToResponse(e)
+    ));
+  }
+
+  private <T> void handleSuccess(Handler<AsyncResult<Response>> asyncResultHandler,
+                                 T entity, Response.Status status) {
+    asyncResultHandler.handle(Future.succeededFuture(
+        Response.status(status).entity(entity).build()
     ));
   }
 

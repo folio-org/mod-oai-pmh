@@ -2,6 +2,8 @@ package org.folio.rest.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import io.restassured.RestAssured;
@@ -20,9 +22,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
+import org.folio.oaipmh.dao.ConfigurationSettingsDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.RestVerticle;
+import org.folio.rest.jaxrs.model.ConfigValue;
+import org.folio.rest.jaxrs.model.ConfigurationSettings;
 import org.folio.rest.persist.PostgresClient;
 import org.folio.rest.tools.utils.NetworkUtils;
 import org.folio.spring.SpringContextUtil;
@@ -32,10 +37,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class ConfigurationSettingsImplTest {
+
+  @Autowired
+  ConfigurationSettingsDao configurationSettingsDao;
 
   private static final Logger logger = LogManager.getLogger(ConfigurationSettingsImplTest.class);
 
@@ -70,7 +79,6 @@ class ConfigurationSettingsImplTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-
     vertx.deployVerticle(
           RestVerticle.class.getName(),
           deploymentOptions,
@@ -295,11 +303,9 @@ class ConfigurationSettingsImplTest {
     JsonObject config = createTestConfig("test-duplicate");
 
     testContext.verify(() -> {
-      // Create first config
       createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
           .body(config.encode()).when().post().then().statusCode(201);
 
-      // Try to create duplicate
       createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
           .body(config.encode())
           .when().post()
@@ -363,7 +369,6 @@ class ConfigurationSettingsImplTest {
   @Test
   void shouldHandlePaginationWithOffset(VertxTestContext testContext) {
     testContext.verify(() -> {
-      // Create multiple configs
       for (int i = 0; i < 5; i++) {
         JsonObject config = createTestConfig("test-pagination-" + i);
         createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
@@ -474,14 +479,12 @@ class ConfigurationSettingsImplTest {
   @Test
   void shouldReturnAllConfigurationsWithDefaultPagination(VertxTestContext testContext) {
     testContext.verify(() -> {
-      // Create configs
       for (int i = 0; i < 3; i++) {
         JsonObject config = createTestConfig("test-default-pagination-" + i);
         createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
             .body(config.encode()).when().post().then().statusCode(201);
       }
 
-      // Get without explicit pagination params
       createBaseRequest(CONFIGURATION_SETTINGS_PATH, null)
           .when().get()
           .then()
@@ -521,18 +524,15 @@ class ConfigurationSettingsImplTest {
     String id = config.getString("id");
 
     testContext.verify(() -> {
-      // Create
       createBaseRequest(CONFIGURATION_SETTINGS_PATH, ContentType.JSON)
           .body(config.encode()).when().post().then().statusCode(201);
 
-      // Update 1
       JsonObject update1 = new JsonObject()
           .put("configName", "test-multiple-updates")
           .put("configValue", new JsonObject().put("version", "1"));
       createBaseRequest(getConfigurationSettingsPathWithId(id), ContentType.JSON)
           .body(update1.encode()).when().put().then().statusCode(200);
 
-      // Update 2
       JsonObject update2 = new JsonObject()
           .put("configName", "test-multiple-updates")
           .put("configValue", new JsonObject().put("version", "2"));
@@ -592,4 +592,43 @@ class ConfigurationSettingsImplTest {
       testContext.completeNow();
     });
   }
+
+  @Test
+  void shouldSaveAndRetrieveConfigurationSetting(VertxTestContext testContext) {
+    String id = UUID.randomUUID().toString();
+    ConfigurationSettings config = new ConfigurationSettings()
+          .withId(id)
+          .withConfigName("test-dao")
+          .withConfigValue(new ConfigValue().withAdditionalProperty("sss", "vvvvv"));
+
+    JsonObject jsonConfig = new JsonObject()
+        .put("id", config.getId())
+        .put("configName", config.getConfigName())
+        .put("configValue", new JsonObject()
+        .put("enableOaiService", true)
+        .put("repositoryName", "Test Repository"));
+
+    configurationSettingsDao.saveConfigurationSettings(jsonConfig,
+        OAI_TEST_TENANT, "test-user")
+          .compose(saved -> configurationSettingsDao
+            .getConfigurationSettingsById(config.getId(), OAI_TEST_TENANT))
+          .onComplete(ar -> {
+            if (ar.succeeded()) {
+              JsonObject retrieved = ar.result();
+              assertNotNull(retrieved);
+              assertEquals(config.getId(), retrieved.getString("id"));
+              assertEquals(config.getConfigName(), retrieved.getString("configName"));
+              assertNotNull(retrieved.getJsonObject("configValue"));
+              assertEquals(true,
+                    retrieved.getJsonObject("configValue").getBoolean("enableOaiService"));
+              assertEquals("Test Repository",
+                    retrieved.getJsonObject("configValue").getString("repositoryName"));
+              testContext.completeNow();
+            } else {
+              testContext.failNow(ar.cause());
+            }
+          });
+  }
+
+
 }
