@@ -101,6 +101,19 @@ Suppressed from discovery instances UUIDs| GET /oai/request-metadata/{requestId}
 A typical API usage should be performed with the following approach. The user requests a collection of Request Metadata. Finds the necessary request metadata by the harvesting start time. Request Metadata contains the `requestId` 
 and counters of the corresponding events. Next, the user can call the necessary endpoints using `requestId` to get a list of UUIDs.
 
+### Configuration Settings API
+
+Endpoints for managing OAI-PMH module configuration settings. All requests must include appropriate Okapi headers (for example `X-Okapi-Tenant` and `X-Okapi-Token`) and the caller must have the required permission listed below.
+
+| Method | Path |                   Permission                    | Description |
+|:------:|:----:|:-----------------------------------------------:|------------|
+| GET | `/oai-pmh/configuration-settings` | `oai-pmh.configuration-settings.collection.get` | Get collection of configuration settings |
+| GET | `/oai-pmh/configuration-settings/name/{configName}` | `oai-pmh.configuration-settings.item.name.get`  | Get configuration setting by name |
+| GET | `/oai-pmh/configuration-settings/{id}` |    `oai-pmh.configuration-settings.item.get`    | Get configuration setting by id |
+| POST | `/oai-pmh/configuration-settings` |   `oai-pmh.configuration-settings.item.post`    | Create a new configuration setting |
+| PUT | `/oai-pmh/configuration-settings/{id}` |    `oai-pmh.configuration-settings.item.put`    | Update configuration setting by id |
+| DELETE | `/oai-pmh/configuration-settings/{id}` |  `oai-pmh.configuration-settings.item.delete`   | Delete configuration setting by id |
+
 ### Environment variables
 This module uses S3 storage for files. AWS S3 and Minio Server are supported for files storage.
 It is also necessary to specify variable S3_IS_AWS to determine if AWS S3 is used as files storage. By default,
