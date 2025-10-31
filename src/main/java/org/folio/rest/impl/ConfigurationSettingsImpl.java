@@ -32,11 +32,18 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
   }
 
+  private record OkapiContext(String tenantId, String userId) {}
+
+  private static OkapiContext extractOkapiContext(Map<String, String> headers) {
+    return new OkapiContext(headers.get(XOkapiHeaders.TENANT), headers
+      .get(XOkapiHeaders.USER_ID));
+  }
+
   public void getOaiPmhConfigurationSettings(String totalRecords, int offset, int limit,
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.getConfigurationSettingsList(offset, limit, tenantId)
         .onSuccess(configSettings -> {
@@ -51,10 +58,9 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
+    OkapiContext ctx = extractOkapiContext(okapiHeaders);
     configurationSettingsService.saveConfigurationSettings(JsonObject.mapFrom(entity),
-        tenantId, userId)
+        ctx.tenantId, ctx.userId)
         .onSuccess(savedConfig -> {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.status(Response.Status.CREATED).entity(savedConfig.encode()).build()));
@@ -66,7 +72,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.getConfigurationSettingsById(id, tenantId)
         .onSuccess(configSetting -> {
@@ -82,11 +88,10 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
-    String userId = okapiHeaders.get(XOkapiHeaders.USER_ID);
+    OkapiContext ctx = extractOkapiContext(okapiHeaders);
 
     configurationSettingsService.updateConfigurationSettingsById(id,
-        JsonObject.mapFrom(entity), tenantId, userId)
+        JsonObject.mapFrom(entity), ctx.tenantId, ctx.userId)
         .onSuccess(updatedConfig -> {
           asyncResultHandler.handle(Future.succeededFuture(
               Response.ok().entity(updatedConfig.encode()).build()));
@@ -100,7 +105,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
     configurationSettingsService.deleteConfigurationSettingsById(id, tenantId)
         .onSuccess(deleted -> {
@@ -116,7 +121,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String tenantId = extractOkapiContext(okapiHeaders).tenantId;
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
@@ -124,7 +129,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       Map<String, String> okapiHeaders, Handler<AsyncResult<Response>> asyncResultHandler,
       Context vertxContext) {
 
-    String tenantId = okapiHeaders.get(XOkapiHeaders.TENANT);
+    String tenantId = extractOkapiContext(okapiHeaders).tenantId;
     getConfigurationByName(configName, tenantId, asyncResultHandler);
   }
 
