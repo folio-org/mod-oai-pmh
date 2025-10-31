@@ -3,7 +3,6 @@ package org.folio.rest.impl;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 import io.restassured.RestAssured;
@@ -22,7 +21,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
-import org.folio.oaipmh.dao.ConfigurationSettingsDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.postgres.testing.PostgresTesterContainer;
@@ -43,6 +41,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @ExtendWith(VertxExtension.class)
 @TestInstance(PER_CLASS)
 class ConfigurationSettingsImplTest {
+
+  @Autowired
+  private ConfigurationSettingsImpl configurationSettingsImpl;
 
   @Autowired
   private ConfigurationSettingsService configurationSettingsService;
@@ -595,41 +596,45 @@ class ConfigurationSettingsImplTest {
   }
 
   @Test
-  void shouldSaveAndRetrieveConfigurationSetting(VertxTestContext testContext) {
+  void shouldSaveAndRetrieveConfigurationSettingThroughApi1(VertxTestContext testContext) {
     String id = UUID.randomUUID().toString();
     ConfigurationSettings config = new ConfigurationSettings()
           .withId(id)
           .withConfigName("test-dao")
-          .withConfigValue(new ConfigValue().withAdditionalProperty("sss", "vvvvv"));
+          .withConfigValue(new ConfigValue()
+              .withAdditionalProperty("enableOaiService", true)
+              .withAdditionalProperty("repositoryName", "Test Repository"));
 
     JsonObject jsonConfig = new JsonObject()
-        .put("id", config.getId())
-        .put("configName", config.getConfigName())
-        .put("configValue", new JsonObject()
-        .put("enableOaiService", true)
-        .put("repositoryName", "Test Repository"));
+          .put("id", config.getId())
+          .put("configName", config.getConfigName())
+          .put("configValue", new JsonObject()
+          .put("enableOaiService", true)
+          .put("repositoryName", "Test Repository"));
 
-    configurationSettingsService.saveConfigurationSettings(jsonConfig,
-        OAI_TEST_TENANT, "test-user")
+    configurationSettingsService.saveConfigurationSettings(jsonConfig, OAI_TEST_TENANT, "test-user")
           .compose(saved -> configurationSettingsService
-            .getConfigurationSettingsById(config.getId(), OAI_TEST_TENANT))
+        .getConfigurationSettingsById(id, OAI_TEST_TENANT))
           .onComplete(ar -> {
-            if (ar.succeeded()) {
-              JsonObject retrieved = ar.result();
-              assertNotNull(retrieved);
-              assertEquals(config.getId(), retrieved.getString("id"));
-              assertEquals(config.getConfigName(), retrieved.getString("configName"));
-              assertNotNull(retrieved.getJsonObject("configValue"));
-              assertEquals(true,
-                    retrieved.getJsonObject("configValue").getBoolean("enableOaiService"));
-              assertEquals("Test Repository",
-                    retrieved.getJsonObject("configValue").getString("repositoryName"));
-              testContext.completeNow();
-            } else {
+            if (ar.failed()) {
               testContext.failNow(ar.cause());
+              return;
+            }
+
+            JsonObject serviceResult = ar.result();
+            try {
+              io.restassured.response.Response apiResponse = createBaseRequest(
+                    getConfigurationSettingsPathWithId(id), null)
+                      .when().get();
+              testContext.verify(() -> {
+                assertEquals(200, apiResponse.getStatusCode());
+                JsonObject apiJson = new JsonObject(apiResponse.getBody().asString());
+                assertEquals(serviceResult.encode(), apiJson.encode());
+                testContext.completeNow();
+              });
+            } catch (Exception e) {
+              testContext.failNow(e);
             }
           });
   }
-
-
 }
