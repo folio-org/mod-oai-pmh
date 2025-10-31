@@ -5,7 +5,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.Map;
 import javax.ws.rs.core.Response;
@@ -16,7 +15,6 @@ import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.ConfigurationSettings;
 import org.folio.rest.jaxrs.resource.OaiPmhConfigurationSettings;
-import org.folio.spring.SpringContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
@@ -34,14 +32,10 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
   private static final String ERROR_DELETE = "Failed to delete configuration setting";
 
 
+  private record OkapiContext(String tenantId, String userId) {}
+
   @Autowired
   private ConfigurationSettingsService configurationSettingsService;
-
-  public ConfigurationSettingsImpl() {
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
-  }
-
-  private record OkapiContext(String tenantId, String userId) {}
 
   private static OkapiContext extractOkapiContext(Map<String, String> headers) {
     return new OkapiContext(headers.get(XOkapiHeaders.TENANT), headers
