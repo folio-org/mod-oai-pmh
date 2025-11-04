@@ -33,9 +33,10 @@ import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.okapi.common.GenericCompositeFuture;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.ConfigurationsClient;
-import org.folio.rest.jaxrs.model.Config;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.tools.client.exceptions.ResponseException;
 import org.folio.spring.SpringContextUtil;
@@ -48,12 +49,10 @@ public class ModTenantApi extends TenantAPI {
 
   private static final String CONFIG_DIR_PATH = "config";
   private static final String QUERY = "module==OAIPMH and configName==%s";
-  private static final String MODULE_NAME = "OAIPMH";
-  private static final int CONFIG_JSON_BODY = 0;
-
   private static final String CONFIG_PATH_KEY = "configPath";
 
   private ConfigurationHelper configurationHelper;
+  private ConfigurationSettingsService configurationSettingsService;
 
   public ModTenantApi() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -102,7 +101,8 @@ public class ModTenantApi extends TenantAPI {
     List<Future<String>> futures = new ArrayList<>();
 
     configsSet.forEach(configName ->
-        futures.add(processConfigurationByConfigName(configName, client)));
+        futures.add(processConfigurationByConfigName(configName,
+            client, tenant, headers.get(XOkapiHeaders.USER_ID))));
     return GenericCompositeFuture.all(futures)
         .map("Configuration has been set up successfully.")
         .recover(throwable -> {
@@ -115,97 +115,58 @@ public class ModTenantApi extends TenantAPI {
   }
 
   private Future<String> processConfigurationByConfigName(String configName,
-      ConfigurationsClient client) {
+      ConfigurationsClient client, String tenantId, String userId) {
+
     Promise<String> promise = Promise.promise();
-    try {
-      logger.info("Getting configurations with configName \"{}\"", configName);
-      client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
-        if (result.succeeded()) {
-          HttpResponse<Buffer> response = result.result();
-          handleModConfigurationGetResponse(response, client, configName, promise);
+    client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
+      if (result.succeeded()) {
+        HttpResponse<Buffer> response = result.result();
+        JsonObject body = response.bodyAsJsonObject();
+        JsonArray configs = body.getJsonArray(CONFIGS);
+
+        if (!configs.isEmpty()) {
+          JsonObject configEntry = configs.getJsonObject(0);
+          JsonObject valueJson = new JsonObject(configEntry.getString("value"));
+
+          saveToConfigurationSettings(configName, valueJson, tenantId, userId)
+              .onSuccess(v -> {
+                logger.info("Migrated config {} from mod-configuration", configName);
+                promise.complete();
+              })
+              .onFailure(promise::fail);
         } else {
-          String message = "POST request to mod-configuration with config: " + configName
-              + ", has failed.";
-          logger.error(message, result.cause());
-          promise.fail(new IllegalStateException(message, result.cause()));
+          JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
+          saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
+            .onSuccess(v -> {
+              logger.info("Inserted default config {}", configName);
+              promise.complete();
+            })
+              .onFailure(promise::fail);
         }
-      });
-    } catch (Exception e) {
-      String message = String.format("Error while processing config with configName '%s'. '%s'",
-          configName, e.getMessage());
-      logger.error(message, e);
-      promise.fail(new IllegalStateException(message, e));
-    }
+      } else {
+        promise.fail(result.cause());
+      }
+    });
+
     return promise.future();
   }
 
-  private void handleModConfigurationGetResponse(HttpResponse<Buffer> response,
-      ConfigurationsClient client, String configName, Promise<String> promise) {
-    if (response.statusCode() != 200) {
-      Buffer buffer = response.body();
-      logger.error(buffer.toString());
-      promise.fail(new IllegalStateException(
-          "Invalid GET request response returned for config with name: " + configName
-              + "; response: " + buffer.toString()));
-      return;
-    }
-    JsonObject body = response.bodyAsJsonObject();
-    JsonArray configs = body.getJsonArray(CONFIGS);
-    if (configs.isEmpty()) {
-      logger.info("Configuration group with configName {} doesn't exist. "
-          + "Posting default configs for {} configuration group.",
-          MODULE_NAME, configName);
-      postConfig(client, configName, promise);
-    } else {
-      logger.info("Configurations has been got successfully, applying configurations "
-          + "to module system properties.");
-      populateSystemPropertiesWithConfig(body);
-      promise.complete();
-    }
-  }
+  /**.
+   * Saves configuration settings to the database.
+   *
+   * @param configName - name of the configuration
+   * @param configValue - JSON configuration values
+   * @param tenantId - tenant identifier
+   * @param userId - user identifier
+   * @return Future with the saved configuration or error
+   */
+  private Future<JsonObject> saveToConfigurationSettings(String configName,
+      JsonObject configValue, String tenantId, String userId) {
+    JsonObject entry = new JsonObject()
+        .put("configName", configName)
+        .put("configValue", configValue);
 
-  private void postConfig(ConfigurationsClient client, String configName,
-      Promise<String> promise) {
-    try {
-      Config config = new Config();
-      config.setConfigName(configName);
-      config.setEnabled(true);
-      config.setModule(MODULE_NAME);
-      config.setValue(getConfigValue(configName));
-      client.postConfigurationsEntries(null, config, result -> {
-        if (result.failed()) {
-          Exception e = new IllegalStateException("Error occurred during config posting.",
-              result.cause());
-          logger.error(e.getMessage(), e);
-          promise.fail(e);
-          return;
-        }
-        HttpResponse<Buffer> response = result.result();
-        if (response.statusCode() != 201) {
-          logger.error("Invalid responseonse from mod-configuration. Cannot post "
-              + "config '{}'. Response message: {} {}",
-              configName, response.statusCode(), response.statusMessage());
-          promise.fail(new IllegalStateException("Cannot post config. "
-              + response.statusMessage()));
-          return;
-        }
-        logger.info("Config {} posted successfully.", configName);
-        promise.complete();
-      });
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
-      promise.fail(e);
-      return;
-    }
-  }
-
-  private void populateSystemPropertiesWithConfig(JsonObject jsonResponse) {
-    JsonObject configBody = jsonResponse.getJsonArray(CONFIGS)
-        .getJsonObject(CONFIG_JSON_BODY);
-    Map<String, String> configKeyValueMap =
-        configurationHelper.getConfigKeyValueMapFromJsonEntryValueField(configBody);
-    Properties sysProps = System.getProperties();
-    sysProps.putAll(configKeyValueMap);
+    return configurationSettingsService.saveConfigurationSettings(entry, tenantId, userId);
   }
 
   /**
@@ -254,6 +215,12 @@ public class ModTenantApi extends TenantAPI {
   @Autowired
   public void setConfigurationHelper(ConfigurationHelper configurationHelper) {
     this.configurationHelper = configurationHelper;
+  }
+
+  @Autowired
+  public void setConfigurationSettingsService(
+      ConfigurationSettingsService configurationSettingsService) {
+    this.configurationSettingsService = configurationSettingsService;
   }
 
 }
