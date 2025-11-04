@@ -162,6 +162,7 @@
     <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
     <generate-marc-utils-version>1.10.0</generate-marc-utils-version>
     <postgres.image>postgres:16-alpine</postgres.image>
+    <folio-spring-base.version>10.0.0-SNAPSHOT</folio-spring-base.version>
     <folio-s3-client.version>2.3.0</folio-s3-client.version>
     <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
     <aws.sdk.version>2.29.9</aws.sdk.version>
@@ -362,6 +363,11 @@
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
       <version>3.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-spring-base</artifactId>
+      <version>${folio-spring-base.version}</version>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
