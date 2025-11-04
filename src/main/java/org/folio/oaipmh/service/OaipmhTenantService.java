@@ -35,7 +35,7 @@ public class OaipmhTenantService extends TenantService {
     // After schema is created and default values are inserted,
     // migrate customized configurations from mod-configuration
     log.info("Starting configuration migration from mod-configuration");
-    configurationMigrationService.migrateConfigurationsFromModConfiguration();
+    configurationMigrationService.migrateConfigurationsFromModConfiguration(jdbcTemplate);
     log.info("Configuration migration completed");
   }
 }
