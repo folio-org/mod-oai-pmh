@@ -30,19 +30,22 @@ public class ConfigurationMigrationService {
       "technical", "technical"
   );
 
+  private final JdbcTemplate jdbcTemplate;
   private final FolioExecutionContext context;
   private final RestTemplate restTemplate;
   private final ObjectMapper objectMapper;
 
-  public ConfigurationMigrationService(FolioExecutionContext context,
+  public ConfigurationMigrationService(JdbcTemplate jdbcTemplate,
+                                       FolioExecutionContext context,
                                        RestTemplate restTemplate,
                                        ObjectMapper objectMapper) {
+    this.jdbcTemplate = jdbcTemplate;
     this.context = context;
     this.restTemplate = restTemplate;
     this.objectMapper = objectMapper;
   }
 
-  public void migrateConfigurationsFromModConfiguration(JdbcTemplate jdbcTemplate) {
+  public void migrateConfigurationsFromModConfiguration() {
     log.info("Starting migration of configurations from "
         + "mod-configuration for tenant: {}", context.getTenantId());
 
@@ -63,7 +66,7 @@ public class ConfigurationMigrationService {
       String okapiUrl = context.getOkapiUrl();
       if (okapiUrl == null || okapiUrl.isEmpty()) {
         log.warn("Okapi URL not available, skipping migration from mod-configuration");
-        markMigrationCompleted(jdbcTemplate);
+        markMigrationCompleted();
         return;
       }
 
@@ -92,7 +95,7 @@ public class ConfigurationMigrationService {
           log.info("Found {} configurations in mod-configuration", configs.size());
 
           for (JsonNode config : configs) {
-            migrateConfiguration(config, jdbcTemplate);
+            migrateConfiguration(config);
           }
 
           log.info("Successfully migrated configurations from mod-configuration");
@@ -100,16 +103,16 @@ public class ConfigurationMigrationService {
           log.info("No configurations found in mod-configuration, using defaults");
         }
         // Mark migration as completed
-        markMigrationCompleted(jdbcTemplate);
+        markMigrationCompleted();
       }
     } catch (Exception e) {
       log.error("Error migrating configurations from mod-configuration", e);
       // Mark as completed anyway to prevent repeated attempts
-      markMigrationCompleted(jdbcTemplate);
+      markMigrationCompleted();
     }
   }
 
-  private void migrateConfiguration(JsonNode config, JdbcTemplate jdbcTemplate) {
+  private void migrateConfiguration(JsonNode config) {
     try {
       String configName = config.get("configName").asText();
       String valueString = config.get("value").asText();
@@ -179,7 +182,7 @@ public class ConfigurationMigrationService {
     }
   }
 
-  private void markMigrationCompleted(JdbcTemplate jdbcTemplate) {
+  private void markMigrationCompleted() {
     try {
       String sql = "INSERT INTO " + context.getTenantId()
             + "_mod_oai_pmh.configuration_settings (id, config_name, config_value) "

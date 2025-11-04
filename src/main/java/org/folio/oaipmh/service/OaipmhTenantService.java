@@ -6,7 +6,6 @@ import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.liquibase.FolioSpringLiquibase;
 import org.folio.spring.service.TenantService;
 import org.folio.tenant.domain.dto.TenantAttributes;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ public class OaipmhTenantService extends TenantService {
 
   private final ConfigurationMigrationService configurationMigrationService;
 
-  @Autowired
   public OaipmhTenantService(JdbcTemplate jdbcTemplate, FolioExecutionContext context,
                              FolioSpringLiquibase folioSpringLiquibase,
                              ConfigurationMigrationService configurationMigrationService) {
@@ -37,7 +35,7 @@ public class OaipmhTenantService extends TenantService {
     // After schema is created and default values are inserted,
     // migrate customized configurations from mod-configuration
     log.info("Starting configuration migration from mod-configuration");
-    configurationMigrationService.migrateConfigurationsFromModConfiguration(jdbcTemplate);
+    configurationMigrationService.migrateConfigurationsFromModConfiguration();
     log.info("Configuration migration completed");
   }
 }
