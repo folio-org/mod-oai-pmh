@@ -96,6 +96,12 @@ public class ModTenantApi extends TenantAPI {
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);
 
+    // Validate required headers
+    if (okapiUrl == null || okapiUrl.isEmpty()) {
+      return Future.failedFuture(
+        new IllegalArgumentException("Missing required header: x-okapi-url"));
+    }
+
     WebClient webClient = WebClientProvider.getWebClient();
     ConfigurationsClient client = new ConfigurationsClient(okapiUrl, tenant, token, webClient);
 
