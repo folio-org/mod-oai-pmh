@@ -108,7 +108,6 @@ Endpoints for managing OAI-PMH module configuration settings. All requests must 
 | Method | Path |                   Permission                    | Description |
 |:------:|:----:|:-----------------------------------------------:|------------|
 | GET | `/oai-pmh/configuration-settings` | `oai-pmh.configuration-settings.collection.get` | Get collection of configuration settings |
-| GET | `/oai-pmh/configuration-settings/name/{configName}` | `oai-pmh.configuration-settings.item.name.get`  | Get configuration setting by name |
 | GET | `/oai-pmh/configuration-settings/{id}` |    `oai-pmh.configuration-settings.item.get`    | Get configuration setting by id |
 | POST | `/oai-pmh/configuration-settings` |   `oai-pmh.configuration-settings.item.post`    | Create a new configuration setting |
 | PUT | `/oai-pmh/configuration-settings/{id}` |    `oai-pmh.configuration-settings.item.put`    | Update configuration setting by id |

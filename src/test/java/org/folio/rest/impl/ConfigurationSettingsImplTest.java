@@ -296,39 +296,6 @@ class ConfigurationSettingsImplTest {
   }
 
   @Test
-  void shouldGetConfigurationSettingsByName() {
-    String configName = "by-name-test-" + UUID.randomUUID();
-    createTestConfig(configName);
-
-    given()
-      .header(tenantHeader)
-      .header(urlHeader)
-      .header(tokenHeader)
-      .contentType(ContentType.JSON)
-      .when()
-      .get(CONFIGURATION_SETTINGS_PATH + "/name/" + configName)
-      .then()
-      .defaultParser(Parser.JSON)
-      .statusCode(HttpStatus.SC_OK)
-      .body("configName", equalTo(configName))
-        .body("configValue", notNullValue());
-  }
-
-  @Test
-  void shouldReturn404WhenConfigNameNotFound() {
-    String nonExistentName = "non-existent-config-" + UUID.randomUUID();
-
-    given()
-      .header(tenantHeader)
-      .header(urlHeader)
-      .header(tokenHeader)
-      .when()
-      .get(CONFIGURATION_SETTINGS_PATH + "/name/" + nonExistentName)
-      .then()
-        .statusCode(HttpStatus.SC_NOT_FOUND);
-  }
-
-  @Test
   void shouldValidateRequiredFieldsWhenCreating() {
     JsonObject invalidConfig = new JsonObject()
         .put("configValue", new JsonObject().put("key", "value"));

@@ -46,24 +46,3 @@ resourceTypes:
         exampleItem: !include examples/configurationSettings.sample
     put:
      is: [validate]
-  /name/{configName}:
-    displayName: Configuration Setting by Name
-    description: Get a specific configuration setting by name
-    get:
-      description: Retrieve a configuration setting by its name
-      responses:
-        200:
-          body:
-            application/json:
-              type: configurationSettings
-              example: !include examples/configurationSettings.sample
-        404:
-          description: Configuration setting not found
-          body:
-            text/plain:
-              example: "Configuration setting with name 'nonexistent' was not found"
-        500:
-          description: Internal server error
-          body:
-            application/json:
-              type: errors
