@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -65,7 +66,7 @@ public class ModTenantApi extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+        List<String> configsSet = Arrays.asList("behavioral", "general", "technical");
         loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
           if (asyncResult.succeeded()) {
             handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
@@ -117,38 +118,66 @@ public class ModTenantApi extends TenantAPI {
   private Future<String> processConfigurationByConfigName(String configName,
       ConfigurationsClient client, String tenantId, String userId) {
 
-    Promise<String> promise = Promise.promise();
-    client.getConfigurationsEntries(format(QUERY, configName), 0, 100, null, null, result -> {
-      if (result.succeeded()) {
-        HttpResponse<Buffer> response = result.result();
-        JsonObject body = response.bodyAsJsonObject();
-        JsonArray configs = body.getJsonArray(CONFIGS);
+    // First, check if configuration already exists in mod-oai-pmh configuration table
+    return configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
+        .compose(existingConfig -> {
+          // Configuration already exists, skip repopulating
+          logger.info("Configuration {} already exists in mod-oai-pmh, skipping", configName);
+          return Future.succeededFuture("Configuration already exists");
+        })
+        .recover(throwable -> {
+          // Configuration doesn't exist, proceed with migration/default insertion
+          if (throwable instanceof NotFoundException) {
+            Promise<String> promise = Promise.promise();
 
-        if (!configs.isEmpty()) {
-          JsonObject configEntry = configs.getJsonObject(0);
-          JsonObject valueJson = new JsonObject(configEntry.getString("value"));
+            // Try to get configuration from mod-configuration
+            client.getConfigurationsEntries(
+                format(QUERY, configName), 0, 100, null, null, result -> {
+                  if (result.succeeded()) {
+                    HttpResponse<Buffer> response = result.result();
+                    JsonObject body = response.bodyAsJsonObject();
+                    JsonArray configs = body.getJsonArray(CONFIGS);
 
-          saveToConfigurationSettings(configName, valueJson, tenantId, userId)
-              .onSuccess(v -> {
-                logger.info("Migrated config {} from mod-configuration", configName);
-                promise.complete();
-              })
-              .onFailure(promise::fail);
-        } else {
-          JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
-          saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
-            .onSuccess(v -> {
-              logger.info("Inserted default config {}", configName);
-              promise.complete();
-            })
-              .onFailure(promise::fail);
-        }
-      } else {
-        promise.fail(result.cause());
-      }
-    });
+                    if (!configs.isEmpty()) {
+                      // Configuration found in mod-configuration, migrate it
+                      JsonObject configEntry = configs.getJsonObject(0);
+                      JsonObject valueJson = new JsonObject(configEntry.getString("value"));
 
-    return promise.future();
+                      saveToConfigurationSettings(configName, valueJson, tenantId, userId)
+                          .onSuccess(v -> {
+                            logger.info("Migrated config {} from mod-configuration", configName);
+                            promise.complete("Configuration migrated");
+                          })
+                          .onFailure(promise::fail);
+                    } else {
+                      // Configuration not found in mod-configuration, use default values
+                      JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
+                      saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
+                          .onSuccess(v -> {
+                            logger.info("Inserted default config {}", configName);
+                            promise.complete("Default configuration inserted");
+                          })
+                          .onFailure(promise::fail);
+                    }
+                  } else {
+                    // Error communicating with mod-configuration, use default values
+                    logger.warn("Failed to communicate with mod-configuration for {}, "
+                        + "using defaults: {}",
+                        configName, result.cause().getMessage());
+                    JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
+                    saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
+                        .onSuccess(v -> {
+                          logger.info("Inserted default config {} "
+                              + "after mod-configuration error", configName);
+                          promise.complete("Default configuration inserted");
+                        })
+                        .onFailure(promise::fail);
+                  }
+                });
+            return promise.future();
+          }
+          return Future.failedFuture(throwable);
+        });
   }
 
   /**.
