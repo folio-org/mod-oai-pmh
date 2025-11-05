@@ -66,7 +66,7 @@ public class ModTenantApi extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        List<String> configsSet = Arrays.asList("behavioral", "general", "technical");
+        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
         loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
           if (asyncResult.succeeded()) {
             handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
