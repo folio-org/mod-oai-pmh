@@ -5,7 +5,7 @@
 
   <changeSet id="2025-10-29--11-00-create-configuration-settings" author="kjain@ebsco.com">
 
-    <createTable schemaName="${database.defaultSchemaName}" tableName="configuration_settings">
+    <createTable tableName="configuration_settings">
       <column name="id" type="UUID">
         <constraints primaryKey="true" primaryKeyName="pk_configuration_settings" nullable="false"/>
       </column>
