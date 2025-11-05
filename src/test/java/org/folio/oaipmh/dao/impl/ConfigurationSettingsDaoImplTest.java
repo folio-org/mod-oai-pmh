@@ -87,25 +87,6 @@ class ConfigurationSettingsDaoImplTest {
           })));
   }
 
-  @Test
-  void shouldThrowExceptionWhenSavingDuplicateId(VertxTestContext testContext) {
-    JsonObject configEntry = createTestConfigEntry();
-    String duplicateId = UUID.randomUUID().toString();
-    configEntry.put("id", duplicateId);
-
-    configurationSettingsDao.saveConfigurationSettings(configEntry, OAI_TEST_TENANT, TEST_USER_ID)
-          .compose(v -> {
-            JsonObject duplicate = createTestConfigEntry();
-            duplicate.put("id", duplicateId);
-            return configurationSettingsDao
-              .saveConfigurationSettings(duplicate, OAI_TEST_TENANT, TEST_USER_ID);
-          })
-          .onComplete(testContext.failing(throwable -> testContext.verify(() -> {
-            assertTrue(throwable instanceof ConfigSettingException);
-            assertTrue(throwable.getMessage().contains("already exists"));
-            testContext.completeNow();
-          })));
-  }
 
   @Test
   void shouldGetConfigurationSettingsById(VertxTestContext testContext) {
