@@ -69,27 +69,23 @@ public class ModTenantApi extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        super.loadData(entity, TenantTool.tenantId(headers), headers, context)
-              .compose(num -> {
-                Vertx vertx = context.owner();
-                LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
-                return Future.succeededFuture(num);
-              })
-              .compose(num -> {
+        requirePostgresVersion(context)
+              .compose(v -> {
                 List<String> configsSet = Arrays.asList("behavior", "general", "technical");
                 return loadConfigurationData(headers, configsSet);
               })
-              .onSuccess(result -> {
-                handlers.handle(Future.succeededFuture(buildSuccessResponse(result)));
-              })
+              .onSuccess(result -> handlers.handle(Future.succeededFuture(
+                buildSuccessResponse(result))))
               .onFailure(cause -> {
                 logger.error("Failed during postTenant setup", cause);
                 handlers.handle(Future.failedFuture(
-                  new ResponseException(buildErrorResponse(cause.getMessage()))));
+                  new ResponseException(buildErrorResponse(cause.getMessage()))
+                ));
               });
       }
     }, context);
   }
+
 
   Future<Integer> loadData(TenantAttributes attributes, String tenantId,
       Map<String, String> headers, Context vertxContext) {
