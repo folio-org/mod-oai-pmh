@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Configuration Collection DTO Schema",
+  "title": "Configuration Settings Collection Schema",
+  "type": "object",
+  "properties": {
+    "configurationSettings": {
+      "type": "array",
+      "description": "List of configuration settings",
+      "items": {
+        "$ref": "configurationSettings.json"
+      }
+    },
+    "totalRecords": {
+      "type": "integer",
+      "description": "Total number of records"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "configurationSettings",
+    "totalRecords"
+  ]
+}
