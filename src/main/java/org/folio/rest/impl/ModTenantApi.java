@@ -41,6 +41,7 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.tools.client.exceptions.ResponseException;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,26 +63,34 @@ public class ModTenantApi extends TenantAPI {
 
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
-      final Handler<AsyncResult<Response>> handlers, final Context context) {
+                         final Handler<AsyncResult<Response>> handlers, final Context context) {
+
     super.postTenant(entity, headers, postTenantAsyncResultHandler -> {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-        loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
-          if (asyncResult.succeeded()) {
-            handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
-          } else {
-            logger.error(asyncResult.cause());
+        super.loadData(entity, TenantTool.tenantId(headers), headers, context)
+          .compose(num -> {
+            Vertx vertx = context.owner();
+            LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+            return Future.succeededFuture(num);
+          })
+          .compose(num -> {
+            List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+            return loadConfigurationData(headers, configsSet);
+          })
+          .onSuccess(result -> {
+            handlers.handle(Future.succeededFuture(buildSuccessResponse(result)));
+          })
+          .onFailure(cause -> {
+            logger.error("Failed during postTenant setup", cause);
             handlers.handle(Future.failedFuture(
-                new ResponseException(buildErrorResponse(asyncResult.cause().getMessage()))));
-          }
-        });
+              new ResponseException(buildErrorResponse(cause.getMessage()))));
+          });
       }
     }, context);
   }
 
-  @Override
   Future<Integer> loadData(TenantAttributes attributes, String tenantId,
       Map<String, String> headers, Context vertxContext) {
     return super.loadData(attributes, tenantId, headers, vertxContext).compose(num -> {
@@ -259,18 +268,5 @@ public class ModTenantApi extends TenantAPI {
     this.configurationSettingsService = configurationSettingsService;
   }
 
-  @Override
-  Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
-                        Map<String, String> headers, Context context) {
-    return postgresClient(context).runSqlFile(file)
-      .compose(res -> loadData(tenantAttributes, job.getTenant(), headers, context))
-      .onFailure(cause -> {
-        String message = cause.getMessage();
-        if (message == null) {
-          message = cause.getClass().getName();
-        }
-        job.setError(message);
-      }).mapEmpty();
-  }
 
 }
