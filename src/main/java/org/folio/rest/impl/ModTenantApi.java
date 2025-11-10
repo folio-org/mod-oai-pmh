@@ -70,23 +70,23 @@ public class ModTenantApi extends TenantAPI {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
         super.loadData(entity, TenantTool.tenantId(headers), headers, context)
-          .compose(num -> {
-            Vertx vertx = context.owner();
-            LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
-            return Future.succeededFuture(num);
-          })
-          .compose(num -> {
-            List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-            return loadConfigurationData(headers, configsSet);
-          })
-          .onSuccess(result -> {
-            handlers.handle(Future.succeededFuture(buildSuccessResponse(result)));
-          })
-          .onFailure(cause -> {
-            logger.error("Failed during postTenant setup", cause);
-            handlers.handle(Future.failedFuture(
-              new ResponseException(buildErrorResponse(cause.getMessage()))));
-          });
+              .compose(num -> {
+                Vertx vertx = context.owner();
+                LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+                return Future.succeededFuture(num);
+              })
+              .compose(num -> {
+                List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+                return loadConfigurationData(headers, configsSet);
+              })
+              .onSuccess(result -> {
+                handlers.handle(Future.succeededFuture(buildSuccessResponse(result)));
+              })
+              .onFailure(cause -> {
+                logger.error("Failed during postTenant setup", cause);
+                handlers.handle(Future.failedFuture(
+                  new ResponseException(buildErrorResponse(cause.getMessage()))));
+              });
       }
     }, context);
   }
