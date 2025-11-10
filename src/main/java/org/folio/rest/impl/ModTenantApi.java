@@ -69,23 +69,28 @@ public class ModTenantApi extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
+        String tenantId = TenantTool.tenantId(headers);
+        Vertx vertx = context.owner();
         requirePostgresVersion(context)
-              .compose(v -> {
-                List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-                return loadConfigurationData(headers, configsSet);
-              })
-              .onSuccess(result -> handlers.handle(Future.succeededFuture(
-                buildSuccessResponse(result))))
-              .onFailure(cause -> {
-                logger.error("Failed during postTenant setup", cause);
-                handlers.handle(Future.failedFuture(
-                  new ResponseException(buildErrorResponse(cause.getMessage()))
-                ));
-              });
+          .compose(v -> {
+            LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
+            return Future.succeededFuture();
+          })
+          .compose(v -> {
+            List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+            return loadConfigurationData(headers, configsSet);
+          })
+          .onSuccess(result -> handlers.handle(Future.succeededFuture(
+            buildSuccessResponse(result))))
+          .onFailure(cause -> {
+            logger.error("Failed during postTenant setup", cause);
+            handlers.handle(Future.failedFuture(
+              new ResponseException(buildErrorResponse(cause.getMessage()))
+            ));
+          });
       }
     }, context);
   }
-
 
   Future<Integer> loadData(TenantAttributes attributes, String tenantId,
       Map<String, String> headers, Context vertxContext) {
