@@ -3,9 +3,6 @@ package org.folio.rest.impl;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mockStatic;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -18,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.folio.config.ApplicationConfig;
-import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.PostgresClientFactory;
@@ -31,7 +27,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
+
 
 
 @ExtendWith(VertxExtension.class)
@@ -47,15 +43,8 @@ class ModTenantApiTest {
   private ModTenantApi modTenantApi;
   private TenantAttributes tenantAttributes = new TenantAttributes().withModuleTo("99.99.99");
 
-  private static MockedStatic<LiquibaseUtil> mockedLiquibase;
-
   @BeforeAll
   void beforeAll(Vertx vertx, VertxTestContext vtc) {
-    mockedLiquibase = mockStatic(LiquibaseUtil.class);
-    mockedLiquibase
-      .when(() -> LiquibaseUtil.initializeSchemaForTenant(any(), anyString()))
-      .thenAnswer(invocation -> null);
-
     var context = vertx.getOrCreateContext();
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
@@ -64,21 +53,20 @@ class ModTenantApiTest {
     vertx.runOnContext(v -> {
       modTenantApi = new ModTenantApi();
       startOkapiMockServer(vertx)
-        .onComplete(vtc.succeedingThenComplete());
+          .onComplete(vtc.succeedingThenComplete());
     });
   }
 
   @AfterAll
   void afterAll() {
-    if (mockedLiquibase != null) {
-      mockedLiquibase.close();
-    }
     WebClientProvider.closeAll();
     PostgresClientFactory.closeAll();
   }
+
   private Future<HttpServer> startOkapiMockServer(Vertx vertx) {
     return vertx.createHttpServer()
         .requestHandler(httpServerRequest -> {
+          // mock mod-configuration responses
           if (httpServerRequest.method().equals(HttpMethod.POST)) {
             httpServerRequest.response()
                 .setStatusCode(201)

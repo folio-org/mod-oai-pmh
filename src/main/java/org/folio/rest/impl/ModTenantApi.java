@@ -41,7 +41,6 @@ import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
 import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.tools.client.exceptions.ResponseException;
-import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,36 +63,27 @@ public class ModTenantApi extends TenantAPI {
   @Override
   public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
                          final Handler<AsyncResult<Response>> handlers, final Context context) {
-
     super.postTenant(entity, headers, postTenantAsyncResultHandler -> {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        String tenantId = TenantTool.tenantId(headers);
-        Vertx vertx = context.owner();
-        requirePostgresVersion(context)
-          .compose(v -> {
-            LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
-            return Future.succeededFuture();
-          })
-          .compose(v -> {
-            List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-            return loadConfigurationData(headers, configsSet);
-          })
-          .onSuccess(result -> handlers.handle(Future.succeededFuture(
-            buildSuccessResponse(result))))
-          .onFailure(cause -> {
-            logger.error("Failed during postTenant setup", cause);
+        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
+        loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
+          if (asyncResult.succeeded()) {
+            handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
+          } else {
+            logger.error(asyncResult.cause());
             handlers.handle(Future.failedFuture(
-              new ResponseException(buildErrorResponse(cause.getMessage()))
-            ));
-          });
+              new ResponseException(buildErrorResponse(asyncResult.cause().getMessage()))));
+          }
+        });
       }
     }, context);
   }
 
+  @Override
   Future<Integer> loadData(TenantAttributes attributes, String tenantId,
-      Map<String, String> headers, Context vertxContext) {
+                           Map<String, String> headers, Context vertxContext) {
     return super.loadData(attributes, tenantId, headers, vertxContext).compose(num -> {
       Vertx vertx = vertxContext.owner();
       LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
@@ -102,7 +92,7 @@ public class ModTenantApi extends TenantAPI {
   }
 
   public Future<String> loadConfigurationData(Map<String, String> headers,
-      List<String> configsSet) {
+                                              List<String> configsSet) {
     String okapiUrl = headers.get(OKAPI_URL);
     String tenant = headers.get(OKAPI_TENANT);
     String token = headers.get(OKAPI_TOKEN);
@@ -119,82 +109,83 @@ public class ModTenantApi extends TenantAPI {
     List<Future<String>> futures = new ArrayList<>();
 
     configsSet.forEach(configName ->
-        futures.add(processConfigurationByConfigName(configName,
+          futures.add(processConfigurationByConfigName(configName,
             client, tenant, headers.get(XOkapiHeaders.USER_ID))));
     return GenericCompositeFuture.all(futures)
-        .map("Configuration has been set up successfully.")
-        .recover(throwable -> {
-          if (throwable.getMessage() == null) {
-            throwable = new RuntimeException(
-                "Error has been occurred while communicating to mod-configuration", throwable);
-          }
-          return Future.failedFuture(throwable);
-        });
+      .map("Configuration has been set up successfully.")
+      .recover(throwable -> {
+        if (throwable.getMessage() == null) {
+          throwable = new RuntimeException(
+              "Error has been occurred while communicating to mod-configuration", throwable);
+        }
+        return Future.failedFuture(throwable);
+      });
   }
 
   private Future<String> processConfigurationByConfigName(String configName,
-      ConfigurationsClient client, String tenantId, String userId) {
+                                                          ConfigurationsClient client,
+                                                          String tenantId, String userId) {
 
     // First, check if configuration already exists in mod-oai-pmh configuration table
     return configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
-        .compose(existingConfig -> {
-          // Configuration already exists, skip repopulating
-          logger.info("Configuration {} already exists in mod-oai-pmh, skipping", configName);
-          return Future.succeededFuture("Configuration already exists");
-        })
-        .recover(throwable -> {
-          // Configuration doesn't exist, proceed with migration/default insertion
-          if (throwable instanceof NotFoundException) {
-            Promise<String> promise = Promise.promise();
+      .compose(existingConfig -> {
+        // Configuration already exists, skip repopulating
+        logger.info("Configuration {} already exists in mod-oai-pmh, skipping", configName);
+        return Future.succeededFuture("Configuration already exists");
+      })
+      .recover(throwable -> {
+        // Configuration doesn't exist, proceed with migration/default insertion
+        if (throwable instanceof NotFoundException) {
+          Promise<String> promise = Promise.promise();
 
-            // Try to get configuration from mod-configuration
-            client.getConfigurationsEntries(
-                format(QUERY, configName), 0, 100, null, null, result -> {
-                  if (result.succeeded()) {
-                    HttpResponse<Buffer> response = result.result();
-                    JsonObject body = response.bodyAsJsonObject();
-                    JsonArray configs = body.getJsonArray(CONFIGS);
+          // Try to get configuration from mod-configuration
+          client.getConfigurationsEntries(
+              format(QUERY, configName), 0, 100, null, null, result -> {
+              if (result.succeeded()) {
+                HttpResponse<Buffer> response = result.result();
+                JsonObject body = response.bodyAsJsonObject();
+                JsonArray configs = body.getJsonArray(CONFIGS);
 
-                    if (!configs.isEmpty()) {
-                      // Configuration found in mod-configuration, migrate it
-                      JsonObject configEntry = configs.getJsonObject(0);
-                      JsonObject valueJson = new JsonObject(configEntry.getString("value"));
+                if (!configs.isEmpty()) {
+                  // Configuration found in mod-configuration, migrate it
+                  JsonObject configEntry = configs.getJsonObject(0);
+                  JsonObject valueJson = new JsonObject(configEntry.getString("value"));
 
-                      saveToConfigurationSettings(configName, valueJson, tenantId, userId)
-                          .onSuccess(v -> {
-                            logger.info("Migrated config {} from mod-configuration", configName);
-                            promise.complete("Configuration migrated");
-                          })
-                          .onFailure(promise::fail);
-                    } else {
-                      // Configuration not found in mod-configuration, use default values
-                      JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
-                      saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
-                          .onSuccess(v -> {
-                            logger.info("Inserted default config {}", configName);
-                            promise.complete("Default configuration inserted");
-                          })
-                          .onFailure(promise::fail);
-                    }
-                  } else {
-                    // Error communicating with mod-configuration, use default values
-                    logger.warn("Failed to communicate with mod-configuration for {}, "
-                        + "using defaults: {}",
-                        configName, result.cause().getMessage());
-                    JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
-                    saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
-                        .onSuccess(v -> {
-                          logger.info("Inserted default config {} "
-                              + "after mod-configuration error", configName);
-                          promise.complete("Default configuration inserted");
-                        })
-                        .onFailure(promise::fail);
-                  }
-                });
-            return promise.future();
-          }
-          return Future.failedFuture(throwable);
-        });
+                  saveToConfigurationSettings(configName, valueJson, tenantId, userId)
+                    .onSuccess(v -> {
+                      logger.info("Migrated config {} from mod-configuration", configName);
+                      promise.complete("Configuration migrated");
+                    })
+                      .onFailure(promise::fail);
+                } else {
+                  // Configuration not found in mod-configuration, use default values
+                  JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
+                  saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
+                    .onSuccess(v -> {
+                      logger.info("Inserted default config {}", configName);
+                      promise.complete("Default configuration inserted");
+                    })
+                      .onFailure(promise::fail);
+                }
+              } else {
+                // Error communicating with mod-configuration, use default values
+                logger.warn("Failed to communicate with mod-configuration for {}, "
+                    + "using defaults: {}",
+                    configName, result.cause().getMessage());
+                JsonObject defaultConfig = new JsonObject(getConfigValue(configName));
+                saveToConfigurationSettings(configName, defaultConfig, tenantId, userId)
+                  .onSuccess(v -> {
+                    logger.info("Inserted default config {} "
+                        + "after mod-configuration error", configName);
+                    promise.complete("Default configuration inserted");
+                  })
+                    .onFailure(promise::fail);
+              }
+            });
+          return promise.future();
+        }
+        return Future.failedFuture(throwable);
+      });
   }
 
   /**.
@@ -207,10 +198,11 @@ public class ModTenantApi extends TenantAPI {
    * @return Future with the saved configuration or error
    */
   private Future<JsonObject> saveToConfigurationSettings(String configName,
-      JsonObject configValue, String tenantId, String userId) {
+                                                         JsonObject configValue,
+                                                         String tenantId, String userId) {
     JsonObject entry = new JsonObject()
-        .put("configName", configName)
-        .put("configValue", configValue);
+          .put("configName", configName)
+          .put("configValue", configValue);
 
     return configurationSettingsService.saveConfigurationSettings(entry, tenantId, userId);
   }
@@ -235,12 +227,12 @@ public class ModTenantApi extends TenantAPI {
     configKeyValueMap.forEach((key, configDefaultValue) -> {
       String possibleJvmSpecifiedValue = systemProperties.getProperty(key);
       if (Objects.nonNull(possibleJvmSpecifiedValue)
-          && !possibleJvmSpecifiedValue.equals(configDefaultValue)) {
+            && !possibleJvmSpecifiedValue.equals(configDefaultValue)) {
         configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key),
-            possibleJvmSpecifiedValue);
+              possibleJvmSpecifiedValue);
       } else {
         configEntryValueField.put(PropertyNameMapper.mapToFrontendKeyName(key),
-            configDefaultValue);
+             configDefaultValue);
       }
     });
     return configEntryValueField.encode();
@@ -269,5 +261,18 @@ public class ModTenantApi extends TenantAPI {
     this.configurationSettingsService = configurationSettingsService;
   }
 
+  @Override
+  Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
+                        Map<String, String> headers, Context context) {
+    return postgresClient(context).runSqlFile(file)
+      .compose(res -> loadData(tenantAttributes, job.getTenant(), headers, context))
+      .onFailure(cause -> {
+        String message = cause.getMessage();
+        if (message == null) {
+          message = cause.getClass().getName();
+        }
+        job.setError(message);
+      }).mapEmpty();
+  }
 
 }
