@@ -39,6 +39,7 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
+import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.tools.client.exceptions.ResponseException;
 import org.folio.spring.SpringContextUtil;
 import org.glassfish.jersey.message.internal.Statuses;
@@ -256,6 +257,20 @@ public class ModTenantApi extends TenantAPI {
   public void setConfigurationSettingsService(
       ConfigurationSettingsService configurationSettingsService) {
     this.configurationSettingsService = configurationSettingsService;
+  }
+
+  @Override
+  Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
+                        Map<String, String> headers, Context context) {
+    return postgresClient(context).runSqlFile(file)
+      .compose(res -> loadData(tenantAttributes, job.getTenant(), headers, context))
+      .onFailure(cause -> {
+        String message = cause.getMessage();
+        if (message == null) {
+          message = cause.getClass().getName();
+        }
+        job.setError(message);
+      }).mapEmpty();
   }
 
 }
