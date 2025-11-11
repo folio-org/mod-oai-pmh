@@ -6,12 +6,8 @@ import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 import static org.folio.oaipmh.Constants.OKAPI_URL;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -26,8 +22,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Response;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
@@ -39,10 +33,9 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
-import org.folio.rest.tools.client.exceptions.ResponseException;
+import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
-import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class ModTenantApi extends TenantAPI {
@@ -61,32 +54,15 @@ public class ModTenantApi extends TenantAPI {
   }
 
   @Override
-  public void postTenant(final TenantAttributes entity, final Map<String, String> headers,
-                         final Handler<AsyncResult<Response>> handlers, final Context context) {
-    super.postTenant(entity, headers, postTenantAsyncResultHandler -> {
-      if (postTenantAsyncResultHandler.failed()) {
-        handlers.handle(postTenantAsyncResultHandler);
-      } else {
-        requirePostgresVersion(context)
-            .compose(v -> {
-              Vertx vertx = context.owner();
-              LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
-              return Future.succeededFuture();
-            })
-            .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior", "general",
-              "technical")))
-            .onComplete(asyncResult -> {
-              if (asyncResult.succeeded()) {
-                handlers.handle(Future.succeededFuture(buildSuccessResponse(
-                    asyncResult.result())));
-              } else {
-                logger.error(asyncResult.cause());
-                handlers.handle(Future.failedFuture(new ResponseException(buildErrorResponse(
-                    asyncResult.cause().getMessage()))));
-              }
-            });
-      }
-    }, context);
+  Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
+                        Map<String, String> headers, Context context) {
+    return super.runAsync(tenantAttributes, file, job, headers, context).compose(v -> {
+      Vertx vertx = context.owner();
+      LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+      return Future.succeededFuture();
+    })
+      .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior",
+                "general", "technical")).mapEmpty());
   }
 
   public Future<String> loadConfigurationData(Map<String, String> headers,
@@ -234,18 +210,6 @@ public class ModTenantApi extends TenantAPI {
       }
     });
     return configEntryValueField.encode();
-  }
-
-  private Response buildSuccessResponse(String body) {
-    Response.ResponseBuilder builder = Response.status(HttpStatus.SC_OK)
-        .header(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.TEXT_PLAIN.toString())
-        .entity(body);
-    return builder.build();
-  }
-
-  private Response buildErrorResponse(String info) {
-    Response.ResponseBuilder builder = Response.status(Statuses.from(400, info));
-    return builder.build();
   }
 
   @Autowired
