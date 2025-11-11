@@ -223,7 +223,7 @@ class ConfigurationSettingsDaoImplTest {
 
     Future.all(future1, future2)
           .compose(v -> configurationSettingsDao
-            .getConfigurationSettingsList(0, 10, OAI_TEST_TENANT))
+            .getConfigurationSettingsList(0, 10, null, OAI_TEST_TENANT))
           .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
             assertNotNull(result);
             assertTrue(result.containsKey("configurationSettings"));
@@ -246,7 +246,7 @@ class ConfigurationSettingsDaoImplTest {
 
     Future.all(future1, future2, future3)
           .compose(v -> configurationSettingsDao
-            .getConfigurationSettingsList(0, 2, OAI_TEST_TENANT))
+            .getConfigurationSettingsList(0, 2, null, OAI_TEST_TENANT))
           .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
             assertNotNull(result);
             assertTrue(result.getInteger("totalRecords") >= 3);
@@ -259,7 +259,7 @@ class ConfigurationSettingsDaoImplTest {
 
   @Test
   void shouldReturnEmptyListWhenNoConfigsExist(VertxTestContext testContext) {
-    configurationSettingsDao.getConfigurationSettingsList(10000, 10, OAI_TEST_TENANT)
+    configurationSettingsDao.getConfigurationSettingsList(10000, 10, null, OAI_TEST_TENANT)
           .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
             assertNotNull(result);
             assertTrue(result.containsKey("configurationSettings"));

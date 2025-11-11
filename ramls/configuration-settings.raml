@@ -37,6 +37,12 @@ resourceTypes:
       pageable,
       validate
     ]
+    queryParameters:
+      name:
+        description: Search configuration settings by name
+        type: string
+        required: false
+        example: behavior.deletedRecordsSupport
   /{id}:
     displayName: Configuration Setting
     description: Get, Delete or Update a specific configuration setting
