@@ -68,21 +68,23 @@ public class ModTenantApi extends TenantAPI {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
         requirePostgresVersion(context)
-          .compose(v -> {
-            Vertx vertx = context.owner();
-            LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
-            return Future.succeededFuture();
-          })
-          .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior", "general", "technical")))
-          .onComplete(asyncResult -> {
-            if (asyncResult.succeeded()) {
-              handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
-            } else {
-              logger.error(asyncResult.cause());
-              handlers.handle(Future.failedFuture(new ResponseException(buildErrorResponse(asyncResult.cause()
-                .getMessage()))));
-            }
-          });
+            .compose(v -> {
+              Vertx vertx = context.owner();
+              LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+              return Future.succeededFuture();
+            })
+            .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior", "general",
+              "technical")))
+            .onComplete(asyncResult -> {
+              if (asyncResult.succeeded()) {
+                handlers.handle(Future.succeededFuture(buildSuccessResponse(
+                    asyncResult.result())));
+              } else {
+                logger.error(asyncResult.cause());
+                handlers.handle(Future.failedFuture(new ResponseException(buildErrorResponse(
+                    asyncResult.cause().getMessage()))));
+              }
+            });
       }
     }, context);
   }
