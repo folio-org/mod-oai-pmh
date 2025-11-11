@@ -107,6 +107,31 @@
           "permissionsRequired": ["oai-pmh.request-metadata.logs.item.get"]
         },
         {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/configuration-settings",
+          "permissionsRequired": ["oai-pmh.configuration-settings.collection.get"]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/oai-pmh/configuration-settings",
+          "permissionsRequired": ["oai-pmh.configuration-settings.item.post"]
+        },
+        {
+          "methods": ["GET"],
+          "pathPattern": "/oai-pmh/configuration-settings/{id}",
+          "permissionsRequired": ["oai-pmh.configuration-settings.item.get"]
+        },
+        {
+          "methods": ["PUT"],
+          "pathPattern": "/oai-pmh/configuration-settings/{id}",
+          "permissionsRequired": ["oai-pmh.configuration-settings.item.put"]
+        },
+        {
+          "methods": ["DELETE"],
+          "pathPattern": "/oai-pmh/configuration-settings/{id}",
+          "permissionsRequired": ["oai-pmh.configuration-settings.item.delete"]
+        },
+        {
           "methods": [
             "POST"
           ],
@@ -292,6 +317,31 @@
       "description": "Downloads error log by request id"
     },
     {
+      "permissionName": "oai-pmh.configuration-settings.collection.get",
+      "displayName": "OAI-PMH Configuration Settings - get collection",
+      "description": "Get configuration settings collection"
+    },
+    {
+      "permissionName": "oai-pmh.configuration-settings.item.get",
+      "displayName": "OAI-PMH Configuration Settings - get item",
+      "description": "Get a configuration setting by ID"
+    },
+    {
+      "permissionName": "oai-pmh.configuration-settings.item.post",
+      "displayName": "OAI-PMH Configuration Settings - create item",
+      "description": "Create a new configuration setting"
+    },
+    {
+      "permissionName": "oai-pmh.configuration-settings.item.put",
+      "displayName": "OAI-PMH Configuration Settings - update item",
+      "description": "Update a configuration setting"
+    },
+    {
+      "permissionName": "oai-pmh.configuration-settings.item.delete",
+      "displayName": "OAI-PMH Configuration Settings - delete item",
+      "description": "Delete a configuration setting"
+    },
+    {
       "permissionName": "oai-pmh.all",
       "displayName": "OAI-PMH - all permissions",
       "description": "Entire set of permissions needed to use OAI-PMH",
@@ -308,7 +358,12 @@
         "oai-pmh.request-metadata.failed-instances.collection.get",
         "oai-pmh.request-metadata.skipped-instances.collection.get",
         "oai-pmh.request-metadata.suppressed-from-discovery-instances.collection.get",
-        "oai-pmh.request-metadata.logs.item.get"
+        "oai-pmh.request-metadata.logs.item.get",
+        "oai-pmh.configuration-settings.collection.get",
+        "oai-pmh.configuration-settings.item.get",
+        "oai-pmh.configuration-settings.item.post",
+        "oai-pmh.configuration-settings.item.put",
+        "oai-pmh.configuration-settings.item.delete"
       ]
     },
     {
@@ -393,6 +448,6 @@
       { "name": "S3_SECRET_ACCESS_KEY", "value": ""},
       { "name": "S3_IS_AWS", "value": false},
       { "name": "CLEAN_UP_ERROR_LOGS_INTERVAL", "value": 30 }
-    ]
+      ]
   }
 }
