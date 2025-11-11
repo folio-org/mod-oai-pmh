@@ -39,8 +39,8 @@ import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
-import org.folio.rest.jaxrs.model.TenantJob;
 import org.folio.rest.tools.client.exceptions.ResponseException;
+import org.folio.rest.tools.utils.TenantTool;
 import org.folio.spring.SpringContextUtil;
 import org.glassfish.jersey.message.internal.Statuses;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,28 +67,24 @@ public class ModTenantApi extends TenantAPI {
       if (postTenantAsyncResultHandler.failed()) {
         handlers.handle(postTenantAsyncResultHandler);
       } else {
-        List<String> configsSet = Arrays.asList("behavior", "general", "technical");
-        loadConfigurationData(headers, configsSet).onComplete(asyncResult -> {
-          if (asyncResult.succeeded()) {
-            handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
-          } else {
-            logger.error(asyncResult.cause());
-            handlers.handle(Future.failedFuture(
-              new ResponseException(buildErrorResponse(asyncResult.cause().getMessage()))));
-          }
-        });
+        requirePostgresVersion(context)
+          .compose(v -> {
+            Vertx vertx = context.owner();
+            LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+            return Future.succeededFuture();
+          })
+          .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior", "general", "technical")))
+          .onComplete(asyncResult -> {
+            if (asyncResult.succeeded()) {
+              handlers.handle(Future.succeededFuture(buildSuccessResponse(asyncResult.result())));
+            } else {
+              logger.error(asyncResult.cause());
+              handlers.handle(Future.failedFuture(new ResponseException(buildErrorResponse(asyncResult.cause()
+                .getMessage()))));
+            }
+          });
       }
     }, context);
-  }
-
-  @Override
-  Future<Integer> loadData(TenantAttributes attributes, String tenantId,
-                           Map<String, String> headers, Context vertxContext) {
-    return super.loadData(attributes, tenantId, headers, vertxContext).compose(num -> {
-      Vertx vertx = vertxContext.owner();
-      LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
-      return Future.succeededFuture(num);
-    });
   }
 
   public Future<String> loadConfigurationData(Map<String, String> headers,
@@ -260,19 +256,4 @@ public class ModTenantApi extends TenantAPI {
       ConfigurationSettingsService configurationSettingsService) {
     this.configurationSettingsService = configurationSettingsService;
   }
-
-  @Override
-  Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
-                        Map<String, String> headers, Context context) {
-    return postgresClient(context).runSqlFile(file)
-      .compose(res -> loadData(tenantAttributes, job.getTenant(), headers, context))
-      .onFailure(cause -> {
-        String message = cause.getMessage();
-        if (message == null) {
-          message = cause.getClass().getName();
-        }
-        job.setError(message);
-      }).mapEmpty();
-  }
-
 }
