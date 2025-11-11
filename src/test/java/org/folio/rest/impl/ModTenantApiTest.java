@@ -110,7 +110,7 @@ class ModTenantApiTest {
     modTenantApi.loadData(tenantAttributes, OAI_TEST_TENANT, headers(), vertx.getOrCreateContext())
         .compose(v -> PostgresClient.getInstance(vertx, OAI_TEST_TENANT).select(TABLES_QUERY))
         .onSuccess(rows -> {
-          assertEquals(10, rows.size());
+          assertEquals(11, rows.size());
           List<String> tables = new ArrayList<>();
           rows.forEach(row -> tables.add(row.getString("tablename")));
           assertTrue(tables.containsAll(EXPECTED_TABLES));
