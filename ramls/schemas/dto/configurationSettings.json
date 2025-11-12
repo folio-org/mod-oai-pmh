@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Configuration Setting DTO Schema",
+  "title": "Configuration Settings Schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the configuration entry"
+    },
+    "configName": {
+      "type": "string",
+      "description": "Name of the configuration group"
+    },
+    "configValue": {
+      "type": "object",
+      "description": "JSON configuration values"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "configName",
+    "configValue"
+  ]
+}
