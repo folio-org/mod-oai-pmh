@@ -122,8 +122,8 @@ class ModTenantApiTest {
     var headers = headers();
     headers.remove("x-okapi-url");
     modTenantApi.postTenantSync(tenantAttributes, headers, vtc.succeeding(r -> {
-          assertEquals(400, r.getStatus());
-          vtc.completeNow();
-        }), vertx.getOrCreateContext());
+      assertEquals(400, r.getStatus());
+      vtc.completeNow();
+    }), vertx.getOrCreateContext());
   }
 }

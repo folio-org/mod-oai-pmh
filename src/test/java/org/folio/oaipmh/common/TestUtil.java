@@ -1,7 +1,6 @@
 package org.folio.oaipmh.common;
 
 import io.vertx.core.Vertx;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
