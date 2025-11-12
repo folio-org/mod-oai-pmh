@@ -1,8 +1,8 @@
-CREATE ROLE oaitest_mod_oai_pmh PASSWORD 'oaiTest' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
-GRANT oaitest_mod_oai_pmh TO CURRENT_USER;
-CREATE SCHEMA oaiTest_mod_inventory_storage AUTHORIZATION oaitest_mod_oai_pmh;
-ALTER ROLE oaitest_mod_oai_pmh SET search_path = "$user";
-SET search_path TO oaitest_mod_oai_pmh;
+CREATE ROLE oaiTest_mod_oai_pmh PASSWORD 'oaiTest' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+GRANT oaiTest_mod_oai_pmh TO CURRENT_USER;
+CREATE SCHEMA oaiTest_mod_inventory_storage AUTHORIZATION oaiTest_mod_oai_pmh;
+ALTER ROLE oaiTest_mod_oai_pmh SET search_path = "$user";
+SET search_path TO oaiTest_mod_oai_pmh;
 
 CREATE ROLE oaiTest_mod_inventory_storage WITH
   LOGIN

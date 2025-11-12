@@ -27,8 +27,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
+
+
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -37,8 +37,7 @@ class ModTenantApiTest {
   private static final String TABLES_QUERY = "select * from pg_tables where schemaname='"
       + PostgresClient.convertToPsqlStandard(OAI_TEST_TENANT) + "'";
   private static final List<String> EXPECTED_TABLES = List.of("set_lb", "instances",
-      "request_metadata_lb", "databasechangelog", "databasechangeloglock", "errors",
-      "rmb_internal", "configuration_settings");
+      "request_metadata_lb", "databasechangelog", "databasechangeloglock", "errors");
 
   private int okapiPort = -1;
   private ModTenantApi modTenantApi;
@@ -47,24 +46,12 @@ class ModTenantApiTest {
   @BeforeAll
   void beforeAll(Vertx vertx, VertxTestContext vtc) {
     var context = vertx.getOrCreateContext();
-
     SpringContextUtil.init(vertx, context, ApplicationConfig.class);
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     WebClientProvider.init(vertx);
-
     vertx.runOnContext(v -> {
-      try {
-        modTenantApi = new ModTenantApi();
-        TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
-        TestUtil.prepareExternalTables(vertx, OAI_TEST_TENANT);
-        // needed for RMB general requirePostgresVersion as this is performed without
-        // specific tenant roles; in real usage, this would be from the env config and
-        // already exist in the DB
-        TestUtil.prepareUser(vertx, OAI_TEST_TENANT, "username", "password");
-      } catch (Exception e) {
-        vtc.failNow(e);
-      }
+      modTenantApi = new ModTenantApi();
       startOkapiMockServer(vertx)
           .onComplete(vtc.succeedingThenComplete());
     });
@@ -104,29 +91,32 @@ class ModTenantApiTest {
   }
 
   @Test
-  void postTenantShouldSucceedAndCreateDatabase(Vertx vertx, VertxTestContext vtc) {
-    modTenantApi.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
-      assertEquals(204, r.getStatus());
-      PostgresClient.getInstance(vertx, OAI_TEST_TENANT)
-          .select(TABLES_QUERY)
-          .compose(rows -> {
-            List<String> tables = new ArrayList<>();
-            rows.forEach(row -> tables.add(row.getString("tablename")));
-            assertTrue(tables.containsAll(EXPECTED_TABLES));
-            return Future.succeededFuture();
-          })
-          .andThen(vtc.succeedingThenComplete());
-    }), vertx.getOrCreateContext());
+  void postTenantShouldSucceed(Vertx vertx, VertxTestContext vtc) {
+    modTenantApi.postTenant(tenantAttributes, headers(), vtc.succeedingThenComplete(),
+        vertx.getOrCreateContext());
   }
 
-  @ParameterizedTest
-  @NullAndEmptySource
-  void postTenantShouldFailWhenNoOkapiUrl(String okapiUrl, Vertx vertx, VertxTestContext vtc) {
+  @Test
+  void postTenantShouldFailWhenNoOkapiUrl(Vertx vertx, VertxTestContext vtc) {
     var headers = headers();
-    headers.put("x-okapi-url", okapiUrl);
-    modTenantApi.postTenantSync(tenantAttributes, headers, vtc.succeeding(r -> {
-      assertEquals(400, r.getStatus());
-      vtc.completeNow();
-    }), vertx.getOrCreateContext());
+    headers.remove("x-okapi-url");
+    modTenantApi.postTenant(tenantAttributes, headers, vtc.failingThenComplete(),
+        vertx.getOrCreateContext());
   }
+
+  @Test
+  void loadDataShouldSucceedAndDatabaseShouldBePopulated(Vertx vertx, VertxTestContext vtc) {
+    TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
+    modTenantApi.loadData(tenantAttributes, OAI_TEST_TENANT, headers(), vertx.getOrCreateContext())
+        .compose(v -> PostgresClient.getInstance(vertx, OAI_TEST_TENANT).select(TABLES_QUERY))
+        .onSuccess(rows -> {
+          assertEquals(10, rows.size());
+          List<String> tables = new ArrayList<>();
+          rows.forEach(row -> tables.add(row.getString("tablename")));
+          assertTrue(tables.containsAll(EXPECTED_TABLES));
+          vtc.completeNow();
+        })
+        .onFailure(vtc::failNow);
+  }
+
 }

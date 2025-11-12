@@ -154,7 +154,7 @@ class CleanUpErrorLogsTest {
     var requestId = UUID.randomUUID().toString();
     var instanceId1 = UUID.randomUUID().toString();
     var errorMsg1 = "some error msg 1";
-    var testTenantId = "oaitest";
+    var testTenantId = "oaiTest";
 
     testContext.verify(() -> {
       errorsService.log(testTenantId, requestId, instanceId1, errorMsg1);
@@ -227,7 +227,7 @@ class CleanUpErrorLogsTest {
   @Test
   void shouldSucceedIfNoInstancesToSave(VertxTestContext testContext) {
 
-    var testTenantId = "oaitest";
+    var testTenantId = "oaiTest";
 
     testContext.verify(() -> {
 
@@ -299,7 +299,7 @@ class CleanUpErrorLogsTest {
       requestMetadata.setLinkToErrorFile("error-link");
       requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate().minusDays(365));
 
-      var testTenantId = "oaitest";
+      var testTenantId = "oaiTest";
       instancesDao.saveRequestMetadata(requestMetadata, testTenantId)
           .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
 
