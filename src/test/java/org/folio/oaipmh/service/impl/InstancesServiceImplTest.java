@@ -43,7 +43,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
 
   private final Logger logger = LogManager.getLogger(this.getClass());
 
-  private static final String TEST_TENANT_ID = "oaitest";
+  private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();
 
   private static final int EXPIRED_REQUEST_IDS_EMPTY_LIST_TIME = 2000;

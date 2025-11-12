@@ -54,7 +54,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
 
   private final Logger logger = LogManager.getLogger(this.getClass());
 
-  private static final String TEST_TENANT_ID = "oaitest";
+  private static final String TEST_TENANT_ID = "oaiTest";
   private static final int mockPort = NetworkUtils.nextFreePort();
   private static final GenericContainer<?> s3;
   private static final String MINIO_ENDPOINT;
