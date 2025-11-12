@@ -42,8 +42,8 @@ public class TestUtil {
   public static void prepareUser(Vertx vertx, String tenantId, String username, String password) {
     log.info("Creating DB user {}", username);
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
-      connection.prepareStatement("CREATE ROLE %s WITH LOGIN SUPERUSER INHERIT NOCREATEDB "
-                                  + "NOCREATEROLE NOREPLICATION PASSWORD '%s';".formatted(
+      connection.prepareStatement(("CREATE ROLE %s WITH LOGIN SUPERUSER INHERIT NOCREATEDB "
+                                  + "NOCREATEROLE NOREPLICATION PASSWORD '%s';").formatted(
                                     username, password)).execute();
     } catch (Exception ex) {
       throw log.throwing(new IllegalStateException(ex));

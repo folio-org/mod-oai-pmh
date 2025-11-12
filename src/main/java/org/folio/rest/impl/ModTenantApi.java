@@ -62,7 +62,9 @@ public class ModTenantApi extends TenantAPI {
       return Future.succeededFuture();
     })
       .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior",
-                "general", "technical")).mapEmpty());
+                "general", "technical")).mapEmpty())
+      .onFailure(err -> job.setError(err.getMessage()))
+      .mapEmpty();
   }
 
   public Future<String> loadConfigurationData(Map<String, String> headers,

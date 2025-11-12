@@ -1,6 +1,7 @@
 package org.folio.rest.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.Future;
@@ -102,24 +103,27 @@ class ModTenantApiTest {
 
   @Test
   void postTenantShouldSucceedAndCreateDatabase(Vertx vertx, VertxTestContext vtc) {
-    modTenantApi.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r ->
-        PostgresClient.getInstance(vertx, OAI_TEST_TENANT)
-            .select(TABLES_QUERY)
-            .compose(rows -> {
-              List<String> tables = new ArrayList<>();
-              rows.forEach(row -> tables.add(row.getString("tablename")));
-              assertTrue(tables.containsAll(EXPECTED_TABLES));
-              return Future.succeededFuture();
-            })
-            .andThen(vtc.succeedingThenComplete())
-    ), vertx.getOrCreateContext());
+    modTenantApi.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
+      assertEquals(204, r.getStatus());
+      PostgresClient.getInstance(vertx, OAI_TEST_TENANT)
+          .select(TABLES_QUERY)
+          .compose(rows -> {
+            List<String> tables = new ArrayList<>();
+            rows.forEach(row -> tables.add(row.getString("tablename")));
+            assertTrue(tables.containsAll(EXPECTED_TABLES));
+            return Future.succeededFuture();
+          })
+          .andThen(vtc.succeedingThenComplete());
+    }), vertx.getOrCreateContext());
   }
 
   @Test
   void postTenantShouldFailWhenNoOkapiUrl(Vertx vertx, VertxTestContext vtc) {
     var headers = headers();
     headers.remove("x-okapi-url");
-    modTenantApi.postTenant(tenantAttributes, headers, vtc.failingThenComplete(),
-        vertx.getOrCreateContext());
+    modTenantApi.postTenantSync(tenantAttributes, headers, vtc.succeeding(r -> {
+          assertEquals(400, r.getStatus());
+          vtc.completeNow();
+        }), vertx.getOrCreateContext());
   }
 }
