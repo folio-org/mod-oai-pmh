@@ -27,6 +27,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -117,10 +119,11 @@ class ModTenantApiTest {
     }), vertx.getOrCreateContext());
   }
 
-  @Test
-  void postTenantShouldFailWhenNoOkapiUrl(Vertx vertx, VertxTestContext vtc) {
+  @ParameterizedTest
+  @NullAndEmptySource
+  void postTenantShouldFailWhenNoOkapiUrl(String okapiUrl, Vertx vertx, VertxTestContext vtc) {
     var headers = headers();
-    headers.remove("x-okapi-url");
+    headers.put("x-okapi-url", okapiUrl);
     modTenantApi.postTenantSync(tenantAttributes, headers, vtc.succeeding(r -> {
       assertEquals(400, r.getStatus());
       vtc.completeNow();
