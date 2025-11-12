@@ -1,0 +1,48 @@
+#%RAML 1.0
+title: Configuration Settings API
+baseUri: https://github.com/folio-org/mod-oai-pmh
+version: v3.1
+protocols: [ HTTP, HTTPS ]
+
+documentation:
+  - title: Configuration Settings API
+    content: API for managing OAI-PMH configuration settings
+
+types:
+  configurationSettings: !include schemas/dto/configurationSettings.json
+  configurationSettingsCollection: !include schemas/dto/configurationSettingsCollection.json
+  errors: !include raml-util/schemas/errors.schema
+
+traits:
+  validate: !include raml-util/traits/validation.raml
+  pageable: !include raml-util/traits/pageable.raml
+
+resourceTypes:
+  collection: !include raml-util/rtypes/collection.raml
+  collection-item: !include raml-util/rtypes/item-collection.raml
+
+/oai-pmh/configuration-settings:
+  displayName: Configuration Settings
+  description: CRUD API for managing configuration settings
+  type:
+    collection:
+      schemaCollection: configurationSettingsCollection
+      schemaItem: configurationSettings
+      exampleCollection: !include examples/configurationSettingsCollection.sample
+      exampleItem: !include examples/configurationSettings.sample
+  post:
+    is: [validate]
+  get:
+    is: [
+      pageable,
+      validate
+    ]
+  /{id}:
+    displayName: Configuration Setting
+    description: Get, Delete or Update a specific configuration setting
+    type:
+      collection-item:
+        schema: configurationSettings
+        exampleItem: !include examples/configurationSettings.sample
+    put:
+     is: [validate]
