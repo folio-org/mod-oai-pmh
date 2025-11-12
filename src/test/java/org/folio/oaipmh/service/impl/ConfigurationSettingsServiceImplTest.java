@@ -252,7 +252,8 @@ class ConfigurationSettingsServiceImplTest {
   void shouldGetConfigurationSettingsList(VertxTestContext testContext) {
     int offset = 0;
     int limit = 10;
-    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID))
+    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit,
+      null, TEST_TENANT_ID))
           .willReturn(Future.succeededFuture(testConfigurationSettingsList));
 
     Future<JsonObject> future = configurationSettingsService
@@ -280,7 +281,8 @@ class ConfigurationSettingsServiceImplTest {
           .put("totalRecords", 0)
           .put("configurationSettings", new JsonArray());
 
-    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID))
+    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit,
+      null, TEST_TENANT_ID))
           .willReturn(Future.succeededFuture(emptyList));
 
     Future<JsonObject> future = configurationSettingsService

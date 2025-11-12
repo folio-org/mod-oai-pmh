@@ -48,7 +48,8 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       .get(XOkapiHeaders.USER_ID));
   }
 
-  public void getOaiPmhConfigurationSettings(String name, String totalRecords, int offset, int limit,
+  public void getOaiPmhConfigurationSettings(String name, String totalRecords, int offset,
+                                             int limit,
                                              Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<Response>> asyncResultHandler,
                                              Context vertxContext) {

@@ -43,7 +43,8 @@ public class ConfigurationSettingsServiceImpl implements ConfigurationSettingsSe
   }
 
   @Override
-  public Future<JsonObject> getConfigurationSettingsList(int offset, int limit, String name, String tenantId) {
+  public Future<JsonObject> getConfigurationSettingsList(int offset, int limit,
+                                                         String name, String tenantId) {
     return configurationSettingsDao.getConfigurationSettingsList(offset, limit, name, tenantId);
   }
 

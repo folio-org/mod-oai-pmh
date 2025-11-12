@@ -16,6 +16,7 @@ public interface ConfigurationSettingsService {
 
   Future<Boolean> deleteConfigurationSettingsById(String id, String tenantId);
 
-  Future<JsonObject> getConfigurationSettingsList(int offset, int limit, String name, String tenantId);
+  Future<JsonObject> getConfigurationSettingsList(int offset, int limit,
+                                                  String name, String tenantId);
 
 }
