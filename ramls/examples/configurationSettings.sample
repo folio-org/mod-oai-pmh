@@ -1,0 +1,10 @@
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "configName": "behavior",
+  "configValue": {
+    "deletedRecordsSupport": "persistent",
+    "suppressedRecordsProcessing": "true",
+    "errorsProcessing": "200",
+    "recordsSource": "Source record storage"
+  }
+}
