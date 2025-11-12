@@ -402,6 +402,98 @@ class ConfigurationSettingsImplTest {
         .statusCode(HttpStatus.SC_OK);
   }
 
+  @Test
+  void shouldFilterConfigurationSettingsByName() {
+    // Create test configurations with unique names
+    String configName1 = "test-filter-config-" + UUID.randomUUID();
+    String configName2 = "test-filter-config-" + UUID.randomUUID();
+    String configName3 = "another-config-" + UUID.randomUUID();
+    
+    String config1Id = createTestConfig(configName1);
+    createTestConfig(configName2);
+    createTestConfig(configName3);
+
+    // Filter by first config name - should return only 1 result
+    given()
+        .header(tenantHeader)
+        .header(urlHeader)
+        .header(tokenHeader)
+        .queryParam("name", configName1)
+        .when()
+        .get(CONFIGURATION_SETTINGS_PATH)
+        .then()
+        .statusCode(HttpStatus.SC_OK)
+        .defaultParser(Parser.JSON)
+        .body("totalRecords", equalTo(1))
+        .body("configurationSettings.size()", equalTo(1))
+        .body("configurationSettings[0].configName", equalTo(configName1))
+        .body("configurationSettings[0].id", equalTo(config1Id));
+  }
+
+  @Test
+  void shouldReturnEmptyListWhenNameFilterMatchesNoResults() {
+    String nonExistentName = "non-existent-config-" + UUID.randomUUID();
+
+    given()
+        .header(tenantHeader)
+        .header(urlHeader)
+        .header(tokenHeader)
+        .queryParam("name", nonExistentName)
+        .when()
+        .get(CONFIGURATION_SETTINGS_PATH)
+        .then()
+        .statusCode(HttpStatus.SC_OK)
+        .defaultParser(Parser.JSON)
+        .body("totalRecords", equalTo(0))
+        .body("configurationSettings.size()", equalTo(0));
+  }
+
+  @Test
+  void shouldReturnAllConfigurationsWhenNoNameFilterProvided() {
+    // Create multiple test configurations
+    String configName1 = "test-all-configs-1-" + UUID.randomUUID();
+    String configName2 = "test-all-configs-2-" + UUID.randomUUID();
+    
+    createTestConfig(configName1);
+    createTestConfig(configName2);
+
+    // Get all configurations without name filter
+    given()
+        .header(tenantHeader)
+        .header(urlHeader)
+        .header(tokenHeader)
+        .queryParam("limit", 100)
+        .when()
+        .get(CONFIGURATION_SETTINGS_PATH)
+        .then()
+        .statusCode(HttpStatus.SC_OK)
+        .defaultParser(Parser.JSON)
+        .body("totalRecords", greaterThanOrEqualTo(2));
+  }
+
+  @Test
+  void shouldHandleNameFilterWithPagination() {
+    String configName = "test-pagination-filter-" + UUID.randomUUID();
+    createTestConfig(configName);
+
+    // Test with name filter and pagination parameters
+    given()
+        .header(tenantHeader)
+        .header(urlHeader)
+        .header(tokenHeader)
+        .queryParam("name", configName)
+        .queryParam("offset", 0)
+        .queryParam("limit", 10)
+        .when()
+        .get(CONFIGURATION_SETTINGS_PATH)
+        .then()
+        .statusCode(HttpStatus.SC_OK)
+        .defaultParser(Parser.JSON)
+        .body("totalRecords", equalTo(1))
+        .body("configurationSettings.size()", equalTo(1))
+        .body("configurationSettings[0].configName", equalTo(configName));
+  }
+
   /**.
    * Helper method to create a test configuration
 
