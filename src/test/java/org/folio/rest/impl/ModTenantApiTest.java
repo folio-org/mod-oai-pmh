@@ -55,7 +55,7 @@ class ModTenantApiTest {
       try {
         modTenantApi = new ModTenantApi();
         TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
-        TestUtil.prepareTables(vertx, OAI_TEST_TENANT);
+        TestUtil.prepareExternalTables(vertx, OAI_TEST_TENANT);
         // needed for RMB general requirePostgresVersion as this is performed without
         // specific tenant roles; in real usage, this would be from the env config and
         // already exist in the DB
