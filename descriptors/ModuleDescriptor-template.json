@@ -162,6 +162,10 @@
             "configuration.entries.collection.get",
             "configuration.entries.item.post"
           ]
+        },
+        {
+          "methods": ["GET", "DELETE"],
+          "pathPattern": "/_/tenant/{id}"
         }
       ]
     },
