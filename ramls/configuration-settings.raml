@@ -37,6 +37,11 @@ resourceTypes:
       pageable,
       validate
     ]
+    queryParameters:
+      name:
+        description: Filter configuration settings by name (configName field)
+        type: string
+        required: false
   /{id}:
     displayName: Configuration Setting
     description: Get, Delete or Update a specific configuration setting

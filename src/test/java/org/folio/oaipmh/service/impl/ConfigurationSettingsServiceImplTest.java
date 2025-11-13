@@ -252,11 +252,12 @@ class ConfigurationSettingsServiceImplTest {
   void shouldGetConfigurationSettingsList(VertxTestContext testContext) {
     int offset = 0;
     int limit = 10;
-    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, TEST_TENANT_ID))
+    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit,
+      null, TEST_TENANT_ID))
           .willReturn(Future.succeededFuture(testConfigurationSettingsList));
 
     Future<JsonObject> future = configurationSettingsService
-          .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
+          .getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID);
 
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
@@ -267,7 +268,7 @@ class ConfigurationSettingsServiceImplTest {
       JsonObject firstConfig = configArray.getJsonObject(0);
       assertEquals(TEST_CONFIG_ID, firstConfig.getString("id"));
       verify(configurationSettingsDao)
-            .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
+            .getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID);
       testContext.completeNow();
     })));
   }
@@ -280,11 +281,12 @@ class ConfigurationSettingsServiceImplTest {
           .put("totalRecords", 0)
           .put("configurationSettings", new JsonArray());
 
-    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit, TEST_TENANT_ID))
+    given(configurationSettingsDao.getConfigurationSettingsList(offset, limit,
+      null, TEST_TENANT_ID))
           .willReturn(Future.succeededFuture(emptyList));
 
     Future<JsonObject> future = configurationSettingsService
-          .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
+          .getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID);
 
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertNotNull(result);
@@ -293,7 +295,7 @@ class ConfigurationSettingsServiceImplTest {
       assertNotNull(configArray);
       assertEquals(0, configArray.size());
       verify(configurationSettingsDao)
-            .getConfigurationSettingsList(offset, limit, TEST_TENANT_ID);
+            .getConfigurationSettingsList(offset, limit, null, TEST_TENANT_ID);
       testContext.completeNow();
     })));
   }

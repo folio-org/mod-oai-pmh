@@ -48,14 +48,15 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
       .get(XOkapiHeaders.USER_ID));
   }
 
-  public void getOaiPmhConfigurationSettings(String totalRecords, int offset, int limit,
+  public void getOaiPmhConfigurationSettings(String name, String totalRecords, int offset,
+                                             int limit,
                                              Map<String, String> okapiHeaders,
                                              Handler<AsyncResult<Response>> asyncResultHandler,
                                              Context vertxContext) {
 
     String tenantId = extractOkapiContext(okapiHeaders).tenantId;
 
-    configurationSettingsService.getConfigurationSettingsList(offset, limit, tenantId)
+    configurationSettingsService.getConfigurationSettingsList(offset, limit, name, tenantId)
       .onSuccess(configSettings -> handleSuccess(asyncResultHandler,
         configSettings.encode(), Response.Status.OK))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_RETRIEVE));

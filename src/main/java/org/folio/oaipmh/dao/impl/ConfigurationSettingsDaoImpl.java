@@ -136,18 +136,28 @@ public class ConfigurationSettingsDaoImpl implements ConfigurationSettingsDao {
   }
 
   @Override
-  public Future<JsonObject> getConfigurationSettingsList(int offset, int limit, String tenantId) {
+  public Future<JsonObject> getConfigurationSettingsList(int offset, int limit,
+                                                         String name, String tenantId) {
     return getQueryExecutorReader(tenantId).transaction(txQE -> {
-      Future<Integer> countFuture = txQE.findOneRow(dslContext ->
-          dslContext.selectCount()
-              .from(CONFIGURATION_SETTINGS))
+      Future<Integer> countFuture = txQE.findOneRow(dslContext -> {
+        var query = dslContext.selectCount()
+                .from(CONFIGURATION_SETTINGS);
+        if (name != null && !name.isEmpty()) {
+          query.where(CONFIGURATION_SETTINGS.CONFIG_NAME.eq(name));
+        }
+        return query;
+      })
           .map(row -> row.getInteger(0));
 
-      Future<JsonObject> dataFuture = txQE.findManyRow(dslContext ->
-          dslContext.selectFrom(CONFIGURATION_SETTINGS)
-              .orderBy(CONFIGURATION_SETTINGS.CONFIG_NAME)
-              .limit(limit)
-              .offset(offset))
+      Future<JsonObject> dataFuture = txQE.findManyRow(dslContext -> {
+        var query = dslContext.selectFrom(CONFIGURATION_SETTINGS);
+        if (name != null && !name.isEmpty()) {
+          query.where(CONFIGURATION_SETTINGS.CONFIG_NAME.eq(name));
+        }
+        return query.orderBy(CONFIGURATION_SETTINGS.CONFIG_NAME)
+                .limit(limit)
+                .offset(offset);
+      })
           .map(rows -> {
             JsonObject result = new JsonObject();
             JsonArray configArray = new JsonArray();
