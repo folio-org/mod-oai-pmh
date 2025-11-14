@@ -1,11 +1,5 @@
 {
   "id": "33333333-3333-3333-3333-333333333333",
   "configName": "technical",
-  "configValue": {
-    "repository.maxRecordsPerResponse": "10",
-    "jaxb.marshaller.enableValidation": "false",
-    "jaxb.marshaller.formattedOutput": "false",
-    "repository.srsHttpRequestRetryAttempts": "3",
-    "repository.srsClientIdleTimeoutSec": "10"
-  }
+  "value": "{\"repository.maxRecordsPerResponse\":\"10\",\"jaxb.marshaller.enableValidation\":\"false\",\"jaxb.marshaller.formattedOutput\":\"false\",\"repository.srsHttpRequestRetryAttempts\":\"3\",\"repository.srsClientIdleTimeoutSec\":\"10\"}"
 }

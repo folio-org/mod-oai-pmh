@@ -1,9 +1,5 @@
 {
   "id": "11111111-1111-1111-1111-111111111111",
   "configName": "behavior",
-  "configValue": {
-    "repository.deletedRecords": "yes",
-    "repository.suppressedRecordsProcessing": "false",
-    "repository.errorsProcessing": "include_all"
-  }
+  "value": "{\"repository.deletedRecords\":\"yes\",\"repository.suppressedRecordsProcessing\":\"false\",\"repository.errorsProcessing\":\"include_all\"}"
 }
