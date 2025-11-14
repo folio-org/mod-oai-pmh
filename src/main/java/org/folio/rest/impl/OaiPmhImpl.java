@@ -19,6 +19,7 @@ import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
 import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -91,7 +92,7 @@ public class OaiPmhImpl implements Oai {
         verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
     String tenantId = okapiHeaders.get(OKAPI_TENANT);
-    
+
     Request.Builder requestBuilder = Request.builder()
         .okapiHeaders(okapiHeaders)
         .verb(getVerb(verb))
@@ -209,14 +210,14 @@ public class OaiPmhImpl implements Oai {
    */
   private Future<Void> loadConfigurationFromService(String tenantId, String requestId) {
     Promise<Void> promise = Promise.promise();
-    
+
     // Load all three configuration groups: behavior, general, and technical
     List<String> configNames = Arrays.asList("behavior", "general", "technical");
-    
+
     List<Future<JsonObject>> configFutures = new ArrayList<>();
     for (String configName : configNames) {
       configFutures.add(
-        configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
+          configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
       );
     }
 
@@ -225,7 +226,7 @@ public class OaiPmhImpl implements Oai {
           try {
             // Merge all configuration values into a single JsonObject
             JsonObject mergedConfig = new JsonObject();
-            
+
             for (int i = 0; i < compositeFuture.size(); i++) {
               JsonObject configEntry = compositeFuture.resultAt(i);
               if (configEntry != null && configEntry.containsKey("configValue")) {
@@ -236,7 +237,7 @@ public class OaiPmhImpl implements Oai {
                 }
               }
             }
-            
+
             // Store the merged configuration using reflection to access the private configsMap
             // This mimics what RepositoryConfigurationUtil.loadConfiguration does
             try {
@@ -244,10 +245,10 @@ public class OaiPmhImpl implements Oai {
                   .getDeclaredField("configsMap");
               field.setAccessible(true);
               @SuppressWarnings("unchecked")
-              Map<String, JsonObject> configsMap = 
+              Map<String, JsonObject> configsMap =
                   (Map<String, JsonObject>) field.get(null);
               configsMap.put(requestId, mergedConfig);
-              
+
               logger.info("loadConfigurationFromService:: Successfully loaded configuration "
                   + "for requestId {} with {} properties", requestId, mergedConfig.size());
               promise.complete();
@@ -265,7 +266,7 @@ public class OaiPmhImpl implements Oai {
               + "for requestId {}: {}", requestId, throwable.getMessage());
           promise.fail("Failed to load configuration settings: " + throwable.getMessage());
         });
-    
+
     return promise.future();
   }
 
