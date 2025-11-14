@@ -1,6 +1,11 @@
 {
-  "module" : "OAIPMH",
-  "configName" : "technical",
-  "enabled" : true,
-  "value" : "{\"maxRecordsPerResponse\":\"100\",\"enableValidation\":false,\"formattedOutput\":false,\"srsHttpRequestRetryAttempts\":\"50\",\"srsClientIdleTimeoutSec\":\"20\",\"fetchingChunkSize\":\"5000\",\"cleanErrorsInterval\":\"30\"}"
+  "id": "33333333-3333-3333-3333-333333333333",
+  "configName": "technical",
+  "configValue": {
+    "repository.maxRecordsPerResponse": "10",
+    "jaxb.marshaller.enableValidation": "false",
+    "jaxb.marshaller.formattedOutput": "false",
+    "repository.srsHttpRequestRetryAttempts": "3",
+    "repository.srsClientIdleTimeoutSec": "10"
+  }
 }

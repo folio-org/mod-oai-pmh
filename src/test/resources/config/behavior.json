@@ -1,6 +1,9 @@
 {
-  "module" : "OAIPMH",
-  "configName" : "behavior",
-  "enabled" : true,
-  "value" : "{\"deletedRecordsSupport\":\"no\",\"suppressedRecordsProcessing\":false,\"errorsProcessing\":\"500\",\"recordsSource\":\"Source record storage\"}"
+  "id": "11111111-1111-1111-1111-111111111111",
+  "configName": "behavior",
+  "configValue": {
+    "repository.deletedRecords": "yes",
+    "repository.suppressedRecordsProcessing": "false",
+    "repository.errorsProcessing": "include_all"
+  }
 }

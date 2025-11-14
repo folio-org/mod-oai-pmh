@@ -1,6 +1,11 @@
 {
-  "module" : "OAIPMH",
-  "configName" : "general",
-  "enabled" : true,
-  "value" : "{\"enableOaiService\":true,\"repositoryName\":\"FOLIO_OAI_Repository\",\"baseUrl\":\"http://folio.org/oai\",\"administratorEmail\":\"oai-pmh@folio.org\",\"timeGranularity\":\"YYYY-MM-DDThh:mm:ssZ\"}"
+  "id": "22222222-2222-2222-2222-222222222222",
+  "configName": "general",
+  "configValue": {
+    "repository.name": "FOLIO_OAI_Repository_mock",
+    "repository.baseURL": "http://test.folio.org/oai",
+    "repository.adminEmails": "oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org",
+    "repository.timeGranularity": "YYYY-MM-DDThh:mm:ssZ",
+    "repository.enableOaiService": "true"
+  }
 }

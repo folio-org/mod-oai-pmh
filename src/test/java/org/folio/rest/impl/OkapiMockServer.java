@@ -159,7 +159,7 @@ public class OkapiMockServer {
   private static final String INSTANCES_1_WITH_INVALID_CHARACTER =
       "/instances_1_with_invalid_character.json";
   private static final String INSTANCES_1_NO_RECORD_SOURCE =
-      "/instances_1_withNoRecordSource.json";
+        "/instances_1_withNoRecordSource.json";
 
   private static final String INSTANCES_3 = "/instances_3.json";
   private static final String INSTANCES_3_WITH_DELETED = "/instances_3_with_deleted.json";
@@ -184,6 +184,17 @@ public class OkapiMockServer {
   private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS =
       "/configurations.entries/config_invalid_setting_value.json";
   private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
+
+  // New configuration settings endpoints
+  private static final String CONFIGURATION_SETTINGS_ENDPOINT = "/oai-pmh/configuration-settings";
+  private static final String CONFIG_SETTINGS_BEHAVIOR =
+      "/configuration-settings/config_settings_behavior.json";
+  private static final String CONFIG_SETTINGS_GENERAL =
+      "/configuration-settings/config_settings_general.json";
+  private static final String CONFIG_SETTINGS_TECHNICAL =
+      "/configuration-settings/config_settings_technical.json";
+  private static final String CONFIG_SETTINGS_BEHAVIOR_SUPPRESSED =
+      "/configuration-settings/config_settings_behavior_suppressed.json";
 
   private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
@@ -350,6 +361,10 @@ public class OkapiMockServer {
     router.get(CONFIGURATIONS_ENTRIES)
         .handler(this::handleConfigurationModuleResponse);
 
+    // New configuration settings endpoint
+    router.get(CONFIGURATION_SETTINGS_ENDPOINT)
+        .handler(this::handleConfigurationSettingsResponse);
+
     router.get(INSTANCE_STORAGE_URI)
         .handler(this::handleInstanceStorageRequest);
     // related to MarcWithHoldingsRequestHelper
@@ -430,6 +445,79 @@ public class OkapiMockServer {
     }
   }
 
+  private void handleConfigurationSettingsResponse(RoutingContext ctx) {
+    String tenant = ctx.request().getHeader(OKAPI_TENANT);
+    String configName = ctx.request().getParam("name");
+
+    if (configName == null || configName.isEmpty()) {
+      failureResponse(ctx, 400, "Missing name parameter");
+      return;
+    }
+
+    switch (tenant) {
+      case OAI_TEST_TENANT:
+        if (ctx.request().absoluteURI().contains(SUPPRESSED_RECORDS_DATE)) {
+          // Return behavior config with suppressed records processing enabled
+          if ("behavior".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(
+                CONFIG_SETTINGS_BEHAVIOR_SUPPRESSED));
+          } else if ("general".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_GENERAL));
+          } else if ("technical".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_TECHNICAL));
+          } else {
+            failureResponse(ctx, 404, "Configuration not found");
+          }
+        } else {
+          // Return standard configs
+          if ("behavior".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_BEHAVIOR));
+          } else if ("general".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_GENERAL));
+          } else if ("technical".equals(configName)) {
+            successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_TECHNICAL));
+          } else {
+            failureResponse(ctx, 404, "Configuration not found");
+          }
+        }
+        break;
+      case EXIST_CONFIG_TENANT:
+      case EXIST_CONFIG_TENANT_2:
+        // Return standard configs for other test tenants
+        if ("behavior".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_BEHAVIOR));
+        } else if ("general".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_GENERAL));
+        } else if ("technical".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_TECHNICAL));
+        } else {
+          failureResponse(ctx, 404, "Configuration not found");
+        }
+        break;
+      case INVALID_CONFIG_TENANT:
+        // Return configs with invalid values for testing error handling
+        if ("behavior".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_BEHAVIOR));
+        } else if ("general".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_GENERAL));
+        } else if ("technical".equals(configName)) {
+          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_SETTINGS_TECHNICAL));
+        } else {
+          failureResponse(ctx, 404, "Configuration not found");
+        }
+        break;
+      case ERROR_TENANT:
+        failureResponse(ctx, 500, "Internal Server Error");
+        break;
+      case INVALID_JSON_TENANT:
+        successResponse(ctx, "&&@^$%^@$^&$");
+        break;
+      default:
+        failureResponse(ctx, 404, "Configuration not found");
+        break;
+    }
+  }
+
   private void handleSourceRecordStorageResponse(RoutingContext ctx) {
     String json = getJsonObjectFromFileAsString(String.format("/source-storage/records/%s",
         String.format("marc-%s.json", JSON_FILE_ID)));
@@ -444,7 +532,7 @@ public class OkapiMockServer {
         json = getRecordJsonWithSuppressedTrue(getRecordJsonWithDeletedTrue(json));
       } else if (uri.contains(NO_RECORDS_DATE)) {
         json = getJsonObjectFromFileAsString("/instance-storage.instances"
-            + "/instances_0.json");
+          + "/instances_0.json");
       } else if (ctx.request().method() == HttpMethod.POST) {
         json = getJsonObjectFromFileAsString("/source-storage/records/srs_instances.json");
       }
@@ -645,10 +733,10 @@ public class OkapiMockServer {
       int limit = parseInt(requireNonNull(params.get("limit")));
       String sourceRecordsString =
           requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
-              + INSTANCES_10_TOTAL_RECORDS_10));
+            + INSTANCES_10_TOTAL_RECORDS_10));
       String srsRecordsResponseTemplate =
           requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
-              + SRS_RESPONSE_TEMPLATE_JSON));
+            + SRS_RESPONSE_TEMPLATE_JSON));
       JsonObject sourceRecordsJson = new JsonObject(sourceRecordsString);
       JsonArray defaultRecords = sourceRecordsJson.getJsonArray("sourceRecords");
       JsonArray requiredRecords = new JsonArray();
@@ -722,8 +810,8 @@ public class OkapiMockServer {
 
   private void successResponse(RoutingContext ctx, String body) {
     ctx.response()
-        .setStatusCode(200)
-        .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
+      .setStatusCode(200)
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
         .end(body);
   }
 
@@ -743,22 +831,22 @@ public class OkapiMockServer {
     logger.debug("Built response: {}", response);
     Buffer buffer = Buffer.buffer(response);
     routingContext.response()
-        .setStatusCode(200)
+      .setStatusCode(200)
         .end(buffer);
   }
 
   private void failureResponseWithForbidden(RoutingContext ctx) {
     ctx.response()
-        .setStatusCode(403)
-        .setStatusMessage("Forbidden")
-        .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
+      .setStatusCode(403)
+      .setStatusMessage("Forbidden")
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
         .end();
   }
 
   private void failureResponse(RoutingContext ctx, int code, String body) {
     ctx.response()
-        .setStatusCode(code)
-        .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
+      .setStatusCode(code)
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain")
         .end(body);
   }
 
@@ -795,7 +883,7 @@ public class OkapiMockServer {
 
   private String getRecordJsonWithSuppressedTrue(String json) {
     return json.replace("\"suppressDiscovery\": false",
-        "\"suppressDiscovery\": true");
+      "\"suppressDiscovery\": true");
   }
 
   private String generateEnrichedInstancesResponse(JsonArray instancesIds, String jsonFileName) {
@@ -804,10 +892,10 @@ public class OkapiMockServer {
     List<String> enrichedInstances = instancesIds.stream()
         .map(Object::toString)
         .map(instanceId ->  enrichedInstanceTemplate.replace("set_instance_id", instanceId)
-            .replace("set_instance_item_id", randomId())
-            .replace("set_instance_item_campusId_id", randomId())
-            .replace("set_instance_item__libraryId_id", randomId())
-            .replace("set_instance_item_id_institutionId", randomId())
+          .replace("set_instance_item_id", randomId())
+          .replace("set_instance_item_campusId_id", randomId())
+          .replace("set_instance_item__libraryId_id", randomId())
+          .replace("set_instance_item_id_institutionId", randomId())
         )
         .collect(Collectors.toList());
     return String.join("", enrichedInstances);
@@ -816,23 +904,23 @@ public class OkapiMockServer {
   private String generateSrsPostResponseForInstanceIds(JsonArray instanceIds) {
     String srsRecordTemplate =
         requireNonNull(getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
-            + SRS_RECORD_TEMPLATE_JSON));
+          + SRS_RECORD_TEMPLATE_JSON));
     String srsRecordsResponseTemplate = requireNonNull(
         getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
-            + SRS_RESPONSE_TEMPLATE_JSON));
+          + SRS_RESPONSE_TEMPLATE_JSON));
     List<String> srsRecords = new ArrayList<>();
     instanceIds.stream()
         .map(Object::toString)
         .forEach(id ->
-            srsRecords.add(transformTemplateToRecord(requireNonNull(srsRecordTemplate), id)));
+          srsRecords.add(transformTemplateToRecord(requireNonNull(srsRecordTemplate), id)));
     String allRecords = String.join(",", srsRecords);
     return srsRecordsResponseTemplate.replace(JSON_TEMPLATE_KEY_RECORDS, allRecords)
-      .replace(JSON_TEMPLATE_KEY_TOTAL_COUNT, String.valueOf(srsRecords.size()));
+        .replace(JSON_TEMPLATE_KEY_TOTAL_COUNT, String.valueOf(srsRecords.size()));
   }
 
   private String transformTemplateToRecord(String recordTemplate, String instanceId) {
     return recordTemplate.replace("replace_record_UUID", UUID.randomUUID()
-      .toString())
+        .toString())
       .replace("instanceId_replace", instanceId);
   }
 
