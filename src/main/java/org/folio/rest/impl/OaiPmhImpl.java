@@ -5,28 +5,29 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
 import static org.openarchives.oai._2.VerbType.LIST_METADATA_FORMATS;
 import static org.openarchives.oai._2.VerbType.LIST_RECORDS;
 import static org.openarchives.oai._2.VerbType.LIST_SETS;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.folio.spring.SpringContextUtil;
@@ -65,6 +67,7 @@ public class OaiPmhImpl implements Oai {
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
 
   private VerbValidator validator;
+  private ConfigurationSettingsService configurationSettingsService;
 
   public OaiPmhImpl() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -87,6 +90,8 @@ public class OaiPmhImpl implements Oai {
         + "resumptionToken: {}, from: {}, until: {}, set: {}, metadataPrefix: {}",
         verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
+    String tenantId = okapiHeaders.get(OKAPI_TENANT);
+    
     Request.Builder requestBuilder = Request.builder()
         .okapiHeaders(okapiHeaders)
         .verb(getVerb(verb))
@@ -98,7 +103,7 @@ public class OaiPmhImpl implements Oai {
     Request request = requestBuilder.build();
     var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
 
-    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
+    loadConfigurationFromService(tenantId, generatedRequestId)
         .onSuccess(v -> {
           String requestId = generatedRequestId;
           try {
@@ -194,8 +199,84 @@ public class OaiPmhImpl implements Oai {
     return request.getRequestId();
   }
 
+  /**
+   * Load configuration settings from the ConfigurationSettingsService for all config groups.
+   * This replaces the old mod-configuration approach with the new configuration service API.
+   *
+   * @param tenantId the tenant identifier
+   * @param requestId unique identifier for current request
+   * @return Future that completes when all configurations are loaded
+   */
+  private Future<Void> loadConfigurationFromService(String tenantId, String requestId) {
+    Promise<Void> promise = Promise.promise();
+    
+    // Load all three configuration groups: behavior, general, and technical
+    List<String> configNames = Arrays.asList("behavior", "general", "technical");
+    
+    List<Future<JsonObject>> configFutures = new ArrayList<>();
+    for (String configName : configNames) {
+      configFutures.add(
+        configurationSettingsService.getConfigurationSettingsByName(configName, tenantId)
+      );
+    }
+
+    Future.all(configFutures)
+        .onSuccess(compositeFuture -> {
+          try {
+            // Merge all configuration values into a single JsonObject
+            JsonObject mergedConfig = new JsonObject();
+            
+            for (int i = 0; i < compositeFuture.size(); i++) {
+              JsonObject configEntry = compositeFuture.resultAt(i);
+              if (configEntry != null && configEntry.containsKey("configValue")) {
+                JsonObject configValue = configEntry.getJsonObject("configValue");
+                if (configValue != null) {
+                  // Merge configuration values
+                  configValue.forEach(entry -> mergedConfig.put(entry.getKey(), entry.getValue()));
+                }
+              }
+            }
+            
+            // Store the merged configuration using reflection to access the private configsMap
+            // This mimics what RepositoryConfigurationUtil.loadConfiguration does
+            try {
+              java.lang.reflect.Field field = RepositoryConfigurationUtil.class
+                  .getDeclaredField("configsMap");
+              field.setAccessible(true);
+              @SuppressWarnings("unchecked")
+              Map<String, JsonObject> configsMap = 
+                  (Map<String, JsonObject>) field.get(null);
+              configsMap.put(requestId, mergedConfig);
+              
+              logger.info("loadConfigurationFromService:: Successfully loaded configuration "
+                  + "for requestId {} with {} properties", requestId, mergedConfig.size());
+              promise.complete();
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+              logger.error("loadConfigurationFromService:: Failed to store configuration", e);
+              promise.fail("Failed to store configuration: " + e.getMessage());
+            }
+          } catch (Exception e) {
+            logger.error("loadConfigurationFromService:: Error processing configuration", e);
+            promise.fail(e);
+          }
+        })
+        .onFailure(throwable -> {
+          logger.error("loadConfigurationFromService:: Failed to load configuration "
+              + "for requestId {}: {}", requestId, throwable.getMessage());
+          promise.fail("Failed to load configuration settings: " + throwable.getMessage());
+        });
+    
+    return promise.future();
+  }
+
   @Autowired
   public void setValidator(VerbValidator validator) {
     this.validator = validator;
+  }
+
+  @Autowired
+  public void setConfigurationSettingsService(
+      ConfigurationSettingsService configurationSettingsService) {
+    this.configurationSettingsService = configurationSettingsService;
   }
 }
