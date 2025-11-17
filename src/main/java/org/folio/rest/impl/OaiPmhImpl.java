@@ -2,18 +2,16 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
+import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
-import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_FORMAT_ERROR;
 import static org.folio.oaipmh.Constants.RESUMPTION_TOKEN_PARAM;
 import static org.folio.oaipmh.Constants.SET_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
-import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
-import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 import static org.openarchives.oai._2.VerbType.GET_RECORD;
 import static org.openarchives.oai._2.VerbType.IDENTIFY;
 import static org.openarchives.oai._2.VerbType.LIST_IDENTIFIERS;
@@ -23,9 +21,10 @@ import static org.openarchives.oai._2.VerbType.LIST_SETS;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -44,10 +43,11 @@ import org.folio.oaipmh.helpers.GetOaiMetadataFormatsHelper;
 import org.folio.oaipmh.helpers.GetOaiRecordHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
-import org.folio.oaipmh.helpers.RepositoryConfigurationUtil;
 import org.folio.oaipmh.helpers.VerbHelper;
+import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.oaipmh.validator.VerbValidator;
 import org.folio.rest.jaxrs.resource.Oai;
 import org.folio.spring.SpringContextUtil;
@@ -63,8 +63,13 @@ public class OaiPmhImpl implements Oai {
 
   /** Map containing OAI-PMH verb and corresponding helper instance. */
   private static final Map<VerbType, VerbHelper> HELPERS = new EnumMap<>(VerbType.class);
+  
+  /** Map containing configuration for each request ID. */
+  private static final Map<String, JsonObject> configsMap = new HashMap<>();
 
   private VerbValidator validator;
+  private ConfigurationSettingsService configurationService;
+  private ConfigurationHelper configurationHelper;
 
   public OaiPmhImpl() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -98,11 +103,23 @@ public class OaiPmhImpl implements Oai {
     Request request = requestBuilder.build();
     var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
 
-    RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, generatedRequestId)
-        .onSuccess(v -> {
+    String tenantId = okapiHeaders.get(OKAPI_TENANT);
+    configurationService.getConfigurationSettingsList(0, 100, null, tenantId)
+        .onSuccess(configList -> {
           String requestId = generatedRequestId;
           try {
-            request.setBaseUrl((getProperty(generatedRequestId, REPOSITORY_BASE_URL)));
+            // Process configuration settings
+            JsonObject config = new JsonObject();
+            JsonArray configs = configList.getJsonArray(CONFIGS);
+            if (configs != null) {
+              configs.stream()
+                  .map(object -> (JsonObject) object)
+                  .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
+                  .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
+            }
+            configsMap.put(generatedRequestId, config);
+            
+            request.setBaseUrl(getProperty(generatedRequestId, REPOSITORY_BASE_URL));
             if (StringUtils.isNotEmpty(identifier)) {
               request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
             }
@@ -145,11 +162,11 @@ public class OaiPmhImpl implements Oai {
               verbHelper
                   .handle(request, vertxContext)
                   .compose(response -> {
-                    RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
+                    cleanConfigForRequestId(request.getRequestId());
                     asyncResultHandler.handle(succeededFuture(response));
                     return succeededFuture();
                   }).onFailure(e -> {
-                    RepositoryConfigurationUtil.cleanConfigForRequestId(request.getRequestId());
+                    cleanConfigForRequestId(request.getRequestId());
                     var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(
                         oaipmhResponse, request, e.getMessage());
                     asyncResultHandler.handle(succeededFuture(responseWithErrors));
@@ -158,7 +175,7 @@ public class OaiPmhImpl implements Oai {
           } catch (Exception e) {
             logger.error("getOaiRecords:: RequestId {} completed with  error {}",
                 requestId,  e.getMessage());
-            RepositoryConfigurationUtil.cleanConfigForRequestId(requestId);
+            cleanConfigForRequestId(requestId);
             var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(
                 oaipmhResponse, request, e.getMessage());
             asyncResultHandler.handle(succeededFuture(responseWithErrors));
@@ -188,14 +205,50 @@ public class OaiPmhImpl implements Oai {
       request.setRequestId(generatedRequestId);
     } else {
       String existedRequestId = request.getRequestId();
-      RepositoryConfigurationUtil.replaceGeneratedConfigKeyWithExisted(
-          generatedRequestId, existedRequestId);
+      replaceGeneratedConfigKeyWithExisted(generatedRequestId, existedRequestId);
     }
     return request.getRequestId();
+  }
+
+  private void replaceGeneratedConfigKeyWithExisted(String generatedRequestId,
+      String existedRequestId) {
+    configsMap.put(existedRequestId, configsMap.remove(generatedRequestId));
+  }
+
+  private String getProperty(String requestId, String name) {
+    JsonObject configs = configsMap.get(requestId);
+    String defaultValue = System.getProperty(name);
+    if (configs != null) {
+      return configs.getString(name, defaultValue);
+    }
+    return defaultValue;
+  }
+
+  private boolean getBooleanProperty(String requestId, String name) {
+    JsonObject configs = configsMap.get(requestId);
+    String defaultValue = System.getProperty(name);
+    if (configs != null) {
+      return Boolean.parseBoolean(configs.getString(name, defaultValue));
+    }
+    return Boolean.parseBoolean(defaultValue);
+  }
+
+  private void cleanConfigForRequestId(String requestId) {
+    configsMap.remove(requestId);
   }
 
   @Autowired
   public void setValidator(VerbValidator validator) {
     this.validator = validator;
+  }
+
+  @Autowired
+  public void setConfigurationService(ConfigurationSettingsService configurationService) {
+    this.configurationService = configurationService;
+  }
+
+  @Autowired
+  public void setConfigurationHelper(ConfigurationHelper configurationHelper) {
+    this.configurationHelper = configurationHelper;
   }
 }
