@@ -49,9 +49,9 @@ public class TestUtil {
     log.info("Inserting default configuration settings for {}", tenantId);
     String schema = PostgresClient.convertToPsqlStandard(tenantId);
     String insertSql = String.format(
-        "INSERT INTO %s.configuration_settings (id, config_name, config_value) VALUES (?, ?, ?::jsonb)",
-        schema);
-    
+        "INSERT INTO %s.configuration_settings"
+        + "(id, config_name, config_value) VALUES (?, ?, ?::jsonb)", schema);
+
     try (Connection connection = SingleConnectionProvider.getConnection(vertx, tenantId)) {
       // Insert the main configuration with baseUrl
       PreparedStatement ps = connection.prepareStatement(insertSql);

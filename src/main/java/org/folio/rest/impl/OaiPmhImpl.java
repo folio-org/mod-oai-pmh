@@ -112,7 +112,8 @@ public class OaiPmhImpl implements Oai {
               configSettings.stream()
                   .map(object -> (JsonObject) object)
                   .map(entry -> entry.getJsonObject("configValue"))
-                  .forEach(configValue -> configValue.forEach(entry -> config.put(entry.getKey(), entry.getValue())));
+                  .forEach(configValue -> configValue
+                    .forEach(entry -> config.put(entry.getKey(), entry.getValue())));
             }
             configsMap.put(generatedRequestId, config);
             
