@@ -2,7 +2,6 @@ package org.folio.rest.impl;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
-import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.FROM_PARAM;
 import static org.folio.oaipmh.Constants.IDENTIFIER_PARAM;
 import static org.folio.oaipmh.Constants.METADATA_PREFIX_PARAM;
@@ -44,7 +43,6 @@ import org.folio.oaipmh.helpers.GetOaiRecordHelper;
 import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
-import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
@@ -69,7 +67,6 @@ public class OaiPmhImpl implements Oai {
 
   private VerbValidator validator;
   private ConfigurationSettingsService configurationService;
-  private ConfigurationHelper configurationHelper;
 
   public OaiPmhImpl() {
     SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
@@ -108,14 +105,14 @@ public class OaiPmhImpl implements Oai {
         .onSuccess(configList -> {
           String requestId = generatedRequestId;
           try {
-            // Process configuration settings
+            // Process configuration settings from database
             JsonObject config = new JsonObject();
-            JsonArray configs = configList.getJsonArray(CONFIGS);
-            if (configs != null) {
-              configs.stream()
+            JsonArray configSettings = configList.getJsonArray("configurationSettings");
+            if (configSettings != null) {
+              configSettings.stream()
                   .map(object -> (JsonObject) object)
-                  .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
-                  .forEach(configKeyValueMap -> configKeyValueMap.forEach(config::put));
+                  .map(entry -> entry.getJsonObject("configValue"))
+                  .forEach(configValue -> configValue.forEach(entry -> config.put(entry.getKey(), entry.getValue())));
             }
             configsMap.put(generatedRequestId, config);
             
@@ -245,10 +242,5 @@ public class OaiPmhImpl implements Oai {
   @Autowired
   public void setConfigurationService(ConfigurationSettingsService configurationService) {
     this.configurationService = configurationService;
-  }
-
-  @Autowired
-  public void setConfigurationHelper(ConfigurationHelper configurationHelper) {
-    this.configurationHelper = configurationHelper;
   }
 }

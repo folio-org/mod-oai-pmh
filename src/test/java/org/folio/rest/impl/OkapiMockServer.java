@@ -22,7 +22,6 @@ import static org.folio.oaipmh.Constants.LOCATION_URI;
 import static org.folio.oaipmh.Constants.MATERIAL_TYPES_URI;
 import static org.folio.oaipmh.Constants.MODES_OF_ISSUANCE_URI;
 import static org.folio.oaipmh.Constants.NATURE_OF_CONTENT_TERMS_URI;
-import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.RESOURCE_TYPES_URI;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -176,14 +175,6 @@ public class OkapiMockServer {
   private static final String SRS_RECORD_WITH_INVALID_JSON = "/srs_record_with_invalid_json.json";
   private static final String TWO_RECORDS_ONE_CANNOT_BE_CONVERTED_TO_XML_JSON =
       "/two_records_one_cannot_be_converted_to_xml.json";
-  private static final String CONFIG_TEST = "/configurations.entries/config_test.json";
-  private static final String CONFIG_EMPTY = "/configurations.entries/config_empty.json";
-  private static final String CONFIG_OAI_TENANT = "/configurations.entries/config_oaiTenant.json";
-  private static final String CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS =
-      "/configurations.entries/config_process_suppressed_records.json";
-  private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS =
-      "/configurations.entries/config_invalid_setting_value.json";
-  private static final String CONFIGURATIONS_ENTRIES = "/configurations/entries";
 
   private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
@@ -347,9 +338,6 @@ public class OkapiMockServer {
     router.get(SOURCE_STORAGE_RESULT_URI)
         .handler(this::handleSourceRecordStorageResponse);
 
-    router.get(CONFIGURATIONS_ENTRIES)
-        .handler(this::handleConfigurationModuleResponse);
-
     router.get(INSTANCE_STORAGE_URI)
         .handler(this::handleInstanceStorageRequest);
     // related to MarcWithHoldingsRequestHelper
@@ -395,38 +383,6 @@ public class OkapiMockServer {
       failureResponse(ctx, 500, INTERNAL_SERVER_ERROR);
     } else {
       inventoryViewSuccessResponse(ctx, instanceIds);
-    }
-  }
-
-  private void handleConfigurationModuleResponse(RoutingContext ctx) {
-    switch (ctx.request().getHeader(OKAPI_TENANT)) {
-      case EXIST_CONFIG_TENANT:
-        successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_TEST));
-        break;
-      case EXIST_CONFIG_TENANT_2:
-        successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_OAI_TENANT));
-        break;
-      case INVALID_CONFIG_TENANT:
-        successResponse(ctx,
-            getJsonObjectFromFileAsString(CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS));
-        break;
-      case OAI_TEST_TENANT:
-        if (ctx.request().absoluteURI().contains(SUPPRESSED_RECORDS_DATE)) {
-          successResponse(ctx,
-              getJsonObjectFromFileAsString(CONFIG_OAI_TENANT_PROCESS_SUPPRESSED_RECORDS));
-        } else {
-          successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_OAI_TENANT));
-        }
-        break;
-      case ERROR_TENANT:
-        failureResponse(ctx, 500, "Internal Server Error");
-        break;
-      case INVALID_JSON_TENANT:
-        successResponse(ctx, "&&@^$%^@$^&$");
-        break;
-      default:
-        successResponse(ctx, getJsonObjectFromFileAsString(CONFIG_EMPTY));
-        break;
     }
   }
 
