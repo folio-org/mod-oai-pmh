@@ -786,7 +786,6 @@
                 </env>
                 <ports>
                   <port>${db.port}:5432</port>
-                  <port>+docker.host.address:${db.port}:5432</port>
                 </ports>
                 <wait>
                   <log>(?s)ready to accept connections.*ready to accept connections</log>
