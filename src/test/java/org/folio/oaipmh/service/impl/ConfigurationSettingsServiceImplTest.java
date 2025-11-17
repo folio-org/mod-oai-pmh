@@ -18,10 +18,12 @@ import org.folio.oaipmh.dao.ConfigurationSettingsDao;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 class ConfigurationSettingsServiceImplTest {
 
