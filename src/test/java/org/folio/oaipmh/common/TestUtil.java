@@ -56,8 +56,8 @@ public class TestUtil {
       // Insert the main configuration with baseUrl
       PreparedStatement ps = connection.prepareStatement(insertSql);
       ps.setObject(1, UUID.fromString("42b9ea94-ec9a-4904-9809-532ffc4573fe"));
-      ps.setString(2, "test_config");
-      ps.setString(3, "{\"repositoryName\":\"FOLIO_OAI_Repository_mock\",\"baseUrl\":\"http://test.folio.org/oai\",\"administratorEmail\":\"oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org\"}");
+      ps.setString(2, "repositoryBaseURL");
+      ps.setString(3, "{\"repositoryName\":\"FOLIO_OAI_Repository_mock\",\"baseUrl\":\"http://test.folio.org/oai\",\"administratorEmail\":\"oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org\",\"enableOaiService\":true}");
       ps.execute();
       log.info("Inserted default configuration settings for {}", tenantId);
     } catch (Exception ex) {

@@ -44,6 +44,7 @@ import org.folio.oaipmh.helpers.GetOaiRepositoryInfoHelper;
 import org.folio.oaipmh.helpers.GetOaiSetsHelper;
 import org.folio.oaipmh.helpers.VerbHelper;
 import org.folio.oaipmh.helpers.response.ResponseHelper;
+import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.folio.oaipmh.validator.VerbValidator;
@@ -113,7 +114,12 @@ public class OaiPmhImpl implements Oai {
                   .map(object -> (JsonObject) object)
                   .map(entry -> entry.getJsonObject("configValue"))
                   .forEach(configValue -> configValue
-                    .forEach(entry -> config.put(entry.getKey(), entry.getValue())));
+                    .forEach(entry -> {
+                      // Map frontend key to backend key using PropertyNameMapper
+                      String backendKey = PropertyNameMapper
+                          .mapFrontendKeyToServerKey(entry.getKey());
+                      config.put(backendKey, entry.getValue());
+                    }));
             }
             configsMap.put(generatedRequestId, config);
             
