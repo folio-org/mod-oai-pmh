@@ -37,18 +37,46 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
   public Future<Response> handle(Request request, Context ctx) {
     Promise<Response> promise = Promise.promise();
     try {
+      logger.info("handle:: Starting GetRecord request - requestId: {}, identifier: {}, "
+          + "metadataPrefix: {}", request.getRequestId(), request.getIdentifier(), 
+          request.getMetadataPrefix());
+      logger.info("handle:: Storage identifier: {} for requestId: {}", 
+          request.getStorageIdentifier(), request.getRequestId());
+      
       List<OAIPMHerrorType> errors = validateRequest(request);
       if (!errors.isEmpty()) {
+        logger.warn("handle:: Validation failed with {} errors for requestId: {}", 
+            errors.size(), request.getRequestId());
+        for (OAIPMHerrorType error : errors) {
+          logger.warn("handle:: Validation error - code: {}, message: {} for requestId: {}", 
+              error.getCode(), error.getValue(), request.getRequestId());
+        }
         return buildResponseWithErrors(request, promise, errors);
       }
+      
       var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
+      logger.info("handle:: Records source: '{}' for requestId: {}", 
+          recordsSource, request.getRequestId());
+      
       if (recordsSource.equals(INVENTORY)) {
         logger.info("handle:: Generate records from inventory by requestId {}",
             request.getRequestId());
-        requestFromInventory(request, 1, request.getIdentifier() != null
-            ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-            .onComplete(handler ->
-                handleInventoryResponse(handler, request, ctx, promise));
+        List<String> identifiers = request.getIdentifier() != null
+            ? List.of(request.getStorageIdentifier()) : null;
+        logger.info("handle:: Requesting from inventory with identifiers: {} for requestId: {}", 
+            identifiers, request.getRequestId());
+        requestFromInventory(request, 1, identifiers, false, false, true)
+            .onComplete(handler -> {
+              if (handler.succeeded()) {
+                logger.info("handle:: Successfully received for requestId: {}", 
+                    request.getRequestId());
+              } else {
+                logger.error("handle:: Failed to receive response from inventory for requestId: {} "
+                    + "with error: {}", request.getRequestId(), 
+                    handler.cause() != null ? handler.cause().getMessage() : "unknown");
+              }
+              handleInventoryResponse(handler, request, ctx, promise);
+            });
       } else {
         logger.info("handle:: Process records from srs for requestId {}",
             request.getRequestId());
@@ -56,8 +84,8 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
             recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
-      logger.error("handle:: Request failed for requestId {} with error {}",
-          request.getRequestId(),  e.getMessage());
+      logger.error("handle:: Request failed for requestId {} with error: {}",
+          request.getRequestId(), e.getMessage(), e);
       handleException(promise, e);
     }
     return promise.future();
@@ -65,28 +93,50 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
   @Override
   protected List<OAIPMHerrorType> validateRequest(Request request) {
+    logger.info("validateRequest:: Validating request for requestId: {}", request.getRequestId());
     List<OAIPMHerrorType> errors = new ArrayList<>();
-    if (!validateIdentifier(request)) {
+    
+    boolean identifierValid = validateIdentifier(request);
+    logger.info("validateRequest:: Identifier validation result: {} for identifier: '{}' "
+        + "(storage: '{}') for requestId: {}", identifierValid, request.getIdentifier(), 
+        request.getStorageIdentifier(), request.getRequestId());
+    if (!identifierValid) {
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
           .withValue(INVALID_IDENTIFIER_ERROR_MESSAGE));
     }
+    
     if (request.getMetadataPrefix() != null) {
-      if (!MetadataPrefix.getAllMetadataFormats().contains(request.getMetadataPrefix())) {
+      boolean formatSupported = MetadataPrefix.getAllMetadataFormats()
+          .contains(request.getMetadataPrefix());
+      logger.info("validateRequest:: Metadata prefix validation result: {} for prefix: '{}' "
+          + "for requestId: {}", formatSupported, request.getMetadataPrefix(), 
+          request.getRequestId());
+      if (!formatSupported) {
         errors.add(new OAIPMHerrorType().withCode(CANNOT_DISSEMINATE_FORMAT)
             .withValue(CANNOT_DISSEMINATE_FORMAT_ERROR));
       }
     } else {
+      logger.warn("validateRequest:: Metadata prefix is null for requestId: {}", 
+          request.getRequestId());
       errors.add(new OAIPMHerrorType().withCode(BAD_ARGUMENT)
           .withValue(RECORD_METADATA_PREFIX_PARAM_ERROR));
     }
+    
+    logger.info("validateRequest:: Validation completed with {} errors for requestId: {}", 
+        errors.size(), request.getRequestId());
     return errors;
   }
 
   @Override
   protected void addRecordsToOaiResponse(OAIPMH oaipmh, Collection<RecordType> records) {
+    logger.info("addRecordsToOaiResponse:: Adding {} records to OAI response", records.size());
     if (!records.isEmpty()) {
-      oaipmh.withGetRecord(new GetRecordType().withRecord(records.iterator().next()));
+      RecordType record = records.iterator().next();
+      logger.info("addRecordsToOaiResponse:: Adding record with identifier: {}", 
+          record.getHeader() != null ? record.getHeader().getIdentifier() : "null");
+      oaipmh.withGetRecord(new GetRecordType().withRecord(record));
     } else {
+      logger.warn("addRecordsToOaiResponse:: No records found, adding error response");
       oaipmh.withErrors(createNoRecordFoundError());
     }
   }
@@ -102,11 +152,14 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
 
   @Override
   public Response buildNoRecordsFoundOaiResponse(OAIPMH oaipmh, Request request) {
+    logger.warn("buildNoRecordsFoundOaiResponse:: Building no records found response for "
+        + "identifier: '{}' for requestId: {}", request.getIdentifier(), request.getRequestId());
     oaipmh.withErrors(createNoRecordFoundError());
     return getResponseHelper().buildFailureResponse(oaipmh, request);
   }
 
   private OAIPMHerrorType createNoRecordFoundError() {
+    logger.info("createNoRecordFoundError:: Creating ID_DOES_NOT_EXIST error");
     return new OAIPMHerrorType().withCode(ID_DOES_NOT_EXIST).withValue(RECORD_NOT_FOUND_ERROR);
   }
 

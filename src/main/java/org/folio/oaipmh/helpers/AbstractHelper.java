@@ -334,7 +334,13 @@ public abstract class AbstractHelper implements VerbHelper {
   }
 
   protected boolean validateIdentifier(Request request) {
-    return StringUtils.startsWith(request.getIdentifier(), request.getIdentifierPrefix());
+    String identifier = request.getIdentifier();
+    String identifierPrefix = request.getIdentifierPrefix();
+    boolean isValid = StringUtils.startsWith(identifier, identifierPrefix);
+    logger.info("validateIdentifier:: Validating identifier: '{}' with prefix: '{}', "
+        + "result: {} for requestId: {}", identifier, identifierPrefix, isValid, 
+        request.getRequestId());
+    return isValid;
   }
 
   protected List<SetType> getSupportedSetTypes() {

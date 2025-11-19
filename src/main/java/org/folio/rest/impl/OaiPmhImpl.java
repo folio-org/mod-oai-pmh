@@ -90,6 +90,7 @@ public class OaiPmhImpl implements Oai {
         + "resumptionToken: {}, from: {}, until: {}, set: {}, metadataPrefix: {}",
         verb, identifier, resumptionToken, from, until, set, metadataPrefix);
     String generatedRequestId = UUID.randomUUID().toString();
+    logger.info("getOaiRecords:: Generated requestId: {}", generatedRequestId);
     Request.Builder requestBuilder = Request.builder()
         .okapiHeaders(okapiHeaders)
         .verb(getVerb(verb))
@@ -103,14 +104,20 @@ public class OaiPmhImpl implements Oai {
     var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
 
     String tenantId = okapiHeaders.get(OKAPI_TENANT);
+    logger.info("getOaiRecords:: Fetching configuration for tenant: {}, requestId: {}", 
+        tenantId, generatedRequestId);
     configurationService.getConfigurationSettingsList(0, 100, null, tenantId)
         .onSuccess(configList -> {
           String requestId = generatedRequestId;
           try {
+            logger.debug("getOaiRecords:: Successfully retrieved configuration for requestId: {}", 
+                generatedRequestId);
             // Process configuration settings from database
             JsonObject config = new JsonObject();
             JsonArray configSettings = configList.getJsonArray("configurationSettings");
             if (configSettings != null) {
+              logger.debug("getOaiRecords:: Processing {} configuration reId: {}", 
+                  configSettings.size(), generatedRequestId);
               configSettings.stream()
                   .map(object -> (JsonObject) object)
                   .map(entry -> entry.getJsonObject("configValue"))
@@ -123,14 +130,22 @@ public class OaiPmhImpl implements Oai {
                     }));
             }
             configsMap.put(generatedRequestId, config);
+            logger.debug("getOaiRecords:: Configuration saved for requestId: {}, config: {}", 
+                generatedRequestId, config.encodePrettily());
             
-            request.setBaseUrl(getProperty(generatedRequestId, REPOSITORY_BASE_URL));
+            String baseUrl = getProperty(generatedRequestId, REPOSITORY_BASE_URL);
+            request.setBaseUrl(baseUrl);
+            logger.info("getOaiRecords:: Base URL set to: '{}' for requestId: {}", 
+                baseUrl, generatedRequestId);
             if (StringUtils.isNotEmpty(identifier)) {
-              request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
+              String decodedIdentifier = URLDecoder.decode(identifier, "UTF-8");
+              request.setIdentifier(decodedIdentifier);
+              logger.info("getOaiRecords:: Identifier decoded from '{}' to '{}' for requestId: {}", 
+                  identifier, decodedIdentifier, generatedRequestId);
             } else if (GET_RECORD.value().equals(verb) 
                 || LIST_METADATA_FORMATS.value().equals(verb)) {
-              logger.warn("getOaiRecords:: Identifier is required but not provided for verb {}", 
-                  verb);
+              logger.warn("getOaiRecords:: Identifier is required but not provided for verb {} "
+                  + "for requestId: {}", verb, generatedRequestId);
             }
             if (!getBooleanProperty(generatedRequestId, REPOSITORY_ENABLE_OAI_SERVICE)) {
               ResponseHelper responseHelper = ResponseHelper.getInstance();
@@ -149,11 +164,20 @@ public class OaiPmhImpl implements Oai {
             addParamToMapIfNotEmpty(SET_PARAM, set, requestParams);
             addParamToMapIfNotEmpty(METADATA_PREFIX_PARAM, metadataPrefix, requestParams);
 
+            logger.info("getOaiRecords:: Validating parameters for verb: {} params: {}, "
+                + "requestId: {}", verb, requestParams, generatedRequestId);
             List<OAIPMHerrorType> errors = validator.validate(verb, requestParams, request);
             requestId = setupRequestIdIfAbsent(request, generatedRequestId);
+            logger.info("getOaiRecords:: Final requestId: {} (generated: {})", 
+                request.getRequestId(), generatedRequestId);
             if (isNotEmpty(errors)) {
-              logger.info("getOaiRecords:: Validation errors {} for verb {} for requestId {}",
-                  errors.size(), verb, request.getRequestId());
+              logger.warn("getOaiRecords:: Validation failed with {} errors for verb '{}' "
+                  + "for requestId: {}", errors.size(), verb, request.getRequestId());
+              for (OAIPMHerrorType error : errors) {
+                logger.warn("getOaiRecords:: Validation error - code: {}, message: {} "
+                    + "for requestId: {}", error.getCode(), error.getValue(), 
+                    request.getRequestId());
+              }
               ResponseHelper responseHelper = ResponseHelper.getInstance();
               OAIPMH oaipmh = responseHelper.buildOaipmhResponseWithErrors(request, errors);
               asyncResultHandler.handle(succeededFuture(
@@ -166,15 +190,21 @@ public class OaiPmhImpl implements Oai {
               } else {
                 verbHelper = HELPERS.get(verbType);
               }
-              logger.info("getOaiRecords:: Use {} for requestId {}",
-                  verbHelper.getClass().getCanonicalName(),  request.getRequestId());
+              logger.info("getOaiRecords:: Using helper {} for verb '{}' with requestId: {}",
+                  verbHelper.getClass().getSimpleName(), verb, request.getRequestId());
+              logger.info("getOaiRecords:: Calling verbHelper.handle() for requestId: {}", 
+                  request.getRequestId());
               verbHelper
                   .handle(request, vertxContext)
                   .compose(response -> {
+                    logger.info("getOaiRecords:: Request completed successfully for requestId: {}", 
+                        request.getRequestId());
                     cleanConfigForRequestId(request.getRequestId());
                     asyncResultHandler.handle(succeededFuture(response));
                     return succeededFuture();
                   }).onFailure(e -> {
+                    logger.error("getOaiRecords:: Request failed in verbHelper for requestId: {} "
+                        + "with error: {}", request.getRequestId(), e.getMessage(), e);
                     cleanConfigForRequestId(request.getRequestId());
                     var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(
                         oaipmhResponse, request, e.getMessage());
@@ -182,14 +212,16 @@ public class OaiPmhImpl implements Oai {
                   });
             }
           } catch (Exception e) {
-            logger.error("getOaiRecords:: RequestId {} completed with  error {}",
-                requestId,  e.getMessage());
+            logger.error("getOaiRecords:: RequestId {} completed with error: {}", 
+                requestId, e.getMessage(), e);
             cleanConfigForRequestId(requestId);
             var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(
                 oaipmhResponse, request, e.getMessage());
             asyncResultHandler.handle(succeededFuture(responseWithErrors));
           }
         }).onFailure(e -> {
+          logger.error("getOaiRecords:: Failed to retrieve configuration for tenant: {} "
+              + "with error: {}", tenantId, e.getMessage(), e);
           var responseWithErrors = AbstractHelper.buildNoRecordsFoundOaiResponse(
               oaipmhResponse, request, e.getMessage());
           asyncResultHandler.handle(succeededFuture(responseWithErrors));
