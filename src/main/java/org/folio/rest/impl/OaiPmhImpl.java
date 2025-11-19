@@ -97,7 +97,8 @@ public class OaiPmhImpl implements Oai {
         .metadataPrefix(metadataPrefix)
         .resumptionToken(resumptionToken)
         .set(set)
-        .until(until);
+        .until(until)
+        .identifier(identifier);
     Request request = requestBuilder.build();
     var oaipmhResponse = AbstractHelper.getResponseHelper().buildBaseOaipmhResponse(request);
 
@@ -126,6 +127,10 @@ public class OaiPmhImpl implements Oai {
             request.setBaseUrl(getProperty(generatedRequestId, REPOSITORY_BASE_URL));
             if (StringUtils.isNotEmpty(identifier)) {
               request.setIdentifier(URLDecoder.decode(identifier, "UTF-8"));
+            } else if (GET_RECORD.value().equals(verb) 
+                || LIST_METADATA_FORMATS.value().equals(verb)) {
+              logger.warn("getOaiRecords:: Identifier is required but not provided for verb {}", 
+                  verb);
             }
             if (!getBooleanProperty(generatedRequestId, REPOSITORY_ENABLE_OAI_SERVICE)) {
               ResponseHelper responseHelper = ResponseHelper.getInstance();
