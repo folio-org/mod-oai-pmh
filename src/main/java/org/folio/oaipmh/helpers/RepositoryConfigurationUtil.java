@@ -8,7 +8,6 @@ import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
 import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,9 +16,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
-import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.DeletedRecordType;
-import org.springframework.beans.factory.annotation.Autowired;
+
 
 public class RepositoryConfigurationUtil {
 
@@ -29,17 +27,16 @@ public class RepositoryConfigurationUtil {
       + "%s tenant: %s";
   private static Map<String, JsonObject> configsMap = new HashMap<>();
   private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
-
-  @Autowired
   private static ConfigurationSettingsService configurationSettingsService;
 
-  public RepositoryConfigurationUtil() {
-    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  private RepositoryConfigurationUtil() {
+    // Private constructor to prevent instantiation
   }
 
   public static void setConfigurationSettingsService(ConfigurationSettingsService service) {
     configurationSettingsService = service;
   }
+
 
   /**
    * Retrieve configuration for mod-oai-pmh from own configuration service and puts these
