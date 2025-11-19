@@ -3,42 +3,46 @@ package org.folio.oaipmh.helpers;
 import static java.lang.Boolean.parseBoolean;
 import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.openarchives.oai._2.DeletedRecordType.PERSISTENT;
 import static org.openarchives.oai._2.DeletedRecordType.TRANSIENT;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
-import org.folio.rest.client.ConfigurationsClient;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
+import org.folio.spring.SpringContextUtil;
 import org.openarchives.oai._2.DeletedRecordType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class RepositoryConfigurationUtil {
 
   private static final Logger logger = LogManager.getLogger(RepositoryConfigurationUtil.class);
 
-  private static final String MOD_CONFIGURATION_ERROR = "mod-configuration didn't respond for "
-      + "%s tenant with status 200. Status code was %s";
-  private static final String QUERY = "module==OAIPMH";
+  private static final String CONFIGURATION_ERROR = "Configuration service error for "
+      + "%s tenant: %s";
   private static Map<String, JsonObject> configsMap = new HashMap<>();
   private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
 
-  private RepositoryConfigurationUtil() {}
+  @Autowired
+  private static ConfigurationSettingsService configurationSettingsService;
+
+  public RepositoryConfigurationUtil() {
+    SpringContextUtil.autowireDependencies(this, Vertx.currentContext());
+  }
+
+  public static void setConfigurationSettingsService(ConfigurationSettingsService service) {
+    configurationSettingsService = service;
+  }
 
   /**
-   * Retrieve configuration for mod-oai-pmh from mod-configuration and puts these
+   * Retrieve configuration for mod-oai-pmh from own configuration service and puts these
    * properties into context.
    *
    * @param okapiHeaders - okapi headers
@@ -47,52 +51,53 @@ public class RepositoryConfigurationUtil {
    */
   public static Future<Void> loadConfiguration(Map<String, String> okapiHeaders,
       String requestId) {
-    Promise<Void> promise = Promise.promise();
-
-    String okapiUrl = StringUtils.trimToEmpty(okapiHeaders.get(OKAPI_URL));
     String tenant = okapiHeaders.get(OKAPI_TENANT);
-    String token = okapiHeaders.get(OKAPI_TOKEN);
 
-    var client = WebClientProvider.getWebClient();
+    if (configurationSettingsService == null) {
+      logger.error("ConfigurationSettingsService is not initialized for {} tenant.", tenant);
+      return Future.failedFuture(
+        new IllegalStateException("ConfigurationSettingsService is not initialized"));
+    }
 
     try {
-      var configurationsClient = new ConfigurationsClient(okapiUrl, tenant, token, client);
-      configurationsClient.getConfigurationsEntries(QUERY, 0, 100, null,
-          null, result -> {
+      // Fetch all OAIPMH configurations from own configuration service
+      // Using offset=0 and limit=100 to get all configurations
+      return configurationSettingsService.getConfigurationSettingsList(0, 100, null, tenant)
+        .compose(response -> {
           try {
-            if (result.succeeded()) {
-              HttpResponse<Buffer> response = result.result();
-              if (response.statusCode() != 200) {
-                var errorMessage = String.format(MOD_CONFIGURATION_ERROR, tenant,
-                    response.statusCode());
-                logger.error(errorMessage);
-                throw new IllegalStateException(errorMessage);
-              }
-              JsonObject body = response.bodyAsJsonObject();
-              JsonObject config = new JsonObject();
-              body.getJsonArray(CONFIGS)
+            JsonObject config = new JsonObject();
+            
+            // Process the configuration settings
+            if (response != null && response.containsKey(CONFIGS)) {
+              response.getJsonArray(CONFIGS)
                   .stream()
                   .map(object -> (JsonObject) object)
                   .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
                   .forEach(configKeyValueMap ->
                       configKeyValueMap.forEach(config::put));
-
-              configsMap.put(requestId, config);
-              promise.complete(null);
             }
+
+            configsMap.put(requestId, config);
+            logger.info("Configuration loaded successfully for {} tenant.", tenant);
+            return Future.<Void>succeededFuture();
           } catch (Exception e) {
             logger.error("Error occurred while processing configuration for {} tenant.",
                 tenant, e);
-            promise.fail(e);
+            return Future.<Void>failedFuture(e);
           }
+        })
+        .recover(throwable -> {
+          logger.error("Error loading configuration for {} tenant: {}",
+              tenant, throwable.getMessage(), throwable);
+          return Future.failedFuture(
+              new IllegalStateException(
+                  String.format(CONFIGURATION_ERROR, tenant, throwable.getMessage()),
+                  throwable));
         });
     } catch (Exception e) {
-      logger.error("Error happened initializing mod-configurations client for {} tenant.",
-          tenant, e);
-      promise.fail(e);
-      return promise.future();
+      logger.error("Error initializing configuration service for {} tenant.", tenant, e);
+      return Future.failedFuture(e);
     }
-    return promise.future();
   }
 
   public static void replaceGeneratedConfigKeyWithExisted(String generatedRequestId,
