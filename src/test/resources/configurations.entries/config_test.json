@@ -2,11 +2,11 @@
   "configurationSettings": [
     {
       "id": "42b9ea94-ec9a-4904-9809-532ffc4573fe",
-      "configName": "test_config",
+      "configName": "test_config1",
       "configValue": {
         "repositoryName": "FOLIO_OAI_Repository_mock",
         "baseUrl": "http://test.folio.org/oai",
-        "administratorEmail": "oai-pmh-admin1@folio.org",
+        "administratorEmail": "oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org",
         "maxRecordsPerResponse": "100"
       }
     }
