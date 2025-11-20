@@ -67,8 +67,15 @@ public class RepositoryConfigurationUtil {
                 response != null ? response.encodePrettily() : "null");
             
             // Process the configuration settings
-            if (response != null && response.containsKey(CONFIGS)) {
-              response.getJsonArray(CONFIGS)
+            // Check for both "configs" and "configurationSettings" keys
+            String configKey = response != null && response.containsKey("configurationSettings") 
+                ? "configurationSettings" : CONFIGS;
+            
+            logger.info("Using config key: {}, response contains key: {}", 
+                configKey, response != null && response.containsKey(configKey));
+            
+            if (response != null && response.containsKey(configKey)) {
+              response.getJsonArray(configKey)
                   .stream()
                   .map(object -> (JsonObject) object)
                   .peek(entry -> logger.info("Processing config entry: {}", entry.encodePrettily()))
