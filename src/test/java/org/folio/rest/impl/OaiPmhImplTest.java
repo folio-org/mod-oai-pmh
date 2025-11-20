@@ -308,6 +308,7 @@ class OaiPmhImplTest {
     System.setProperty("minio.secretKey", S3_SECRET_KEY);
     System.setProperty("minio.endpoint", MINIO_ENDPOINT);
     resetSystemProperties();
+    System.setProperty(REPOSITORY_BASE_URL, "http://test.folio.org/oai");
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000 * 60 * 60);
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);

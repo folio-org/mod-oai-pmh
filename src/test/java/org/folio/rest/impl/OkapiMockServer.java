@@ -183,7 +183,7 @@ public class OkapiMockServer {
       "/configurations.entries/config_process_suppressed_records.json";
   private static final String CONFIG_WITH_INVALID_VALUE_FOR_DELETED_RECORDS =
       "/configurations.entries/config_invalid_setting_value.json";
-  private static final String CONFIGURATIONS_ENTRIES = "/oai-pmh/configurations-settings";
+  private static final String CONFIGURATIONS_ENTRIES = "/oai-pmh/configuration-settings";
 
   private static final String INSTANCE_STORAGE_URI = "/instance-storage/instances";
   private static final String SOURCE_STORAGE_RESULT_URI = "/source-storage/source-records";
