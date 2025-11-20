@@ -5,7 +5,7 @@
       "configName": "test_config",
       "configValue": {
         "repositoryName": "FOLIO_OAI_Repository_mock",
-        "baseUrl": "http://mock.folio.org/oai",
+        "baseUrl": "http://test.folio.org/oai",
         "administratorEmail": "oai-pmh-admin1@folio.org",
         "maxRecordsPerResponse": "100"
       }
