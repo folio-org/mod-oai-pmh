@@ -69,7 +69,8 @@ class RepositoryConfigurationUtilTest {
       // Test first tenant
       String tenant1 = EXIST_CONFIG_TENANT;
       okapiHeaders.put(OKAPI_TENANT, tenant1);
-      when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(), eq(tenant1)))
+      when(mockConfigService.getConfigurationSettingsList(anyInt(), 
+        anyInt(), isNull(), eq(tenant1)))
           .thenReturn(Future.succeededFuture(createConfigResponse(tenant1)));
       
       RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, tenant1)
@@ -82,7 +83,8 @@ class RepositoryConfigurationUtilTest {
             // Test second tenant
             String tenant2 = EXIST_CONFIG_TENANT_2;
             okapiHeaders.put(OKAPI_TENANT, tenant2);
-            when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(), eq(tenant2)))
+            when(mockConfigService.getConfigurationSettingsList(anyInt(), 
+              anyInt(), isNull(), eq(tenant2)))
                 .thenReturn(Future.succeededFuture(createConfigResponse(tenant2)));
             
             RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, tenant2)
@@ -219,7 +221,7 @@ class RepositoryConfigurationUtilTest {
     return result;
   }
   
-  /**
+  /**.
    * Helper method to create a configuration response for a given tenant
    */
   private JsonObject createConfigResponse(String tenant) {
@@ -230,7 +232,7 @@ class RepositoryConfigurationUtilTest {
       return new JsonObject().put(CONFIGS, new JsonArray());
     }
     
-    JsonObject response = new JsonObject();
+  
     JsonArray configsArray = new JsonArray();
     
     // Create a single configuration entry with all properties
@@ -239,6 +241,7 @@ class RepositoryConfigurationUtilTest {
     configForTenant.forEach(valueObject::put);
     configEntry.put(VALUE, valueObject.encode());
     configsArray.add(configEntry);
+    JsonObject response = new JsonObject();
     
     response.put(CONFIGS, configsArray);
     return response;
