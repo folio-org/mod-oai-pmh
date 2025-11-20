@@ -76,35 +76,31 @@ public class RepositoryConfigurationUtil {
             
             if (response != null && response.containsKey(configKey)) {
               response.getJsonArray(configKey)
-                  .stream()
-                  .map(object -> (JsonObject) object)
-                  .peek(entry -> logger.info("Processing config entry: {}", entry.encodePrettily()))
-                  .forEach(entry -> {
-                    // Handle new structure where configValue is a JsonObject, not a string
-                    JsonObject configValue = entry.getJsonObject("configValue");
-                    if (configValue != null) {
-                      logger.info("Found configValue object: {}", configValue.encodePrettily());
-                      logger.info("configValue map size: {}", configValue.getMap().size());
-                      
-                      // Map frontend keys to backend keys and add to config
-                      configValue.fieldNames().forEach(key -> {
-                        Object value = configValue.getValue(key);
-                        String mappedKey = org.folio.oaipmh.mappers.PropertyNameMapper
-                            .mapFrontendKeyToServerKey(key);
-                        String stringValue = value != null ? value.toString() : null;
-                        logger.info("Mapping: {} -> {} = {} (type: {})", 
-                            key, mappedKey, stringValue, 
-                            value != null ? value.getClass().getSimpleName() : "null");
-                        config.put(mappedKey, stringValue);
-                        logger.info("Config now has {} keys", config.size());
-                      });
-                    } else {
-                      logger.warn("configValue is null for entry: {}", 
-                          entry.encodePrettily());
-                    }
-                  });
+                    .stream()
+                    .map(o -> (JsonObject) JsonObject.mapFrom(o))
+                    .peek(entry -> logger.info("Processing config entry: {}",
+                      entry.encodePrettily()))
+                    .forEach(entry -> {
+                      JsonObject configValue = entry.getJsonObject("configValue");
+                      if (configValue != null) {
+                        logger.info("Found configValue object: {}", configValue.encodePrettily());
+                        logger.info("configValue map size: {}", configValue.getMap().size());
+                        configValue.fieldNames().forEach(key -> {
+                          Object value = configValue.getValue(key);
+                          String mappedKey = org.folio.oaipmh.mappers.PropertyNameMapper
+                              .mapFrontendKeyToServerKey(key);
+                          String stringValue = value != null ? value.toString() : null;
+                          logger.info("Mapping: {} -> {} = {} (type: {})",
+                              key, mappedKey, stringValue,
+                              value != null ? value.getClass().getSimpleName() : "null");
+                          config.put(mappedKey, stringValue);
+                          logger.info("Config now has {} keys", config.size());
+                        });
+                      } else {
+                        logger.warn("configValue is null for entry: {}", entry.encodePrettily());
+                      }
+                    });
             }
-
             // Debug logging to verify configuration
             logger.info("Final configuration for {} tenant. Keys: {}", 
                 tenant, config.fieldNames());
