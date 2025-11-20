@@ -77,23 +77,34 @@ public class RepositoryConfigurationUtil {
                     JsonObject configValue = entry.getJsonObject("configValue");
                     if (configValue != null) {
                       logger.info("Found configValue object: {}", configValue.encodePrettily());
+                      logger.info("configValue map size: {}", configValue.getMap().size());
+                      
                       // Map frontend keys to backend keys and add to config
-                      configValue.getMap().forEach((key, value) -> {
+                      configValue.fieldNames().forEach(key -> {
+                        Object value = configValue.getValue(key);
                         String mappedKey = org.folio.oaipmh.mappers.PropertyNameMapper
                             .mapFrontendKeyToServerKey(key);
                         String stringValue = value != null ? value.toString() : null;
-                        logger.info("Mapping: {} -> {} = {}", key, mappedKey, stringValue);
+                        logger.info("Mapping: {} -> {} = {} (type: {})", 
+                            key, mappedKey, stringValue, 
+                            value != null ? value.getClass().getSimpleName() : "null");
                         config.put(mappedKey, stringValue);
+                        logger.info("Config now has {} keys", config.size());
                       });
+                    } else {
+                      logger.warn("configValue is null for entry: {}", 
+                          entry.encodePrettily());
                     }
                   });
             }
 
             // Debug logging to verify configuration
-            logger.info("Final configuration for {} tenant. Keys: {}", tenant, config.fieldNames());
+            logger.info("Final configuration for {} tenant. Keys: {}", 
+                tenant, config.fieldNames());
             logger.info("repository.recordsSource = {}", 
                 config.getString("repository.recordsSource"));
-            logger.info("recordsSource (without prefix) = {}", config.getString("recordsSource"));
+            logger.info("recordsSource (without prefix) = {}", 
+                config.getString("recordsSource"));
             logger.debug("Full configuration: {}", config.encodePrettily());
 
             configsMap.put(requestId, config);
@@ -135,9 +146,18 @@ public class RepositoryConfigurationUtil {
   public static String getProperty(String requestId, String name) {
     JsonObject configs = getConfig(requestId);
     String defaultValue = System.getProperty(name);
+    
+    logger.debug("getProperty called: requestId={}, name={}", requestId, name);
+    logger.debug("Config for requestId: {}", configs != null ? configs.encodePrettily() : "null");
+    logger.debug("System property default: {}", defaultValue);
+    
     if (configs != null) {
-      return configs.getString(name, defaultValue);
+      String value = configs.getString(name, defaultValue);
+      logger.info("getProperty returning: {} = {}", name, value);
+      return value;
     }
+    
+    logger.info("getProperty returning default: {} = {}", name, defaultValue);
     return defaultValue;
   }
 
