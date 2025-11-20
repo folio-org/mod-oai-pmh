@@ -1,6 +1,7 @@
 {
   "configurationSettings": [
     {
+      "id": "42b9ea94-ec9a-4904-9809-532ffc4573fe",
       "configName": "test_config",
       "configValue": {
         "suppressedRecordsProcessing": "true",

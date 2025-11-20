@@ -2040,7 +2040,7 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getAdminEmails(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
+    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(1)));
     assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getGranularity(),
         is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
