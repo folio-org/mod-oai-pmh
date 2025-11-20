@@ -230,13 +230,14 @@ class RepositoryConfigurationUtilTest {
     if (configForTenant == null) {
       return new JsonObject().put("configurationSettings", new JsonArray());
     }
-    JsonArray configsArray = new JsonArray();
+  
     // Create a single configuration entry with all properties
     JsonObject configEntry = new JsonObject();
     JsonObject configValueObject = new JsonObject();
     configForTenant.forEach(configValueObject::put);
     configEntry.put("configValue", configValueObject);
     configEntry.put("configName", "test_config");
+    JsonArray configsArray = new JsonArray();
     configsArray.add(configEntry);
     JsonObject response = new JsonObject();
 
@@ -250,13 +251,14 @@ class RepositoryConfigurationUtilTest {
     okapiHeaders.put(OKAPI_TENANT, INVALID_CONFIG_TENANT);
 
     // Mock configuration with invalid value for deleted records
-    JsonObject invalidConfig = new JsonObject();
+  
     JsonArray configs = new JsonArray();
     JsonObject config = new JsonObject();
     config.put("configValue", new JsonObject()
         .put("deletedRecordsSupport", "invalidValue"));
     config.put("configName", "behavior");
     configs.add(config);
+    JsonObject invalidConfig = new JsonObject();
     invalidConfig.put("configurationSettings", configs);
 
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
@@ -284,8 +286,7 @@ class RepositoryConfigurationUtilTest {
 
     // Mock service returning invalid JSON that cannot be parsed
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
-      eq(INVALID_JSON_TENANT)))
-        .thenReturn(Future.failedFuture(
+        eq(INVALID_JSON_TENANT))).thenReturn(Future.failedFuture(
             new IllegalArgumentException("Invalid JSON structure")));
 
     vertx.runOnContext(event -> {
