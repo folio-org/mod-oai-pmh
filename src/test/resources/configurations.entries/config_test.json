@@ -3,7 +3,12 @@
     {
       "id": "42b9ea94-ec9a-4904-9809-532ffc4573fe",
       "configName": "test_config",
-      "value": "{\"repositoryName\":\"FOLIO_OAI_Repository_mock\",\"baseUrl\":\"http://mock.folio.org/oai\",\"administratorEmail\":\"oai-pmh-admin1@folio.org\",\"maxRecordsPerResponse\":\"100\"}"
+      "configValue": {
+        "repositoryName": "FOLIO_OAI_Repository_mock",
+        "baseUrl": "http://mock.folio.org/oai",
+        "administratorEmail": "oai-pmh-admin1@folio.org",
+        "maxRecordsPerResponse": "100"
+      }
     }
   ],
   "totalRecords": 1

@@ -1,13 +1,11 @@
 package org.folio.oaipmh.helpers;
 
-import static org.folio.oaipmh.Constants.CONFIGS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
-import static org.folio.oaipmh.Constants.VALUE;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -109,7 +107,7 @@ class RepositoryConfigurationUtilTest {
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
         eq(NON_EXIST_CONFIG_TENANT)))
         .thenReturn(Future.succeededFuture(
-          new JsonObject().put(CONFIGS, new JsonArray())));
+          new JsonObject().put("configurationSettings", new JsonArray())));
 
     vertx.runOnContext(event -> RepositoryConfigurationUtil.loadConfiguration(okapiHeaders,
         NON_EXIST_CONFIG_TENANT)
@@ -230,21 +228,19 @@ class RepositoryConfigurationUtilTest {
     Map<String, String> configForTenant = configs.get(tenant);
 
     if (configForTenant == null) {
-      return new JsonObject().put(CONFIGS, new JsonArray());
+      return new JsonObject().put("configurationSettings", new JsonArray());
     }
-
-
     JsonArray configsArray = new JsonArray();
-
     // Create a single configuration entry with all properties
     JsonObject configEntry = new JsonObject();
-    JsonObject valueObject = new JsonObject();
-    configForTenant.forEach(valueObject::put);
-    configEntry.put(VALUE, valueObject.encode());
+    JsonObject configValueObject = new JsonObject();
+    configForTenant.forEach(configValueObject::put);
+    configEntry.put("configValue", configValueObject);
+    configEntry.put("configName", "test_config");
     configsArray.add(configEntry);
     JsonObject response = new JsonObject();
 
-    response.put(CONFIGS, configsArray);
+    response.put("configurationSettings", configsArray);
     return response;
   }
 
@@ -257,11 +253,11 @@ class RepositoryConfigurationUtilTest {
     JsonObject invalidConfig = new JsonObject();
     JsonArray configs = new JsonArray();
     JsonObject config = new JsonObject();
-    config.put(VALUE, new JsonObject()
-        .put("repository.deletedRecords", "invalidValue")
-        .encode());
+    config.put("configValue", new JsonObject()
+        .put("deletedRecordsSupport", "invalidValue"));
+    config.put("configName", "behavior");
     configs.add(config);
-    invalidConfig.put(CONFIGS, configs);
+    invalidConfig.put("configurationSettings", configs);
 
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
       eq(INVALID_CONFIG_TENANT)))
@@ -286,22 +282,16 @@ class RepositoryConfigurationUtilTest {
                                                                            testContext) {
     okapiHeaders.put(OKAPI_TENANT, INVALID_JSON_TENANT);
 
-    // Mock configuration with invalid JSON structure
-    JsonObject invalidResponse = new JsonObject();
-    JsonArray configs = new JsonArray();
-    JsonObject config = new JsonObject();
-    config.put(VALUE, "&&@^$%^@$^&$"); // Invalid JSON string
-    configs.add(config);
-    invalidResponse.put(CONFIGS, configs);
-
+    // Mock service returning invalid JSON that cannot be parsed
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
       eq(INVALID_JSON_TENANT)))
-        .thenReturn(Future.succeededFuture(invalidResponse));
+        .thenReturn(Future.failedFuture(
+            new IllegalArgumentException("Invalid JSON structure")));
 
     vertx.runOnContext(event -> {
       RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, INVALID_JSON_TENANT)
           .onFailure(th -> {
-            assertTrue(th instanceof IllegalArgumentException);
+            assertTrue(th instanceof IllegalStateException);
             testContext.completeNow();
           }).onSuccess(v -> testContext.failNow(
             new IllegalStateException("An exception was expected to be thrown.")));
