@@ -1,12 +1,12 @@
 {
   "configurationSettings": [
     {
-      "configName": "behavior",
+      "configName": "test_config",
       "configValue": {
         "suppressedRecordsProcessing": "true",
         "repositoryName": "FOLIO_OAI_Repository_mock",
         "baseUrl": "http://test.folio.org/oai",
-        "administratorEmail": "oai-pmh-admin1@folio.org,oai-pmh-admin2@folio.org"
+        "administratorEmail": "oai-pmh-admin1@folio.org"
       }
     }
   ],

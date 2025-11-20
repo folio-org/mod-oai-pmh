@@ -1,7 +1,7 @@
 {
   "configurationSettings": [
     {
-      "configName": "behavior",
+      "configName": "test_config",
       "configValue": {
         "deletedRecordsSupport": "invalid_value",
         "repositoryName": "FOLIO_OAI_Repository_mock",
