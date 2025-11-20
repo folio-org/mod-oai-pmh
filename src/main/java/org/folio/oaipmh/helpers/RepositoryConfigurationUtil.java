@@ -64,15 +64,27 @@ public class RepositoryConfigurationUtil {
           try {
             JsonObject config = new JsonObject();
             
+            // Debug: Log raw response
+            logger.info("Raw configuration response for {} tenant: {}", tenant, 
+                response != null ? response.encodePrettily() : "null");
+            
             // Process the configuration settings
             if (response != null && response.containsKey(CONFIGS)) {
               response.getJsonArray(CONFIGS)
                   .stream()
                   .map(object -> (JsonObject) object)
+                  .peek(entry -> logger.info("Processing config entry: {}", entry.encodePrettily()))
                   .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
+                  .peek(map -> logger.info("Mapped config: {}", map))
                   .forEach(configKeyValueMap ->
                       configKeyValueMap.forEach(config::put));
             }
+
+            // Debug logging to verify configuration
+            logger.info("Final configuration for {} tenant. Keys: {}", tenant, config.fieldNames());
+            logger.info("repository.recordsSource = {}", config.getString("repository.recordsSource"));
+            logger.info("recordsSource (without prefix) = {}", config.getString("recordsSource"));
+            logger.debug("Full configuration: {}", config.encodePrettily());
 
             configsMap.put(requestId, config);
             logger.info("Configuration loaded successfully for {} tenant.", tenant);
