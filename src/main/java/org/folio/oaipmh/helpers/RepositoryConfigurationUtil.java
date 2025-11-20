@@ -55,19 +55,10 @@ public class RepositoryConfigurationUtil {
     }
 
     try {
-      // Fetch all OAIPMH configurations from own configuration service
-      // Using offset=0 and limit=100 to get all configurations
       return configurationSettingsService.getConfigurationSettingsList(0, 100, null, tenant)
         .compose(response -> {
           try {
             JsonObject config = new JsonObject();
-
-            // Debug: Log raw response
-            logger.info("Raw configuration response for {} tenant: {}", tenant,
-                response != null ? response.encodePrettily() : "null");
-
-            // Process the configuration settings
-            // Check for both "configs" and "configurationSettings" keys
             String configKey = response != null && response.containsKey("configurationSettings")
                 ? "configurationSettings" : CONFIGS;
 
@@ -140,18 +131,10 @@ public class RepositoryConfigurationUtil {
   public static String getProperty(String requestId, String name) {
     JsonObject configs = getConfig(requestId);
     String defaultValue = System.getProperty(name);
-
-    logger.debug("getProperty called: requestId={}, name={}", requestId, name);
-    logger.debug("Config for requestId: {}", configs != null ? configs.encodePrettily() : "null");
-    logger.debug("System property default: {}", defaultValue);
-
     if (configs != null) {
       String value = configs.getString(name, defaultValue);
-      logger.info("getProperty returning: {} = {}", name, value);
       return value;
     }
-
-    logger.info("getProperty returning default: {} = {}", name, defaultValue);
     return defaultValue;
   }
 

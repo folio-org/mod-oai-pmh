@@ -64,7 +64,6 @@ class RepositoryConfigurationUtilTest {
       Map<String, Map<String, String>> requestIdsWithExpectedConfigs =
           requestIdAndExpectedConfigProvider();
 
-      // Test first tenant
       String tenant1 = EXIST_CONFIG_TENANT;
       okapiHeaders.put(OKAPI_TENANT, tenant1);
       when(mockConfigService.getConfigurationSettingsList(anyInt(),
@@ -78,7 +77,6 @@ class RepositoryConfigurationUtilTest {
               assertThat(RepositoryConfigurationUtil.getProperty(tenant1, key),
               is(equalTo(expectedConfig.get(key)))));
 
-          // Test second tenant
           String tenant2 = EXIST_CONFIG_TENANT_2;
           okapiHeaders.put(OKAPI_TENANT, tenant2);
           when(mockConfigService.getConfigurationSettingsList(anyInt(),
@@ -103,7 +101,6 @@ class RepositoryConfigurationUtilTest {
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, NON_EXIST_CONFIG_TENANT);
 
-    // Mock empty configuration response
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
         eq(NON_EXIST_CONFIG_TENANT)))
         .thenReturn(Future.succeededFuture(
@@ -123,7 +120,6 @@ class RepositoryConfigurationUtilTest {
   void testGetConfigurationIfUnexpectedStatusCode(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
 
-    // Mock service failure
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
       eq(ERROR_TENANT)))
         .thenReturn(Future.failedFuture(new RuntimeException("Internal Server Error")));
@@ -144,7 +140,6 @@ class RepositoryConfigurationUtilTest {
     String configValue = "123";
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, configValue);
 
-    // Mock service failure
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
       eq(ERROR_TENANT)))
         .thenReturn(Future.failedFuture(new RuntimeException("Internal Server Error")));
@@ -161,7 +156,6 @@ class RepositoryConfigurationUtilTest {
 
   @Test
   void testGetConfigurationWithMissingConfigService(Vertx vertx, VertxTestContext testContext) {
-    // Set config service to null to test error handling
     RepositoryConfigurationUtil.setConfigurationSettingsService(null);
 
     vertx.runOnContext(event -> testContext.verify(() -> {
@@ -230,8 +224,7 @@ class RepositoryConfigurationUtilTest {
     if (configForTenant == null) {
       return new JsonObject().put("configurationSettings", new JsonArray());
     }
-  
-    // Create a single configuration entry with all properties
+
     JsonObject configEntry = new JsonObject();
     JsonObject configValueObject = new JsonObject();
     configForTenant.forEach(configValueObject::put);
@@ -250,8 +243,6 @@ class RepositoryConfigurationUtilTest {
                                                                   VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, INVALID_CONFIG_TENANT);
 
-    // Mock configuration with invalid value for deleted records
-  
     JsonArray configs = new JsonArray();
     JsonObject config = new JsonObject();
     config.put("configValue", new JsonObject()
@@ -284,7 +275,6 @@ class RepositoryConfigurationUtilTest {
                                                                            testContext) {
     okapiHeaders.put(OKAPI_TENANT, INVALID_JSON_TENANT);
 
-    // Mock service returning invalid JSON that cannot be parsed
     when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
         eq(INVALID_JSON_TENANT))).thenReturn(Future.failedFuture(
             new IllegalArgumentException("Invalid JSON structure")));
