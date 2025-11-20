@@ -83,7 +83,7 @@ public class RepositoryConfigurationUtil {
             // Debug logging to verify configuration
             logger.info("Final configuration for {} tenant. Keys: {}", tenant, config.fieldNames());
             logger.info("repository.recordsSource = {}", config.getString("repository.recordsSource"));
-            logger.info("recordsSource (without prefix) = {}", config.getString("recordsSource"));
+            logger.info("recorsSource (without prefix) = {}", config.getString("recordsSource"));
             logger.debug("Full configuration: {}", config.encodePrettily());
 
             configsMap.put(requestId, config);
