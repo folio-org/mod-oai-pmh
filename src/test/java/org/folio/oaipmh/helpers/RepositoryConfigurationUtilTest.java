@@ -1,37 +1,32 @@
 package org.folio.oaipmh.helpers;
 
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
-import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
-import static org.folio.oaipmh.Constants.OKAPI_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
-import static org.folio.rest.impl.OkapiMockServer.ERROR_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.EXIST_CONFIG_TENANT_2;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_CONFIG_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.INVALID_JSON_TENANT;
-import static org.folio.rest.impl.OkapiMockServer.NON_EXIST_CONFIG_TENANT;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxException;
-import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import java.util.HashMap;
 import java.util.Map;
-import org.folio.oaipmh.WebClientProvider;
-import org.folio.rest.impl.OkapiMockServer;
-import org.folio.rest.tools.utils.NetworkUtils;
-import org.junit.jupiter.api.AfterAll;
+import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,28 +35,27 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(VertxExtension.class)
 class RepositoryConfigurationUtilTest {
 
-  private static final int mockPort = NetworkUtils.nextFreePort();
-
   private static final Map<String, String> okapiHeaders = new HashMap<>();
   private static final String REPOSITORY_TEST_BOOLEAN_PROPERTY = "repository.testBooleanProperty";
 
+  private static final String EXIST_CONFIG_TENANT = "test_diku";
+  private static final String EXIST_CONFIG_TENANT_2 = "test_diku2";
+  private static final String NON_EXIST_CONFIG_TENANT = "not_diku";
+  private static final String ERROR_TENANT = "error";
+  private static final String INVALID_CONFIG_TENANT = "invalid_config_value_tenant";
+  private static final String INVALID_JSON_TENANT = "invalidJsonTenant";
+
+  private ConfigurationSettingsService mockConfigService;
+
   @BeforeAll
   static void setUpOnce(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.put(OKAPI_TOKEN, "eyJhbGciOiJIUzI1NiJ9");
-    OkapiMockServer okapiMockServer = new OkapiMockServer(vertx, mockPort);
-
-    vertx.runOnContext(event -> testContext.verify(() -> okapiMockServer.start(testContext)));
-    WebClientProvider.init(vertx);
+    testContext.completeNow();
   }
 
   @BeforeEach
   void init() {
-    okapiHeaders.put(OKAPI_URL, "http://localhost:" + mockPort);
-  }
-
-  @AfterAll
-  static void afterAll() {
-    WebClientProvider.closeAll();
+    mockConfigService = mock(ConfigurationSettingsService.class);
+    RepositoryConfigurationUtil.setConfigurationSettingsService(mockConfigService);
   }
 
   @Test
@@ -69,27 +63,51 @@ class RepositoryConfigurationUtilTest {
     vertx.runOnContext(event -> {
       Map<String, Map<String, String>> requestIdsWithExpectedConfigs =
           requestIdAndExpectedConfigProvider();
-      requestIdsWithExpectedConfigs.keySet()
-          .forEach(requestId -> {
-            okapiHeaders.put(OKAPI_TENANT, requestId);
-            RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, requestId)
-            .onSuccess(v -> {
-              Map<String, String> expectedConfig = requestIdsWithExpectedConfigs.get(requestId);
-              expectedConfig.keySet().forEach(key ->
-                  assertThat(RepositoryConfigurationUtil.getProperty(requestId, key),
-                      is(equalTo(expectedConfig.get(key)))));
+
+      String tenant1 = EXIST_CONFIG_TENANT;
+      okapiHeaders.put(OKAPI_TENANT, tenant1);
+      when(mockConfigService.getConfigurationSettingsList(anyInt(),
+        anyInt(), isNull(), eq(tenant1)))
+          .thenReturn(Future.succeededFuture(createConfigResponse(tenant1)));
+
+      RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, tenant1)
+        .onSuccess(v -> {
+          Map<String, String> expectedConfig = requestIdsWithExpectedConfigs.get(tenant1);
+          expectedConfig.keySet().forEach(key ->
+              assertThat(RepositoryConfigurationUtil.getProperty(tenant1, key),
+              is(equalTo(expectedConfig.get(key)))));
+
+          String tenant2 = EXIST_CONFIG_TENANT_2;
+          okapiHeaders.put(OKAPI_TENANT, tenant2);
+          when(mockConfigService.getConfigurationSettingsList(anyInt(),
+            anyInt(), isNull(), eq(tenant2)))
+              .thenReturn(Future.succeededFuture(createConfigResponse(tenant2)));
+
+          RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, tenant2)
+            .onSuccess(v2 -> {
+              Map<String, String> expectedConfig2 = requestIdsWithExpectedConfigs.get(tenant2);
+              expectedConfig2.keySet().forEach(key ->
+                  assertThat(RepositoryConfigurationUtil.getProperty(tenant2, key),
+                  is(equalTo(expectedConfig2.get(key)))));
               testContext.completeNow();
             })
-                .onFailure(testContext::failNow);
-          });
+              .onFailure(testContext::failNow);
+        })
+          .onFailure(testContext::failNow);
     });
   }
 
   @Test
   void testGetConfigurationIfNotExist(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, NON_EXIST_CONFIG_TENANT);
+
+    when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
+        eq(NON_EXIST_CONFIG_TENANT)))
+        .thenReturn(Future.succeededFuture(
+          new JsonObject().put("configurationSettings", new JsonArray())));
+
     vertx.runOnContext(event -> RepositoryConfigurationUtil.loadConfiguration(okapiHeaders,
-          NON_EXIST_CONFIG_TENANT)
+        NON_EXIST_CONFIG_TENANT)
         .onSuccess(v -> {
           assertThat(RepositoryConfigurationUtil.getConfig(NON_EXIST_CONFIG_TENANT),
               is(emptyIterable()));
@@ -102,8 +120,12 @@ class RepositoryConfigurationUtilTest {
   void testGetConfigurationIfUnexpectedStatusCode(Vertx vertx, VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
 
+    when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
+      eq(ERROR_TENANT)))
+        .thenReturn(Future.failedFuture(new RuntimeException("Internal Server Error")));
+
     vertx.runOnContext(event -> RepositoryConfigurationUtil.loadConfiguration(okapiHeaders,
-          ERROR_TENANT)
+        ERROR_TENANT)
         .onComplete(v -> {
           assertThat(RepositoryConfigurationUtil.getConfig(ERROR_TENANT), is(nullValue()));
           testContext.completeNow();
@@ -112,10 +134,16 @@ class RepositoryConfigurationUtilTest {
 
   @Test
   void shouldReturnDefaultConfigValueWhenErrorResponseReturnedFromModConfig(Vertx vertx,
-      VertxTestContext testContext) {
+                                                                            VertxTestContext
+                                                                              testContext) {
     okapiHeaders.put(OKAPI_TENANT, ERROR_TENANT);
     String configValue = "123";
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, configValue);
+
+    when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
+      eq(ERROR_TENANT)))
+        .thenReturn(Future.failedFuture(new RuntimeException("Internal Server Error")));
+
     vertx.runOnContext(event -> {
       RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, ERROR_TENANT)
           .onComplete(result -> {
@@ -127,16 +155,16 @@ class RepositoryConfigurationUtilTest {
   }
 
   @Test
-  void testGetConfigurationWithMissingOkapiHeader(Vertx vertx, VertxTestContext testContext) {
-    okapiHeaders.remove(OKAPI_URL);
+  void testGetConfigurationWithMissingConfigService(Vertx vertx, VertxTestContext testContext) {
+    RepositoryConfigurationUtil.setConfigurationSettingsService(null);
 
     vertx.runOnContext(event -> testContext.verify(() -> {
       RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, "requestId")
           .onFailure(throwable -> {
-            assertTrue(throwable instanceof VertxException);
+            assertTrue(throwable instanceof IllegalStateException);
             testContext.completeNow();
           }).onSuccess(v -> testContext.failNow(
-            new IllegalStateException("An VertxException was expected to be thrown.")));
+            new IllegalStateException("An IllegalStateException was expected to be thrown.")));
     }));
   }
 
@@ -186,10 +214,48 @@ class RepositoryConfigurationUtilTest {
     return result;
   }
 
+  /**.
+   * Helper method to create a configuration response for a given tenant
+   */
+  private JsonObject createConfigResponse(String tenant) {
+    Map<String, Map<String, String>> configs = requestIdAndExpectedConfigProvider();
+    Map<String, String> configForTenant = configs.get(tenant);
+
+    if (configForTenant == null) {
+      return new JsonObject().put("configurationSettings", new JsonArray());
+    }
+
+    JsonObject configEntry = new JsonObject();
+    JsonObject configValueObject = new JsonObject();
+    configForTenant.forEach(configValueObject::put);
+    configEntry.put("configValue", configValueObject);
+    configEntry.put("configName", "test_config");
+    JsonArray configsArray = new JsonArray();
+    configsArray.add(configEntry);
+    JsonObject response = new JsonObject();
+
+    response.put("configurationSettings", configsArray);
+    return response;
+  }
+
   @Test
   void shouldReturnDefaultConfigWhenInvalidConfigValueWasReturned(Vertx vertx,
-      VertxTestContext testContext) {
+                                                                  VertxTestContext testContext) {
     okapiHeaders.put(OKAPI_TENANT, INVALID_CONFIG_TENANT);
+
+    JsonArray configs = new JsonArray();
+    JsonObject config = new JsonObject();
+    config.put("configValue", new JsonObject()
+        .put("deletedRecordsSupport", "invalidValue"));
+    config.put("configName", "behavior");
+    configs.add(config);
+    JsonObject invalidConfig = new JsonObject();
+    invalidConfig.put("configurationSettings", configs);
+
+    when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
+      eq(INVALID_CONFIG_TENANT)))
+        .thenReturn(Future.succeededFuture(invalidConfig));
+
     vertx.runOnContext(event -> {
       final String expectedValue = "true";
       System.setProperty(REPOSITORY_DELETED_RECORDS, expectedValue);
@@ -204,16 +270,22 @@ class RepositoryConfigurationUtilTest {
   }
 
   @Test
-  void shouldReturnFailedFuture_whenInvalidJsonReturnedFromModConfig2(Vertx vertx,
-      VertxTestContext testContext) {
+  void shouldReturnFailedFuture_whenInvalidJsonReturnedFromConfigService(Vertx vertx,
+                                                                         VertxTestContext
+                                                                           testContext) {
     okapiHeaders.put(OKAPI_TENANT, INVALID_JSON_TENANT);
+
+    when(mockConfigService.getConfigurationSettingsList(anyInt(), anyInt(), isNull(),
+        eq(INVALID_JSON_TENANT))).thenReturn(Future.failedFuture(
+            new IllegalArgumentException("Invalid JSON structure")));
+
     vertx.runOnContext(event -> {
       RepositoryConfigurationUtil.loadConfiguration(okapiHeaders, INVALID_JSON_TENANT)
           .onFailure(th -> {
-            assertTrue(th instanceof DecodeException);
+            assertTrue(th instanceof IllegalStateException);
             testContext.completeNow();
           }).onSuccess(v -> testContext.failNow(
-            new IllegalStateException("An DecodeException was expected to be thrown.")));
+            new IllegalStateException("An exception was expected to be thrown.")));
     });
   }
 }

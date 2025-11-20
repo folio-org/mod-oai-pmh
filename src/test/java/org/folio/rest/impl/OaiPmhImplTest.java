@@ -308,6 +308,7 @@ class OaiPmhImplTest {
     System.setProperty("minio.secretKey", S3_SECRET_KEY);
     System.setProperty("minio.endpoint", MINIO_ENDPOINT);
     resetSystemProperties();
+    System.setProperty(REPOSITORY_BASE_URL, "http://test.folio.org/oai");
     VertxOptions options = new VertxOptions();
     options.setBlockedThreadCheckInterval(1000 * 60 * 60);
     System.setProperty(REPOSITORY_STORAGE, SOURCE_RECORD_STORAGE);
@@ -1064,7 +1065,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void getOaiListVerbResumptionFlowStartedWithFromParamHasDateOnlyGranularityAndGranularitySettingIsDateOnly(
+  void getOaiResumptionFlowWithDateGranularity(
       MetadataPrefix prefix, VerbType verb) {
     String timeGranularity = System.getProperty(REPOSITORY_TIME_GRANULARITY);
     System.setProperty(REPOSITORY_TIME_GRANULARITY, GranularityType.YYYY_MM_DD.value());
@@ -2039,7 +2040,7 @@ class OaiPmhImplTest {
     assertThat(oaipmhFromString.getIdentify(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getBaseURL(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getAdminEmails(), is(notNullValue()));
-    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(2)));
+    assertThat(oaipmhFromString.getIdentify().getAdminEmails(), hasSize(equalTo(1)));
     assertThat(oaipmhFromString.getIdentify().getEarliestDatestamp(), is(notNullValue()));
     assertThat(oaipmhFromString.getIdentify().getGranularity(),
         is(equalTo(GranularityType.YYYY_MM_DD_THH_MM_SS_Z)));
@@ -2492,7 +2493,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigFalseAndRecordMarkedAsDeleted(
+  void supportDeletedRecordsNoDeletedConfigSuppressedFalseRecordDeleted(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
@@ -2540,7 +2541,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigIsNoAndSuppressedConfigTrueAndRecordMarkedAsDeleted(
+  void supportDeletedRecordsNoDeletedConfigSuppressedTrueRecordDeleted(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
@@ -2588,7 +2589,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndRecordMarkAsDeleted(
+  void supportDeletedRecordsPersistentDeletedConfigSuppressedFalseRecordDeleted(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
@@ -2620,7 +2621,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressInRecordTrue(
+  void supportDeletedRecordsPersistentDeletedConfigSuppressedFalseRecordSuppressedTrue(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
@@ -2644,7 +2645,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigPersistentAndSuppressedConfigFalseAndSuppressTrueAndRecordMarcAsDeleted(
+  void supportDeletedRecordsPersistentDeletedConfigSuppressedFalseRecordMarkedDeleted(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "persistent");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
@@ -2702,7 +2703,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndRecordMarkAsDeleted(
+  void supportDeletedRecordsTransientDeletedConfigSuppressedTrueRecordDeleted(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
@@ -2734,7 +2735,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("metadataPrefixAndVerbProviderExceptMarc21withHoldingsAndListRecords")
-  void checkSupportDeletedRecordsWhenDeletedConfigTransientAndSuppressedConfigTrueAndSuppressInRecordTrue(
+  void supportDeletedRecordsTransientDeletedConfigSuppressedTrueRecordSuppressedTrue(
       MetadataPrefix prefix, VerbType verb) {
     System.setProperty(REPOSITORY_DELETED_RECORDS, "transient");
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
@@ -2940,7 +2941,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldNotThrowNullPointerException_whenGetListRecordsAndInventoryRespondedBeforeCapacityCheckerWasSet() {
+  void getListRecordsNoNpeWhenInventoryBeforeCapacityChecker() {
     final String currentValue = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, "60");
 
@@ -2978,7 +2979,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void shouldRerequestSrsWhenItRespondedWith500_whenGetOaiRecordsMarc21WithHoldingsWithErrorResponseAndThenSuccessResponseFromSrs() {
+  void rerequestSrsOn500ErrorThenSuccessMarc21WithHoldings() {
     RequestSpecification listRecordRequest = createBaseRequest()
         .with()
         .param(VERB_PARAM, LIST_RECORDS.value())
