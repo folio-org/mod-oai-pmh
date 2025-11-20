@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
 import org.openarchives.oai._2.DeletedRecordType;
 
@@ -26,7 +25,6 @@ public class RepositoryConfigurationUtil {
   private static final String CONFIGURATION_ERROR = "Configuration service error for "
       + "%s tenant: %s";
   private static Map<String, JsonObject> configsMap = new HashMap<>();
-  private static ConfigurationHelper configurationHelper = ConfigurationHelper.getInstance();
   private static ConfigurationSettingsService configurationSettingsService;
 
   private RepositoryConfigurationUtil() {
@@ -74,10 +72,21 @@ public class RepositoryConfigurationUtil {
                   .stream()
                   .map(object -> (JsonObject) object)
                   .peek(entry -> logger.info("Processing config entry: {}", entry.encodePrettily()))
-                  .map(configurationHelper::getConfigKeyValueMapFromJsonEntryValueField)
-                  .peek(map -> logger.info("Mapped config: {}", map))
-                  .forEach(configKeyValueMap ->
-                      configKeyValueMap.forEach(config::put));
+                  .forEach(entry -> {
+                    // Handle new structure where configValue is a JsonObject, not a string
+                    JsonObject configValue = entry.getJsonObject("configValue");
+                    if (configValue != null) {
+                      logger.info("Found configValue object: {}", configValue.encodePrettily());
+                      // Map frontend keys to backend keys and add to config
+                      configValue.getMap().forEach((key, value) -> {
+                        String mappedKey = org.folio.oaipmh.mappers.PropertyNameMapper
+                            .mapFrontendKeyToServerKey(key);
+                        String stringValue = value != null ? value.toString() : null;
+                        logger.info("Mapping: {} -> {} = {}", key, mappedKey, stringValue);
+                        config.put(mappedKey, stringValue);
+                      });
+                    }
+                  });
             }
 
             // Debug logging to verify configuration
