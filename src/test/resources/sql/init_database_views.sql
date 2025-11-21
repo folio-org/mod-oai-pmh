@@ -33,7 +33,8 @@ WHERE record_lb.leader_record_status != 'd' AND record_lb.state = 'ACTUAL';
 
 CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_srs_deleted AS
 SELECT * FROM oaitest_mod_source_record_storage.records_lb record_lb
-WHERE (record_lb.leader_record_status = 'd' AND (record_lb.state = 'ACTUAL' OR record_lb.state = 'DELETED')) OR record_lb.state = 'DELETED';
+WHERE record_type = 'MARC_BIB'
+  AND ((record_lb.leader_record_status = 'd' AND (record_lb.state = 'ACTUAL' OR record_lb.state = 'DELETED')) OR record_lb.state = 'DELETED');
 
 CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_marc_records AS
 SELECT * FROM oaitest_mod_source_record_storage.marc_records_lb;
