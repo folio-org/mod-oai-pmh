@@ -230,11 +230,7 @@ class ConfigurationSettingsImplTest {
       .put(CONFIGURATION_SETTINGS_PATH + "/" + createdId)
       .then()
       .defaultParser(Parser.JSON)
-      .statusCode(HttpStatus.SC_NO_CONTENT)
-      .body("id", equalTo(createdId))
-      .body("configValue.deletedRecordsSupport", equalTo("persistent"))
-      .body("configValue.suppressedRecordsProcessing", equalTo(true))
-        .body("configValue.errorsProcessing", equalTo("1000"));
+        .statusCode(HttpStatus.SC_NO_CONTENT);
   }
 
   @Test
