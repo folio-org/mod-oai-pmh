@@ -230,7 +230,7 @@ class ConfigurationSettingsImplTest {
       .put(CONFIGURATION_SETTINGS_PATH + "/" + createdId)
       .then()
       .defaultParser(Parser.JSON)
-      .statusCode(HttpStatus.SC_OK)
+      .statusCode(HttpStatus.SC_NO_CONTENT)
       .body("id", equalTo(createdId))
       .body("configValue.deletedRecordsSupport", equalTo("persistent"))
       .body("configValue.suppressedRecordsProcessing", equalTo(true))
@@ -408,7 +408,7 @@ class ConfigurationSettingsImplTest {
     String configName1 = "test-filter-config-" + UUID.randomUUID();
     String configName2 = "test-filter-config-" + UUID.randomUUID();
     String configName3 = "another-config-" + UUID.randomUUID();
-    
+
     String config1Id = createTestConfig(configName1);
     createTestConfig(configName2);
     createTestConfig(configName3);
@@ -453,7 +453,7 @@ class ConfigurationSettingsImplTest {
     // Create multiple test configurations
     String configName1 = "test-all-configs-1-" + UUID.randomUUID();
     String configName2 = "test-all-configs-2-" + UUID.randomUUID();
-    
+
     createTestConfig(configName1);
     createTestConfig(configName2);
 
