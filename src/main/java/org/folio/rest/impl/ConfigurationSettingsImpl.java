@@ -98,7 +98,7 @@ public class ConfigurationSettingsImpl implements OaiPmhConfigurationSettings {
     configurationSettingsService.updateConfigurationSettingsById(id,
         JsonObject.mapFrom(entity), ctx.tenantId, ctx.userId)
       .onSuccess(updatedConfig -> handleSuccess(asyncResultHandler,
-        updatedConfig.encode(), Response.Status.OK))
+        updatedConfig.encode(), Response.Status.NO_CONTENT))
         .onFailure(e -> handleFailure(asyncResultHandler, e, ERROR_UPDATE));
   }
 
