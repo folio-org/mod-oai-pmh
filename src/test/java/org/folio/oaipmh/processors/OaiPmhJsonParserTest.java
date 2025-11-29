@@ -6,12 +6,12 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonEvent;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 class OaiPmhJsonParserTest {
 
-  private static final Logger log = LoggerFactory.getLogger(OaiPmhJsonParserTest.class);
+  private static final Logger log = LogManager.getLogger(OaiPmhJsonParserTest.class);
 
   @Test
  void testParserHandleValidData() {

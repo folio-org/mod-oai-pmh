@@ -13,8 +13,8 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -23,7 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class ViewTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ViewTest.class);
+  private static final Logger LOGGER = LogManager.getLogger(ViewTest.class);
 
   private static final Path EXPECTED_ALL_NON_DELETED_INSTANCE_IDS =
       Path.of("src/test/resources/views/expected_all_non_deleted_instance_ids.csv");

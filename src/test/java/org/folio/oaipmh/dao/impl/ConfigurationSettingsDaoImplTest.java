@@ -53,7 +53,7 @@ class ConfigurationSettingsDaoImplTest {
   @AfterAll
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    vertx.close(testContext.succeeding(res -> testContext.completeNow()));
+    vertx.close().onComplete(testContext.succeeding(res -> testContext.completeNow()));
   }
 
   @Test

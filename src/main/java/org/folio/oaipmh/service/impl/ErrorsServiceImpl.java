@@ -70,8 +70,10 @@ public class ErrorsServiceImpl implements ErrorsService {
   @Override
   public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId,
       String requestId) {
-    return CompositeFuture.all(allSavedErrorsByRequestId.getOrDefault(requestId,
-          List.of(Future.succeededFuture())))
+    @SuppressWarnings("rawtypes")
+    List futures = allSavedErrorsByRequestId.getOrDefault(requestId,
+          List.of(Future.succeededFuture()));
+    return Future.all(futures)
         .compose(savedErrorsToDbCompleted -> getErrorsAndSaveToLocalFile(requestId, tenantId)
             .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId))
             .compose(savedErrorsToS3Completed -> {

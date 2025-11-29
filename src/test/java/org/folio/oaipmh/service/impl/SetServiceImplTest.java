@@ -35,7 +35,7 @@ import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.dao.impl.SetDaoImpl;
 import org.folio.oaipmh.service.SetService;
-import org.folio.okapi.common.GenericCompositeFuture;
+
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FolioSet;
@@ -82,7 +82,7 @@ class SetServiceImplTest extends AbstractSetTest {
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     WebClientProvider.closeAll();
-    vertx.close(testContext.succeeding(res -> {
+    vertx.close().onComplete(testContext.succeeding(res -> {
       testContext.completeNow();
     }));
   }
@@ -274,11 +274,11 @@ class SetServiceImplTest extends AbstractSetTest {
     setDao.getSetList(0, 100, OAI_TEST_TENANT)
         .onComplete(result -> {
           FolioSetCollection setItemCollection = result.result();
-          List<Future> futures = new ArrayList<>();
+          List<Future<?>> futures = new ArrayList<>();
           setItemCollection.getSets()
               .forEach(setItem -> futures.add(setDao.deleteSetById(setItem.getId(),
                   OAI_TEST_TENANT)));
-          GenericCompositeFuture.all(futures)
+          Future.all(futures)
               .onSuccess(compositeFuture -> testContext.completeNow())
               .onFailure(testContext::failNow);
         });

@@ -135,11 +135,11 @@
     </sonar.coverage.exclusions>
     <!-- Plugin versions -->
     <aspectj.version>1.9.21.1</aspectj.version>
-    <raml-module-builder.version>35.4.0</raml-module-builder.version>
+    <raml-module-builder.version>36.0.0-SNAPSHOT</raml-module-builder.version>
     <folio-liquibase-util.version>1.10.0</folio-liquibase-util.version>
     <data-import-utils.version>1.14.0</data-import-utils.version>
-    <folio-di-support.version>3.0.0</folio-di-support.version>
-    <vertx.version>4.5.14</vertx.version>
+    <folio-di-support.version>4.0.0-SNAPSHOT</folio-di-support.version>
+    <vertx.version>5.0.5</vertx.version>
     <apache-httpclient.version>4.5.14</apache-httpclient.version>
     <time-adapters.version>1.1.3</time-adapters.version>
     <jaxb2-basics.version>1.11.1</jaxb2-basics.version>
@@ -263,6 +263,10 @@
       <version>${vertx-jooq.classic-reactive.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-pg-client</artifactId>
+    </dependency>
+    <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
       <version>${aws.sdk.version}</version>
@@ -271,13 +275,15 @@
     <!-- logging see http://www.slf4j.org/legacy.html -->
     <!-- The RMB runtime defines usage of log4j2 for for vert.x logging interface -->
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-jul</artifactId>
-    </dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.20.0</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.20.0</version>
+</dependency>
 
     <!-- test dependencies -->
     <!-- vertx for junit5 -->

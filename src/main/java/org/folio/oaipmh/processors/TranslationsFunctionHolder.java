@@ -41,8 +41,8 @@ import org.folio.processor.rule.Metadata;
 import org.folio.processor.translations.Translation;
 import org.folio.processor.translations.TranslationFunction;
 import org.folio.processor.translations.TranslationHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public enum TranslationsFunctionHolder implements TranslationFunction, TranslationHolder {
 
@@ -518,7 +518,7 @@ public enum TranslationsFunctionHolder implements TranslationFunction, Translati
   private static final String IDENTIFIER_TYPE_ID_PARAM = "identifierTypeId";
   private static final String IDENTIFIER_TYPE_METADATA = "identifierType";
   private static final Logger LOGGER =
-      LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+      LogManager.getLogger(MethodHandles.lookup().lookupClass());
   private static final String NAME = "name";
   private static final String VALUE = VALUE_PARAM;
 

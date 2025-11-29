@@ -37,7 +37,6 @@ import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_RESUMPTION_TOKEN;
 
 import com.google.common.io.Resources;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -91,7 +90,6 @@ import org.folio.oaipmh.querybuilder.RecordsSource;
 import org.folio.oaipmh.service.ConsortiaService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
@@ -306,8 +304,8 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         });
 
 
-    CompositeFuture.join(local.future(), central.future())
-        .map(CompositeFuture::list)
+    Future.join(local.future(), central.future())
+        .map(cf -> cf.list())
         .map(results -> results.stream()
             .map(JsonObject.class::cast)
             .reduce((resultLocal, resultCentral) -> {
@@ -648,7 +646,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             futures.add(enrichedRecordFuture);
           });
 
-      GenericCompositeFuture.all(futures).onComplete(res -> {
+      Future.all(futures).onComplete(res -> {
         if (res.succeeded()) {
           enrichedRecordsPromise.complete(recordsMap);
         } else {

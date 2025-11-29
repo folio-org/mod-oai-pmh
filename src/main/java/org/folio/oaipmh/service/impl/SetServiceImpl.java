@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.dao.SetDao;
 import org.folio.oaipmh.service.SetService;
-import org.folio.okapi.common.GenericCompositeFuture;
+
 import org.folio.rest.jaxrs.model.FilteringConditionValueCollection;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
@@ -96,7 +96,7 @@ public class SetServiceImpl implements SetService {
         INSTANCE_FORMATS_URI).forEach(conditionType ->
             futures.add(getFilteringConditionValues(conditionType, webClient, okapiHeaders)));
 
-    GenericCompositeFuture.all(futures)
+    Future.all(futures)
         .onComplete(result -> {
           if (result.failed()) {
             promise.fail(result.cause());
