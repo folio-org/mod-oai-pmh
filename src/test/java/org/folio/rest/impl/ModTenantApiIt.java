@@ -10,8 +10,8 @@ import io.restassured.http.ContentType;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.NginxContainer;
@@ -25,7 +25,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class ModTenantApiIt {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ModTenantApiIt.class);
+  private static final Logger LOGGER = LogManager.getLogger(ModTenantApiIt.class);
 
   private static final Network network = Network.newNetwork();
 
@@ -41,7 +41,7 @@ class ModTenantApiIt {
           .withEnv("DB_USERNAME", "username")
           .withEnv("DB_PASSWORD", "password")
           .withEnv("DB_DATABASE", "postgres")
-          .withLogConsumer(new Slf4jLogConsumer(LOGGER, true).withPrefix("module"));
+          .withLogConsumer(logMessage -> LOGGER.info("[module] {}", logMessage));
 
   @Container
   private static final PostgreSQLContainer<?> postgres =
@@ -59,7 +59,7 @@ class ModTenantApiIt {
       .withNetwork(network)
       .withNetworkAliases("okapi")
       .withExposedPorts(8080)
-      .withLogConsumer(new Slf4jLogConsumer(LOGGER, true).withPrefix("okapi"))
+      .withLogConsumer(logMessage -> LOGGER.info("[okapi] {}", logMessage))
       .withCopyToContainer(Transferable.of("""
             server {
               listen unix:/tmp/backend.sock;

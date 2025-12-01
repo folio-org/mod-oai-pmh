@@ -287,8 +287,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
           }
         });
 
-    return CompositeFuture.join(shared.future(), local.future())
-        .map(CompositeFuture::list)
+    return Future.join(shared.future(), local.future())
+        .map(compositeFuture -> compositeFuture.list())
         .map(results -> results.stream()
             .map(JsonArray.class::cast)
             .reduce(new JsonArray(), JsonArray::addAll)

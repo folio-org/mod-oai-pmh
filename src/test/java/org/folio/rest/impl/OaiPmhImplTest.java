@@ -328,7 +328,7 @@ class OaiPmhImplTest {
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), opt).onComplete(testContext.succeeding(id -> {
       idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
       System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
       Context context = vertx.getOrCreateContext();
@@ -349,7 +349,7 @@ class OaiPmhImplTest {
     PostgresClientFactory.closeAll();
     PostgresClient.stopPostgresTester();
     WebClientProvider.closeAll();
-    vertx.close(res -> {
+    vertx.close().onComplete(res -> {
       if (res.succeeded()) {
         testContext.completeNow();
       } else {

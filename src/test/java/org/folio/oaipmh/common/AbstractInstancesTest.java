@@ -13,7 +13,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.ws.rs.NotFoundException;
 import org.folio.oaipmh.dao.InstancesDao;
-import org.folio.okapi.common.GenericCompositeFuture;
+
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.junit.jupiter.api.AfterEach;
@@ -75,12 +75,12 @@ public abstract class AbstractInstancesTest {
 
   @BeforeEach
   void setup(VertxTestContext testContext) {
-    List<Future> saveRequestMetadataFutures = new ArrayList<>();
+    List<Future<?>> saveRequestMetadataFutures = new ArrayList<>();
     requestMetadataList
         .forEach(elem -> saveRequestMetadataFutures
             .add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
 
-    GenericCompositeFuture.all(saveRequestMetadataFutures)
+    Future.all(saveRequestMetadataFutures)
         .onSuccess(v -> getInstancesDao().saveInstances(instancesList, OAI_TEST_TENANT)
             .onSuccess(e -> testContext.completeNow())
             .onFailure(testContext::failNow))
@@ -95,11 +95,11 @@ public abstract class AbstractInstancesTest {
 
   protected Future<Void> cleanData() {
     Promise<Void> promise = Promise.promise();
-    List<Future> futures = new ArrayList<>();
+    List<Future<?>> futures = new ArrayList<>();
     requestIds.forEach(elem ->
         futures.add(getInstancesDao().deleteRequestMetadataByRequestId(elem, OAI_TEST_TENANT)));
 
-    GenericCompositeFuture.all(futures)
+    Future.all(futures)
         .onSuccess(v -> promise.complete())
         .onFailure(throwable -> {
           if (throwable instanceof NotFoundException) {

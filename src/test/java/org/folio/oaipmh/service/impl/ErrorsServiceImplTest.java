@@ -114,7 +114,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     WebClientProvider.closeAll();
-    vertx.close(testContext.succeeding(res -> {
+    vertx.close().onComplete(testContext.succeeding(res -> {
       PostgresClient.stopPostgresTester();
       testContext.completeNow();
     }));

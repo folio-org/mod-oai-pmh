@@ -8,7 +8,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.SqlClient;
 import java.util.HashMap;
@@ -54,8 +54,8 @@ public class PostgresClientFactory {
    */
   private static boolean shouldResetPool = false;
 
-  private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
-  private static final Map<String, PgPool> POOL_CACHE_READER = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE_READER = new HashMap<>();
 
   private Vertx vertx;
 
@@ -88,7 +88,7 @@ public class PostgresClientFactory {
   public SqlClient getClient(String tenantId) {
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId, true);
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
-    return PgPool.client(vertx, connectOptions, poolOptions);
+    return Pool.pool(vertx, connectOptions, poolOptions);
   }
 
   public static void closeAll() {
@@ -98,7 +98,7 @@ public class PostgresClientFactory {
     POOL_CACHE_READER.clear();
   }
 
-  private static PgPool getCachedPool(Vertx vertx, String tenantId, boolean isReader) {
+  private static Pool getCachedPool(Vertx vertx, String tenantId, boolean isReader) {
     // assumes a single thread Vert.x model so no synchronized needed
     var pool = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
     if (pool.containsKey(tenantId) && !shouldResetPool) {
@@ -112,12 +112,12 @@ public class PostgresClientFactory {
     return createCachedPool(vertx, tenantId, isReader);
   }
 
-  private static PgPool createCachedPool(Vertx vertx, String tenantId, boolean isReader) {
+  private static Pool createCachedPool(Vertx vertx, String tenantId, boolean isReader) {
     logger.info("Creating new database connection pool for tenant {}.", tenantId);
     PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId, isReader);
     var pool = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
-    PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
+    Pool client = Pool.pool(vertx, connectOptions, poolOptions);
     pool.put(tenantId, client);
     return client;
   }
@@ -150,7 +150,7 @@ public class PostgresClientFactory {
         .addProperty(DEFAULT_SCHEMA_PROPERTY, PostgresClient.convertToPsqlStandard(tenantId));
   }
 
-  private static void close(PgPool client) {
+  private static void close(Pool client) {
     client.close();
   }
 

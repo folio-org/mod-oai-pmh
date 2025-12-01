@@ -34,7 +34,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.domain.StatisticsHolder;
-import org.folio.okapi.common.GenericCompositeFuture;
+
 import org.folio.rest.jaxrs.model.RequestMetadata;
 import org.folio.rest.jaxrs.model.RequestMetadataCollection;
 import org.folio.rest.jaxrs.model.UuidCollection;
@@ -346,7 +346,7 @@ public class InstancesDaoImpl implements InstancesDao {
           }).map(rows -> null);
 
 
-      GenericCompositeFuture.all(List.of(saveFailedToSaveInstancesIds, saveFailedInstancesIds,
+      Future.all(List.of(saveFailedToSaveInstancesIds, saveFailedInstancesIds,
           saveSkippedInstancesIds, saveSuppressedFromDiscoveryInstancesIds,
           updateRequestMetadataRecordFuture)).onComplete(x -> {
             if (x.succeeded()) {

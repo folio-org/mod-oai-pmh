@@ -85,7 +85,7 @@ class ConfigurationSettingsImplTest {
         .put("http.port", serverPort));
 
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), options, testContext.succeeding(id -> {
+    vertx.deployVerticle(RestVerticle.class.getName(), options).onComplete(testContext.succeeding(id -> {
       idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
       System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
       Context context = vertx.getOrCreateContext();
@@ -100,7 +100,7 @@ class ConfigurationSettingsImplTest {
   @AfterAll
   void tearDownClass(VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    vertx.close(testContext.succeeding(res -> testContext.completeNow()));
+    vertx.close().onComplete(testContext.succeeding(res -> testContext.completeNow()));
   }
 
   @Test
