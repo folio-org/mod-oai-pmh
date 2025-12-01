@@ -277,12 +277,7 @@
     <dependency>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j-api</artifactId>
-    <version>2.20.0</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-core</artifactId>
-    <version>2.20.0</version>
+    <version>${log4j.version}</version>
 </dependency>
 
     <!-- test dependencies -->
@@ -767,8 +762,7 @@
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
-            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
-          </systemPropertyVariables>
+           </systemPropertyVariables>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
