@@ -115,7 +115,7 @@ class CleanUpErrorLogsTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions).onComplete(
         testContext.succeeding(v -> {
           try {
             Context context = vertx.getOrCreateContext();

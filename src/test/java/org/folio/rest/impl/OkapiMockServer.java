@@ -294,7 +294,7 @@ public class OkapiMockServer {
     HttpServer server = vertx.createHttpServer();
 
     server.requestHandler(defineRoutes())
-        .listen(port, context.succeeding(result -> {
+        .listen(port).onComplete(context.succeeding(result -> {
           logger.info("The server has started.");
           context.completeNow();
         }));
@@ -364,7 +364,7 @@ public class OkapiMockServer {
   }
 
   private void handleStreamingInventoryItemsAndHoldingsResponse(RoutingContext ctx) {
-    JsonArray instanceIds = ctx.getBody()
+    JsonArray instanceIds = ctx.body().buffer()
         .toJsonObject()
         .getJsonArray(INSTANCE_IDS);
     logger.debug("Before building response for enriched instances, instanceIds: {}.",
@@ -500,7 +500,7 @@ public class OkapiMockServer {
   }
 
   private void handleRecordStorageResultPostResponse(RoutingContext ctx) {
-    JsonArray instanceIds = ctx.getBody().toJsonArray();
+    JsonArray instanceIds = ctx.body().buffer().toJsonArray();
 
     if (instanceIds.contains(INSTANCE_ID_TO_MAKE_SRS_FAIL)) {
       failureResponseWithForbidden(ctx);

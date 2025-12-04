@@ -8,7 +8,6 @@ import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_NOT_FOUND;
 import static org.folio.oaipmh.Constants.LOCAL_ERROR_FILE_SAVE_FAILED;
 import static org.folio.oaipmh.Constants.S3_ERROR_FILE_SAVE_FAILED;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +46,7 @@ public class ErrorsServiceImpl implements ErrorsService {
   private InstancesService instancesService;
 
   @SuppressWarnings("rawtypes")
-  private static final Map<String, List<Future>> allSavedErrorsByRequestId =
+  private static final Map<String, List<Future<?>>> allSavedErrorsByRequestId =
       new ConcurrentHashMap<>();
 
   @Override
@@ -70,7 +69,7 @@ public class ErrorsServiceImpl implements ErrorsService {
   @Override
   public Future<RequestMetadataLb> saveErrorsAndUpdateRequestMetadata(String tenantId,
       String requestId) {
-    return CompositeFuture.all(allSavedErrorsByRequestId.getOrDefault(requestId,
+    return Future.all(allSavedErrorsByRequestId.getOrDefault(requestId,
           List.of(Future.succeededFuture())))
         .compose(savedErrorsToDbCompleted -> getErrorsAndSaveToLocalFile(requestId, tenantId)
             .compose(savedErrorsToLocalFileCompleted -> saveErrorFileToS3(requestId, tenantId))
@@ -161,7 +160,7 @@ public class ErrorsServiceImpl implements ErrorsService {
           try {
             Files.deleteIfExists(file);
           } catch (IOException e) {
-            logger.error(LOCAL_ERROR_FILE_DELETE_FAILED, e.toString());
+            logger.error(LOCAL_ERROR_FILE_DELETE_FAILED, localErrorDirPath, e.toString());
           }
         });
         Files.deleteIfExists(localErrorDirPath);

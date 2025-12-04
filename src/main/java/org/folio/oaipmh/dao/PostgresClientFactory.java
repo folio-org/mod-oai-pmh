@@ -2,15 +2,12 @@ package org.folio.oaipmh.dao;
 
 import static java.util.Objects.nonNull;
 
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.vertx.core.Context;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.SqlClient;
+import io.vertx.sqlclient.SqlConnectOptions;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.PreDestroy;
@@ -19,9 +16,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.oaipmh.Request;
 import org.folio.oaipmh.processors.GetListRecordsRequestHelper;
 import org.folio.rest.persist.PostgresClient;
-import org.jooq.Configuration;
-import org.jooq.SQLDialect;
-import org.jooq.impl.DefaultConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,9 +23,6 @@ import org.springframework.stereotype.Component;
 public class PostgresClientFactory {
 
   private static final Logger logger = LogManager.getLogger(PostgresClientFactory.class);
-
-  public static final Configuration configuration = new DefaultConfiguration()
-        .set(SQLDialect.POSTGRES);
 
   private static final String HOST = "host";
   private static final String HOST_READER = "host_reader";
@@ -54,10 +45,10 @@ public class PostgresClientFactory {
    */
   private static boolean shouldResetPool = false;
 
-  private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
-  private static final Map<String, PgPool> POOL_CACHE_READER = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE_READER = new HashMap<>();
 
-  private Vertx vertx;
+  private final Vertx vertx;
 
   @Autowired
   public PostgresClientFactory(Vertx vertx) {
@@ -65,30 +56,22 @@ public class PostgresClientFactory {
   }
 
   @PreDestroy
-  public void preDestory() {
+  public void preDestroy() {
     closeAll();
   }
 
-  /**
-   * Get {@link ReactiveClassicGenericQueryExecutor}.
-   *
-   * @param tenantId tenant id
-   * @return reactive query executor
-   */
-  public ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
-    return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(this.vertx,
-        tenantId, false));
+  public Pool getPoolWriter(String tenantId) {
+    return getCachedPool(vertx, tenantId, false);
   }
 
-  public ReactiveClassicGenericQueryExecutor getQueryExecutorReader(String tenantId) {
-    return new ReactiveClassicGenericQueryExecutor(configuration, getCachedPool(this.vertx,
-        tenantId, true));
+  public Pool getPoolReader(String tenantId) {
+    return getCachedPool(vertx, tenantId, true);
   }
 
-  public SqlClient getClient(String tenantId) {
-    PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId, true);
+  public SqlClient getReaderClient(String tenantId) {
+    SqlConnectOptions connectOptions = getConnectOptions(vertx, tenantId, true);
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
-    return PgPool.client(vertx, connectOptions, poolOptions);
+    return Pool.pool(vertx, connectOptions, poolOptions);
   }
 
   public static void closeAll() {
@@ -98,59 +81,68 @@ public class PostgresClientFactory {
     POOL_CACHE_READER.clear();
   }
 
-  private static PgPool getCachedPool(Vertx vertx, String tenantId, boolean isReader) {
-    // assumes a single thread Vert.x model so no synchronized needed
-    var pool = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
-    if (pool.containsKey(tenantId) && !shouldResetPool) {
+  private static Pool getCachedPool(Vertx vertx, String tenantId, boolean isReader) {
+    Map<String, Pool> cache = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
+
+    if (cache.containsKey(tenantId) && !shouldResetPool) {
       logger.debug("Using existing database connection pool for tenant {}.", tenantId);
-      return pool.get(tenantId);
+      return cache.get(tenantId);
     }
+
     if (shouldResetPool) {
-      pool.remove(tenantId);
+      cache.remove(tenantId);
       shouldResetPool = false;
     }
+
     return createCachedPool(vertx, tenantId, isReader);
   }
 
-  private static PgPool createCachedPool(Vertx vertx, String tenantId, boolean isReader) {
-    logger.info("Creating new database connection pool for tenant {}.", tenantId);
-    PgConnectOptions connectOptions = getConnectOptions(vertx, tenantId, isReader);
-    var pool = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
+  private static Pool createCachedPool(Vertx vertx, String tenantId, boolean isReader) {
+    logger.info("Creating new database connection pool for tenant {} (reader: {}).",
+        tenantId, isReader);
+
+    SqlConnectOptions connectOptions = getConnectOptions(vertx, tenantId, isReader);
+    Map<String, Pool> cache = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
+
     PoolOptions poolOptions = new PoolOptions().setMaxSize(POOL_SIZE);
-    PgPool client = PgPool.pool(vertx, connectOptions, poolOptions);
-    pool.put(tenantId, client);
+    Pool client = Pool.pool(vertx, connectOptions, poolOptions);
+    cache.put(tenantId, client);
     return client;
   }
 
   // NOTE: This should be able to get database configuration without PostgresClient.
   // Additionally, with knowledge of tenant at this time, we are not confined to
   // schema isolation and can provide database isolation.
-  private static PgConnectOptions getConnectOptions(Vertx vertx, String tenantId,
+  private static SqlConnectOptions getConnectOptions(Vertx vertx, String tenantId,
       boolean isReader) {
     PostgresClient postgresClient = PostgresClient.getInstance(vertx, tenantId);
     JsonObject postgreSqlClientConfig = postgresClient.getConnectionConfig();
     postgresClient.closeClient();
+
     readWriteSplitEnabled = nonNull(postgreSqlClientConfig.getString(HOST_READER))
         && nonNull(postgreSqlClientConfig.getInteger(PORT_READER));
-    var host = isReader && readWriteSplitEnabled
+
+    String host = isReader && readWriteSplitEnabled
         ? postgreSqlClientConfig.getString(HOST_READER)
         : postgreSqlClientConfig.getString(HOST);
-    var port = isReader && readWriteSplitEnabled
+
+    Integer port = isReader && readWriteSplitEnabled
         ? postgreSqlClientConfig.getInteger(PORT_READER)
         : postgreSqlClientConfig.getInteger(PORT);
-    logger.info("Is reader: {}, connection parameters: {}:{}", readWriteSplitEnabled,
-        host, port);
-    return new PgConnectOptions()
+
+    logger.info("Is reader: {}, connection parameters: {}:{}",
+        isReader && readWriteSplitEnabled, host, port);
+
+    return new SqlConnectOptions()
         .setHost(host)
         .setPort(port)
         .setDatabase(postgreSqlClientConfig.getString(DATABASE))
         .setUser(postgreSqlClientConfig.getString(USERNAME))
         .setPassword(postgreSqlClientConfig.getString(PASSWORD))
-        // using RMB convention driven tenant to schema name
         .addProperty(DEFAULT_SCHEMA_PROPERTY, PostgresClient.convertToPsqlStandard(tenantId));
   }
 
-  private static void close(PgPool client) {
+  private static void close(Pool client) {
     client.close();
   }
 

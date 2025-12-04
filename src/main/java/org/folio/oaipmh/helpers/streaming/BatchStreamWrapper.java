@@ -51,7 +51,6 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return Future.succeededFuture();
   }
 
-  @Override
   public synchronized void write(JsonEvent data, Handler<AsyncResult<Void>> handler) {
     dataList.add(data);
     if (dataList.size() >= batchSize) {
@@ -95,7 +94,7 @@ public class BatchStreamWrapper implements WriteStream<JsonEvent> {
     return Future.succeededFuture();
   }
 
-  @Override
+
   public void end(Handler<AsyncResult<Void>> handler) {
     handler.handle(end());
   }

@@ -6,7 +6,6 @@ import static java.util.Objects.nonNull;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.parsetools.JsonParser;
 import io.vertx.core.streams.WriteStream;
@@ -34,13 +33,11 @@ public class JsonWriter implements WriteStream<Buffer> {
   }
 
   @Override
-  public Future<Void> write(Buffer buffer) {
-    Promise<Void> promise = Promise.promise();
-    write(buffer, promise);
-    return promise.future();
+  public Future<Void> write(Buffer data) {
+    parser.handle(data);
+    return Future.succeededFuture();
   }
 
-  @Override
   public void write(Buffer data, Handler<AsyncResult<Void>> handler) {
     parser.handle(data);
     if (Objects.nonNull(handler)) {
@@ -49,11 +46,9 @@ public class JsonWriter implements WriteStream<Buffer> {
   }
 
   @Override
-  public void end(Handler<AsyncResult<Void>> handler) {
+  public Future<Void> end() {
     parser.end();
-    if (nonNull(handler)) {
-      handler.handle(Future.succeededFuture());
-    }
+    return Future.succeededFuture();
   }
 
   @Override

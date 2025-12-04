@@ -1,8 +1,8 @@
 package org.folio.oaipmh.service.impl;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,7 +73,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
   static void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
     WebClientProvider.closeAll();
-    vertx.close(testContext.succeeding(res -> {
+    vertx.close().onComplete(testContext.succeeding(res -> {
       PostgresClient.stopPostgresTester();
       testContext.completeNow();
     }));
@@ -117,7 +117,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
                     testContext.completeNow();
                   } else {
                     testContext.failNow(new IllegalStateException(
-                        "Cannot delete test request metadata with request id: " + id.toString()));
+                        "Cannot delete test request metadata with request id: " + id));
                   }
                 }));
           }));
@@ -226,7 +226,7 @@ class InstancesServiceImplTest extends AbstractInstancesTest {
     testContext.verify(() -> {
       instancesService.deleteRequestMetadataByRequestId(NON_EXISTENT_REQUEST_ID, OAI_TEST_TENANT)
           .onComplete(testContext.failing(throwable -> {
-            assertTrue(throwable instanceof NotFoundException);
+            assertInstanceOf(NotFoundException.class, throwable);
             testContext.completeNow();
           }));
     });

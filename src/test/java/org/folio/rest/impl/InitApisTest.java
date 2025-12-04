@@ -63,7 +63,7 @@ class InitApisTest {
       Vertx vertx, VertxTestContext testContext) {
     logger.info("run shouldInitSuccessfully_whenConfigFilePathAndConfigFilesProperties"
           + "HaveCorrectValues");
-    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(),
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions()).onComplete(
         testContext.succeeding(id ->
             new InitApis().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(
                 result -> {
@@ -86,7 +86,7 @@ class InitApisTest {
     System.clearProperty(CONFIGURATION_FILES);
     logger.info("run shouldInitSuccessfully_whenDefaultConfigFilePathAndConfigFilesProperty"
         + "ValuesAreUsed, {}", Vertx.currentContext());
-    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(),
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions()).onComplete(
         testContext.succeeding(id ->
             new InitApis().init(vertx, vertx.getOrCreateContext(), testContext.succeeding(
                 result -> {
@@ -106,7 +106,7 @@ class InitApisTest {
       Vertx vertx, VertxTestContext testContext) {
     System.clearProperty(CONFIGURATION_PATH);
     System.clearProperty(CONFIGURATION_FILES);
-    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions(),
+    vertx.deployVerticle(RestVerticle.class.getName(), new DeploymentOptions()).onComplete(
         testContext.succeeding(id ->
             new InitApis().init(vertx, vertx.getOrCreateContext(),
                 testContext.succeeding(result -> {

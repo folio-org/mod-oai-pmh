@@ -11,14 +11,14 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ViewsDaoImpl implements ViewsDao {
 
-  private PostgresClientFactory postgresClientFactory;
+  private final PostgresClientFactory postgresClientFactory;
 
   public ViewsDaoImpl(PostgresClientFactory postgresClientFactory) {
     this.postgresClientFactory = postgresClientFactory;
   }
 
   public Future<JsonArray> query(String query, String tenantId) {
-    var client = postgresClientFactory.getClient(tenantId);
+    var client = postgresClientFactory.getReaderClient(tenantId);
     return client.query(query).execute()
         .map(this::rowSetToString).onComplete(handler -> client.close());
   }

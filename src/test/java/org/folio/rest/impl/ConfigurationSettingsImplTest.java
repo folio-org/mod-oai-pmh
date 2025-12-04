@@ -85,22 +85,23 @@ class ConfigurationSettingsImplTest {
         .put("http.port", serverPort));
 
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), options, testContext.succeeding(id -> {
-      idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-      System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
-      Context context = vertx.getOrCreateContext();
-      SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-      SpringContextUtil.autowireDependencies(this, context);
-      logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
-      new OkapiMockServer(vertx, mockPort).start(testContext);
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), options)
+        .onComplete(testContext.succeeding(id -> {
+          idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+          System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
+          Context context = vertx.getOrCreateContext();
+          SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+          SpringContextUtil.autowireDependencies(this, context);
+          logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
+          new OkapiMockServer(vertx, mockPort).start(testContext);
+        }));
     assertTrue(testContext.awaitCompletion(10, TimeUnit.SECONDS));
   }
 
   @AfterAll
   void tearDownClass(VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    vertx.close(testContext.succeeding(res -> testContext.completeNow()));
+    vertx.close().onComplete(testContext.succeeding(res -> testContext.completeNow()));
   }
 
   @Test

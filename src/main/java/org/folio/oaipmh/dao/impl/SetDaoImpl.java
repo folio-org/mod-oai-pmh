@@ -1,21 +1,22 @@
 package org.folio.oaipmh.dao.impl;
 
 import static java.util.Date.from;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.rest.jooq.Tables.SET_LB;
 
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.Tuple;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.ws.rs.NotFoundException;
@@ -24,9 +25,13 @@ import org.folio.oaipmh.dao.SetDao;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.folio.rest.jaxrs.model.FolioSetCollection;
-import org.folio.rest.jooq.tables.mappers.RowMappers;
-import org.folio.rest.jooq.tables.records.SetLbRecord;
-import org.jooq.Condition;
+import org.jooq.DSLContext;
+import org.jooq.Query;
+import org.jooq.ResultQuery;
+import org.jooq.SQLDialect;
+import org.jooq.conf.ParamType;
+import org.jooq.conf.Settings;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -34,208 +39,315 @@ public class SetDaoImpl implements SetDao {
 
   private static final String ALREADY_EXISTS_ERROR_MSG = "Set with id '%s' already exists";
   private static final String NOT_FOUND_ERROR_MSG = "Set with id '%s' was not found";
+  private static final DSLContext JOOQ = DSL.using(
+      SQLDialect.POSTGRES,
+      new Settings()
+          .withParamType(ParamType.NAMED)
+  );
 
   private final PostgresClientFactory postgresClientFactory;
 
-  public SetDaoImpl(final PostgresClientFactory postgresClientFactory) {
+  public SetDaoImpl(PostgresClientFactory postgresClientFactory) {
     this.postgresClientFactory = postgresClientFactory;
   }
 
   @Override
   public Future<FolioSet> getSetById(String id, String tenantId) {
-    return getQueryExecutorReader(tenantId).transaction(txQE -> {
-      Condition condition = SET_LB.ID.eq(UUID.fromString(id));
-      return txQE.findOneRow(dslContext -> dslContext.selectFrom(SET_LB)
-          .where(condition)
-          .limit(1))
-          .map(this::toOptionalSet)
-          .map(optionalSet -> {
-            if (optionalSet.isPresent()) {
-              return optionalSet.get();
-            }
-            throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id));
-          });
-    });
+
+    var uuid = UUID.fromString(id);
+    var query = JOOQ
+        .selectFrom(SET_LB)
+        .where(SET_LB.ID.eq(uuid))
+        .limit(1);
+    var sqlAndParams = toSql(query);
+    var client = postgresClientFactory.getPoolReader(tenantId);
+    Promise<FolioSet> promise = Promise.promise();
+
+    client.preparedQuery(sqlAndParams.sql())
+        .execute(sqlAndParams.params())
+        .onSuccess(rows -> {
+          var opt = toOptionalSet(rows);
+          if (opt.isPresent()) {
+            promise.complete(opt.get());
+          } else {
+            promise.fail(new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id)));
+          }
+        })
+        .onFailure(promise::fail);
+
+    return promise.future();
   }
 
   @Override
   public Future<FolioSet> updateSetById(String id, FolioSet entry, String tenantId, String userId) {
+
     entry.setId(id);
     prepareSetMetadata(entry, userId, InsertType.UPDATE);
-    SetLbRecord dbRecord = toDatabaseSetRecord(entry);
-    return getQueryExecutor(tenantId).transaction(queryExecutor ->
-        queryExecutor.executeAny(dslContext -> dslContext.update(SET_LB)
-            .set(dbRecord)
-            .where(SET_LB.ID.eq(UUID.fromString(entry.getId())))
-            .returning())
-            .map(this::toOptionalSet)
-            .map(optionalSet -> {
-              if (optionalSet.isPresent()) {
-                return optionalSet.get();
-              }
-              throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, entry.getId()));
-            }));
+
+    var uuid = UUID.fromString(entry.getId());
+    var query = JOOQ
+        .update(SET_LB)
+        .set(SET_LB.NAME, entry.getName())
+        .set(SET_LB.DESCRIPTION, entry.getDescription())
+        .set(SET_LB.SET_SPEC, entry.getSetSpec())
+        .set(SET_LB.FILTERING_CONDITIONS,
+            nonNull(entry.getFilteringConditions())
+                ? fkListToJsonString(entry.getFilteringConditions())
+                : null)
+        .set(SET_LB.CREATED_DATE,
+            nonNull(entry.getCreatedDate())
+                ? entry.getCreatedDate().toInstant().atOffset(ZoneOffset.UTC)
+                : null)
+        .set(SET_LB.CREATED_BY_USER_ID,
+            isNotEmpty(entry.getCreatedByUserId())
+                ? UUID.fromString(entry.getCreatedByUserId())
+                : null)
+        .set(SET_LB.UPDATED_DATE,
+            nonNull(entry.getUpdatedDate())
+                ? entry.getUpdatedDate().toInstant().atOffset(ZoneOffset.UTC)
+                : null)
+        .set(SET_LB.UPDATED_BY_USER_ID,
+            isNotEmpty(entry.getUpdatedByUserId())
+                ? UUID.fromString(entry.getUpdatedByUserId())
+                : null)
+        .where(SET_LB.ID.eq(uuid))
+        .returning();
+
+    var sqlAndParams = toSql(query);
+    var client = postgresClientFactory.getPoolWriter(tenantId);
+    Promise<FolioSet> promise = Promise.promise();
+
+    client.preparedQuery(sqlAndParams.sql())
+        .execute(sqlAndParams.params())
+        .onSuccess(rows -> {
+          Optional<FolioSet> opt = toOptionalSet(rows);
+          if (opt.isPresent()) {
+            promise.complete(opt.get());
+          } else {
+            promise.fail(new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, entry.getId())));
+          }
+        })
+        .onFailure(promise::fail);
+
+    return promise.future();
   }
 
   @Override
   public Future<FolioSet> saveSet(FolioSet entry, String tenantId, String userId) {
+    var client = postgresClientFactory.getPoolWriter(tenantId);
+
     if (isNotEmpty(entry.getId())) {
-      return getQueryExecutor(tenantId).transaction(queryExecutor ->
-          queryExecutor
-              .execute(dslContext -> dslContext.selectFrom(SET_LB)
-                  .where(SET_LB.ID.eq(UUID.fromString(entry.getId()))))
-              .compose(res -> {
-                if (res == 1) {
-                  throw new IllegalArgumentException(String.format(ALREADY_EXISTS_ERROR_MSG,
-                      entry.getId()));
-                }
-                return saveSetItem(entry, tenantId, userId);
-              }));
+      var uuid = UUID.fromString(entry.getId());
+      var checkQuery = JOOQ
+          .selectOne()
+          .from(SET_LB)
+          .where(SET_LB.ID.eq(uuid));
+      var check = toSql(checkQuery);
+
+      return client.preparedQuery(check.sql())
+          .execute(check.params())
+          .compose(rows -> {
+            if (rows.size() != 0) {
+              return Future.failedFuture(
+                  new IllegalArgumentException(String.format(ALREADY_EXISTS_ERROR_MSG,
+                      entry.getId())));
+            }
+            return saveSetItem(entry, tenantId, userId);
+          });
     } else {
       entry.setId(UUID.randomUUID().toString());
       return saveSetItem(entry, tenantId, userId);
     }
   }
 
-  private Future<FolioSet> saveSetItem(FolioSet entry, String tenantId, String userId) {
-    prepareSetMetadata(entry, userId, InsertType.INSERT);
-    return getQueryExecutor(tenantId).transaction(queryExecutor ->
-        queryExecutor.executeAny(dslContext -> dslContext.insertInto(SET_LB)
-          .set(toDatabaseSetRecord(entry)))
-          .map(raw -> entry));
-  }
-
   @Override
   public Future<Boolean> deleteSetById(String id, String tenantId) {
-    return getQueryExecutor(tenantId).transaction(queryExecutor ->
-        queryExecutor.execute(dslContext -> dslContext.deleteFrom(SET_LB)
-            .where(SET_LB.ID.eq(UUID.fromString(id))))
-            .map(res -> {
-              if (res == 1) {
-                return true;
-              }
-              throw new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id));
-            }));
+    var uuid = UUID.fromString(id);
+    var query = JOOQ
+        .deleteFrom(SET_LB)
+        .where(SET_LB.ID.eq(uuid));
+    var sqlAndParams = toSql(query);
+    var client = postgresClientFactory.getPoolWriter(tenantId);
+    Promise<Boolean> promise = Promise.promise();
+
+    client.preparedQuery(sqlAndParams.sql())
+        .execute(sqlAndParams.params())
+        .onSuccess(rows -> {
+          if (rows.rowCount() == 1) {
+            promise.complete(true);
+          } else {
+            promise.fail(new NotFoundException(String.format(NOT_FOUND_ERROR_MSG, id)));
+          }
+        })
+        .onFailure(promise::fail);
+
+    return promise.future();
   }
 
   @Override
   public Future<FolioSetCollection> getSetList(int offset, int limit, String tenantId) {
-    return getQueryExecutorReader(tenantId)
-        .transaction(queryExecutor ->
-            queryExecutor.query(dslContext ->
-                dslContext.selectCount().from(SET_LB)))
-        .compose(recordsCount ->
-            getQueryExecutorReader(tenantId).transaction(queryExecutor ->
-                queryExecutor.query(dslContext -> dslContext.selectFrom(SET_LB)
-                    .orderBy(SET_LB.UPDATED_DATE.desc())
-                    .offset(offset)
-                    .limit(limit))
-                .map(collection -> queryResultToSetCollection(collection,
-                    recordsCount.get(0, int.class))))
-    );
+    var client = postgresClientFactory.getPoolReader(tenantId);
+
+    var countQuery = JOOQ
+        .selectCount()
+        .from(SET_LB);
+
+    var count = toSql(countQuery);
+
+    ResultQuery<?> query = JOOQ
+        .selectFrom(SET_LB)
+        .orderBy(SET_LB.UPDATED_DATE.desc())
+        .offset(offset)
+        .limit(limit);
+
+    var data = toSql(query);
+
+    Promise<FolioSetCollection> promise = Promise.promise();
+
+    client.preparedQuery(count.sql())
+        .execute(count.params())
+        .compose(rows -> {
+          int total = rows.iterator().next().getInteger(0);
+
+          Promise<FolioSetCollection> dataPromise = Promise.promise();
+          client.preparedQuery(data.sql())
+              .execute(data.params())
+              .onSuccess(dataRows -> {
+                var sets = rowsToSetList(dataRows);
+                var collection = new FolioSetCollection()
+                    .withSets(sets)
+                    .withTotalRecords(total);
+                dataPromise.complete(collection);
+              })
+              .onFailure(dataPromise::fail);
+          return dataPromise.future();
+        })
+        .onSuccess(promise::complete)
+        .onFailure(promise::fail);
+
+    return promise.future();
   }
 
-  private FolioSetCollection queryResultToSetCollection(QueryResult queryResult,
-      int totalRecordsCount) {
-    List<FolioSet> list = queryResult.stream()
-        .map(row -> rowToSet(row.unwrap()))
-        .toList();
-    return new FolioSetCollection().withSets(list).withTotalRecords(totalRecordsCount);
+  private Future<FolioSet> saveSetItem(FolioSet entry, String tenantId, String userId) {
+
+    prepareSetMetadata(entry, userId, InsertType.INSERT);
+
+    var uuid = UUID.fromString(entry.getId());
+
+    var query = JOOQ
+        .insertInto(SET_LB)
+        .set(SET_LB.ID, uuid)
+        .set(SET_LB.NAME, entry.getName())
+        .set(SET_LB.DESCRIPTION, entry.getDescription())
+        .set(SET_LB.SET_SPEC, entry.getSetSpec())
+        .set(SET_LB.FILTERING_CONDITIONS,
+            nonNull(entry.getFilteringConditions())
+                ? fkListToJsonString(entry.getFilteringConditions())
+                : null)
+        .set(SET_LB.CREATED_DATE,
+            nonNull(entry.getCreatedDate())
+                ? entry.getCreatedDate().toInstant().atOffset(ZoneOffset.UTC)
+                : null)
+        .set(SET_LB.CREATED_BY_USER_ID,
+            isNotEmpty(entry.getCreatedByUserId())
+                ? UUID.fromString(entry.getCreatedByUserId())
+                : null)
+        .set(SET_LB.UPDATED_DATE,
+            nonNull(entry.getUpdatedDate())
+                ? entry.getUpdatedDate().toInstant().atOffset(ZoneOffset.UTC)
+                : null)
+        .set(SET_LB.UPDATED_BY_USER_ID,
+            isNotEmpty(entry.getUpdatedByUserId())
+                ? UUID.fromString(entry.getUpdatedByUserId())
+                : null);
+    var sqlAndParams = toSql(query);
+    var client = postgresClientFactory.getPoolWriter(tenantId);
+    Promise<FolioSet> promise = Promise.promise();
+
+    client.preparedQuery(sqlAndParams.sql())
+        .execute(sqlAndParams.params())
+        .onSuccess(rows -> promise.complete(entry))
+        .onFailure(promise::fail);
+
+    return promise.future();
   }
 
   private void prepareSetMetadata(FolioSet entry, String userId, InsertType insertType) {
-    if (insertType.equals(InsertType.INSERT)) {
+    if (insertType == InsertType.INSERT) {
       entry.setCreatedDate(from(Instant.now()));
       entry.setCreatedByUserId(userId);
+    }
+    if (isNull(entry.getCreatedByUserId())) {
+      entry.setCreatedByUserId(userId);
+    }
+    if (isNull(entry.getCreatedDate())) {
+      entry.setCreatedDate(from(Instant.now()));
     }
     entry.setUpdatedDate(from(Instant.now()));
     entry.setUpdatedByUserId(userId);
   }
 
-  private SetLbRecord toDatabaseSetRecord(FolioSet set) {
-    SetLbRecord dbRecord = new SetLbRecord();
-    dbRecord.setDescription(set.getDescription());
-    if (isNotEmpty(set.getId())) {
-      dbRecord.setId(UUID.fromString(set.getId()));
-    }
-    if (isNotEmpty(set.getName())) {
-      dbRecord.setName(set.getName());
-    }
-    if (nonNull(set.getDescription())) {
-      dbRecord.setDescription(set.getDescription());
-    }
-    if (isNotEmpty(set.getSetSpec())) {
-      dbRecord.setSetSpec(set.getSetSpec());
-    }
-    if (nonNull(set.getFilteringConditions())) {
-      dbRecord.setFilteringConditions(fkListToJsonString(set.getFilteringConditions()));
-    }
-    if (Objects.nonNull(set.getCreatedDate())) {
-      dbRecord.setCreatedDate(set.getCreatedDate()
-          .toInstant()
-          .atOffset(ZoneOffset.UTC));
-    }
-    if (isNotEmpty(set.getCreatedByUserId())) {
-      dbRecord.setCreatedByUserId(UUID.fromString(set.getCreatedByUserId()));
-    }
-    if (Objects.nonNull(set.getUpdatedDate())) {
-      dbRecord.setUpdatedDate(set.getUpdatedDate()
-          .toInstant()
-          .atOffset(ZoneOffset.UTC));
-    }
-    if (isNotEmpty(set.getUpdatedByUserId())) {
-      dbRecord.setUpdatedByUserId(UUID.fromString(set.getUpdatedByUserId()));
-    }
-    return dbRecord;
-  }
-
-  private ReactiveClassicGenericQueryExecutor getQueryExecutor(String tenantId) {
-    return postgresClientFactory.getQueryExecutor(tenantId);
-  }
-
-  private ReactiveClassicGenericQueryExecutor getQueryExecutorReader(String tenantId) {
-    return postgresClientFactory.getQueryExecutorReader(tenantId);
-  }
-
-  private Optional<FolioSet> toOptionalSet(Row row) {
-    return nonNull(row) ? Optional.of(rowToSet(row)) : Optional.empty();
-  }
-
   private Optional<FolioSet> toOptionalSet(RowSet<Row> rows) {
-    return rows.rowCount() == 1 ? Optional.of(rowToSet(rows.iterator()
-      .next())) : Optional.empty();
+    if (rows == null || rows.size() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(rowToSet(rows.iterator().next()));
+  }
+
+  private List<FolioSet> rowsToSetList(RowSet<Row> rows) {
+    return rows.stream()
+        .map(this::rowToSet)
+        .toList();
   }
 
   private FolioSet rowToSet(Row row) {
-    org.folio.rest.jooq.tables.pojos.SetLb pojo = RowMappers.getSetLbMapper().apply(row);
     FolioSet set = new FolioSet();
-    if (nonNull(pojo.getId())) {
-      set.withId(pojo.getId().toString());
+
+    UUID id = row.getUUID("id");
+    if (nonNull(id)) {
+      set.withId(id.toString());
     }
-    if (nonNull(pojo.getName())) {
-      set.withName(pojo.getName());
+
+    String name = row.getString("name");
+    if (nonNull(name)) {
+      set.withName(name);
     }
-    if (nonNull(pojo.getDescription())) {
-      set.withDescription(pojo.getDescription());
+
+    String description = row.getString("description");
+    if (nonNull(description)) {
+      set.withDescription(description);
     }
-    if (nonNull(pojo.getSetSpec())) {
-      set.withSetSpec(pojo.getSetSpec());
+
+    String setSpec = row.getString("set_spec");
+    if (nonNull(setSpec)) {
+      set.withSetSpec(setSpec);
     }
-    if (nonNull(pojo.getFilteringConditions())) {
-      set.setFilteringConditions(jsonStringToFkList(pojo.getFilteringConditions()));
+
+    String filteringJson = row.getString("filtering_conditions");
+    if (nonNull(filteringJson)) {
+      set.setFilteringConditions(jsonStringToFkList(filteringJson));
     }
-    if (nonNull(pojo.getCreatedByUserId())) {
-      set.withCreatedByUserId(pojo.getCreatedByUserId().toString());
+
+    UUID createdBy = row.getUUID("created_by_user_id");
+    if (nonNull(createdBy)) {
+      set.withCreatedByUserId(createdBy.toString());
     }
-    if (nonNull(pojo.getCreatedDate())) {
-      set.withCreatedDate(from(pojo.getCreatedDate().toInstant()));
+
+    OffsetDateTime createdDate = row.getOffsetDateTime("created_date");
+    if (nonNull(createdDate)) {
+      set.withCreatedDate(from(createdDate.toInstant()));
     }
-    if (nonNull(pojo.getUpdatedByUserId())) {
-      set.withUpdatedByUserId(pojo.getUpdatedByUserId().toString());
+
+    UUID updatedBy = row.getUUID("updated_by_user_id");
+    if (nonNull(updatedBy)) {
+      set.withUpdatedByUserId(updatedBy.toString());
     }
-    if (nonNull(pojo.getUpdatedDate())) {
-      set.withUpdatedDate(from(pojo.getUpdatedDate().toInstant()));
+
+    OffsetDateTime updatedDate = row.getOffsetDateTime("updated_date");
+    if (nonNull(updatedDate)) {
+      set.withUpdatedDate(from(updatedDate.toInstant()));
     }
+
     return set;
   }
 
@@ -261,14 +373,43 @@ public class SetDaoImpl implements SetDao {
 
   private List<FilteringCondition> jsonStringToFkList(String json) {
     return new JsonArray(json).stream()
-      .map(JsonObject.class::cast)
-      .map(this::jsonObjectToFilteringCondition)
-      .toList();
+        .map(JsonObject.class::cast)
+        .map(this::jsonObjectToFilteringCondition)
+        .toList();
   }
 
   private FilteringCondition jsonObjectToFilteringCondition(JsonObject jsonObject) {
-    return new FilteringCondition().withName(jsonObject.getString("name"))
+    return new FilteringCondition()
+        .withName(jsonObject.getString("name"))
         .withValue(jsonObject.getString("value"))
         .withSetSpec(jsonObject.getString("setSpec"));
+  }
+
+  private record SqlAndParams(String sql, Tuple params) {}
+
+  private static SqlAndParams toSql(Query query) {
+    String namedSql = JOOQ.renderNamedParams(query);
+    List<Object> bindValues = JOOQ.extractBindValues(query);
+    StringBuilder sb = new StringBuilder();
+    int paramIndex = 1;
+    for (int i = 0; i < namedSql.length(); ) {
+      char c = namedSql.charAt(i);
+      if (c == ':' && i + 1 < namedSql.length() && Character.isDigit(namedSql.charAt(i + 1))) {
+        int j = i + 1;
+        while (j < namedSql.length() && Character.isDigit(namedSql.charAt(j))) {
+          j++;
+        }
+        sb.append('$').append(paramIndex++);
+        i = j;
+      } else {
+        sb.append(c);
+        i++;
+      }
+    }
+
+    Tuple tuple = Tuple.tuple();
+    bindValues.forEach(tuple::addValue);
+
+    return new SqlAndParams(sb.toString(), tuple);
   }
 }
