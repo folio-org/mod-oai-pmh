@@ -1,6 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
@@ -167,6 +165,7 @@
     <aws.sdk.version>2.29.9</aws.sdk.version>
     <json-smart.version>2.5.2</json-smart.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+
   </properties>
 
   <dependencies>
@@ -221,7 +220,7 @@
         </exclusion>
       </exclusions>
     </dependency>
-
+    <!-- Jaxb dependencies -->
     <dependency>
       <groupId>com.migesok</groupId>
       <artifactId>jaxb-java-time-adapters</artifactId>
@@ -233,6 +232,7 @@
       <version>${jaxb2-basics.version}</version>
     </dependency>
 
+    <!-- we use marc4j for converting marcJson to marcXml -->
     <dependency>
       <groupId>org.marc4j</groupId>
       <artifactId>marc4j</artifactId>
@@ -250,7 +250,6 @@
       <artifactId>httpclient</artifactId>
       <version>${apache-httpclient.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.jooq</groupId>
       <artifactId>jooq</artifactId>
@@ -263,6 +262,8 @@
       <version>${aws.sdk.version}</version>
     </dependency>
 
+    <!-- logging see http://www.slf4j.org/legacy.html -->
+    <!-- The RMB runtime defines usage of log4j2 for for vert.x logging interface -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j2-impl</artifactId>
@@ -272,6 +273,8 @@
       <artifactId>log4j-jul</artifactId>
     </dependency>
 
+    <!-- test dependencies -->
+    <!-- vertx for junit5 -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
@@ -377,6 +380,7 @@
       <artifactId>json-smart</artifactId>
       <version>${json-smart.version}</version>
     </dependency>
+
   </dependencies>
 
   <build>
@@ -461,6 +465,15 @@
       </plugin>
 
       <plugin>
+        <!--
+          Until version 1.11.1 is released into Maven Central by org.codehaus.mojo use the snapshot build instead:
+          https://github.com/mojohaus/aspectj-maven-plugin/issues/24#issuecomment-419077658
+          So that, this dependency group can be used alternatively:
+
+          <groupId>com.github.m50d</groupId>
+              instead of
+          <groupId>org.codehaus.mojo</groupId>
+        -->
         <groupId>com.nickwongdev</groupId>
         <artifactId>aspectj-maven-plugin</artifactId>
         <version>1.12.6</version>
@@ -550,6 +563,8 @@
         </executions>
       </plugin>
 
+      <!-- Replace the baseUri and the protocols in the RAMLs that have been copied to
+      apidocs directory so that they can be used via the local html api console. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -559,15 +574,11 @@
             <phase>prepare-package</phase>
             <configuration>
               <target if="http.port">
-                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh"
-                  value="baseUri: http://localhost:${http.port}"
-                  dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="baseUri: https://github.com/folio-org/mod-oai-pmh" value="baseUri: http://localhost:${http.port}" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
-                <replace token="protocols: [ HTTP, HTTPS ]"
-                  value="protocols: [ HTTP ]"
-                  dir="${basedir}/target/classes/apidocs/raml">
-                  <include name="**/*.raml"/>
+                <replace token="protocols: [ HTTP, HTTPS ]" value="protocols: [ HTTP ]" dir="${basedir}/target/classes/apidocs/raml">
+                  <include name="**/*.raml" />
                 </replace>
               </target>
             </configuration>
@@ -658,7 +669,7 @@
                   </excludes>
                 </filter>
               </filters>
-              <artifactSet/>
+              <artifactSet />
               <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
             </configuration>
           </execution>
@@ -734,6 +745,8 @@
         </configuration>
       </plugin>
 
+      <!-- Enable jaxb validation for unit tests by default. The implementation by default enables validation.
+           Setting here as well just in case because apparently the default behavior might be changed. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -742,9 +755,7 @@
           <forkedProcessExitTimeoutInSeconds>300</forkedProcessExitTimeoutInSeconds>
           <systemPropertyVariables>
             <jaxb.marshaller.enableValidation>true</jaxb.marshaller.enableValidation>
-            <vertx.logger-delegate-factory-class-name>
-              io.vertx.core.logging.Log4j2LogDelegateFactory
-            </vertx.logger-delegate-factory-class-name>
+            <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.Log4j2LogDelegateFactory</vertx.logger-delegate-factory-class-name>
           </systemPropertyVariables>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
@@ -864,11 +875,13 @@
             <database>
               <name>org.jooq.meta.postgres.PostgresDatabase</name>
               <includes>.*</includes>
-              <excludes>databasechangelog|databasechangeloglock</excludes>
+              <excludes>
+                databasechangelog|databasechangeloglock
+              </excludes>
               <inputSchema>public</inputSchema>
               <outputSchemaToDefault>true</outputSchemaToDefault>
               <unsignedTypes>false</unsignedTypes>
-              <forcedTypes/>
+              <forcedTypes />
             </database>
             <generate>
               <daos>true</daos>
