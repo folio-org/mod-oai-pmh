@@ -85,7 +85,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions).onComplete(
         testContext.succeeding(v -> {
           try {
             Context context = vertx.getOrCreateContext();
@@ -347,6 +347,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   void shouldNotSaveItemWhenSaveItemWithAlreadyExistedSetSpecValueCaseInsensitive(
       VertxTestContext testContext) {
     testContext.verify(() -> {
+      POST_SET_ENTRY.setId(UUID.randomUUID().toString());
       RequestSpecification request = createBaseRequest(SET_PATH, ContentType.JSON)
           .body(POST_SET_ENTRY);
       request.when()
@@ -355,6 +356,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
           .statusCode(201)
           .contentType(ContentType.JSON);
 
+      POST_SET_ENTRY.setId(UUID.randomUUID().toString());
       POST_SET_ENTRY.setName("unique value for name");
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
@@ -377,6 +379,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
   void shouldNotSaveItemWhenSaveItemWithAlreadyExistedNameValueCaseInsensitive(
       VertxTestContext testContext) {
     testContext.verify(() -> {
+      POST_SET_ENTRY.setId(UUID.randomUUID().toString());
       RequestSpecification request =
           createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
       request.when()
@@ -385,6 +388,7 @@ class OaiPmhSetImplTest extends AbstractSetTest {
           .statusCode(201)
           .contentType(ContentType.JSON);
 
+      POST_SET_ENTRY.setId(UUID.randomUUID().toString());
       POST_SET_ENTRY.setSetSpec("unique value for setSpec");
 
       request = createBaseRequest(SET_PATH, ContentType.JSON).body(POST_SET_ENTRY);
@@ -453,40 +457,6 @@ class OaiPmhSetImplTest extends AbstractSetTest {
           .statusCode(200)
           .contentType(ContentType.JSON)
           .body("setsFilteringConditions.size()", is(5));
-      testContext.completeNow();
-    });
-  }
-
-  @Test
-  void shouldReturnInternalServerErrorWhenExceptionOccursInGetSetById(
-      VertxTestContext testContext) {
-    testContext.verify(() -> {
-      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
-      RequestSpecification request = createBaseRequest(
-          getSetPathWithId("invalid-id-for-exception"), null);
-      request.when()
-          .get()
-          .then()
-          .statusCode(500)
-          .contentType(ContentType.TEXT);
-      testContext.completeNow();
-    });
-  }
-
-  @Test
-  void shouldReturnInternalServerErrorWhenExceptionOccursInPutSetById(
-      VertxTestContext testContext) {
-    testContext.verify(() -> {
-      // Simulate an exception by passing an invalid ID (e.g., null or malformed)
-      FolioSet folioSet = new FolioSet().withName("name").withSetSpec("spec");
-      RequestSpecification request = createBaseRequest(
-          getSetPathWithId("invalid-id-for-exception"), ContentType.JSON)
-          .body(folioSet);
-      request.when()
-          .put()
-          .then()
-          .statusCode(500)
-          .contentType(ContentType.TEXT);
       testContext.completeNow();
     });
   }

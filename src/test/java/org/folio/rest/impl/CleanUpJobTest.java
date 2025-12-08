@@ -73,7 +73,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
     dpConfig.put("http.port", okapiPort);
     DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dpConfig);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions,
+    vertx.deployVerticle(RestVerticle.class.getName(), deploymentOptions).onComplete(
         testContext.succeeding(v -> {
           try {
             Context context = vertx.getOrCreateContext();
@@ -108,7 +108,7 @@ class CleanUpJobTest extends AbstractInstancesTest {
     instancesDao.getInstancesList(100, EXPIRED_REQUEST_ID, OAI_TEST_TENANT)
         .onSuccess(instances -> {
           List<String> instancesIds = instances.stream().map(Instances::getInstanceId)
-              .map(UUID::toString).collect(Collectors.toList());
+              .map(UUID::toString).toList();
           assertFalse(instancesIds.contains(EXPIRED_INSTANCE_ID));
           testContext.completeNow();
         }).onFailure(testContext::failNow);

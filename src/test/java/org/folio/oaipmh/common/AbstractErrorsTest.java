@@ -13,7 +13,6 @@ import java.util.UUID;
 import javax.ws.rs.NotFoundException;
 import org.folio.oaipmh.dao.ErrorsDao;
 import org.folio.oaipmh.dao.InstancesDao;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Errors;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.junit.jupiter.api.AfterEach;
@@ -38,17 +37,17 @@ public abstract class AbstractErrorsTest {
 
   @BeforeEach
   void setup(VertxTestContext testContext) {
-    List<Future> saveRequestMetadataFutures = new ArrayList<>();
+    List<Future<?>> saveRequestMetadataFutures = new ArrayList<>();
     requestMetadataList
         .forEach(elem -> saveRequestMetadataFutures
             .add(getInstancesDao().saveRequestMetadata(elem, OAI_TEST_TENANT)));
 
-    List<Future> saveErrorsFutures = new ArrayList<>();
+    List<Future<?>> saveErrorsFutures = new ArrayList<>();
     errorList.forEach(err ->
         saveErrorsFutures.add(getErrorsDao().saveErrors(err, OAI_TEST_TENANT)));
 
-    GenericCompositeFuture.all(saveRequestMetadataFutures)
-        .onSuccess(v -> GenericCompositeFuture.all(saveErrorsFutures)
+    Future.all(saveRequestMetadataFutures)
+        .onSuccess(v -> Future.all(saveErrorsFutures)
             .onSuccess(e -> testContext.completeNow())
             .onFailure(testContext::failNow))
         .onFailure(testContext::failNow);
@@ -62,11 +61,11 @@ public abstract class AbstractErrorsTest {
 
   protected Future<Void> cleanData() {
     Promise<Void> promise = Promise.promise();
-    List<Future> futures = new ArrayList<>();
+    List<Future<?>> futures = new ArrayList<>();
     requestIds.forEach(elem ->
         futures.add(getInstancesDao().deleteRequestMetadataByRequestId(elem, OAI_TEST_TENANT)));
 
-    GenericCompositeFuture.all(futures)
+    Future.all(futures)
         .onSuccess(v -> promise.complete())
         .onFailure(throwable -> {
           if (throwable instanceof NotFoundException) {

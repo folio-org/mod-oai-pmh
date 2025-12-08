@@ -1,14 +1,14 @@
 package org.folio.oaipmh.common;
 
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
-import static org.folio.rest.jooq.tables.SetLb.SET_LB;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import com.google.common.collect.ImmutableList;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.sqlclient.SqlClient;
+import io.vertx.sqlclient.SqlResult;
 import java.util.List;
 import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.service.SetService;
@@ -16,6 +16,7 @@ import org.folio.rest.impl.OkapiMockServer;
 import org.folio.rest.jaxrs.model.FilteringCondition;
 import org.folio.rest.jaxrs.model.FolioSet;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 public abstract class AbstractSetTest {
@@ -80,9 +81,13 @@ public abstract class AbstractSetTest {
   }
 
   private Future<Integer> deleteSets() {
-    return getPostgresClientFactory().getQueryExecutor(OAI_TEST_TENANT)
-        .transaction(queryExecutor -> queryExecutor.execute(dslContext ->
-            dslContext.deleteFrom(SET_LB)));
+    SqlClient client = getPostgresClientFactory().getPoolWriter(OAI_TEST_TENANT);
+    String sql = "DELETE FROM set_lb";
+
+    return client
+        .query(sql)
+        .execute()
+        .map(SqlResult::rowCount);
   }
 
   protected void verifyMainSetData(FolioSet setWithExpectedData, FolioSet setToVerify,
@@ -101,19 +106,19 @@ public abstract class AbstractSetTest {
 
   private void verifyFilteringConditions(List<FilteringCondition> fkWithExpectedData,
       List<FilteringCondition> fkList) {
-    assertFalse(fkList.isEmpty());
-    FilteringCondition expectedFk = fkWithExpectedData.iterator().next();
-    FilteringCondition actualFk = fkList.iterator().next();
-    assertEquals(expectedFk.getName(), actualFk.getName());
-    assertEquals(expectedFk.getValue(), actualFk.getValue());
-    assertEquals(expectedFk.getSetSpec(), actualFk.getSetSpec());
+    Assertions.assertFalse(fkList.isEmpty());
+    FilteringCondition expectedFk = fkWithExpectedData.getFirst();
+    FilteringCondition actualFk = fkList.getFirst();
+    Assertions.assertEquals(expectedFk.getName(), actualFk.getName());
+    Assertions.assertEquals(expectedFk.getValue(), actualFk.getValue());
+    Assertions.assertEquals(expectedFk.getSetSpec(), actualFk.getSetSpec());
   }
 
   protected void verifyMetadata(FolioSet folioSet) {
-    assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getCreatedByUserId());
-    assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getUpdatedByUserId());
-    assertNotNull(folioSet.getCreatedDate());
-    assertNotNull(folioSet.getUpdatedDate());
+    Assertions.assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getCreatedByUserId());
+    Assertions.assertEquals(OkapiMockServer.TEST_USER_ID, folioSet.getUpdatedByUserId());
+    Assertions.assertNotNull(folioSet.getCreatedDate());
+    Assertions.assertNotNull(folioSet.getUpdatedDate());
   }
 
   protected abstract SetService getSetService();

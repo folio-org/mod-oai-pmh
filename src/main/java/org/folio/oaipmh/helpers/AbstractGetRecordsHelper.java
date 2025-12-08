@@ -91,7 +91,6 @@ import org.folio.oaipmh.querybuilder.RecordsSource;
 import org.folio.oaipmh.service.ConsortiaService;
 import org.folio.oaipmh.service.MetricsCollectingService;
 import org.folio.oaipmh.service.SourceStorageSourceRecordsClientWrapper;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processor.referencedata.JsonObjectWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapper;
 import org.folio.processor.referencedata.ReferenceDataWrapperImpl;
@@ -306,7 +305,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         });
 
 
-    CompositeFuture.join(local.future(), central.future())
+    Future.join(local.future(), central.future())
         .map(CompositeFuture::list)
         .map(results -> results.stream()
             .map(JsonObject.class::cast)
@@ -648,7 +647,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             futures.add(enrichedRecordFuture);
           });
 
-      GenericCompositeFuture.all(futures).onComplete(res -> {
+      Future.all(futures).onComplete(res -> {
         if (res.succeeded()) {
           enrichedRecordsPromise.complete(recordsMap);
         } else {

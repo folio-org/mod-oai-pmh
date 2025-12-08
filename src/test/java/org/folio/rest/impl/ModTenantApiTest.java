@@ -42,7 +42,8 @@ class ModTenantApiTest {
 
   private int okapiPort = -1;
   private ModTenantApi modTenantApi;
-  private TenantAttributes tenantAttributes = new TenantAttributes().withModuleTo("99.99.99");
+  private TenantAttributes tenantAttributes
+      = new TenantAttributes().withModuleTo("mod-oai-pmh-99.99.99");
 
   @BeforeAll
   void beforeAll(Vertx vertx, VertxTestContext vtc) {
@@ -53,17 +54,15 @@ class ModTenantApiTest {
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
     WebClientProvider.init(vertx);
 
-    vertx.runOnContext(v -> {
+    context.runOnContext(v -> {
       try {
         modTenantApi = new ModTenantApi();
         TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
         TestUtil.prepareExternalTables(vertx, OAI_TEST_TENANT);
-        // needed for RMB general requirePostgresVersion as this is performed without
-        // specific tenant roles; in real usage, this would be from the env config and
-        // already exist in the DB
         TestUtil.prepareUser(vertx, OAI_TEST_TENANT, "username", "password");
       } catch (Exception e) {
         vtc.failNow(e);
+        return;
       }
       startOkapiMockServer(vertx)
           .onComplete(vtc.succeedingThenComplete());

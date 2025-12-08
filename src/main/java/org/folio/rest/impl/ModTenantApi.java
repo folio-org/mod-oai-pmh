@@ -29,7 +29,6 @@ import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.ConfigurationsClient;
 import org.folio.rest.jaxrs.model.TenantAttributes;
@@ -87,7 +86,7 @@ public class ModTenantApi extends TenantAPI {
     configsSet.forEach(configName ->
           futures.add(processConfigurationByConfigName(configName,
             client, tenant, headers.get(XOkapiHeaders.USER_ID))));
-    return GenericCompositeFuture.all(futures)
+    return Future.all(futures)
       .map("Configuration has been set up successfully.")
       .recover(throwable -> {
         if (throwable.getMessage() == null) {

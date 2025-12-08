@@ -328,17 +328,18 @@ class OaiPmhImplTest {
 
     DeploymentOptions opt = new DeploymentOptions().setConfig(conf);
     WebClientProvider.init(vertx);
-    vertx.deployVerticle(RestVerticle.class.getName(), opt, testContext.succeeding(id -> {
-      idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
-      System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
-      Context context = vertx.getOrCreateContext();
-      SpringContextUtil.init(vertx, context, ApplicationConfig.class);
-      SpringContextUtil.autowireDependencies(this, context);
-      logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
-      // Once MockServer starts, it indicates to junit that process is finished
-      // by calling context.completeNow()
-      new OkapiMockServer(vertx, mockPort).start(testContext);
-    }));
+    vertx.deployVerticle(RestVerticle.class.getName(), opt).onComplete(
+        testContext.succeeding(id -> {
+          idleTimeout = System.getProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC);
+          System.setProperty(REPOSITORY_SRS_CLIENT_IDLE_TIMEOUT_SEC, "1");
+          Context context = vertx.getOrCreateContext();
+          SpringContextUtil.init(vertx, context, ApplicationConfig.class);
+          SpringContextUtil.autowireDependencies(this, context);
+          logger.info("mod-oai-pmh Test: setup done. Using port " + okapiPort);
+          // Once MockServer starts, it indicates to junit that process is finished
+          // by calling context.completeNow()
+          new OkapiMockServer(vertx, mockPort).start(testContext);
+        }));
     setupPredicates();
 
   }
@@ -349,7 +350,7 @@ class OaiPmhImplTest {
     PostgresClientFactory.closeAll();
     PostgresClient.stopPostgresTester();
     WebClientProvider.closeAll();
-    vertx.close(res -> {
+    vertx.close().onComplete(res -> {
       if (res.succeeded()) {
         testContext.completeNow();
       } else {

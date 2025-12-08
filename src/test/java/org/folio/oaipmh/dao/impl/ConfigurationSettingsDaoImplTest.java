@@ -17,7 +17,6 @@ import javax.ws.rs.NotFoundException;
 import org.folio.oaipmh.common.TestUtil;
 import org.folio.oaipmh.dao.ConfigurationSettingsDao;
 import org.folio.oaipmh.dao.PostgresClientFactory;
-import org.folio.oaipmh.exception.ConfigSettingException;
 import org.folio.postgres.testing.PostgresTesterContainer;
 import org.folio.rest.persist.PostgresClient;
 import org.junit.jupiter.api.AfterAll;
@@ -34,13 +33,12 @@ class ConfigurationSettingsDaoImplTest {
   private static final String CONFIG_NAME = "behavioral";
   private static final String NONEXISTENT_ID = "00000000-0000-0000-0000-000000000000";
 
-  private static PostgresClientFactory postgresClientFactory;
   private ConfigurationSettingsDao configurationSettingsDao;
 
   @BeforeAll
   void setUpClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.setShouldResetPool(true);
-    postgresClientFactory = new PostgresClientFactory(vertx);
+    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
     PostgresClient.setPostgresTester(new PostgresTesterContainer());
     PostgresClient.getInstance(vertx, OAI_TEST_TENANT).startPostgresTester();
 
@@ -53,7 +51,7 @@ class ConfigurationSettingsDaoImplTest {
   @AfterAll
   void tearDownClass(Vertx vertx, VertxTestContext testContext) {
     PostgresClientFactory.closeAll();
-    vertx.close(testContext.succeeding(res -> testContext.completeNow()));
+    vertx.close().onComplete(testContext.succeeding(res -> testContext.completeNow()));
   }
 
   @Test

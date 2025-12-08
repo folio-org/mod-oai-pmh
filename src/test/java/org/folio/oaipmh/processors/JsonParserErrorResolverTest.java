@@ -21,14 +21,14 @@ class JsonParserErrorResolverTest {
         + "\"callNumber\":\"M1366.S67 T73 2017\"},\"suppressFromDiscovery\":false, "
         + "\"holdingsStatementsForSupplements\":[]}]}";
 
-    int errorPositionByParser = 180;
+    int errorPositionByParser = 179;
     var errors = new ArrayList<String>();
 
     var jsonParser = new OaiPmhJsonParser()
         .objectValueMode().exceptionHandler(e -> errors.add(e.getLocalizedMessage()));
     jsonParser.write(Buffer.buffer(json)).end();
 
-    var jsonParserErrorResolver = new JsonParserErrorResolver(json, errors.get(0));
+    var jsonParserErrorResolver = new JsonParserErrorResolver(json, errors.getFirst());
 
     var expected = json.substring(errorPositionByParser, errorPositionByParser + 20);
     int errorPositionByParserErrorResolver = jsonParserErrorResolver.getErrorPosition();

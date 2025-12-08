@@ -15,7 +15,6 @@ import org.folio.oaipmh.dao.InstancesDao;
 import org.folio.oaipmh.domain.StatisticsHolder;
 import org.folio.oaipmh.service.InstancesService;
 import org.folio.oaipmh.service.MetricsCollectingService;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.rest.jooq.tables.pojos.Instances;
 import org.folio.rest.jooq.tables.pojos.RequestMetadataLb;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,12 +40,12 @@ public class InstancesServiceImpl implements InstancesService {
     Promise<List<String>> promise = Promise.promise();
     instancesDao.getExpiredRequestIds(tenantId, expirationTimeSeconds)
         .onSuccess(ids -> {
-          List<Future> futures = new ArrayList<>();
+          List<Future<Boolean>> futures = new ArrayList<>();
           if (isNotEmpty(ids)) {
             logger.debug("Got expired request ids: {}.", String.join(",", ids));
             ids.forEach(id -> futures.add(instancesDao.deleteRequestMetadataByRequestId(id,
                 tenantId)));
-            GenericCompositeFuture.all(futures)
+            Future.all(futures)
                 .onSuccess(v -> promise.complete(ids))
                 .onFailure(throwable -> {
                   logger.error("Error occurred during deleting instances by request ids: {}.",
