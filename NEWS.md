@@ -1,5 +1,11 @@
 ## 3.15.0 - Unreleased
 
+## 3.14.5 (Released)
+
+This release includes RMB and Vert.x upgrade.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.4...v3.14.5)
+
 ## 3.14.4 (Released)
 
 This release includes bug fixes (adding missing interface).
