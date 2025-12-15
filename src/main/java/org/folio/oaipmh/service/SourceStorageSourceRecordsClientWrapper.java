@@ -53,7 +53,7 @@ public class SourceStorageSourceRecordsClientWrapper implements AutoCloseable {
     client
       .getSourceStorageSourceRecords(recordId, snapshotId, externalId, externalHrid, instanceId, instanceHrid, holdingsId,
           holdingsHrid, recordType, suppressFromDiscovery, deleted, leaderRecordStatus, updatedAfter, updatedBefore, orderBy,
-          null, offset, limit)
+          offset, limit)
       .onComplete(httpResponseAsyncResult -> {
         metricsCollectingService.endMetric(requestId, SRS_RESPONSE);
         responseHandler.handle(httpResponseAsyncResult);
