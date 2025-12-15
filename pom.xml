@@ -262,6 +262,12 @@
       <groupId>io.github.jklingsporn</groupId>
       <artifactId>vertx-jooq-classic-reactive</artifactId>
       <version>${vertx-jooq.classic-reactive.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jooq</groupId>
+          <artifactId>jooq</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -867,6 +873,12 @@
             <groupId>io.github.jklingsporn</groupId>
             <artifactId>vertx-jooq-generate</artifactId>
             <version>${vertx-jooq.generator.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.maven</groupId>
