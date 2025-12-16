@@ -158,7 +158,7 @@
     <mod-source-record-storage-client.version>5.4.0</mod-source-record-storage-client.version>
     <restassured.version>5.4.0</restassured.version>
     <junit.jupiter.version>5.9.0-M1</junit.jupiter.version>
-    <jooq.version>3.20.3</jooq.version>
+    <jooq.version>3.20.0</jooq.version>
     <vertx-jooq.generator.version>6.5.5</vertx-jooq.generator.version>
     <vertx-jooq.classic-reactive.version>6.5.5</vertx-jooq.classic-reactive.version>
     <postgres.version>42.7.2</postgres.version>
