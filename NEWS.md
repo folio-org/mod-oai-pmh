@@ -2,7 +2,7 @@
 
 ## 3.14.5 (Released)
 
-This release includes RMB and Vert.x upgrade.
+This release includes RMB upgrade.
 
 [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.14.4...v3.14.5)
 
