@@ -1,0 +1,18 @@
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.9.xsd">
+
+  <changeSet id="2025-12-18--18-00-create-unique-idx-for-errors" author="LiquibaseBot">
+    <sql>
+      CREATE UNIQUE INDEX IF NOT EXISTS error_logs_unique_idx
+      ON ${database.defaultSchemaName}.errors (request_id, instance_id, md5(error_msg));
+    </sql>
+    <rollback>
+      <sql>DROP INDEX IF EXISTS ${database.defaultSchemaName}.error_logs_unique_idx;</sql>
+    </rollback>
+  </changeSet>
+
+</databaseChangeLog>
+

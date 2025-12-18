@@ -134,14 +134,10 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
       errorsService.log(TEST_TENANT_ID, requestId, instanceId2, errorMsg2);
       errorsService.log(TEST_TENANT_ID, requestId, instanceId3, errorMsg3);
       List<String> csvErrorLines = new ArrayList<>();
-      csvErrorLines.add(new StringBuilder().append("Request ID").append(",")
-          .append("Instance ID").append(",").append("Error message").toString());
-      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-          .append(instanceId1).append(",").append(errorMsg1).toString());
-      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-          .append(instanceId2).append(",").append(errorMsg2).toString());
-      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-          .append(instanceId3).append(",").append(errorMsg3).toString());
+      csvErrorLines.add("Request ID" + "," + "Instance ID" + "," + "Error message");
+      csvErrorLines.add(requestId + "," + instanceId1 + "," + errorMsg1);
+      csvErrorLines.add(requestId + "," + instanceId2 + "," + errorMsg2);
+      csvErrorLines.add(requestId + "," + instanceId3 + "," + errorMsg3);
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
@@ -157,7 +153,7 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
                   instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
                       .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
                         var generatedLinkToErrorFile = requestMetadataWithGeneratedLink
-                            .getRequestMetadataCollection().get(0).getLinkToErrorFile();
+                            .getRequestMetadataCollection().getFirst().getLinkToErrorFile();
                         assertNotNull(generatedLinkToErrorFile);
                         verifyErrorCsvFile(generatedLinkToErrorFile, csvErrorLines);
                         errorsDao.getErrorsList(requestMetadata.getRequestId().toString(),
@@ -182,10 +178,8 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     testContext.verify(() -> {
       errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
       List<String> csvErrorLines = new ArrayList<>();
-      csvErrorLines.add(new StringBuilder().append("Request ID").append(",")
-          .append("Instance ID").append(",").append("Error message").toString());
-      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-          .append(instanceId).append(",").append(errorMsg).toString());
+      csvErrorLines.add("Request ID" + "," + "Instance ID" + "," + "Error message");
+      csvErrorLines.add(requestId + "," + instanceId + "," + errorMsg);
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
@@ -202,14 +196,14 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
                   instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
                       .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
                         var generatedLinkToErrorFile = requestMetadataWithGeneratedLink
-                            .getRequestMetadataCollection().get(0).getLinkToErrorFile();
+                            .getRequestMetadataCollection().getFirst().getLinkToErrorFile();
                         assertNotNull(generatedLinkToErrorFile);
                         verifyErrorCsvFile(generatedLinkToErrorFile, csvErrorLines);
                         errorsDao.getErrorsList(requestMetadata.getRequestId().toString(),
                             TEST_TENANT_ID)
                             .onComplete(testContext.succeeding(errorList -> {
                               assertEquals(1, errorList.size());
-                              assertEquals(errorMsg, errorList.get(0).getErrorMsg());
+                              assertEquals(errorMsg, errorList.getFirst().getErrorMsg());
                               testContext.completeNow();
                             }));
                       }));
@@ -252,9 +246,6 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
     var errorMsg = "some error msg";
     testContext.verify(() -> {
       errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
-      List<String> csvErrorLines = new ArrayList<>();
-      csvErrorLines.add(new StringBuilder().append(requestId).append(",")
-          .append(instanceId).append(",").append(errorMsg).toString());
       RequestMetadataLb requestMetadata = new RequestMetadataLb();
       requestMetadata.setRequestId(UUID.fromString(requestId));
       requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
@@ -276,6 +267,59 @@ public class ErrorsServiceImplTest extends AbstractErrorsTest {
                                     assertEquals(0, errorListAfterDeleted.size());
                                     testContext.completeNow();
                                   }));
+                            }));
+                      }));
+                }));
+          }));
+    });
+  }
+
+  @Test
+  void shouldNotDuplicateErrorsWhenSameErrorLoggedMultipleTimes(VertxTestContext testContext) {
+    var requestId = UUID.randomUUID().toString();
+    var instanceId = UUID.randomUUID().toString();
+    var errorMsg = "duplicate error msg";
+    testContext.verify(() -> {
+      // Log the same error multiple times
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+      errorsService.log(TEST_TENANT_ID, requestId, instanceId, errorMsg);
+
+      // Prepare expected CSV content (header + single unique line)
+      List<String> expectedCsvLines = new ArrayList<>();
+      expectedCsvLines.add("Request ID" + "," + "Instance ID" + "," + "Error message");
+      expectedCsvLines.add(requestId + "," + instanceId + "," + errorMsg);
+
+      RequestMetadataLb requestMetadata = new RequestMetadataLb();
+      requestMetadata.setRequestId(UUID.fromString(requestId));
+      requestMetadata.setLastUpdatedDate(OffsetDateTime.now());
+      requestMetadata.setStartedDate(requestMetadata.getLastUpdatedDate());
+
+      instancesDao.saveRequestMetadata(requestMetadata, TEST_TENANT_ID)
+          .onComplete(testContext.succeeding(requestMetadataLbSaved -> {
+            errorsService.saveErrorsAndUpdateRequestMetadata(TEST_TENANT_ID,
+                requestMetadataLbSaved.getRequestId().toString())
+                .onComplete(testContext.succeeding(requestMetadataUpdated -> {
+                  assertNotNull(requestMetadataUpdated);
+                  // Link will be generated by a separate flow; initially null
+                  assertNull(requestMetadataUpdated.getLinkToErrorFile());
+
+                  // Fetch metadata to get the generated link and verify the CSV
+                  instancesDao.getRequestMetadataCollection(0, 10, TEST_TENANT_ID)
+                      .onComplete(testContext.succeeding(requestMetadataWithGeneratedLink -> {
+                        var generatedLinkToErrorFile = requestMetadataWithGeneratedLink
+                            .getRequestMetadataCollection().getFirst().getLinkToErrorFile();
+                        assertNotNull(generatedLinkToErrorFile);
+                        verifyErrorCsvFile(generatedLinkToErrorFile, expectedCsvLines);
+
+                        // Ensure only one error is stored for the request
+                        errorsDao.getErrorsList(requestMetadata.getRequestId().toString(),
+                            TEST_TENANT_ID)
+                            .onComplete(testContext.succeeding(errorList -> {
+                              assertEquals(1, errorList.size());
+                              assertEquals(errorMsg, errorList.getFirst().getErrorMsg());
+                              assertEquals(instanceId, errorList.getFirst().getInstanceId());
+                              testContext.completeNow();
                             }));
                       }));
                 }));
