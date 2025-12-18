@@ -35,6 +35,7 @@ public class ErrorsDaoImpl implements ErrorsDao {
   @Override
   public Future<Errors> saveErrors(Errors errors, String tenantId) {
 
+    logger.info("errors: {}, tenantId: {}", errors, tenantId);
     var query = JOOQ.insertInto(ERRORS)
         .columns(ERRORS.REQUEST_ID, ERRORS.INSTANCE_ID, ERRORS.ERROR_MSG)
         .values(errors.getRequestId(), errors.getInstanceId(), errors.getErrorMsg())
