@@ -41,6 +41,7 @@ public class ErrorsDaoImpl implements ErrorsDao {
         .onConflict(ERRORS.REQUEST_ID, ERRORS.INSTANCE_ID, ERRORS.ERROR_MSG)
         .doNothing();
     var sql = query.getSQL(ParamType.INLINED);
+    logger.info("query to save error: {}", sql);
     var client = postgresClientFactory.getPoolWriter(tenantId);
 
     return client
