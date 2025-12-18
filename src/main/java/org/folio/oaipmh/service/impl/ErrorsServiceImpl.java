@@ -60,7 +60,7 @@ public class ErrorsServiceImpl implements ErrorsService {
     Errors errors = new Errors().setRequestId(UUID.fromString(requestId)).setInstanceId(instanceId)
         .setErrorMsg(errorMsg);
     var savedError = errorsDao.saveErrors(errors, tenantId)
-        .onComplete(h -> logger.debug("Error {} saved into DB. Instance id {}, request id {}.",
+        .onComplete(h -> logger.info("Error {} saved into DB. Instance id {}, request id {}.",
             errorMsg, instanceId, requestId));
     allSavedErrorsByRequestId.computeIfAbsent(requestId, list -> new ArrayList<>())
         .add(savedError);
