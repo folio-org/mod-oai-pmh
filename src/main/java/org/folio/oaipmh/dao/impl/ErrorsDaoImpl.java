@@ -37,7 +37,9 @@ public class ErrorsDaoImpl implements ErrorsDao {
 
     var query = JOOQ.insertInto(ERRORS)
         .columns(ERRORS.REQUEST_ID, ERRORS.INSTANCE_ID, ERRORS.ERROR_MSG)
-        .values(errors.getRequestId(), errors.getInstanceId(), errors.getErrorMsg());
+        .values(errors.getRequestId(), errors.getInstanceId(), errors.getErrorMsg())
+        .onConflict()
+        .doNothing();
     var sql = query.getSQL(ParamType.INLINED);
     var client = postgresClientFactory.getPoolWriter(tenantId);
 
