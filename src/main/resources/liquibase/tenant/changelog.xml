@@ -22,4 +22,6 @@ xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
   <include file="scripts/2023-06-16--16-00-update-metadata-add-path-to-error-file-in-s3.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2025-10-29--11-00-create-configuration-settings.xml" relativeToChangelogFile="true"/>
   <include file="scripts/2025-12-18--18-00-create_unique_idx_for_errors.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2025-12-24--16-00-remove-error-duplicates.xml" relativeToChangelogFile="true"/>
+  <include file="scripts/2025-12-18--18-00-create_unique_idx_for_errors.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
