@@ -16,6 +16,8 @@
       WHERE ctid IN (
       SELECT ctid FROM duplicates WHERE rn > 1
       );
+      CREATE UNIQUE INDEX IF NOT EXISTS error_logs_unique_idx
+      ON ${database.defaultSchemaName}.errors (request_id, instance_id, md5(error_msg));
     </sql>
   </changeSet>
 
