@@ -51,7 +51,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
               if (handler.succeeded()) {
                 logger.info("result: {}", handler.result());
               }
-                handleInventoryResponse(handler, request, ctx, promise);
+              handleInventoryResponse(handler, request, ctx, promise);
             });
       } else {
         logger.info("handle:: Process records from srs for requestId {}",
