@@ -47,8 +47,12 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
             request.getRequestId());
         requestFromInventory(request, 1, request.getIdentifier() != null
             ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-            .onComplete(handler ->
-                handleInventoryResponse(handler, request, ctx, promise));
+            .onComplete(handler -> {
+              if (handler.succeeded()) {
+                logger.info("result: {}", handler.result());
+              }
+                handleInventoryResponse(handler, request, ctx, promise);
+            });
       } else {
         logger.info("handle:: Process records from srs for requestId {}",
             request.getRequestId());
