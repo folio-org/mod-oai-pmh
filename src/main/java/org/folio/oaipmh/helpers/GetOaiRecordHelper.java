@@ -51,7 +51,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
             .onComplete(handler -> {
               if (handler.succeeded()) {
                 var inventoryRecords = handler.result();
-                logger.info("result: {}", inventoryRecords);
+                logger.info("GetRecord response from inventory: {}", inventoryRecords);
                 var instances = inventoryRecords.getJsonArray("instances");
                 var source = instances.getJsonObject(0).getString("source");
                 if (source.equals(LINKED_DATA.toString())) {
