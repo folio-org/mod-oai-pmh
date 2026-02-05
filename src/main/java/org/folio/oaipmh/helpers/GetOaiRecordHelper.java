@@ -8,6 +8,7 @@ import static org.folio.oaipmh.Constants.RECORD_NOT_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.folio.oaipmh.querybuilder.RecordsSource.LINKED_DATA;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.ID_DOES_NOT_EXIST;
@@ -47,8 +48,19 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
             request.getRequestId());
         requestFromInventory(request, 1, request.getIdentifier() != null
             ? List.of(request.getStorageIdentifier()) : null, false, false, true)
-            .onComplete(handler ->
-                handleInventoryResponse(handler, request, ctx, promise));
+            .onComplete(handler -> {
+              if (handler.succeeded()) {
+                var inventoryRecords = handler.result();
+                logger.info("GetRecord response from inventory: {}", inventoryRecords);
+                var instances = inventoryRecords.getJsonArray("instances");
+                var source = instances.getJsonObject(0).getString("source");
+                if (source.equals(LINKED_DATA.toString())) {
+                  requestAndProcessSrsRecords(request, ctx, promise, false);
+                } else {
+                  handleInventoryResponse(handler, request, ctx, promise);
+                }
+              }
+            });
       } else {
         logger.info("handle:: Process records from srs for requestId {}",
             request.getRequestId());
