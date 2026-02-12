@@ -66,8 +66,6 @@ public class RepositoryConfigurationUtil {
               response.getJsonArray(configKey)
                   .stream()
                   .map(o -> (JsonObject) JsonObject.mapFrom(o))
-                  .peek(entry -> logger.info("Processing config entry: {}",
-                  entry.encodePrettily()))
                   .forEach(entry -> {
                     JsonObject configValue = entry.getJsonObject("configValue");
                     if (configValue != null) {
