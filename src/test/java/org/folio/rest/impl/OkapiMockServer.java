@@ -458,7 +458,7 @@ public class OkapiMockServer {
   private void handleInstanceStorageRequest(RoutingContext ctx) {
     String uri = ctx.request().uri();
     if (uri.contains(NON_EXISTING_IDENTIFIER)) {
-        successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
           + NO_INSTANCES));
     } else if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH

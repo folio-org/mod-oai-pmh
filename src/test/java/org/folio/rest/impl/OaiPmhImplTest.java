@@ -691,7 +691,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
-  void getOaiGetRecordWhenRecordsSourceIsInventoryAndInstanceSourceIsNotLinkedData_shouldRouteToInventory(
+  void getOaiGetRecordWhenSourceIsInventoryAndInstanceSourceIsNotLinkedData_shouldRouteToInventory(
       MetadataPrefix metadataPrefix) {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
@@ -713,7 +713,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiGetRecordWhenRecordsSourceIsInventoryAndInstancesEmpty_shouldRouteToInventoryHandling() {
+  void getOaiGetRecordWhenSourceIsInventoryAndInstancesEmpty_shouldRouteToInventoryHandling() {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
     System.setProperty(REPOSITORY_ERRORS_PROCESSING, "200");
     String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
