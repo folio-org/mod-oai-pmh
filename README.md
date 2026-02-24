@@ -127,6 +127,7 @@ This value should be `true` if AWS S3 is used.
 | S3_ACCESS_KEY_ID             | -                      | S3 access key                               |
 | S3_SECRET_ACCESS_KEY         | -                      | S3 secret key                               |
 | S3_IS_AWS                    | false                  | Specify if AWS S3 is used as files storage  |
+| S3_SUB_PATH                  | mod-oai-pmh            | S3 subpath for file storage                 |
 
 ### Updates for harvest
 OAI-PMH incremental harvest with from/until parameters will use a new complete_updated_date column in the Instance table of
