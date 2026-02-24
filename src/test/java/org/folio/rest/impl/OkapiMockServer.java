@@ -239,6 +239,7 @@ public class OkapiMockServer {
   private static final String DEFAULT_SRS_RECORD = "/default_srs_record.json";
   private static final String INVALID_JSON = "invalid.json";
   private static final String INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS = "instance.json";
+  private static final String NO_INSTANCES = "/no_instances.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS =
       "enriched_instance.json";
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA =
@@ -456,7 +457,10 @@ public class OkapiMockServer {
 
   private void handleInstanceStorageRequest(RoutingContext ctx) {
     String uri = ctx.request().uri();
-    if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
+    if (uri.contains(NON_EXISTING_IDENTIFIER)) {
+        successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
+          + NO_INSTANCES));
+    } else if (uri.contains(INSTANCE_ID_GET_RECORD_MARC21_WITH_HOLDINGS)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH
           + INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS));
     } else if (uri.contains(INSTANCE_ID_NOT_FOUND_RESPONSE)) {
