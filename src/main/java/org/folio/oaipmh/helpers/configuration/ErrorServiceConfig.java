@@ -31,11 +31,14 @@ public class ErrorServiceConfig {
   @Value("#{ T(Boolean).parseBoolean('${minio.awsSdk}')}")
   private boolean awsSdk;
 
+  @Value("${minio.subPath}")
+  private String subPath;
+
   @Bean
   public FolioS3Client folioS3Client() {
     log.debug("Folio S3 client for error storage: endpoint {}, region {}, bucket {}, "
-        + "accessKey {}, secretKey {}, awsSdk {}", endpoint, region, bucket, "<secret>",
-        "<secret>", awsSdk);
+        + "accessKey {}, secretKey {}, awsSdk {}, subPath {}", endpoint, region, bucket,
+        "<secret>", "<secret>", awsSdk, subPath);
     var client = S3ClientFactory.getS3Client(S3ClientProperties.builder()
         .endpoint(endpoint)
         .secretKey(secretKey)
@@ -43,6 +46,7 @@ public class ErrorServiceConfig {
         .bucket(bucket)
         .awsSdk(awsSdk)
         .region(region)
+        .subPath(subPath)
         .build());
     try {
       client.createBucketIfNotExists();
