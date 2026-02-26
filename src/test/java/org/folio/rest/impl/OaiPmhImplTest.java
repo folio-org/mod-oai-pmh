@@ -21,6 +21,7 @@ import static org.folio.oaipmh.Constants.REPOSITORY_ADMIN_EMAILS;
 import static org.folio.oaipmh.Constants.REPOSITORY_BASE_URL;
 import static org.folio.oaipmh.Constants.REPOSITORY_DELETED_RECORDS;
 import static org.folio.oaipmh.Constants.REPOSITORY_ENABLE_OAI_SERVICE;
+import static org.folio.oaipmh.Constants.REPOSITORY_ERRORS_PROCESSING;
 import static org.folio.oaipmh.Constants.REPOSITORY_FETCHING_CHUNK_SIZE;
 import static org.folio.oaipmh.Constants.REPOSITORY_MAX_RECORDS_PER_RESPONSE;
 import static org.folio.oaipmh.Constants.REPOSITORY_NAME;
@@ -664,6 +665,72 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
     var maxRecords = System.getProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE);
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, maxRecords);
+  }
+
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordWhenRecordsSourceIsInventoryAndInstanceSourceIsLinkedData_shouldRouteToSrs(
+      MetadataPrefix metadataPrefix) {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+
+    RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, GET_RECORD.value())
+        .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + "linked-data-identifier")
+        .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponse.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+        Collections.singletonList("linked-data-identifier"));
+    assertThat(oaiPmhResponse.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponse.getErrors(), is(empty()));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
+  @ParameterizedTest
+  @EnumSource(MetadataPrefix.class)
+  void getOaiGetRecordWhenSourceIsInventoryAndInstanceSourceIsNotLinkedData_shouldRouteToInventory(
+      MetadataPrefix metadataPrefix) {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.EXISTING_IDENTIFIER;
+
+    RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, GET_RECORD.value())
+        .param(IDENTIFIER_PARAM, identifier)
+        .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
+
+    OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
+    HeaderType recordHeader = oaiPmhResponse.getGetRecord().getRecord().getHeader();
+    verifyIdentifiers(Collections.singletonList(recordHeader),
+        Collections.singletonList("00000000-0000-4000-a000-000000000111"));
+    assertThat(oaiPmhResponse.getGetRecord(), is(notNullValue()));
+    assertThat(oaiPmhResponse.getErrors(), is(empty()));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+  }
+
+  @Test
+  void getOaiGetRecordWhenSourceIsInventoryAndInstancesEmpty_shouldRouteToInventoryHandling() {
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+    System.setProperty(REPOSITORY_ERRORS_PROCESSING, "200");
+    String identifier = IDENTIFIER_PREFIX + OkapiMockServer.NON_EXISTING_IDENTIFIER;
+
+    RequestSpecification request = createBaseRequest()
+        .with()
+        .param(VERB_PARAM, GET_RECORD.value())
+        .param(IDENTIFIER_PARAM, identifier)
+        .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+
+    OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
+    verifyBaseResponse(oaiPmhResponse, GET_RECORD);
+    assertThat(oaiPmhResponse.getGetRecord(), is(nullValue()));
+    assertThat(oaiPmhResponse.getErrors().getFirst().getCode(), equalTo(ID_DOES_NOT_EXIST));
+
+    System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
+    System.setProperty(REPOSITORY_ERRORS_PROCESSING, "500");
   }
 
   @Test
