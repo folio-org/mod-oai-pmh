@@ -62,30 +62,19 @@ public class RepositoryConfigurationUtil {
             String configKey = response != null && response.containsKey("configurationSettings")
                 ? "configurationSettings" : CONFIGS;
 
-            logger.info("Using config key: {}, response contains key: {}",
-                configKey, response != null && response.containsKey(configKey));
-
             if (response != null && response.containsKey(configKey)) {
               response.getJsonArray(configKey)
                   .stream()
                   .map(o -> (JsonObject) JsonObject.mapFrom(o))
-                  .peek(entry -> logger.info("Processing config entry: {}",
-                  entry.encodePrettily()))
                   .forEach(entry -> {
                     JsonObject configValue = entry.getJsonObject("configValue");
                     if (configValue != null) {
-                      logger.info("Found configValue object: {}", configValue.encodePrettily());
-                      logger.info("configValue map size: {}", configValue.getMap().size());
                       configValue.fieldNames().forEach(key -> {
                         Object value = configValue.getValue(key);
                         String mappedKey = org.folio.oaipmh.mappers.PropertyNameMapper
                             .mapFrontendKeyToServerKey(key);
                         String stringValue = value != null ? value.toString() : null;
-                        logger.info("Mapping: {} -> {} = {} (type: {})",
-                            key, mappedKey, stringValue,
-                            value != null ? value.getClass().getSimpleName() : "null");
                         config.put(mappedKey, stringValue);
-                        logger.info("Config now has {} keys", config.size());
                       });
                     } else {
                       logger.warn("configValue is null for entry: {}", entry.encodePrettily());
