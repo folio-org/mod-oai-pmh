@@ -9,7 +9,6 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
-import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
 import static org.folio.oaipmh.Constants.INVENTORY_STORAGE;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
@@ -793,9 +792,6 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       List<String> listOfIds) {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.getAbs(uri);
-    if (request.getOkapiUrl().contains(HTTPS)) {
-      httpRequest.ssl(true);
-    }
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
