@@ -466,7 +466,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUseDisplaySummaryAsEnumerationSubfield_whenDisplaySummaryIsPresentAndItemHasEnumeration() {
+  void shouldUseDisplaySummaryAsEnumeration_whenDisplaySummaryIsPresentAndItemHasEnumeration() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(
@@ -489,7 +489,7 @@ class RecordMetadataManagerTest {
       List<Map<String, Object>> subFieldsList =
           (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
               .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
-      // enumeration subfield "k" should contain displaySummary value, not the original enumeration value
+      // enumeration subfield "k" should contain displaySummary value, not the original
       assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Test Display Summary", true));
       assertFalse(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
     });
