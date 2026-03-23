@@ -57,6 +57,7 @@ public class RecordMetadataManager {
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
   private final Predicate<JsonObject> electronicAccessPredicate;
+  private final Predicate<String> enumerationOrChronologyPredicate;
   private static RecordMetadataManager instance;
 
   private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
@@ -71,6 +72,7 @@ public class RecordMetadataManager {
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
   public static final String LOCATION_NAME = "locationName";
+  public static final String DISPLAY_SUMMARY = "displaySummary";
   public static final String SUPPRESS_DISCOVERY_CODE = "t";
 
   private RecordMetadataManager() {
@@ -104,6 +106,10 @@ public class RecordMetadataManager {
       }
       return false;
     };
+
+    enumerationOrChronologyPredicate = subFieldCode -> subFieldCode.equals(
+        EffectiveLocationSubFields.ENUMERATION.getSubFieldCode())
+        || subFieldCode.equals(EffectiveLocationSubFields.CHRONOLOGY.getSubFieldCode());
   }
 
   public static RecordMetadataManager getInstance() {
@@ -407,13 +413,27 @@ public class RecordMetadataManager {
       JsonObject itemData,
       List<EffectiveLocationSubFields> subFieldGroupProperties) {
     if (nonNull(itemData)) {
+      var isDisplaySummaryPresent = itemData.containsKey(DISPLAY_SUMMARY)
+          && isNotEmpty(itemData.getString(DISPLAY_SUMMARY).trim());
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
-          effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+          if (isDisplaySummaryPresent && enumerationOrChronologyPredicate.test(subFieldCode)) {
+            addDisplaySummaryToEnumerationAndSkipChronology(effectiveLocationSubFields,
+                subFieldCode, itemData.getString(DISPLAY_SUMMARY));
+          } else {
+            effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+          }
         }
       });
+    }
+  }
+
+  private void addDisplaySummaryToEnumerationAndSkipChronology(
+      Map<String, Object> effectiveLocationSubFields, String subFieldCode, String displaySummary) {
+    if (subFieldCode.equals(EffectiveLocationSubFields.ENUMERATION.getSubFieldCode())) {
+      effectiveLocationSubFields.put(subFieldCode, displaySummary);
     }
   }
 

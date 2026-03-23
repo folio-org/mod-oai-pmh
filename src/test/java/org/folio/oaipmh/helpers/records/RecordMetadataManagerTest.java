@@ -466,6 +466,190 @@ class RecordMetadataManagerTest {
   }
 
   @Test
+  void shouldUseDisplaySummaryAsEnumeration_whenDisplaySummaryIsPresentAndItemHasEnumeration() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0)
+        .put("displaySummary", "Test Display Summary");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // enumeration subfield "k" should contain displaySummary value, not the original
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Test Display Summary", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
+    });
+  }
+
+  @Test
+  void shouldSkipChronologySubfield_whenDisplaySummaryIsPresentAndItemHasChronology() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0)
+        .put("displaySummary", "Test Display Summary");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // chronology subfield "l" should be skipped entirely when displaySummary is present
+      assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("l")));
+    });
+  }
+
+  @Test
+  void shouldUseDisplaySummaryForEnumerationAndSkipChronology_whenBothArePresent() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0)
+        .put("displaySummary", "Test Display Summary");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // enumeration "k" replaced by displaySummary
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Test Display Summary", true));
+      assertFalse(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
+      // chronology "l" is absent
+      assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("l")));
+    });
+  }
+
+  @Test
+  void shouldUseOriginalEnumerationAndChronology_whenDisplaySummaryIsAbsent() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    // Ensure no displaySummary key is present
+    JsonObject item = inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0);
+    item.remove("displaySummary");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // original enumeration and chronology values should be present
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "l", "testChronology", true));
+    });
+  }
+
+  @Test
+  void shouldUseOriginalEnumerationAndChronology_whenDisplaySummaryIsBlank() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0)
+        .put("displaySummary", "   ");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // original enumeration and chronology values should be present when displaySummary is blank
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "k", "Enumeration 1_2_1", true));
+      assertTrue(verifySubFieldValuePresence(subFieldsList, "l", "testChronology", true));
+    });
+  }
+
+  @Test
+  void shouldNotAddEnumerationSubfield_whenDisplaySummaryIsPresentButEnumerationIsMissing() {
+    JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
+        SRS_INSTANCE_JSON_PATH)));
+    JsonObject inventoryInstance = new JsonObject(
+        requireNonNull(getJsonObjectFromFile(INVENTORY_INSTANCE_WITH_ONE_ITEM_JSON_PATH)));
+
+    JsonObject item = inventoryInstance.getJsonObject("itemsandholdingsfields")
+        .getJsonArray("items")
+        .getJsonObject(0);
+    item.remove("enumeration");
+    item.put("displaySummary", "Test Display Summary");
+
+    JsonObject result = metadataManager.populateMetadataWithItemsData(
+        srsInstance, inventoryInstance, false);
+
+    JsonArray fields = getContentFieldsArray(result);
+    List<JsonObject> effectiveLocationFields = getFieldsFromFieldsListByTagNumber(fields,
+        EFFECTIVE_LOCATION_FIELD);
+
+    effectiveLocationFields.forEach(field -> {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> subFieldsList =
+          (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
+              .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
+      // enumeration subfield "k" should not exist because original enumeration value was absent
+      assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("k")));
+      // chronology subfield "l" should also be skipped since displaySummary is present
+      assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("l")));
+    });
+  }
+
+  @Test
   void shouldPrefixLocationNameWithInactive_whenLocationIsInactive() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_JSON_PATH)));
