@@ -8,6 +8,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
+import static org.folio.oaipmh.Constants.DCB_INSTANCE;
 import static org.folio.oaipmh.Constants.GENERIC_ERROR_MESSAGE;
 import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.INSTANCE_ID_FIELD_NAME;
@@ -736,6 +737,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       List<String> listOfIds, boolean ignoreDate, boolean ignoreOffset, boolean ignoreSource) {
     final boolean suppressedRecordsSupport = getBooleanProperty(request.getRequestId(),
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+
+    if (nonNull(listOfIds)) {
+      listOfIds.removeIf(id -> nonNull(id) && id.equals(DCB_INSTANCE));
+    }
 
     final Date updatedAfter = request.getFrom() == null
         || ignoreDate ? null : convertStringToDate(request.getFrom(), false, true);

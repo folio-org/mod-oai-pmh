@@ -6,6 +6,7 @@ import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
+import static org.folio.oaipmh.Constants.DCB_HOLDINGS_RECORD;
 import static org.folio.oaipmh.Constants.FIELDS;
 import static org.folio.oaipmh.Constants.FIRST_INDICATOR;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
@@ -130,12 +131,14 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
       JsonObject inventoryInstance, boolean suppressedRecordsProcessing) {
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
-    if (!(value instanceof JsonObject)) {
+    if (!(value instanceof JsonObject itemsAndHoldings)) {
       return srsInstance;
     }
-    JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
+
+    items = excludeDcb(items, HOLDINGS_RECORD_ID);
+    holdings = excludeDcb(holdings, "id");
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
@@ -145,6 +148,16 @@ public class RecordMetadataManager {
       }
     }
     return srsInstance;
+  }
+
+  private JsonArray excludeDcb(JsonArray itemsHoldings, String idField) {
+    if (nonNull(itemsHoldings)) {
+      return new JsonArray(itemsHoldings.stream()
+          .map(JsonObject.class::cast)
+          .filter(item -> !DCB_HOLDINGS_RECORD.equals(item.getString(idField)))
+          .collect(Collectors.toList()));
+    }
+    return null;
   }
 
   private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings,
@@ -226,7 +239,8 @@ public class RecordMetadataManager {
 
     if (nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      holdings.forEach(holding ->
+      holdings.stream().filter(holding ->
+          !((JsonObject) holding).getString("id").equals(DCB_HOLDINGS_RECORD)).forEach(holding ->
           updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList,
           suppressedRecordsProcessing));
     }
