@@ -739,6 +739,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     if (nonNull(listOfIds)) {
+      listOfIds = new ArrayList<>(listOfIds);
       listOfIds.removeIf(id -> nonNull(id) && id.equals(DCB_INSTANCE));
     }
 
