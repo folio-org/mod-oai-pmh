@@ -175,6 +175,7 @@ public final class Constants {
   public static final String RETRY_ATTEMPTS = "retryAttempts";
   public static final String STATUS_CODE = "statusCode";
   public static final String STATUS_MESSAGE = "statusMessage";
+  public static final String ID = "id";
 
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS =
       "skipSuppressedFromDiscoveryRecords";
