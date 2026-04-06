@@ -741,7 +741,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (nonNull(listOfIds)) {
       listOfIds = listOfIds.stream()
           .map(id -> DCB_INSTANCE.equals(id) ? null : id)
-          .collect(Collectors.toList());
+          .toList();
     }
 
     final Date updatedAfter = request.getFrom() == null
