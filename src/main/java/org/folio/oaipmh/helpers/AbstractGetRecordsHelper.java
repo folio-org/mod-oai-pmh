@@ -739,8 +739,9 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
 
     if (nonNull(listOfIds)) {
-      listOfIds = new ArrayList<>(listOfIds);
-      listOfIds.removeIf(id -> nonNull(id) && id.equals(DCB_INSTANCE));
+      listOfIds = listOfIds.stream()
+          .map(id -> DCB_INSTANCE.equals(id) ? null : id)
+          .collect(Collectors.toList());
     }
 
     final Date updatedAfter = request.getFrom() == null
