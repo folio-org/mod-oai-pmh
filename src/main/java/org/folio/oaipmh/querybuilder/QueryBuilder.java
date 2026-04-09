@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.oaipmh.Constants.DCB_INSTANCE;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,9 +20,10 @@ public class QueryBuilder {
       + "%s" // last instance id
       + "%s" // discovery suppress
       + "%s" // source
-      + "%s" // deleted
       + "%s" // date from
       + "%s" // date until
+      + "%s" // deleted
+      + "%s" // exclude dcb instance
       + "ORDER BY instance_id\n"
       + "LIMIT %d;";
 
@@ -45,6 +47,8 @@ public class QueryBuilder {
   private static final String LAST_INSTANCE_ID = "%s inst.instance_id > '%s'::uuid\n";
 
   private static final String WHERE = " WHERE";
+  private static final String EXCLUDE_DCB_INSTANCE =
+      "%s inst.instance_id != '" + DCB_INSTANCE + "'::uuid\n";
 
   private QueryBuilder() {}
 
@@ -61,6 +65,9 @@ public class QueryBuilder {
       logger.error(errorMsg);
       throw new QueryException(errorMsg);
     }
+    boolean noWhereUsedYet = isNull(lastInstanceId) && !skipSuppressedFromDiscovery
+        && isNull(source) && !((nonNull(from) || nonNull(until)) && !deletedRecords)
+        && !(nonNull(from) || nonNull(until));
     return format(QUERY,
       tenant,
       !deletedRecords ? BASE_QUERY_NON_DELETED_TEMPLATE : BASE_QUERY_DELETED_TEMPLATE,
@@ -73,12 +80,18 @@ public class QueryBuilder {
           && !skipSuppressedFromDiscovery && isNull(source) && isNull(from), deletedRecords),
       buildDeleted(tenant, from, until, isNull(lastInstanceId)
           && !skipSuppressedFromDiscovery && isNull(source), deletedRecords),
+      buildExcludeDcbInstance(noWhereUsedYet),
       limit);
   }
 
   private static String buildLastInstanceId(String lastInstanceId) {
     var where = WHERE;
     return nonNull(lastInstanceId) ? format(LAST_INSTANCE_ID, where, lastInstanceId) : EMPTY;
+  }
+
+  private static String buildExcludeDcbInstance(boolean where) {
+    var whereOrAnd = where ? WHERE : " AND";
+    return format(EXCLUDE_DCB_INSTANCE, whereOrAnd);
   }
 
   private static String buildDateFrom(String tenant, String from, boolean where,

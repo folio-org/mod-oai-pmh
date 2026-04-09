@@ -38,7 +38,9 @@ class QueryBuilderTest {
         "SELECT * FROM test_tenant_mod_oai_pmh.get_instances_with_marc_records inst\n"
         + "    WHERE ( inst.source = 'FOLIO'\n"
         + " OR inst.source = 'CONSORTIUM-FOLIO' OR inst.source = 'LINKED_DATA' OR inst.source"
-        + " = 'CONSORTIUM-LINKED_DATA') ORDER BY instance_id\nLIMIT 1;";
+        + " = 'CONSORTIUM-LINKED_DATA')  "
+        + "AND inst.instance_id != '9d1b77e4-f02e-4b7f-b296-3f2042ddac54'::uuid"
+        + "\nORDER BY instance_id\nLIMIT 1;";
     assertEquals(expected, query);
   }
 
@@ -52,8 +54,9 @@ class QueryBuilderTest {
             + "\n WHERE inst.instance_id > '%s'::uuid\n"
             + "    AND ( inst.source = 'FOLIO'\n"
             + " OR inst.source = 'CONSORTIUM-FOLIO' OR inst.source = 'LINKED_DATA' OR inst.source"
-            + " = 'CONSORTIUM-LINKED_DATA') "
-            + "ORDER BY instance_id\n"
+            + " = 'CONSORTIUM-LINKED_DATA')  AND inst.instance_id != "
+            + "'9d1b77e4-f02e-4b7f-b296-3f2042ddac54'::uuid"
+            + "\nORDER BY instance_id\n"
             + "LIMIT 1;", lastInstanceId);
     assertEquals(expected, query);
   }
@@ -72,8 +75,9 @@ class QueryBuilderTest {
             + " OR inst.source = 'CONSORTIUM-FOLIO' OR inst.source = 'LINKED_DATA' OR inst.source"
             + " = 'CONSORTIUM-LINKED_DATA') "
             + "    AND inst.instance_updated_date >= test_tenant_mod_inventory_storage.dateOrMin"
-            + "(timestamptz '%s')\n"
-            + "ORDER BY instance_id\n"
+            + "(timestamptz '%s')\n AND inst.instance_id != "
+            + "'9d1b77e4-f02e-4b7f-b296-3f2042ddac54'::uuid"
+            + "\nORDER BY instance_id\n"
             + "LIMIT 1;", fromFormatted, fromFormatted, fromFormatted, fromFormatted,
             fromFormatted, fromFormatted);
     assertEquals(expected, query);
@@ -93,7 +97,8 @@ class QueryBuilderTest {
             + " OR inst.source = 'CONSORTIUM-FOLIO' OR inst.source = 'LINKED_DATA' OR inst.source"
             + " = 'CONSORTIUM-LINKED_DATA') "
             + "    AND inst.instance_updated_date <= test_tenant_mod_inventory_storage.dateOrMax"
-            + "(timestamptz '%s')\n"
+            + "(timestamptz '%s')\n AND inst.instance_id != "
+            + "'9d1b77e4-f02e-4b7f-b296-3f2042ddac54'::uuid\n"
             + "ORDER BY instance_id\n"
             + "LIMIT 1;", untilFormatted, untilFormatted, untilFormatted, untilFormatted,
             untilFormatted, untilFormatted);

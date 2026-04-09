@@ -175,6 +175,7 @@ public final class Constants {
   public static final String RETRY_ATTEMPTS = "retryAttempts";
   public static final String STATUS_CODE = "statusCode";
   public static final String STATUS_MESSAGE = "statusMessage";
+  public static final String ID = "id";
 
   public static final String SKIP_SUPPRESSED_FROM_DISCOVERY_RECORDS =
       "skipSuppressedFromDiscoveryRecords";
@@ -189,4 +190,7 @@ public final class Constants {
   public static final String MARC_RECORD_FROM_VIEW_RESPONSE = "marc_record";
   public static final String SOURCE_RECORDS = "sourceRecords";
   public static final String TOTAL_RECORDS = "totalRecords";
+
+  public static final String DCB_INSTANCE = "9d1b77e4-f02e-4b7f-b296-3f2042ddac54";
+  public static final String DCB_HOLDINGS_RECORD = "10cd3a5a-d36f-4c7a-bc4f-e1ae3cf820c9";
 }

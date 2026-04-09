@@ -6,8 +6,10 @@ import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.oaipmh.Constants.CONTENT;
+import static org.folio.oaipmh.Constants.DCB_HOLDINGS_RECORD;
 import static org.folio.oaipmh.Constants.FIELDS;
 import static org.folio.oaipmh.Constants.FIRST_INDICATOR;
+import static org.folio.oaipmh.Constants.ID;
 import static org.folio.oaipmh.Constants.PARSED_RECORD;
 import static org.folio.oaipmh.Constants.SECOND_INDICATOR;
 import static org.folio.oaipmh.Constants.SUBFIELDS;
@@ -57,6 +59,7 @@ public class RecordMetadataManager {
   private final Map<String, String> indicatorsMap;
   private final Predicate<JsonObject> generalInfoFieldPredicate;
   private final Predicate<JsonObject> electronicAccessPredicate;
+  private final Predicate<String> enumerationOrChronologyPredicate;
   private static RecordMetadataManager instance;
 
   private static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
@@ -71,6 +74,7 @@ public class RecordMetadataManager {
   public static final String ELECTRONIC_ACCESS = "electronicAccess";
   public static final String NAME = "name";
   public static final String LOCATION_NAME = "locationName";
+  public static final String DISPLAY_SUMMARY = "displaySummary";
   public static final String SUPPRESS_DISCOVERY_CODE = "t";
 
   private RecordMetadataManager() {
@@ -104,6 +108,10 @@ public class RecordMetadataManager {
       }
       return false;
     };
+
+    enumerationOrChronologyPredicate = subFieldCode -> subFieldCode.equals(
+        EffectiveLocationSubFields.ENUMERATION.getSubFieldCode())
+        || subFieldCode.equals(EffectiveLocationSubFields.CHRONOLOGY.getSubFieldCode());
   }
 
   public static RecordMetadataManager getInstance() {
@@ -124,12 +132,14 @@ public class RecordMetadataManager {
   public JsonObject populateMetadataWithItemsData(JsonObject srsInstance,
       JsonObject inventoryInstance, boolean suppressedRecordsProcessing) {
     Object value = inventoryInstance.getValue(ITEMS_AND_HOLDINGS_FIELDS);
-    if (!(value instanceof JsonObject)) {
+    if (!(value instanceof JsonObject itemsAndHoldings)) {
       return srsInstance;
     }
-    JsonObject itemsAndHoldings = (JsonObject) value;
     JsonArray items = itemsAndHoldings.getJsonArray(ITEMS);
     JsonArray holdings = itemsAndHoldings.getJsonArray(HOLDINGS);
+
+    items = excludeDcb(items, HOLDINGS_RECORD_ID);
+    holdings = excludeDcb(holdings, ID);
 
     if (nonNull(items) && CollectionUtils.isNotEmpty(items.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
@@ -141,13 +151,23 @@ public class RecordMetadataManager {
     return srsInstance;
   }
 
+  private JsonArray excludeDcb(JsonArray itemsHoldings, String idField) {
+    if (nonNull(itemsHoldings)) {
+      return new JsonArray(itemsHoldings.stream()
+          .map(JsonObject.class::cast)
+          .filter(item -> !DCB_HOLDINGS_RECORD.equals(item.getString(idField)))
+          .toList());
+    }
+    return null;
+  }
+
   private void populateItemsAndAddIllPolicy(JsonArray items, JsonArray holdings,
       List<Object> fieldsList, boolean suppressedRecordsProcessing) {
     getItemsFromItems(items).forEach(item -> {
       var illPolicyOpt = nonNull(holdings)
           ? holdings.stream()
               .map(JsonObject.class::cast)
-              .filter(hold -> hold.getString("id")
+              .filter(hold -> hold.getString(ID)
               .equals(item.getString(HOLDINGS_RECORD_ID))
                   && StringUtils.isNotBlank(hold.getString(ILL_POLICY)))
               .map(hold -> hold.getString(ILL_POLICY))
@@ -177,7 +197,7 @@ public class RecordMetadataManager {
   private List<JsonObject> getItemsFromItems(JsonArray items) {
     return items.stream()
         .map(JsonObject.class::cast)
-        .filter(item -> item.containsKey("id"))
+        .filter(item -> item.containsKey(ID))
         .toList();
   }
 
@@ -198,7 +218,7 @@ public class RecordMetadataManager {
   private boolean holdingsContainsItem(JsonObject hold, JsonArray items) {
     return items.stream().map(JsonObject.class::cast)
         .anyMatch(item -> ofNullable(item.getString(HOLDINGS_RECORD_ID)).orElse(EMPTY)
-            .equals(hold.getString("id")));
+            .equals(hold.getString(ID)));
   }
 
   /**
@@ -220,7 +240,8 @@ public class RecordMetadataManager {
 
     if (nonNull(holdings) && CollectionUtils.isNotEmpty(holdings.getList())) {
       List<Object> fieldsList = getFieldsForUpdate(srsInstance);
-      holdings.forEach(holding ->
+      holdings.stream().filter(holding ->
+          !((JsonObject) holding).getString(ID).equals(DCB_HOLDINGS_RECORD)).forEach(holding ->
           updateFieldsWithElectronicAccessField((JsonObject) holding, fieldsList,
           suppressedRecordsProcessing));
     }
@@ -407,13 +428,27 @@ public class RecordMetadataManager {
       JsonObject itemData,
       List<EffectiveLocationSubFields> subFieldGroupProperties) {
     if (nonNull(itemData)) {
+      var isDisplaySummaryPresent = itemData.containsKey(DISPLAY_SUMMARY)
+          && isNotEmpty(itemData.getString(DISPLAY_SUMMARY).trim());
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
-          effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+          if (isDisplaySummaryPresent && enumerationOrChronologyPredicate.test(subFieldCode)) {
+            addDisplaySummaryToEnumerationAndSkipChronology(effectiveLocationSubFields,
+                subFieldCode, itemData.getString(DISPLAY_SUMMARY));
+          } else {
+            effectiveLocationSubFields.put(subFieldCode, subFieldValue);
+          }
         }
       });
+    }
+  }
+
+  private void addDisplaySummaryToEnumerationAndSkipChronology(
+      Map<String, Object> effectiveLocationSubFields, String subFieldCode, String displaySummary) {
+    if (subFieldCode.equals(EffectiveLocationSubFields.ENUMERATION.getSubFieldCode())) {
+      effectiveLocationSubFields.put(subFieldCode, displaySummary);
     }
   }
 
