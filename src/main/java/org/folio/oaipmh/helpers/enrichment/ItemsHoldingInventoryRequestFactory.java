@@ -3,7 +3,6 @@ package org.folio.oaipmh.helpers.enrichment;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.folio.oaipmh.Constants.HTTPS;
 import static org.folio.oaipmh.Constants.OKAPI_TENANT;
 import static org.folio.oaipmh.Constants.OKAPI_TOKEN;
 
@@ -23,9 +22,6 @@ public class ItemsHoldingInventoryRequestFactory {
     var webClient = WebClientProvider.getWebClient();
     var httpRequest = webClient.postAbs(request.getOkapiUrl()
         + INVENTORY_ITEMS_AND_HOLDINGS_ENDPOINT);
-    if (request.getOkapiUrl().contains(HTTPS)) {
-      httpRequest.ssl(true);
-    }
     httpRequest.putHeader(OKAPI_TOKEN, request.getOkapiToken());
     httpRequest.putHeader(OKAPI_TENANT, TenantTool.tenantId(request.getOkapiHeaders()));
     httpRequest.putHeader(ACCEPT, APPLICATION_JSON);
