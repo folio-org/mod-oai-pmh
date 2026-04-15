@@ -438,12 +438,10 @@ public class RecordMetadataManager {
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
-        if (isNotEmpty(subFieldValue)) {
-          if (isNotEmpty(subFieldValue)
-              && (!isDisplaySummaryPresent
-              || !enumerationOrChronologyPredicate.test(subFieldCode))) {
-            effectiveLocationSubFields.put(subFieldCode, subFieldValue);
-          }
+        if (isNotEmpty(subFieldValue)
+            && (!isDisplaySummaryPresent
+            || !enumerationOrChronologyPredicate.test(subFieldCode))) {
+          effectiveLocationSubFields.put(subFieldCode, subFieldValue);
         }
       });
     }
