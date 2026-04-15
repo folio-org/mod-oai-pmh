@@ -439,7 +439,9 @@ public class RecordMetadataManager {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
-          if (!isDisplaySummaryPresent || !enumerationOrChronologyPredicate.test(subFieldCode)) {
+          if (isNotEmpty(subFieldValue)
+              && (!isDisplaySummaryPresent
+              || !enumerationOrChronologyPredicate.test(subFieldCode))) {
             effectiveLocationSubFields.put(subFieldCode, subFieldValue);
           }
         }
