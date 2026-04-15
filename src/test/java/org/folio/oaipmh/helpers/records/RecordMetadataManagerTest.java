@@ -618,7 +618,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldNotAddEnumerationSubfield_whenDisplaySummaryIsPresentButEnumerationIsMissing() {
+  void shouldAddEnumerationSubfield_whenDisplaySummaryIsPresentButEnumerationIsMissing() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_JSON_PATH)));
     JsonObject inventoryInstance = new JsonObject(
@@ -642,8 +642,8 @@ class RecordMetadataManagerTest {
       List<Map<String, Object>> subFieldsList =
           (List<Map<String, Object>>) ((Map<String, Object>) field.getMap()
               .get(EFFECTIVE_LOCATION_FIELD)).get(SUBFIELDS);
-      // enumeration subfield "k" should not exist because original enumeration value was absent
-      assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("k")));
+      // enumeration subfield "k" should exist even the original enumeration value was absent
+      assertTrue(subFieldsList.stream().anyMatch(sf -> sf.containsKey("k")));
       // chronology subfield "l" should also be skipped since displaySummary is present
       assertTrue(subFieldsList.stream().noneMatch(sf -> sf.containsKey("l")));
     });
