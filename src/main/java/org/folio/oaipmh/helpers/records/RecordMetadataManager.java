@@ -430,25 +430,20 @@ public class RecordMetadataManager {
     if (nonNull(itemData)) {
       var isDisplaySummaryPresent = itemData.containsKey(DISPLAY_SUMMARY)
           && isNotEmpty(itemData.getString(DISPLAY_SUMMARY).trim());
+      if (isDisplaySummaryPresent) {
+        effectiveLocationSubFields.put(
+            EffectiveLocationSubFields.ENUMERATION.getSubFieldCode(),
+            itemData.getString(DISPLAY_SUMMARY));
+      }
       subFieldGroupProperties.forEach(pair -> {
         String subFieldCode = pair.getSubFieldCode();
         String subFieldValue = itemData.getString(pair.getJsonPropertyPath());
         if (isNotEmpty(subFieldValue)) {
-          if (isDisplaySummaryPresent && enumerationOrChronologyPredicate.test(subFieldCode)) {
-            addDisplaySummaryToEnumerationAndSkipChronology(effectiveLocationSubFields,
-                subFieldCode, itemData.getString(DISPLAY_SUMMARY));
-          } else {
+          if (!isDisplaySummaryPresent || !enumerationOrChronologyPredicate.test(subFieldCode)) {
             effectiveLocationSubFields.put(subFieldCode, subFieldValue);
           }
         }
       });
-    }
-  }
-
-  private void addDisplaySummaryToEnumerationAndSkipChronology(
-      Map<String, Object> effectiveLocationSubFields, String subFieldCode, String displaySummary) {
-    if (subFieldCode.equals(EffectiveLocationSubFields.ENUMERATION.getSubFieldCode())) {
-      effectiveLocationSubFields.put(subFieldCode, displaySummary);
     }
   }
 
