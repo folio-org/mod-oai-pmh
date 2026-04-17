@@ -1,4 +1,31 @@
-## 3.16.0 - Unreleased
+## 3.17.0 - Unreleased
+
+## 3.16.0 (Released)
+
+This release includes improvements for harvesting of deleted records, some performance improvements, technical tasks, vertex upgrades.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.0...v3.16.0)
+
+### Stories
+* [MODOAIPMH-661](https://folio-org.atlassian.net/browse/MODOAIPMH-661) Exclude DCB instance and holdings records from harvest
+* [MODOAIPMH-657](https://folio-org.atlassian.net/browse/MODOAIPMH-657) Include displaySummary in lieu of enumeration and chronology in OAI-PMH withHoldings output 
+* [MODOAIPMH-647](https://folio-org.atlassian.net/browse/MODOAIPMH-647) Some errors in the error logs are repeated
+* [MODOAIPMH-638](https://folio-org.atlassian.net/browse/MODOAIPMH-638) Improve harvest for deleted MARC records
+* [MODOAIPMH-621](https://folio-org.atlassian.net/browse/MODOAIPMH-621) Migrate settings from mod-configuration to mod-settings
+* [MODOAIPMH-615](https://folio-org.atlassian.net/browse/MODOAIPMH-615) Remove OAI-PMH dependency on instance_audit table
+* [MODOAIPMH-602](https://folio-org.atlassian.net/browse/MODOAIPMH-602) Populating 999 fields while harvesting LINKED_DATA records
+* [MODOAIPMH-561](https://folio-org.atlassian.net/browse/MODOAIPMH-561) Holdings, Item location information is not displayed in 952 field if the effective location is in "Inactive" status
+
+### Bug fixes
+* [MODOAIPMH-586](https://folio-org.atlassian.net/browse/MODOAIPMH-586) Performance issues for deletes on full harvest
+
+### Technical tasks
+* [MODOAIPMH-659](https://folio-org.atlassian.net/browse/MODOAIPMH-659) Delete redundant webClient httpRequest.ssl(true) calls
+* [MODOAIPMH-656](https://folio-org.atlassian.net/browse/MODOAIPMH-656) mod-oai-pmh: Use GitHub Workflows for Maven
+* [MODOAIPMH-655](https://folio-org.atlassian.net/browse/MODOAIPMH-655) Remove redundant RepositoryConfigurationUtil log messages
+* [MODOAIPMH-654](https://folio-org.atlassian.net/browse/MODOAIPMH-654) Add S3_SUB_PATH Environment Variable Support
+* [MODOAIPMH-626](https://folio-org.atlassian.net/browse/MODOAIPMH-626) Upgrade module to Vert.x 5.0
+* [MODOAIPMH-571](https://folio-org.atlassian.net/browse/MODOAIPMH-571) Tech Debt: enable check-style plugin
 
 ## 3.15.0 (Released)
 

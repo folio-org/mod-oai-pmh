@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.16.0-SNAPSHOT</version>
+  <version>3.17.0-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -135,7 +135,7 @@
     </sonar.coverage.exclusions>
 
     <aspectj.version>1.9.21.1</aspectj.version>
-    <raml-module-builder.version>36.0.0-SNAPSHOT</raml-module-builder.version>
+    <raml-module-builder.version>36.0.0</raml-module-builder.version>
     <folio-liquibase-util.version>1.10.0</folio-liquibase-util.version>
     <data-import-utils.version>1.14.0</data-import-utils.version>
     <folio-di-support.version>3.0.0</folio-di-support.version>
@@ -158,9 +158,9 @@
     <mockito-junit-jupiter.version>5.17.0</mockito-junit-jupiter.version>
     <junit.version>5.12.2</junit.version>
     <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
-    <generate-marc-utils-version>1.10.0</generate-marc-utils-version>
+    <generate-marc-utils-version>1.11.0</generate-marc-utils-version>
     <postgres.image>postgres:16-alpine</postgres.image>
-    <folio-s3-client.version>3.0.0-SNAPSHOT</folio-s3-client.version>
+    <folio-s3-client.version>3.0.0</folio-s3-client.version>
     <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
     <aws.sdk.version>2.29.9</aws.sdk.version>
     <json-smart.version>2.5.2</json-smart.version>
