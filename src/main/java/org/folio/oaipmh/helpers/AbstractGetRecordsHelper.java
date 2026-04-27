@@ -173,7 +173,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
       }
       logger.info("handle:: Process records from srs for requestId {}",
           request.getRequestId());
-      requestAndProcessSrsRecords(request, ctx, promise, false);
+      requestAndProcessSrsRecords(request, ctx, promise, false, false);
     } catch (Exception e) {
       logger.error("handle:: Request failed for requestId {} with error {}",
           request.getRequestId(),  e.getMessage());
