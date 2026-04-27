@@ -30,6 +30,7 @@ import static org.folio.oaipmh.Constants.TURNED_TO_DELETED_PARAM;
 import static org.folio.oaipmh.Constants.UNTIL_PARAM;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getBooleanProperty;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.folio.oaipmh.querybuilder.RecordsSource.CONSORTIUM_LINKED_DATA;
 import static org.folio.oaipmh.querybuilder.RecordsSource.CONSORTIUM_MARC;
 import static org.folio.oaipmh.querybuilder.RecordsSource.MARC_SHARED;
 import static org.folio.oaipmh.service.MetricsCollectingService.MetricOperation.INSTANCES_PROCESSING;
@@ -262,7 +263,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
             var idJsonMap = finalRecords.stream()
                 .map(JsonObject.class::cast)
                 .filter(json -> json.getString(SOURCE).equals(MARC_SHARED.toString())
-                    || json.getString(SOURCE).equals(CONSORTIUM_MARC.toString()))
+                    || json.getString(SOURCE).equals(CONSORTIUM_MARC.toString())
+                    || json.getString(SOURCE).equals(CONSORTIUM_LINKED_DATA.toString()))
                 // Here id1 = id2, i.e. the same ids, take only first one.
                 .collect(toMap(jsonKey ->
                     jsonKey.getString(INSTANCE_ID_FROM_VIEW_RESPONSE),
@@ -309,8 +311,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport,
       Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, int retryAttempts,
       Promise<JsonArray> promise, Request request, JsonArray records) {
-    logger.info("doRequestShared execution: {}, {}, {}, {}",
-        idJsonMap, deletedRecordsSupport, records, request);
+    logger.info("doRequestShared execution: {}, {}, {}",
+        idJsonMap.keySet(), deletedRecordsSupport, request);
     var client =
         SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
     client.postSourceStorageSourceRecords("INSTANCE",
