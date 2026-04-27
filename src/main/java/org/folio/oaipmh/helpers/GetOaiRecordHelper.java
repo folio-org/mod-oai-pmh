@@ -8,6 +8,7 @@ import static org.folio.oaipmh.Constants.RECORD_NOT_FOUND_ERROR;
 import static org.folio.oaipmh.Constants.REPOSITORY_RECORDS_SOURCE;
 import static org.folio.oaipmh.Constants.SRS_AND_INVENTORY;
 import static org.folio.oaipmh.helpers.RepositoryConfigurationUtil.getProperty;
+import static org.folio.oaipmh.querybuilder.RecordsSource.CONSORTIUM_LINKED_DATA;
 import static org.folio.oaipmh.querybuilder.RecordsSource.LINKED_DATA;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.BAD_ARGUMENT;
 import static org.openarchives.oai._2.OAIPMHerrorcodeType.CANNOT_DISSEMINATE_FORMAT;
@@ -56,7 +57,8 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
                 var source = instances.isEmpty()
                         ? ""
                         : instances.getJsonObject(0).getString("source");
-                if (source.equals(LINKED_DATA.toString())) {
+                if (source.equals(LINKED_DATA.toString())
+                    || source.equals(CONSORTIUM_LINKED_DATA.toString())) {
                   requestAndProcessSrsRecords(request, ctx, promise, false);
                 } else {
                   handleInventoryResponse(handler, request, ctx, promise);
