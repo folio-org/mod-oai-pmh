@@ -317,8 +317,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   sourceRecordsLocal.size());
               logger.info("srscentral {}", sourceRecordsCentral);
               if (nonNull(sourceRecordsCentral)) {
-                if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD
-                    && !linkedData) {
+                if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
                   sourceRecordsLocal.clear();
                 }
                 sourceRecordsLocal.addAll(sourceRecordsCentral);
