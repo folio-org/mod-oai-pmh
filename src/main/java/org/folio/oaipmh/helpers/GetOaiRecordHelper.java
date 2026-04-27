@@ -57,7 +57,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
                         ? ""
                         : instances.getJsonObject(0).getString("source");
                 if (source.equals(LINKED_DATA.toString())) {
-                  requestAndProcessSrsRecords(request, ctx, promise, false);
+                  requestAndProcessSrsRecords(request, ctx, promise, false, true);
                 } else {
                   handleInventoryResponse(handler, request, ctx, promise);
                 }
@@ -67,7 +67,7 @@ public class GetOaiRecordHelper extends AbstractGetRecordsHelper {
         logger.info("handle:: Process records from srs for requestId {}",
             request.getRequestId());
         requestAndProcessSrsRecords(request, ctx, promise,
-            recordsSource.equals(SRS_AND_INVENTORY));
+            recordsSource.equals(SRS_AND_INVENTORY), false);
       }
     } catch (Exception e) {
       logger.error("handle:: Request failed for requestId {} with error {}",

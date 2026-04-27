@@ -227,7 +227,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
   }
 
   protected void requestAndProcessSrsRecords(Request request, Context ctx,
-      Promise<Response> promise, boolean withInventory) {
+      Promise<Response> promise, boolean withInventory, boolean linkedData) {
 
     final boolean deletedRecordsSupport =
         RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
@@ -315,8 +315,10 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
               logger.info("Number of SRS records from central tenant: {}, local tenant: {}",
                   nonNull(sourceRecordsCentral) ? sourceRecordsCentral.size() : 0,
                   sourceRecordsLocal.size());
+              logger.info("srscentral {}", sourceRecordsCentral);
               if (nonNull(sourceRecordsCentral)) {
-                if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD) {
+                if (!sourceRecordsCentral.isEmpty() && request.getVerb() == VerbType.GET_RECORD
+                    && !linkedData) {
                   sourceRecordsLocal.clear();
                 }
                 sourceRecordsLocal.addAll(sourceRecordsCentral);
@@ -442,6 +444,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
           HttpResponse<Buffer> response = asyncResult.result();
           if (isSuccess(response.statusCode())) {
             promise.complete(response.bodyAsJsonObject());
+            logger.info("bodyAsJsonObject {}", response.bodyAsJsonObject());
           } else {
             String verbName = request.getVerb().value();
             String statusMessage = response.statusMessage();

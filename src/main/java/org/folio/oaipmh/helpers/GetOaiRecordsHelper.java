@@ -44,7 +44,7 @@ public class GetOaiRecordsHelper extends AbstractGetRecordsHelper {
             .onComplete(handler -> handleInventoryResponse(handler, request, ctx, promise));
       } else {
         requestAndProcessSrsRecords(request, ctx, promise,
-            recordsSource.equals(SRS_AND_INVENTORY));
+            recordsSource.equals(SRS_AND_INVENTORY), false);
       }
     } catch (Exception e) {
       handleException(promise, e);
