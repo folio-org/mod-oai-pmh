@@ -311,8 +311,7 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
   private void doRequestShared(Vertx vertx, boolean deletedRecordsSupport,
       Map<String, JsonObject> idJsonMap, AtomicInteger attemptsCount, int retryAttempts,
       Promise<JsonArray> promise, Request request, JsonArray records) {
-    logger.info("doRequestShared execution: {}, {}, {}",
-        idJsonMap.keySet(), deletedRecordsSupport, request);
+    logger.info("doRequestShared execution");
     var client =
         SourceStorageSourceRecordsClientWrapper.getSourceStorageSourceRecordsClient(request);
     client.postSourceStorageSourceRecords("INSTANCE",

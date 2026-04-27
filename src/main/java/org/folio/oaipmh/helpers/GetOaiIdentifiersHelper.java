@@ -43,7 +43,7 @@ public class GetOaiIdentifiersHelper extends AbstractGetRecordsHelper {
         requestAndProcessInventoryRecords(request, ctx, promise);
       } else {
         requestAndProcessSrsRecords(request, ctx, promise,
-            recordsSource.equals(SRS_AND_INVENTORY), false);
+            recordsSource.equals(SRS_AND_INVENTORY));
       }
     } catch (Exception e) {
       handleException(promise, e);
