@@ -120,7 +120,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUpdateRecordMetadataWithTwoEffectiveLocationFieldsWhenInventoryItemsArrayHasTwoElements() {
+  void shouldUpdateRecordMetadataWithTwoEffLocFieldsWhenInventoryItemsArrayHasTwoElements() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
@@ -141,7 +141,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUpdateRecordMetadataWithTwoElectronicAccessFieldsWhenInventoryItemHasElectronicAccessArrayWithTwoItems() {
+  void shouldUpdateRecordMetadataWithTwoElAccFieldsWhenInventoryItemHasElAccArrayWithTwoItems() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
@@ -282,7 +282,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutLocationsSubfieldGroupWhenInstanceHasItemWithoutLocationData() {
+  void shouldUpdateFieldsWithEffLocFieldWithoutLocSubfieldGroupWhenInstHasItemWithoutLocData() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
@@ -302,7 +302,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldUpdateFieldsWithEffectiveLocationFieldWithoutCallNumberSubfieldGroupWhenInstanceHasItemWithoutCallNumber() {
+  void shouldUpdateFieldsWithEffLocFieldWithoutCallNumSubfieldGroupWhenInstHasItmWithoutCallNum() {
     JsonObject srsInstance = new JsonObject(requireNonNull(getJsonObjectFromFile(
         SRS_INSTANCE_WITH_ELECTRONIC_ACCESS)));
     JsonObject inventoryInstance = new JsonObject(
