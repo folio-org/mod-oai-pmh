@@ -71,6 +71,8 @@ class RecordMetadataManagerTest {
 
   private static final String SRS_INSTANCE_WITH_856_BLANK_FIRST_INDICATOR =
       "/metadata-manager/srs_instance_with_856_blank_first_indicator.json";
+  private static final String SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR =
+      "/metadata-manager/srs_instance_with_856_empty_first_indicator.json";
 
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY =
       "/metadata-manager/electronic_access-empty.json";
@@ -259,6 +261,38 @@ class RecordMetadataManagerTest {
 
       assertTrue(hasSuppressSubfield,
           "856 field with blank first indicator should have 't' subfield added");
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldNotAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsEmpty(Vertx vertx,
+      VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject record = new JsonObject(
+          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR)));
+      String source = storageHelper.getInstanceRecordSource(record);
+      String updatedSource = metadataManager
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+
+      JsonObject jsonFromSource = new JsonObject(updatedSource);
+      JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
+      JsonObject field856 = fields.stream()
+          .map(o -> (JsonObject) o)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+
+      JsonArray subfields = field856.getJsonObject(ELECTRONIC_ACCESS_FILED)
+          .getJsonArray(SUBFIELDS);
+      boolean hasSuppressSubfield = subfields.stream()
+          .map(o -> (JsonObject) o)
+          .anyMatch(o -> o.containsKey("t"));
+
+      assertFalse(hasSuppressSubfield,
+          "856 field with empty first indicator should not have 't' subfield added"
+              + " because electronicAccessPredicate requires isNotEmpty(firstIndicator)");
       testContext.completeNow();
     }));
   }
