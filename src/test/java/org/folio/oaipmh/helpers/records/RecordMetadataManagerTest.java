@@ -69,6 +69,9 @@ class RecordMetadataManagerTest {
   private static final String INVENTORY_INSTANCE_WITH_ITEM_WITHOUT_CALL_NUMBER =
       "/metadata-manager/inventory_instance_with_item_without_call_number.json";
 
+  private static final String SRS_INSTANCE_WITH_856_BLANK_FIRST_INDICATOR =
+      "/metadata-manager/srs_instance_with_856_blank_first_indicator.json";
+
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_EMPTY =
       "/metadata-manager/electronic_access-empty.json";
   private static final String ITEM_WITH_ELECTRONIC_ACCESS_NO_DISPLAY_CONSTANT_GENERATED =
@@ -225,6 +228,37 @@ class RecordMetadataManagerTest {
       verifySourceWasUpdatedWithNewSubfield(updatedSource,
           metadataManager.getElectronicAccessPredicate(),
           ELECTRONIC_ACCESS_FILED);
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsBlank(Vertx vertx,
+      VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject record = new JsonObject(
+          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_BLANK_FIRST_INDICATOR)));
+      String source = storageHelper.getInstanceRecordSource(record);
+      String updatedSource = metadataManager
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+
+      JsonObject jsonFromSource = new JsonObject(updatedSource);
+      JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
+      JsonObject field856 = fields.stream()
+          .map(o -> (JsonObject) o)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+
+      JsonArray subfields = field856.getJsonObject(ELECTRONIC_ACCESS_FILED)
+          .getJsonArray(SUBFIELDS);
+      boolean hasSuppressSubfield = subfields.stream()
+          .map(o -> (JsonObject) o)
+          .anyMatch(o -> o.containsKey("t"));
+
+      assertTrue(hasSuppressSubfield,
+          "856 field with blank first indicator should have 't' subfield added");
       testContext.completeNow();
     }));
   }
