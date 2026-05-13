@@ -239,11 +239,11 @@ class RecordMetadataManagerTest {
       VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(
+      JsonObject marcRecord = new JsonObject(
           requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_BLANK_FIRST_INDICATOR)));
-      String source = storageHelper.getInstanceRecordSource(record);
+      String source = storageHelper.getInstanceRecordSource(marcRecord);
       String updatedSource = metadataManager
-          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, marcRecord);
 
       JsonObject jsonFromSource = new JsonObject(updatedSource);
       JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
@@ -270,11 +270,11 @@ class RecordMetadataManagerTest {
       VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
-      JsonObject record = new JsonObject(
+      JsonObject marcRecord = new JsonObject(
           requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR)));
-      String source = storageHelper.getInstanceRecordSource(record);
+      String source = storageHelper.getInstanceRecordSource(marcRecord);
       String updatedSource = metadataManager
-          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, record);
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, marcRecord);
 
       JsonObject jsonFromSource = new JsonObject(updatedSource);
       JsonArray fields = jsonFromSource.getJsonArray(FIELDS);
