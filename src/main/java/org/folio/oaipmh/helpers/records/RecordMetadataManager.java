@@ -104,7 +104,7 @@ public class RecordMetadataManager {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
         String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
         String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotBlank(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
+        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
       }
       return false;
     };
