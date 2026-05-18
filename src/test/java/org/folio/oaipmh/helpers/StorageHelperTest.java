@@ -122,7 +122,7 @@ class StorageHelperTest {
   }
 
   @Test
-  void shouldReturnEmptyStringWhenGetIdentifierIdAndStorageIsSrsAndRecordHasNotExternalIdsHolderField() {
+  void getIdentifierIdReturnsEmptyWhenNoExternalIdsHolder() {
     JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH
         + "/instance_withoutExternalIdsHolderField.json");
     assertEquals(EMPTY, getStorageHelper(SOURCE_RECORD_STORAGE).getIdentifierId(item));

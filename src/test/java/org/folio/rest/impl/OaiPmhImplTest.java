@@ -690,7 +690,7 @@ class OaiPmhImplTest {
   }
 
   @Test
-  void getOaiGetRecordWhenRecordsSourceIsInventoryAndSuppressedLinkedData_shouldAddSuppressionTo999And856() {
+  void getRecordInventorySuppressedLinkedDataAddsSuppression999And856() {
     var currentRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
     var currentSuppressedRecordsProcessing =
         System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);

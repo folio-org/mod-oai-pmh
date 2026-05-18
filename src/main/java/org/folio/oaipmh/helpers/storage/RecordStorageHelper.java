@@ -145,7 +145,7 @@ public class RecordStorageHelper implements StorageHelper {
     }
     Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
     var suppressFromAdditionalInfo = jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
-      .orElse(null);
+        .orElse(null);
     if (nonNull(suppressFromAdditionalInfo)) {
       return suppressFromAdditionalInfo;
     }
