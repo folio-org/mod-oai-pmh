@@ -80,7 +80,7 @@ public class ItemsHoldingsEnrichment {
   }
 
   private void enrichDiscoverySuppressed(JsonObject itemsAndHoldingsFields, JsonObject instance) {
-    if (Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY))) {
+    if (isDiscoverySuppressed(instance)) {
       for (Object item : itemsAndHoldingsFields.getJsonArray("items")) {
         if (item instanceof JsonObject) {
           JsonObject itemJson = (JsonObject) item;
@@ -88,6 +88,14 @@ public class ItemsHoldingsEnrichment {
         }
       }
     }
+  }
+
+  private boolean isDiscoverySuppressed(JsonObject instance) {
+    Object suppressFromDiscovery = instance.getValue(SUPPRESS_FROM_DISCOVERY);
+    if (suppressFromDiscovery instanceof Boolean suppressValue) {
+      return suppressValue;
+    }
+    return Boolean.parseBoolean(instance.getString(SUPPRESS_FROM_DISCOVERY));
   }
 
   private void addEffectiveLocationCallNumberFromHoldingsWithoutItems(JsonObject instance) {
@@ -138,5 +146,4 @@ public class ItemsHoldingsEnrichment {
     }
   }
 }
-
 

@@ -102,9 +102,7 @@ public class RecordMetadataManager {
     electronicAccessPredicate = jsonObject -> {
       if (jsonObject.containsKey(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)) {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
-        String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
-        String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
+        return nonNull(dataFieldContent.getJsonArray(SUBFIELDS));
       }
       return false;
     };
@@ -463,8 +461,8 @@ public class RecordMetadataManager {
   /**
    * Updates marc general info datafield(tag=999, ind1=ind2='f') with additional
    * subfield which holds data about record discovery
-   * suppression status. Additional subfield has code = 't' and value = '0' if
-   * record is discovery suppressed and '1' at opposite
+   * suppression status. Additional subfield has code = 't' and value = '1' if
+   * record is discovery suppressed and '0' at opposite
    * case.
    *
    * @param metadataSource      - record source
@@ -485,8 +483,8 @@ public class RecordMetadataManager {
   /**
    * Updates marc electronic access field(tag=856) with additional subfield which
    * holds data about record discovery
-   * suppression status. Additional subfield has code = 't' and value = '0' if
-   * record is discovery suppressed and '1' at opposite
+   * suppression status. Additional subfield has code = 't' and value = '1' if
+   * record is discovery suppressed and '0' at opposite
    * case.
    *
    * @param metadataSource      - record source

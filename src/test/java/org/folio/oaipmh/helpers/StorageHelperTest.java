@@ -93,6 +93,22 @@ class StorageHelperTest {
   }
 
   @Test
+  void getSuppressedFromDiscoveryShouldReadSuppressFromDiscoveryAsBoolean() {
+    JsonObject item = new JsonObject()
+        .put("source", "LINKED_DATA")
+        .put("suppressFromDiscovery", true);
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getSuppressedFromDiscovery(item), is(true));
+  }
+
+  @Test
+  void getSuppressedFromDiscoveryShouldReadSuppressFromDiscoveryAsString() {
+    JsonObject item = new JsonObject()
+        .put("source", "LINKED_DATA")
+        .put("suppressFromDiscovery", "true");
+    assertThat(getStorageHelper(SOURCE_RECORD_STORAGE).getSuppressedFromDiscovery(item), is(true));
+  }
+
+  @Test
   void getRecordSource() {
     JsonObject item = getJsonObjectFromFile(SOURCE_STORAGE_RECORD_PATH + "/instance.json");
     String recordSource = getStorageHelper(SOURCE_RECORD_STORAGE).getRecordSource(item);
