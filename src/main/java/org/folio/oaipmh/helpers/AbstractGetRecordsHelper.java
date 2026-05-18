@@ -707,7 +707,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             JsonObject instanceRequiredFieldsOnly = new JsonObject();
             instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
             instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY,
-                instance.getString("discoverySuppress"));
+                ofNullable(instance.getBoolean("discoverySuppress")).orElse(false));
             return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
           })
           .compose(oneItemList ->

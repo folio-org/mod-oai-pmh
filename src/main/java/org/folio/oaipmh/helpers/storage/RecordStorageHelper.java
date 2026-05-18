@@ -34,6 +34,12 @@ public class RecordStorageHelper implements StorageHelper {
   private static final String EXTERNAL_IDS_HOLDER = "externalIdsHolder";
   private static final String ADDITIONAL_INFO = "additionalInfo";
   private static final String SUPPRESS_DISCOVERY = "suppressDiscovery";
+  private static final String SUPPRESS_FROM_DISCOVERY = "suppressFromDiscovery";
+  private static final String DISCOVERY_SUPPRESS = "discoverySuppress";
+  private static final String SOURCE = "source";
+  private static final String SUPPRESS_FROM_DISCOVERY_SRS = "suppress_from_discovery_srs";
+  private static final String SUPPRESS_FROM_DISCOVERY_INVENTORY =
+      "suppress_from_discovery_inventory";
   private static final String RECORD = "record";
 
   @Override  public Integer getTotalRecords(JsonObject entries) {
@@ -118,24 +124,54 @@ public class RecordStorageHelper implements StorageHelper {
 
   @Override
   public boolean getSuppressedFromDiscovery(final JsonObject entry) {
-    if (entry.containsKey("source")) {
+    if (entry.containsKey(SOURCE)) {
+      var source = entry.getString(SOURCE);
       Boolean res;
-      if (entry.getString("source").contains("MARC")
+      if (nonNull(source) && source.contains("MARC")
           && nonNull(entry.getString(MARC_RECORD_FROM_VIEW_RESPONSE))) {
-        res = entry.getBoolean("suppress_from_discovery_srs");
+        res = entry.getBoolean(SUPPRESS_FROM_DISCOVERY_SRS);
       } else {
-        res = entry.getBoolean("suppress_from_discovery_inventory");
+        res = entry.getBoolean(SUPPRESS_FROM_DISCOVERY_INVENTORY);
       }
       if (nonNull(res)) {
         return res;
       }
     }
     if (entry.containsKey(RECORD)) {
-      return entry.getJsonObject(RECORD).getBoolean("discoverySuppress");
+      var discoverySuppress = entry.getJsonObject(RECORD).getBoolean(DISCOVERY_SUPPRESS);
+      if (nonNull(discoverySuppress)) {
+        return discoverySuppress;
+      }
     }
     Optional<JsonObject> jsonObject = ofNullable(entry.getJsonObject(ADDITIONAL_INFO));
-    return jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
-      .orElse(entry.getBoolean("discoverySuppress"));
+    var suppressFromAdditionalInfo = jsonObject.map(obj -> obj.getBoolean(SUPPRESS_DISCOVERY))
+        .orElse(null);
+    if (nonNull(suppressFromAdditionalInfo)) {
+      return suppressFromAdditionalInfo;
+    }
+
+    var suppressFromDiscovery = parseBooleanValue(entry.getValue(SUPPRESS_FROM_DISCOVERY));
+    if (nonNull(suppressFromDiscovery)) {
+      return suppressFromDiscovery;
+    }
+
+    var discoverySuppress = parseBooleanValue(entry.getValue(DISCOVERY_SUPPRESS));
+    return nonNull(discoverySuppress) && discoverySuppress;
+  }
+
+  private Boolean parseBooleanValue(Object value) {
+    if (value instanceof Boolean boolValue) {
+      return boolValue;
+    }
+    if (value instanceof String stringValue) {
+      if ("true".equalsIgnoreCase(stringValue)) {
+        return true;
+      }
+      if ("false".equalsIgnoreCase(stringValue)) {
+        return false;
+      }
+    }
+    return null;
   }
 
   private String getLeaderValue(JsonObject entry) {

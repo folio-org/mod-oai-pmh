@@ -266,7 +266,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldNotAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsEmpty(Vertx vertx,
+  void shouldAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsEmpty(Vertx vertx,
       VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
@@ -290,9 +290,8 @@ class RecordMetadataManagerTest {
           .map(o -> (JsonObject) o)
           .anyMatch(o -> o.containsKey("t"));
 
-      assertFalse(hasSuppressSubfield,
-          "856 field with empty first indicator should not have 't' subfield added"
-              + " because electronicAccessPredicate requires isNotEmpty(firstIndicator)");
+      assertTrue(hasSuppressSubfield,
+          "856 field with empty first indicator should have 't' subfield added");
       testContext.completeNow();
     }));
   }

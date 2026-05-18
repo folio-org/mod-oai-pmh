@@ -689,6 +689,50 @@ class OaiPmhImplTest {
     System.setProperty(REPOSITORY_RECORDS_SOURCE, SRS);
   }
 
+  @Test
+  void getRecordInventorySuppressedLinkedDataAddsSuppression999And856() {
+    var currentRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
+    var currentSuppressedRecordsProcessing =
+        System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    try {
+      System.setProperty(REPOSITORY_RECORDS_SOURCE, INVENTORY);
+      System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+
+      RequestSpecification request = createBaseRequest()
+          .with()
+          .param(VERB_PARAM, GET_RECORD.value())
+          .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX
+              + OkapiMockServer.INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA)
+          .param(METADATA_PREFIX_PARAM, MARC21WITHHOLDINGS.getName());
+
+      OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
+      RecordType record = oaiPmhResponse.getGetRecord().getRecord();
+
+      Optional<SubfieldatafieldType> suppressSubfield999 =
+          findSubfieldByFiledTagAndSubfieldCode(record, "999", "t");
+      assertTrue(suppressSubfield999.isPresent());
+      assertThat(suppressSubfield999.get().getValue(), equalTo("1"));
+
+      Optional<SubfieldatafieldType> suppressSubfield856 =
+          findSubfieldByFiledTagAndSubfieldCode(record, "856", "t");
+      assertTrue(suppressSubfield856.isPresent());
+      assertThat(suppressSubfield856.get().getValue(), equalTo("1"));
+    } finally {
+      if (currentRecordsSource != null) {
+        System.setProperty(REPOSITORY_RECORDS_SOURCE, currentRecordsSource);
+      } else {
+        System.clearProperty(REPOSITORY_RECORDS_SOURCE);
+      }
+
+      if (currentSuppressedRecordsProcessing != null) {
+        System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING,
+            currentSuppressedRecordsProcessing);
+      } else {
+        System.clearProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      }
+    }
+  }
+
   @ParameterizedTest
   @EnumSource(MetadataPrefix.class)
   void getOaiGetRecordWhenSourceIsInventoryAndInstanceSourceIsNotLinkedData_shouldRouteToInventory(
@@ -2889,6 +2933,10 @@ class OaiPmhImplTest {
       Optional<SubfieldatafieldType> optHoldingsUrlNote =
           findSubfieldByFiledTagAndSubfieldCode(r, "856", "z");
       assertTrue(optHoldingsUrlNote.isPresent());
+      Optional<SubfieldatafieldType> optHoldingsDiscoverySuppressed =
+          findSubfieldByFiledTagAndSubfieldCode(r, "856", "t");
+      assertTrue(optHoldingsDiscoverySuppressed.isPresent());
+      assertTrue(List.of("0", "1").contains(optHoldingsDiscoverySuppressed.get().getValue()));
     });
   }
 

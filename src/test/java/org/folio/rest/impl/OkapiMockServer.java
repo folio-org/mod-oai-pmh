@@ -266,6 +266,8 @@ public class OkapiMockServer {
       "12345000-0000-4000-a000-000000000111";
   private static final String INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO = "FOLIO";
   private static final String INSTANCE_ID_WITH_LINKED_DATA = "linked-data-identifier";
+  static final String INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA =
+      "linked-data-suppressed-identifier";
   private static final String INSTANCE_NO_SRS = "no-srs-identifier";
 
 
@@ -478,6 +480,13 @@ public class OkapiMockServer {
     } else if (uri.contains(GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY_INVALID_DATA_ID)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH
           + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA));
+    } else if (uri.contains(INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA)) {
+      String linkedDataInstance = getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
+          + INSTANCE_LINKED_DATA);
+      linkedDataInstance = linkedDataInstance
+          .replace(INSTANCE_ID_WITH_LINKED_DATA, INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA)
+          .replace("\"discoverySuppress\": false", "\"discoverySuppress\": true");
+      successResponse(ctx, linkedDataInstance);
     } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
           + INSTANCE_LINKED_DATA));
@@ -555,6 +564,13 @@ public class OkapiMockServer {
       if (uri.contains(DEFAULT_RECORD_DATE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
             + DEFAULT_SRS_RECORD));
+      } else if (uri.contains(INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA)) {
+        String linkedDataSrsRecord = getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
+            + SRS_RECORD_LINKED_DATA);
+        linkedDataSrsRecord = linkedDataSrsRecord
+            .replace(INSTANCE_ID_WITH_LINKED_DATA, INSTANCE_ID_WITH_SUPPRESSED_LINKED_DATA)
+            .replace("\"suppressDiscovery\": false", "\"suppressDiscovery\": true");
+        successResponse(ctx, linkedDataSrsRecord);
       } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
             + SRS_RECORD_LINKED_DATA));
@@ -725,6 +741,10 @@ public class OkapiMockServer {
   }
 
   private void successResponse(RoutingContext ctx, String body) {
+    if (body == null) {
+      failureResponse(ctx, 500, "Mock response body is null");
+      return;
+    }
     ctx.response()
         .setStatusCode(200)
         .putHeader(HttpHeaders.CONTENT_TYPE, "text/json")
