@@ -728,8 +728,39 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             return Future.succeededFuture(updatedSrsRecord);
           });
     } else {
-      return Future.succeededFuture(srsRecordToEnrich);
+      return enrichLinkedDataRecordWithInventorySuppression(request, srsRecordToEnrich, instanceId);
     }
+  }
+
+  private Future<JsonObject> enrichLinkedDataRecordWithInventorySuppression(Request request,
+      JsonObject srsRecordToEnrich, String instanceId) {
+    return requestFromInventory(request, 1, List.of(instanceId), true, true, true)
+        .recover(throwable -> {
+          logger.warn("Failed to obtain inventory instance {} for discovery suppression update: {}",
+              instanceId, throwable.getMessage());
+          return Future.succeededFuture(new JsonObject());
+        })
+        .map(inventoryRecords -> {
+          JsonArray inventoryInstances = inventoryRecords.getJsonArray("instances");
+          if (inventoryInstances == null || inventoryInstances.isEmpty()) {
+            return srsRecordToEnrich;
+          }
+          JsonObject inventoryInstance = inventoryInstances.getJsonObject(0);
+          String source = inventoryInstance.getString("source");
+          if (!RecordsSource.LINKED_DATA.toString().equals(source)
+              && !RecordsSource.CONSORTIUM_LINKED_DATA.toString().equals(source)) {
+            return srsRecordToEnrich;
+          }
+          if (inventoryInstance.containsKey("discoverySuppress")) {
+            boolean discoverySuppress = inventoryInstance.getBoolean("discoverySuppress");
+            JsonObject additionalInfo = ofNullable(srsRecordToEnrich.getJsonObject("additionalInfo")
+            ).orElse(new JsonObject());
+            additionalInfo.put("suppressDiscovery", discoverySuppress);
+            srsRecordToEnrich.put("additionalInfo", additionalInfo);
+            srsRecordToEnrich.put("discoverySuppress", discoverySuppress);
+          }
+          return srsRecordToEnrich;
+        });
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit,
