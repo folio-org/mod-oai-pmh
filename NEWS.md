@@ -1,5 +1,14 @@
 ## 3.17.0 - Unreleased
 
+## 3.16.1 (Released)
+
+This release contains fix for linked data (999 field) and fix for 't' subfield in 856 field.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.0...v3.16.1)
+
+### Bug fixes
+* [MODOAIPMH-666](https://folio-org.atlassian.net/browse/MODOAIPMH-666) In GetRecord, ListRecords response for MARC Instance 856 field does not include subfield "t" when 1st indicator is blank
+
 ## 3.16.0 (Released)
 
 This release includes improvements for harvesting of deleted records, some performance improvements, technical tasks, vertex upgrades.
