@@ -768,7 +768,7 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
-  void getOaiGetRecordWhenLinkedDataSuppressedProcessingDisabledAndDeletedRecordsNo_shouldOmitRecord(
+  void getRecordSuppressedSkipModeDeletedNo_shouldOmit(
       String recordsSource, MetadataPrefix metadataPrefix) {
     String linkedDataSuppressedIdentifier = "linked-data-suppressed-identifier";
     var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
