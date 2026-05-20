@@ -629,7 +629,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   } else {
                     context.put(recordId, jsonRecord);
                   }
-                  if (filterInstance(request, jsonRecord)) {
+                  if (filterInstance(request, enrichedSrsRecord)) {
                     recordsMap.put(recordId, recordType);
                   }
 
