@@ -690,9 +690,9 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("recordsSourceProvider")
+  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
   void getOaiGetRecordWhenLinkedDataSuppressedAndProcessingEnabled_shouldPopulate999And856(
-      String recordsSource) {
+      String recordsSource, MetadataPrefix metadataPrefix) {
     String linkedDataSuppressedIdentifier = "linked-data-suppressed-identifier";
     var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
     var initialSuppressedRecordsProcessing =
@@ -704,7 +704,7 @@ class OaiPmhImplTest {
           .with()
           .param(VERB_PARAM, GET_RECORD.value())
           .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + linkedDataSuppressedIdentifier)
-          .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+          .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
       OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
       RecordType record = oaiPmhResponse.getGetRecord().getRecord();
@@ -733,9 +733,9 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("recordsSourceProvider")
+  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
   void getOaiGetRecordWhenLinkedDataSuppressedAndProcessingDisabled_shouldOmitRecord(
-      String recordsSource) {
+      String recordsSource, MetadataPrefix metadataPrefix) {
     String linkedDataSuppressedIdentifier = "linked-data-suppressed-identifier";
     var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
     var initialSuppressedRecordsProcessing =
@@ -747,7 +747,7 @@ class OaiPmhImplTest {
           .with()
           .param(VERB_PARAM, GET_RECORD.value())
           .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + linkedDataSuppressedIdentifier)
-          .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+          .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
       OAIPMH oaiPmhResponse = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
       assertThat(oaiPmhResponse.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
@@ -767,9 +767,9 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("recordsSourceProvider")
+  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
   void getRecordLinkedDataNotSuppressed_shouldSet999And856To0(
-      String recordsSource) {
+      String recordsSource, MetadataPrefix metadataPrefix) {
     String linkedDataIdentifier = "linked-data-identifier";
     var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
     var initialSuppressedRecordsProcessing =
@@ -781,7 +781,7 @@ class OaiPmhImplTest {
           .with()
           .param(VERB_PARAM, GET_RECORD.value())
           .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + linkedDataIdentifier)
-          .param(METADATA_PREFIX_PARAM, MARC21XML.getName());
+          .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
 
       OAIPMH oaiPmhResponse = verify200WithXml(request, GET_RECORD);
       RecordType record = oaiPmhResponse.getGetRecord().getRecord();
@@ -2499,6 +2499,15 @@ class OaiPmhImplTest {
     Stream.Builder<Arguments> builder = Stream.builder();
     for (String recordsSource : RECORDS_SOURCES) {
       builder.add(Arguments.arguments(recordsSource));
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments> linkedDataRecordsSourceAndMarcMetadataPrefixProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (String recordsSource : RECORDS_SOURCES) {
+      builder.add(Arguments.arguments(recordsSource, MARC21XML));
+      builder.add(Arguments.arguments(recordsSource, MARC21WITHHOLDINGS));
     }
     return builder.build();
   }

@@ -704,10 +704,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
       return requestFromInventory(request, 1, List.of(instanceId),
           false, false, true).compose(instance -> {
+            JsonArray instances = instance.getJsonArray("instances");
+            JsonObject inventoryInstance =
+                instances != null && !instances.isEmpty() ? instances.getJsonObject(0) : null;
+            applyLinkedDataDiscoverySuppressFromInventory(
+                srsRecordToEnrich, inventoryInstance, instanceId);
             JsonObject instanceRequiredFieldsOnly = new JsonObject();
             instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
             instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY,
-                instance.getString("discoverySuppress"));
+                inventoryInstance != null ? inventoryInstance.getValue("discoverySuppress") : null);
             return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
           })
           .compose(oneItemList ->
@@ -746,21 +751,55 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             return srsRecordToEnrich;
           }
           JsonObject inventoryInstance = inventoryInstances.getJsonObject(0);
-          String source = inventoryInstance.getString("source");
-          if (!RecordsSource.LINKED_DATA.toString().equals(source)
-              && !RecordsSource.CONSORTIUM_LINKED_DATA.toString().equals(source)) {
-            return srsRecordToEnrich;
-          }
-          if (inventoryInstance.containsKey("discoverySuppress")) {
-            boolean discoverySuppress = inventoryInstance.getBoolean("discoverySuppress");
-            JsonObject additionalInfo = ofNullable(srsRecordToEnrich.getJsonObject("additionalInfo")
-            ).orElse(new JsonObject());
-            additionalInfo.put("suppressDiscovery", discoverySuppress);
-            srsRecordToEnrich.put("additionalInfo", additionalInfo);
-            srsRecordToEnrich.put("discoverySuppress", discoverySuppress);
-          }
+          applyLinkedDataDiscoverySuppressFromInventory(
+              srsRecordToEnrich, inventoryInstance, instanceId);
           return srsRecordToEnrich;
         });
+  }
+
+  private void applyLinkedDataDiscoverySuppressFromInventory(JsonObject srsRecordToEnrich,
+      JsonObject inventoryInstance, String instanceId) {
+    if (inventoryInstance == null) {
+      return;
+    }
+    String source = inventoryInstance.getString("source");
+    if (!isLinkedDataSource(source)) {
+      return;
+    }
+    var suppressDiscovery = getDiscoverySuppress(inventoryInstance);
+    if (suppressDiscovery.isEmpty()) {
+      logger.warn("Inventory instance {} does not contain discovery suppress value", instanceId);
+      return;
+    }
+    JsonObject additionalInfo = ofNullable(srsRecordToEnrich.getJsonObject("additionalInfo"))
+        .orElse(new JsonObject());
+    additionalInfo.put("suppressDiscovery", suppressDiscovery.get());
+    srsRecordToEnrich.put("additionalInfo", additionalInfo);
+    srsRecordToEnrich.put("discoverySuppress", suppressDiscovery.get());
+  }
+
+  private boolean isLinkedDataSource(String source) {
+    if (StringUtils.isBlank(source)) {
+      return false;
+    }
+    return RecordsSource.LINKED_DATA.name().equals(source)
+        || RecordsSource.LINKED_DATA.toString().equals(source)
+        || RecordsSource.CONSORTIUM_LINKED_DATA.name().equals(source)
+        || RecordsSource.CONSORTIUM_LINKED_DATA.toString().equals(source);
+  }
+
+  private java.util.Optional<Boolean> getDiscoverySuppress(JsonObject inventoryInstance) {
+    Object suppressValue = inventoryInstance.getValue("discoverySuppress");
+    if (suppressValue == null) {
+      suppressValue = inventoryInstance.getValue("suppressFromDiscovery");
+    }
+    if (suppressValue instanceof Boolean booleanValue) {
+      return java.util.Optional.of(booleanValue);
+    }
+    if (suppressValue instanceof String stringValue && StringUtils.isNotBlank(stringValue)) {
+      return java.util.Optional.of(Boolean.parseBoolean(stringValue));
+    }
+    return java.util.Optional.empty();
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit,
