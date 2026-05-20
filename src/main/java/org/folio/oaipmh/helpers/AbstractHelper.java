@@ -514,17 +514,13 @@ public abstract class AbstractHelper implements VerbHelper {
    * @return true when a record should be present in oai-pmh response
    */
   protected boolean filterInstance(Request request, JsonObject instance) {
-    boolean shouldProcessSuppressedRecords = getBooleanProperty(request.getRequestId(),
-        REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-    boolean isSuppressedFromDiscovery = storageHelper.getSuppressedFromDiscovery(instance);
-    boolean isDeleted = storageHelper.isRecordMarkAsDeleted(instance);
-    if (!shouldProcessSuppressedRecords && isSuppressedFromDiscovery && !isDeleted) {
-      return false;
-    }
     if (!isDeletedRecordsEnabled(request.getRequestId())) {
-      return !isDeleted;
+      return !storageHelper.isRecordMarkAsDeleted(instance);
     } else {
-      return shouldProcessSuppressedRecords || !isSuppressedFromDiscovery || isDeleted;
+      boolean shouldProcessSuppressedRecords = getBooleanProperty(request.getRequestId(),
+          REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+      return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance)
+          || storageHelper.isRecordMarkAsDeleted(instance);
     }
   }
 

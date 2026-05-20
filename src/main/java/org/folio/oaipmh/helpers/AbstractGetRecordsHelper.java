@@ -827,7 +827,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         : EMPTY;
     and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
         || !queryUntil.isEmpty() ? "and" : EMPTY;
-    var querySuppressFromDiscovery = suppressedRecordsSupport
+    var querySuppressFromDiscovery = suppressedRecordsSupport || nonNull(listOfIds)
         ? EMPTY : format(" %s discoverySuppress==false", and);
     String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
         || !queryUntil.isEmpty()

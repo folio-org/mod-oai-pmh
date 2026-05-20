@@ -768,47 +768,6 @@ class OaiPmhImplTest {
 
   @ParameterizedTest
   @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
-  void getRecordSuppressedSkipModeDeletedNo_shouldOmit(
-      String recordsSource, MetadataPrefix metadataPrefix) {
-    String linkedDataSuppressedIdentifier = "linked-data-suppressed-identifier";
-    var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
-    var initialSuppressedRecordsProcessing =
-        System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-    var initialDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
-    System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
-    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
-    System.setProperty(REPOSITORY_DELETED_RECORDS, "no");
-    try {
-      RequestSpecification request = createBaseRequest()
-          .with()
-          .param(VERB_PARAM, GET_RECORD.value())
-          .param(IDENTIFIER_PARAM, IDENTIFIER_PREFIX + linkedDataSuppressedIdentifier)
-          .param(METADATA_PREFIX_PARAM, metadataPrefix.getName());
-
-      OAIPMH oaiPmhResponse = verifyResponseWithErrors(request, GET_RECORD, 404, 1);
-      assertThat(oaiPmhResponse.getErrors().get(0).getCode(), equalTo(ID_DOES_NOT_EXIST));
-    } finally {
-      if (initialRecordsSource == null) {
-        System.clearProperty(REPOSITORY_RECORDS_SOURCE);
-      } else {
-        System.setProperty(REPOSITORY_RECORDS_SOURCE, initialRecordsSource);
-      }
-      if (initialSuppressedRecordsProcessing == null) {
-        System.clearProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-      } else {
-        System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING,
-            initialSuppressedRecordsProcessing);
-      }
-      if (initialDeletedRecords == null) {
-        System.clearProperty(REPOSITORY_DELETED_RECORDS);
-      } else {
-        System.setProperty(REPOSITORY_DELETED_RECORDS, initialDeletedRecords);
-      }
-    }
-  }
-
-  @ParameterizedTest
-  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
   void getRecordLinkedDataNotSuppressed_shouldSet999And856To0(
       String recordsSource, MetadataPrefix metadataPrefix) {
     String linkedDataIdentifier = "linked-data-identifier";
