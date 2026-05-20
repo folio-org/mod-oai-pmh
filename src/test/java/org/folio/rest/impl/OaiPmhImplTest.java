@@ -733,15 +733,17 @@ class OaiPmhImplTest {
   }
 
   @ParameterizedTest
-  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixProvider")
+  @MethodSource("linkedDataRecordsSourceAndMarcMetadataPrefixAndDeletedRecordsProvider")
   void getOaiGetRecordWhenLinkedDataSuppressedAndProcessingDisabled_shouldOmitRecord(
-      String recordsSource, MetadataPrefix metadataPrefix) {
+      String recordsSource, MetadataPrefix metadataPrefix, String deletedRecords) {
     String linkedDataSuppressedIdentifier = "linked-data-suppressed-identifier";
     var initialRecordsSource = System.getProperty(REPOSITORY_RECORDS_SOURCE);
     var initialSuppressedRecordsProcessing =
         System.getProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
+    var initialDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_RECORDS_SOURCE, recordsSource);
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "false");
+    System.setProperty(REPOSITORY_DELETED_RECORDS, deletedRecords);
     try {
       RequestSpecification request = createBaseRequest()
           .with()
@@ -762,6 +764,11 @@ class OaiPmhImplTest {
       } else {
         System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING,
             initialSuppressedRecordsProcessing);
+      }
+      if (initialDeletedRecords == null) {
+        System.clearProperty(REPOSITORY_DELETED_RECORDS);
+      } else {
+        System.setProperty(REPOSITORY_DELETED_RECORDS, initialDeletedRecords);
       }
     }
   }
@@ -2508,6 +2515,19 @@ class OaiPmhImplTest {
     for (String recordsSource : RECORDS_SOURCES) {
       builder.add(Arguments.arguments(recordsSource, MARC21XML));
       builder.add(Arguments.arguments(recordsSource, MARC21WITHHOLDINGS));
+    }
+    return builder.build();
+  }
+
+  private static Stream<Arguments>
+      linkedDataRecordsSourceAndMarcMetadataPrefixAndDeletedRecordsProvider() {
+    Stream.Builder<Arguments> builder = Stream.builder();
+    for (String recordsSource : RECORDS_SOURCES) {
+      for (MetadataPrefix metadataPrefix : List.of(MARC21XML, MARC21WITHHOLDINGS)) {
+        for (String deletedRecords : List.of("no", "persistent", "transient")) {
+          builder.add(Arguments.arguments(recordsSource, metadataPrefix, deletedRecords));
+        }
+      }
     }
     return builder.build();
   }
