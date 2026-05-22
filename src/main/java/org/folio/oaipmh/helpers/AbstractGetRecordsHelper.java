@@ -629,7 +629,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
                   } else {
                     context.put(recordId, jsonRecord);
                   }
-                  if (filterInstance(request, jsonRecord)) {
+                  if (filterInstance(request, enrichedSrsRecord)) {
                     recordsMap.put(recordId, recordType);
                   }
 
@@ -704,10 +704,15 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
     if (request.getMetadataPrefix().equals(MARC21WITHHOLDINGS.getName())) {
       return requestFromInventory(request, 1, List.of(instanceId),
           false, false, true).compose(instance -> {
+            JsonArray instances = instance.getJsonArray("instances");
+            JsonObject inventoryInstance =
+                instances != null && !instances.isEmpty() ? instances.getJsonObject(0) : null;
+            applyLinkedDataDiscoverySuppressFromInventory(
+                srsRecordToEnrich, inventoryInstance, instanceId);
             JsonObject instanceRequiredFieldsOnly = new JsonObject();
             instanceRequiredFieldsOnly.put(INSTANCE_ID_FIELD_NAME, instanceId);
             instanceRequiredFieldsOnly.put(SUPPRESS_FROM_DISCOVERY,
-                instance.getString("discoverySuppress"));
+                inventoryInstance != null ? inventoryInstance.getValue("discoverySuppress") : null);
             return enrichInstances(Collections.singletonList(instanceRequiredFieldsOnly), request);
           })
           .compose(oneItemList ->
@@ -728,8 +733,56 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
             return Future.succeededFuture(updatedSrsRecord);
           });
     } else {
-      return Future.succeededFuture(srsRecordToEnrich);
+      return enrichLinkedDataRecordWithInventorySuppression(request, srsRecordToEnrich, instanceId);
     }
+  }
+
+  private Future<JsonObject> enrichLinkedDataRecordWithInventorySuppression(Request request,
+      JsonObject srsRecordToEnrich, String instanceId) {
+    return requestFromInventory(request, 1, List.of(instanceId), true, true, true)
+        .recover(throwable -> {
+          logger.warn("Failed to obtain inventory instance {} for discovery suppression update: {}",
+              instanceId, throwable.getMessage());
+          return Future.succeededFuture(new JsonObject());
+        })
+        .map(inventoryRecords -> {
+          JsonArray inventoryInstances = inventoryRecords.getJsonArray("instances");
+          if (inventoryInstances == null || inventoryInstances.isEmpty()) {
+            return srsRecordToEnrich;
+          }
+          JsonObject inventoryInstance = inventoryInstances.getJsonObject(0);
+          applyLinkedDataDiscoverySuppressFromInventory(
+              srsRecordToEnrich, inventoryInstance, instanceId);
+          return srsRecordToEnrich;
+        });
+  }
+
+  private void applyLinkedDataDiscoverySuppressFromInventory(JsonObject srsRecordToEnrich,
+      JsonObject inventoryInstance, String instanceId) {
+    if (inventoryInstance == null) {
+      return;
+    }
+    String source = ofNullable(inventoryInstance.getString("source")).orElse(EMPTY);
+    if (!source.contains("LINKED_DATA")) {
+      return;
+    }
+    Object suppressValue = ofNullable(inventoryInstance.getValue("discoverySuppress"))
+        .orElse(inventoryInstance.getValue("suppressFromDiscovery"));
+    Boolean suppressDiscovery = null;
+    if (suppressValue instanceof Boolean booleanValue) {
+      suppressDiscovery = booleanValue;
+    } else if (suppressValue instanceof String stringValue && StringUtils.isNotBlank(stringValue)) {
+      suppressDiscovery = Boolean.parseBoolean(stringValue);
+    }
+    if (suppressDiscovery == null) {
+      logger.warn("Inventory instance {} does not contain discovery suppress value", instanceId);
+      return;
+    }
+    JsonObject additionalInfo = ofNullable(srsRecordToEnrich.getJsonObject("additionalInfo"))
+        .orElse(new JsonObject());
+    additionalInfo.put("suppressDiscovery", suppressDiscovery);
+    srsRecordToEnrich.put("additionalInfo", additionalInfo);
+    srsRecordToEnrich.put("discoverySuppress", suppressDiscovery);
   }
 
   protected Future<JsonObject> requestFromInventory(Request request, int limit,
@@ -774,7 +827,7 @@ public abstract class AbstractGetRecordsHelper extends AbstractHelper {
         : EMPTY;
     and = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
         || !queryUntil.isEmpty() ? "and" : EMPTY;
-    var querySuppressFromDiscovery = suppressedRecordsSupport
+    var querySuppressFromDiscovery = suppressedRecordsSupport || nonNull(listOfIds)
         ? EMPTY : format(" %s discoverySuppress==false", and);
     String queryParam = !source.isEmpty() || !queryId.isEmpty() || !queryFrom.isEmpty()
         || !queryUntil.isEmpty()
