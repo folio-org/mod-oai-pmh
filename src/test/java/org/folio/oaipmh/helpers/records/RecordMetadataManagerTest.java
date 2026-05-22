@@ -266,7 +266,7 @@ class RecordMetadataManagerTest {
   }
 
   @Test
-  void shouldNotAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsEmpty(Vertx vertx,
+  void shouldAddSuppressDiscoverySubfieldTo856Field_whenFirstIndicatorIsEmpty(Vertx vertx,
       VertxTestContext testContext) {
     System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
     vertx.runOnContext(event -> testContext.verify(() -> {
@@ -290,9 +290,121 @@ class RecordMetadataManagerTest {
           .map(o -> (JsonObject) o)
           .anyMatch(o -> o.containsKey("t"));
 
-      assertFalse(hasSuppressSubfield,
-          "856 field with empty first indicator should not have 't' subfield added"
-              + " because electronicAccessPredicate requires isNotEmpty(firstIndicator)");
+      assertTrue(hasSuppressSubfield,
+          "856 field with empty first indicator should have 't' subfield added");
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldAddSuppressDiscoverySubfieldTo856Field_whenIndicatorsAreMissing(Vertx vertx,
+      VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject marcRecord = new JsonObject(
+          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR)));
+      JsonArray fields = getContentFieldsArray(marcRecord);
+      JsonObject field856 = fields.stream()
+          .map(JsonObject.class::cast)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+      JsonObject fieldContent = field856.getJsonObject(ELECTRONIC_ACCESS_FILED);
+      fieldContent.remove("ind1");
+      fieldContent.remove("ind2");
+
+      String source = storageHelper.getInstanceRecordSource(marcRecord);
+      String updatedSource = metadataManager
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, marcRecord);
+
+      JsonObject jsonFromSource = new JsonObject(updatedSource);
+      JsonArray updatedFields = jsonFromSource.getJsonArray(FIELDS);
+      JsonObject updatedField856 = updatedFields.stream()
+          .map(o -> (JsonObject) o)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+
+      JsonArray subfields = updatedField856.getJsonObject(ELECTRONIC_ACCESS_FILED)
+          .getJsonArray(SUBFIELDS);
+      boolean hasSuppressSubfield = subfields.stream()
+          .map(o -> (JsonObject) o)
+          .anyMatch(o -> o.containsKey("t"));
+
+      assertTrue(hasSuppressSubfield,
+          "856 field with missing indicators should have 't' subfield added");
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldCreateSubfieldsArrayFor856WhenItIsMissing(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject marcRecord = new JsonObject(
+          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR)));
+      JsonArray fields = getContentFieldsArray(marcRecord);
+      JsonObject field856 = fields.stream()
+          .map(JsonObject.class::cast)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+      field856.getJsonObject(ELECTRONIC_ACCESS_FILED).remove(SUBFIELDS);
+
+      String source = storageHelper.getInstanceRecordSource(marcRecord);
+      String updatedSource = metadataManager
+          .updateElectronicAccessFieldWithDiscoverySuppressedData(source, marcRecord);
+
+      JsonObject jsonFromSource = new JsonObject(updatedSource);
+      JsonArray updatedFields = jsonFromSource.getJsonArray(FIELDS);
+      JsonObject updatedField856 = updatedFields.stream()
+          .map(o -> (JsonObject) o)
+          .filter(o -> o.containsKey(ELECTRONIC_ACCESS_FILED))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("856 field not found"));
+
+      JsonArray subfields = updatedField856.getJsonObject(ELECTRONIC_ACCESS_FILED)
+          .getJsonArray(SUBFIELDS);
+      assertTrue(subfields != null && !subfields.isEmpty());
+      assertTrue(subfields.stream()
+          .map(o -> (JsonObject) o)
+          .anyMatch(o -> o.containsKey("t")));
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldCreateSubfieldsArrayFor999WhenItIsMissing(Vertx vertx, VertxTestContext testContext) {
+    System.setProperty(REPOSITORY_SUPPRESSED_RECORDS_PROCESSING, "true");
+    vertx.runOnContext(event -> testContext.verify(() -> {
+      JsonObject marcRecord = new JsonObject(
+          requireNonNull(getJsonObjectFromFile(SRS_INSTANCE_WITH_856_EMPTY_FIRST_INDICATOR)));
+      JsonArray fields = getContentFieldsArray(marcRecord);
+      JsonObject field999 = fields.stream()
+          .map(JsonObject.class::cast)
+          .filter(o -> o.containsKey(GENERAL_INFO_FIELD))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("999 field not found"));
+      field999.getJsonObject(GENERAL_INFO_FIELD).remove(SUBFIELDS);
+
+      String source = storageHelper.getInstanceRecordSource(marcRecord);
+      String updatedSource = metadataManager
+          .updateMetadataSourceWithDiscoverySuppressedData(source, marcRecord);
+
+      JsonObject jsonFromSource = new JsonObject(updatedSource);
+      JsonArray updatedFields = jsonFromSource.getJsonArray(FIELDS);
+      JsonObject updatedField999 = updatedFields.stream()
+          .map(o -> (JsonObject) o)
+          .filter(o -> o.containsKey(GENERAL_INFO_FIELD))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError("999 field not found"));
+
+      JsonArray subfields = updatedField999.getJsonObject(GENERAL_INFO_FIELD)
+          .getJsonArray(SUBFIELDS);
+      assertTrue(subfields != null && !subfields.isEmpty());
+      assertTrue(subfields.stream()
+          .map(o -> (JsonObject) o)
+          .anyMatch(o -> o.containsKey("t")));
       testContext.completeNow();
     }));
   }
