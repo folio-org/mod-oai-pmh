@@ -1,5 +1,14 @@
 ## 3.17.0 - Unreleased
 
+## 3.16.2 (Released)
+
+This release contains fix for suppress from discovery flag in harvesting LINKED_DATA records
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.1...v3.16.2)
+
+### Bug fixes
+* [MODOAIPMH-600](https://folio-org.atlassian.net/browse/MODOAIPMH-600) Suppress from discovery flag in harvesting LINKED_DATA records
+
 ## 3.16.1 (Released)
 
 This release contains fix for linked data (999 field) and fix for 't' subfield in 856 field.
