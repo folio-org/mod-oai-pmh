@@ -452,7 +452,17 @@
       { "name": "S3_SECRET_ACCESS_KEY", "value": ""},
       { "name": "S3_IS_AWS", "value": false},
       { "name": "S3_SUB_PATH", "value": "mod-oai-pmh"},
-      { "name": "CLEAN_UP_ERROR_LOGS_INTERVAL", "value": 30 }
-      ]
+      {
+        "name": "CLEAN_UP_ERROR_LOGS_INTERVAL",
+        "value": 30,
+        "description": "Clean up interval",
+        "type": "DB",
+        "required": true
+      }
+    ],
+    "sidecard": {
+      "memory": "158",
+      "cpu": "64"
+    }
   }
 }
