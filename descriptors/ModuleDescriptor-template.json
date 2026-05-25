@@ -459,10 +459,6 @@
         "type": "DB",
         "required": true
       }
-    ],
-    "sidecard": {
-      "memory": "158",
-      "cpu": "64"
-    }
+    ]
   }
 }
