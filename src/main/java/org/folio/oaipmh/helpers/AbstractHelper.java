@@ -519,8 +519,7 @@ public abstract class AbstractHelper implements VerbHelper {
     } else {
       boolean shouldProcessSuppressedRecords = getBooleanProperty(request.getRequestId(),
           REPOSITORY_SUPPRESSED_RECORDS_PROCESSING);
-      return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance)
-          || storageHelper.isRecordMarkAsDeleted(instance);
+      return shouldProcessSuppressedRecords || !storageHelper.getSuppressedFromDiscovery(instance);
     }
   }
 
