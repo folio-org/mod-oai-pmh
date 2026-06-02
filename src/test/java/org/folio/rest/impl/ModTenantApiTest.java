@@ -51,6 +51,8 @@ class ModTenantApiTest {
 
   private int okapiPort = -1;
   private ModTenantApi modTenantApi;
+  private FailingModTenantApi failingOnceApi;
+  private FailingModTenantApi failingAlwaysApi;
   private TenantAttributes tenantAttributes
       = new TenantAttributes().withModuleTo("mod-oai-pmh-99.99.99");
 
@@ -66,6 +68,8 @@ class ModTenantApiTest {
     context.runOnContext(v -> {
       try {
         modTenantApi = new ModTenantApi();
+        failingOnceApi = new FailingModTenantApi(vertx, 1);
+        failingAlwaysApi = new FailingModTenantApi(vertx, 6);
         TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
         TestUtil.prepareExternalTables(vertx, OAI_TEST_TENANT);
         TestUtil.prepareUser(vertx, OAI_TEST_TENANT, "username", "password");
@@ -145,7 +149,7 @@ class ModTenantApiTest {
   void runAsyncShouldRetryOnTransientFailureAndSucceed(Vertx vertx, VertxTestContext vtc) {
     // Fail the first migration attempt, succeed on the retry.
     // runSqlFile call #0 = initial schema setup (files[0]), call #1 = first migration attempt.
-    var api = new FailingModTenantApi(vertx, 1);
+    var api = failingOnceApi;
     api.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
       assertEquals(204, r.getStatus());
       vtc.completeNow();
@@ -156,7 +160,7 @@ class ModTenantApiTest {
   @Order(4)
   void runAsyncShouldFailAfterExhaustingAllRetries(Vertx vertx, VertxTestContext vtc) {
     // Fail more times than MAX_RETRIES (5) so all retries are exhausted.
-    var api = new FailingModTenantApi(vertx, 6);
+    var api = failingAlwaysApi;
     api.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
       assertEquals(400, r.getStatus());
       vtc.completeNow();
