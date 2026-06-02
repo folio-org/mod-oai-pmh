@@ -81,9 +81,7 @@ public class PostgresClientFactory {
     POOL_CACHE_READER.clear();
   }
 
-  public static void evictPool(String tenantId) {
-    logger.info("Evicting database connection pool for tenant {}.", tenantId);
-  
+  public static void evictPool(String tenantId) {  
     Pool writer = POOL_CACHE.remove(tenantId);
     Pool reader = POOL_CACHE_READER.remove(tenantId);
 
