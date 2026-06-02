@@ -3,7 +3,11 @@ package org.folio.rest.impl;
 import static org.folio.rest.impl.OkapiMockServer.OAI_TEST_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -14,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.folio.config.ApplicationConfig;
 import org.folio.oaipmh.WebClientProvider;
 import org.folio.oaipmh.common.TestUtil;
@@ -24,14 +29,18 @@ import org.folio.rest.persist.PostgresClient;
 import org.folio.spring.SpringContextUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ModTenantApiTest {
 
   private static final String TABLES_QUERY = "select * from pg_tables where schemaname='"
@@ -42,6 +51,8 @@ class ModTenantApiTest {
 
   private int okapiPort = -1;
   private ModTenantApi modTenantApi;
+  private FailingModTenantApi failingOnceApi;
+  private FailingModTenantApi failingAlwaysApi;
   private TenantAttributes tenantAttributes
       = new TenantAttributes().withModuleTo("mod-oai-pmh-99.99.99");
 
@@ -57,6 +68,8 @@ class ModTenantApiTest {
     context.runOnContext(v -> {
       try {
         modTenantApi = new ModTenantApi();
+        failingOnceApi = new FailingModTenantApi(vertx, 1);
+        failingAlwaysApi = new FailingModTenantApi(vertx, 6);
         TestUtil.prepareSchema(vertx, OAI_TEST_TENANT);
         TestUtil.prepareExternalTables(vertx, OAI_TEST_TENANT);
         TestUtil.prepareUser(vertx, OAI_TEST_TENANT, "username", "password");
@@ -103,6 +116,7 @@ class ModTenantApiTest {
   }
 
   @Test
+  @Order(1)
   void postTenantShouldSucceedAndCreateDatabase(Vertx vertx, VertxTestContext vtc) {
     modTenantApi.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
       assertEquals(204, r.getStatus());
@@ -120,6 +134,7 @@ class ModTenantApiTest {
 
   @ParameterizedTest
   @NullAndEmptySource
+  @Order(2)
   void postTenantShouldFailWhenNoOkapiUrl(String okapiUrl, Vertx vertx, VertxTestContext vtc) {
     var headers = headers();
     headers.put("x-okapi-url", okapiUrl);
@@ -127,5 +142,66 @@ class ModTenantApiTest {
       assertEquals(400, r.getStatus());
       vtc.completeNow();
     }), vertx.getOrCreateContext());
+  }
+
+  @Test
+  @Order(3)
+  void runAsyncShouldRetryOnTransientFailureAndSucceed(Vertx vertx, VertxTestContext vtc) {
+    // Fail the first migration attempt, succeed on the retry.
+    // runSqlFile call #0 = initial schema setup (files[0]), call #1 = first migration attempt.
+    var api = failingOnceApi;
+    api.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
+      assertEquals(204, r.getStatus());
+      vtc.completeNow();
+    }), vertx.getOrCreateContext());
+  }
+
+  @Test
+  @Order(4)
+  void runAsyncShouldFailAfterExhaustingAllRetries(Vertx vertx, VertxTestContext vtc) {
+    // Fail more times than MAX_RETRIES (5) so all retries are exhausted.
+    var api = failingAlwaysApi;
+    api.postTenantSync(tenantAttributes, headers(), vtc.succeeding(r -> {
+      assertEquals(400, r.getStatus());
+      vtc.completeNow();
+    }), vertx.getOrCreateContext());
+  }
+
+  /**
+   * Test subclass that overrides the package-private {@code postgresClient(Context)} from
+   * {@code TenantAPI} to inject a spy that fails {@code runSqlFile} for the first N migration
+   * attempts. Call #0 to {@code runSqlFile} is the initial schema setup and is always allowed
+   * through; calls #1..N are the migration attempts made by {@code runAsyncWithRetry}.
+   */
+  private class FailingModTenantApi extends ModTenantApi {
+
+    private final Vertx vertx;
+    private final int migrationCallsToFail;
+    private final AtomicInteger runSqlFileCallCount = new AtomicInteger(0);
+    private PostgresClient pgClientSpy;
+
+    FailingModTenantApi(Vertx vertx, int migrationCallsToFail) {
+      this.vertx = vertx;
+      this.migrationCallsToFail = migrationCallsToFail;
+    }
+
+    @Override
+    PostgresClient postgresClient(Context context) {
+      if (pgClientSpy == null) {
+        var real = PostgresClient.getInstance(vertx);
+        pgClientSpy = spy(real);
+        doAnswer(inv -> {
+          int callNum = runSqlFileCallCount.getAndIncrement();
+          // callNum 0: initial schema setup (files[0]) — always pass through
+          // callNum 1..migrationCallsToFail: migration attempts — simulate failure
+          // callNum > migrationCallsToFail: migration attempt — pass through
+          if (callNum > 0 && callNum <= migrationCallsToFail) {
+            return Future.failedFuture("Simulated transient RMB migration failure");
+          }
+          return real.runSqlFile(inv.getArgument(0));
+        }).when(pgClientSpy).runSqlFile(any());
+      }
+      return pgClientSpy;
+    }
   }
 }
