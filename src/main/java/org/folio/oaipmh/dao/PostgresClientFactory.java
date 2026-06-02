@@ -81,6 +81,21 @@ public class PostgresClientFactory {
     POOL_CACHE_READER.clear();
   }
 
+  public static void evictPool(String tenantId) {
+    logger.info("Evicting database connection pool for tenant {}.", tenantId);
+  
+    Pool writer = POOL_CACHE.remove(tenantId);
+    Pool reader = POOL_CACHE_READER.remove(tenantId);
+
+    if (writer != null) {
+      close(writer);
+    }
+
+    if (reader != null) {
+      close(reader);
+    }
+  }
+
   private static Pool getCachedPool(Vertx vertx, String tenantId, boolean isReader) {
     Map<String, Pool> cache = isReader && readWriteSplitEnabled ? POOL_CACHE_READER : POOL_CACHE;
 

@@ -26,6 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.liquibase.LiquibaseUtil;
 import org.folio.oaipmh.WebClientProvider;
+import org.folio.oaipmh.dao.PostgresClientFactory;
 import org.folio.oaipmh.helpers.configuration.ConfigurationHelper;
 import org.folio.oaipmh.mappers.PropertyNameMapper;
 import org.folio.oaipmh.service.ConfigurationSettingsService;
@@ -56,12 +57,16 @@ public class ModTenantApi extends TenantAPI {
   @Override
   Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
                         Map<String, String> headers, Context context) {
+    String tenantId = TenantTool.tenantId(headers);
+
+    PostgresClientFactory.evictPool(tenantId);
+
     return runAsyncWithRetry(tenantAttributes, file, job, headers, context, MAX_RETRIES)
       .compose(v -> {
         logger.info("Completed RMB migrations, starting Liquibase schema initialization");
 
         Vertx vertx = context.owner();
-        LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+        LiquibaseUtil.initializeSchemaForTenant(vertx, tenantId);
         return Future.succeededFuture();
       })
       .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior",
