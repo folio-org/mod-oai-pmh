@@ -44,6 +44,7 @@ public class ModTenantApi extends TenantAPI {
   private static final String CONFIG_DIR_PATH = "config";
   private static final String QUERY = "module==OAIPMH and configName==%s";
   private static final String CONFIG_PATH_KEY = "configPath";
+  private static final int MAX_RETRIES = 5;
 
   private ConfigurationHelper configurationHelper;
   private ConfigurationSettingsService configurationSettingsService;
@@ -55,15 +56,40 @@ public class ModTenantApi extends TenantAPI {
   @Override
   Future<Void> runAsync(TenantAttributes tenantAttributes, String file, TenantJob job,
                         Map<String, String> headers, Context context) {
-    return super.runAsync(tenantAttributes, file, job, headers, context).compose(v -> {
-      Vertx vertx = context.owner();
-      LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
-      return Future.succeededFuture();
-    })
+    return runAsyncWithRetry(tenantAttributes, file, job, headers, context, MAX_RETRIES)
+      .compose(v -> {
+        logger.info("Completed RMB migrations, starting Liquibase schema initialization");
+
+        Vertx vertx = context.owner();
+        LiquibaseUtil.initializeSchemaForTenant(vertx, TenantTool.tenantId(headers));
+        return Future.succeededFuture();
+      })
       .compose(v -> loadConfigurationData(headers, Arrays.asList("behavior",
                 "general", "technical")).mapEmpty())
       .onFailure(err -> job.setError(err.getMessage()))
       .mapEmpty();
+  }
+
+  private Future<Void> runAsyncWithRetry(TenantAttributes tenantAttributes, String file,
+                                               TenantJob job, Map<String, String> headers,
+                                               Context context, int retriesLeft) {
+    logger.info("Starting runAsync with retriesLeft: {}", retriesLeft);
+
+    return super.runAsync(tenantAttributes, file, job, headers, context)
+      .recover(err -> {
+        if (retriesLeft > 0) {
+          logger.info("Retrying runAsync after future failure ({} left): {}",
+              retriesLeft, err.getMessage());
+
+          job.setError(null);
+
+          return runAsyncWithRetry(tenantAttributes, file, job, headers, context, retriesLeft - 1);
+        }
+
+        logger.error("Failed runAsync after all retries. Last error: {}", err.getMessage());
+
+        return Future.failedFuture(err);
+      });
   }
 
   public Future<String> loadConfigurationData(Map<String, String> headers,
