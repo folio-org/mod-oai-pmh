@@ -33,7 +33,7 @@
     {
       "run": "after",
       "snippetPath": "update_deleted_remove_srs.sql",
-      "fromModuleVersion": "mod-oai-pmh-3.16.1"
+      "fromModuleVersion": "mod-oai-pmh-3.16.0"
     }
   ]
 }
