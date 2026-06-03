@@ -1,6 +1,6 @@
 CREATE OR REPLACE VIEW ${myuniversity}_${mymodule}.get_instances_with_marc_records_deleted AS
 SELECT instance_record.id                                                                                                          instance_id,
-      null                                                                                                                         marc_record,
+      null::jsonb                                                                                                                  marc_record,
       instance_record.jsonb                                                                                                        instance_record,
       instance_record.jsonb ->> 'source'                                                                                           source,
       instance_record.complete_updated_date AS                                                                                     instance_updated_date,
