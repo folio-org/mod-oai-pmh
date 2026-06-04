@@ -9,3 +9,5 @@ SELECT instance_record.id                                                       
       COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                                       suppress_from_discovery_inventory,
       true                                                                                                                         deleted
       FROM ${myuniversity}_${mymodule}.get_instances_from_inventory_deleted instance_record;
+
+DROP VIEW IF EXISTS ${myuniversity}_${mymodule}.get_instances_from_srs_deleted CASCADE;
