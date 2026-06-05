@@ -201,3 +201,15 @@ WHERE jsonb ->> 'deleted' IS NULL OR jsonb ->> 'deleted' = 'false';
 DROP VIEW IF EXISTS oaitest_mod_oai_pmh.get_deleted_instances CASCADE;
 DROP VIEW IF EXISTS oaitest_mod_oai_pmh.get_deleted_holdings CASCADE;
 DROP VIEW IF EXISTS oaitest_mod_oai_pmh.get_deleted_items CASCADE;
+
+CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_with_marc_records_deleted AS
+SELECT instance_record.id                                                                                                          instance_id,
+      null::jsonb                                                                                                                  marc_record,
+      instance_record.jsonb                                                                                                        instance_record,
+      instance_record.jsonb ->> 'source'                                                                                           source,
+      instance_record.complete_updated_date AS                                                                                     instance_updated_date,
+      oaitest_mod_inventory_storage.strtotimestamp((instance_record.jsonb -> 'metadata'::text) ->> 'createdDate'::text) AS instance_created_date,
+      COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                                       suppress_from_discovery_srs,
+      COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                                       suppress_from_discovery_inventory,
+      true                                                                                                                         deleted
+      FROM oaitest_mod_oai_pmh.get_instances_from_inventory_deleted instance_record;

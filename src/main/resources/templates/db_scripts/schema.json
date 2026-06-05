@@ -29,6 +29,11 @@
       "run": "after",
       "snippetPath": "add_marc_bib_filter_for_srs_deleted.sql",
       "fromModuleVersion": "mod-oai-pmh-3.16.0"
+    },
+    {
+      "run": "after",
+      "snippetPath": "update_deleted_remove_srs.sql",
+      "fromModuleVersion": "mod-oai-pmh-3.16.0"
     }
   ]
 }
