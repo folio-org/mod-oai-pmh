@@ -339,7 +339,7 @@
                     "s": "22085e3b-8b42-46f1-9820-0c52cc3201e1"
                   },
                   {
-                    "i": "linked-data-identifier"
+                    "i": "linked-data-suppressed-identifier"
                   }
                 ]
               }
@@ -348,7 +348,7 @@
         }
       },
       "externalIdsHolder": {
-        "instanceId": "linked-data-identifier"
+        "instanceId": "linked-data-suppressed-identifier"
       },
       "additionalInfo": {
         "suppressDiscovery": false

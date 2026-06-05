@@ -102,9 +102,7 @@ public class RecordMetadataManager {
     electronicAccessPredicate = jsonObject -> {
       if (jsonObject.containsKey(ELECTRONIC_ACCESS_FILED_TAG_NUMBER)) {
         JsonObject dataFieldContent = jsonObject.getJsonObject(ELECTRONIC_ACCESS_FILED_TAG_NUMBER);
-        String firstIndicator = dataFieldContent.getString(FIRST_INDICATOR);
-        String secondIndicator = dataFieldContent.getString(SECOND_INDICATOR);
-        return StringUtils.isNotEmpty(firstIndicator) && StringUtils.isNotEmpty(secondIndicator);
+        return nonNull(dataFieldContent);
       }
       return false;
     };
@@ -524,6 +522,10 @@ public class RecordMetadataManager {
 
     JsonObject dataFieldContent = dataField.getJsonObject(tagNumber);
     JsonArray subFields = dataFieldContent.getJsonArray(SUBFIELDS);
+    if (isNull(subFields)) {
+      subFields = new JsonArray();
+      dataFieldContent.put(SUBFIELDS, subFields);
+    }
     List<Object> subFieldsList = subFields.getList();
     for (var s : subFieldsList) {
       var subField = (LinkedHashMap<String, Object>) s;

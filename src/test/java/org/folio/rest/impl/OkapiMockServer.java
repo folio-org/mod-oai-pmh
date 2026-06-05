@@ -245,8 +245,12 @@ public class OkapiMockServer {
   private static final String ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA =
       "enriched_instance_invalid_data.json";
   private static final String INSTANCE_LINKED_DATA = "/instance_linked_data.json";
+  private static final String INSTANCE_LINKED_DATA_SUPPRESSED =
+      "/instance_linked_data_suppressed.json";
   private static final String INSTANCE_NO_SRS_DATA = "/instances_no_srs.json";
   private static final String SRS_RECORD_LINKED_DATA = "/linked_data_srs_record.json";
+  private static final String SRS_RECORD_LINKED_DATA_SUPPRESSED =
+      "/linked_data_srs_record_suppressed.json";
 
   private static final String INSTANCE_ID_UNDERLYING_RECORD_WITH_CYRILLIC_DATA =
       "ebbb759a-dd08-4bf8-b3c3-3d75b2190c41";
@@ -266,6 +270,8 @@ public class OkapiMockServer {
       "12345000-0000-4000-a000-000000000111";
   private static final String INSTANCES_FROM_INVENTORY_WITH_SOURCE_FOLIO = "FOLIO";
   private static final String INSTANCE_ID_WITH_LINKED_DATA = "linked-data-identifier";
+  private static final String INSTANCE_ID_WITH_LINKED_DATA_SUPPRESSED =
+      "linked-data-suppressed-identifier";
   private static final String INSTANCE_NO_SRS = "no-srs-identifier";
 
 
@@ -478,6 +484,9 @@ public class OkapiMockServer {
     } else if (uri.contains(GET_RECORD_MARC21_WITH_HOLDINGS_FROM_INVENTORY_INVALID_DATA_ID)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INVENTORY_VIEW_PATH
           + ENRICHED_INSTANCE_JSON_GET_RECORD_MARC21_WITH_HOLDINGS_INVALID_DATA));
+    } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA_SUPPRESSED)) {
+      successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
+          + INSTANCE_LINKED_DATA_SUPPRESSED));
     } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
       successResponse(ctx, getJsonObjectFromFileAsString(INSTANCE_STORAGE_URI
           + INSTANCE_LINKED_DATA));
@@ -555,6 +564,9 @@ public class OkapiMockServer {
       if (uri.contains(DEFAULT_RECORD_DATE)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
             + DEFAULT_SRS_RECORD));
+      } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA_SUPPRESSED)) {
+        successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
+            + SRS_RECORD_LINKED_DATA_SUPPRESSED));
       } else if (uri.contains(INSTANCE_ID_WITH_LINKED_DATA)) {
         successResponse(ctx, getJsonObjectFromFileAsString(SOURCE_STORAGE_RESULT_URI
             + SRS_RECORD_LINKED_DATA));
