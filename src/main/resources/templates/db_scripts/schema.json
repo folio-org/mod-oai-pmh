@@ -13,12 +13,12 @@
     {
       "run": "after",
       "snippetPath": "add_null_check_for_deleted.sql",
-      "fromModuleVersion": "mod-oai-pmh-3.15.4"
+      "fromModuleVersion": "mod-oai-pmh-3.15.5"
     },
     {
       "run": "after",
       "snippetPath": "update_deleted_remove_srs.sql",
-      "fromModuleVersion": "mod-oai-pmh-3.15.4"
+      "fromModuleVersion": "mod-oai-pmh-3.15.5"
     }
   ]
 }
