@@ -1415,7 +1415,7 @@ CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_inventory AS
 SELECT * FROM oaitest_mod_inventory_storage.instance
 WHERE jsonb ->> 'deleted' IS NULL OR jsonb ->> 'deleted' = 'false';
 
-CREATE OR REPLACE VIEW $oaitest_mod_oai_pmh.get_instances_from_inventory_deleted AS
+CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_inventory_deleted AS
 SELECT * FROM oaitest_mod_inventory_storage.instance
 WHERE jsonb ->> 'deleted' = 'true';
 
@@ -1430,6 +1430,8 @@ SELECT instance_record.id                                                       
   COALESCE((instance_record.jsonb ->> 'discoverySuppress')::bool, false)                                                       suppress_from_discovery_inventory,
   true                                                                                                                         deleted
 FROM oaitest_mod_oai_pmh.get_instances_from_inventory_deleted instance_record;
+
+DROP VIEW IF EXISTS oaitest_mod_oai_pmh.get_instances_from_srs_deleted CASCADE;
 
   GRANT oaitest_mod_inventory_storage TO oaitest_mod_oai_pmh;
   GRANT oaitest_mod_source_record_storage TO oaitest_mod_oai_pmh;
