@@ -423,8 +423,10 @@ CREATE TABLE oaitest_mod_inventory_storage.instance (
     instancetypeid uuid
 );
 
-
 ALTER TABLE oaitest_mod_inventory_storage.instance OWNER TO folio_admin;
+
+ALTER TABLE IF EXISTS oaitest_mod_inventory_storage.instance
+    ADD COLUMN complete_updated_date timestamp with time zone;
 
 --
 -- Name: instance_format; Type: TABLE; Schema: oaitest_mod_inventory_storage; Owner: folio_admin
