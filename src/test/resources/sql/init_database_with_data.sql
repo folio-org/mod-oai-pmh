@@ -1415,6 +1415,10 @@ CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_from_inventory AS
 SELECT * FROM oaitest_mod_inventory_storage.instance
 WHERE jsonb ->> 'deleted' IS NULL OR jsonb ->> 'deleted' = 'false';
 
+CREATE OR REPLACE VIEW $oaitest_mod_oai_pmh.get_instances_from_inventory_deleted AS
+SELECT * FROM oaitest_mod_inventory_storage.instance
+WHERE jsonb ->> 'deleted' = 'true';
+
 CREATE OR REPLACE VIEW oaitest_mod_oai_pmh.get_instances_with_marc_records_deleted AS
 SELECT instance_record.id                                                                                                          instance_id,
        null::jsonb                                                                                                                  marc_record,
