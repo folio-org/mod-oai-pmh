@@ -1,5 +1,14 @@
 ## 3.16.0 - Unreleased
 
+## 3.15.5 (Released)
+
+This release contains improve harvest for deleted MARC records.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.4...v3.15.5)
+
+### Technical tasks
+* [MODOAIPMH-667](https://folio-org.atlassian.net/browse/MODOAIPMH-667) Backport: Improve harvest for deleted MARC records
+
 ## 3.15.4 (Released)
 
 This release contains RMB and Vert.x upgrade.
