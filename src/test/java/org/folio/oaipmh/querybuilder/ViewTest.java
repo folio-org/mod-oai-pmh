@@ -44,7 +44,7 @@ class ViewTest {
   private static final Network network = Network.newNetwork();
 
   @Container
-  private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+  private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:14-alpine")
     .withNetwork(network)
     .withNetworkAliases("postgres")
     .withExposedPorts(5432)
