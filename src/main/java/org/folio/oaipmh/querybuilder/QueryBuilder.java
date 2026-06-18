@@ -25,10 +25,12 @@ public class QueryBuilder {
     "ORDER BY instance_id\n" +
     "LIMIT %d;";
 
-  private static final String DELETED_INSTANCES = " %s %s_mod_inventory_storage.strToTimestamp\n" +
-    " (instance_updated_date::text) >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')\n" +
-    " AND \n" +
-    " %s_mod_inventory_storage.strToTimestamp(instance_updated_date::text) <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')\n";
+  private static final String DELETED_INSTANCES = """
+     %s \
+     instance_updated_date >= %s_mod_inventory_storage.dateOrMin(timestamptz '%s')
+     AND \
+     instance_updated_date <= %s_mod_inventory_storage.dateOrMax(timestamptz '%s')
+    """;
 
   private static final String BASE_QUERY_NON_DELETED_TEMPLATE = "get_instances_with_marc_records";
   private static final String BASE_QUERY_DELETED_TEMPLATE = "get_instances_with_marc_records_deleted";
@@ -119,7 +121,7 @@ public class QueryBuilder {
         until = MAX_DATE;
       }
       var whereOrAnd = where ? WHERE : " AND";
-      return format(DELETED_INSTANCES, whereOrAnd, tenant, tenant, from, tenant, tenant, until);
+      return format(DELETED_INSTANCES, whereOrAnd, tenant, from, tenant, until);
     }
     return EMPTY;
   }

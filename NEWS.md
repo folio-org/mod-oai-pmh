@@ -1,5 +1,11 @@
 ## 3.16.0 - Unreleased
 
+## 3.15.6 (Released)
+
+This release contains improve performance for ListRecords.
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.15.5...v3.15.6)
+
 ## 3.15.5 (Released)
 
 This release contains improve harvest for deleted MARC records.
