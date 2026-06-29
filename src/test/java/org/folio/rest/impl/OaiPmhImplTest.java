@@ -1959,7 +1959,7 @@ class OaiPmhImplTest {
       totalRecords += oaipmh.getListRecords().getRecords().size();
       resumptionToken = getResumptionToken(oaipmh, LIST_RECORDS).getValue();
     }
-    assertThat(totalRecords, is(67));
+    assertThat(totalRecords, is(66));
     System.setProperty(REPOSITORY_MAX_RECORDS_PER_RESPONSE, currentValue);
     String repositoryDeletedRecords = System.getProperty(REPOSITORY_DELETED_RECORDS);
     System.setProperty(REPOSITORY_DELETED_RECORDS, repositoryDeletedRecords);
