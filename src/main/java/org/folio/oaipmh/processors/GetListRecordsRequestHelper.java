@@ -250,7 +250,8 @@ public class GetListRecordsRequestHelper extends AbstractGetRecordsHelper {
     logger.info("Before doRequest, limit: {}", limit);
     long t = System.nanoTime();
     boolean deletedRecordsSupport =
-        RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
+        (nonNull(dateFrom) || nonNull(dateUntil))
+            && RepositoryConfigurationUtil.isDeletedRecordsEnabled(request.getRequestId());
     boolean skipSuppressedFromDiscovery = isSkipSuppressed(request);
     var recordsSource = getProperty(request.getRequestId(), REPOSITORY_RECORDS_SOURCE);
     doRequest(request, finalRecords, skipSuppressedFromDiscovery, deletedRecordsSupport, from,
