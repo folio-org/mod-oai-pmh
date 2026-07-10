@@ -1,5 +1,17 @@
 ## 3.17.0 - Unreleased
 
+## 3.16.3 (Released)
+
+This release contains improvements for harvesting deleted MARC records
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.2...v3.16.3)
+
+### Technical tasks
+* [MODOAIPMH-667](https://folio-org.atlassian.net/browse/MODOAIPMH-667) Backport: Improve harvest for deleted MARC records
+
+### Bug fixes
+* [FAT-26394](https://folio-org.atlassian.net/browse/FAT-26394) retry RMB migrations when inventory is not ready
+
 ## 3.16.2 (Released)
 
 This release contains fix for suppress from discovery flag in harvesting LINKED_DATA records
