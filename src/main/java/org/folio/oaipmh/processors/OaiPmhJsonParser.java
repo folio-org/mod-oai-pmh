@@ -36,8 +36,7 @@ public class OaiPmhJsonParser extends JsonParserImpl {
     } catch (DecodeException e) {
       var errorResolver = new JsonParserErrorResolver(data.toString(), e.getLocalizedMessage());
       logger.error(e.getLocalizedMessage());
-      logger.error("Decode parser exception: Error position at error part of json is {}",
-        errorResolver.getErrorPosition());
+      logger.error("Decode parser exception: Error position at error part of json is {}", errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
       errors.add(errorResolver.getErrorPart());
       if (handle(e)) {
