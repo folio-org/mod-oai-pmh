@@ -31,7 +31,6 @@ public class OaiPmhJsonParser extends JsonParserImpl {
 
   @Override
   public void handle(Buffer data) {
-    //var normalized =  data.toString().replaceAll("([\\r\\n])", "");
     try {
       super.handle(data);
     } catch (DecodeException e) {
