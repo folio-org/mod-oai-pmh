@@ -31,14 +31,13 @@ public class OaiPmhJsonParser extends JsonParserImpl {
 
   @Override
   public void handle(Buffer data) {
-    var normalized =  data.toString().replaceAll("([\\r\\n])", "");
     try {
-      super.handle(Buffer.buffer(normalized));
+      super.handle(data);
     } catch (DecodeException e) {
-      var errorResolver = new JsonParserErrorResolver(normalized, e.getLocalizedMessage());
+      var errorResolver = new JsonParserErrorResolver(data.toString(), e.getLocalizedMessage());
       logger.error(e.getLocalizedMessage());
       logger.error("Decode parser exception: Error position at error part of json is {}",
-          errorResolver.getErrorPosition());
+        errorResolver.getErrorPosition());
       logger.error(errorResolver.getErrorPart());
       errors.add(errorResolver.getErrorPart());
       if (handle(e)) {
