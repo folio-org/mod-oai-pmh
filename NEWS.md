@@ -1,5 +1,12 @@
 ## 3.17.0 - Unreleased
 
+### Stories
+
+### Bug fixes
+
+### Technical tasks
+* [MODOAIPMH-675](https://folio-org.atlassian.net/browse/MODOAIPMH-675) Migrate to docker.io/alpine/minio:RELEASE.2025-10-15T17-29-55Z
+
 ## 3.16.1 (Released)
 
 This release contains fix for linked data (999 field) and fix for 't' subfield in 856 field.
