@@ -65,7 +65,7 @@
       },
       {
         "name": "DB_MAXPOOLSIZE",
-        "value": "20",
+        "value": "50",
         "description": "Maximum database connection pool size",
         "type": "DB",
         "essential": false
