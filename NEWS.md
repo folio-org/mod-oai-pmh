@@ -1,5 +1,12 @@
 ## 3.17.0 - Unreleased
 
+## 3.16.4 (Released)
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.3...v3.16.4)
+
+### Technical tasks
+* [MODOAIPMH-673](https://folio-org.atlassian.net/browse/MODOAIPMH-673) Add DeployConfig.json to mod-oai-pmh (ADR-0013 Configuration Management)
+
 ## 3.16.3 (Released)
 
 This release contains improvements for harvesting deleted MARC records
