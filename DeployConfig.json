@@ -1,0 +1,264 @@
+{
+  "description": "mod-oai-pmh configuration template",
+  "moduleDefaults": {
+    "resources": [
+      {
+        "name": "cpu",
+        "value": "64",
+        "description": "CPU request/limit for container"
+      },
+      {
+        "name": "memory",
+        "value": "3072",
+        "description": "Memory hard limit for container"
+      },
+      {
+        "name": "memoryReservation",
+        "value": "2765",
+        "description": "Memory reservation for container"
+      }
+    ],
+    "java": [
+      {
+        "name": "xmx",
+        "value": "2160m",
+        "description": "Maximum Java heap size"
+      },
+      {
+        "name": "MaxMetaspaceSize",
+        "value": "512m",
+        "description": "Maximum Java metaspace size"
+      },
+      {
+        "name": "MetaspaceSize",
+        "value": "384m",
+        "description": "Initial Java metaspace size"
+      }
+    ],
+    "deployment": {
+      "isHaSupported": true,
+      "replicasRecommendedCount": 2,
+      "description": "Deployment configuration for the backend module. Adjust replicas based on expected load and HA requirements. Set to false if only single instance is supported or required."
+    },
+    "kong": {
+      "timeouts": {
+        "connect": "60s",
+        "send": "7200s",
+        "read": "7200s"
+      },
+      "description": "Extended Kong proxy timeouts required for OAI-PMH harvesting requests which can take up to 2 hours"
+    },
+    "EnvVars": [
+      {
+        "name": "DB_DATABASE",
+        "value": null,
+        "description": "Database name",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_HOST",
+        "value": null,
+        "description": "Database host",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_MAXPOOLSIZE",
+        "value": "50",
+        "description": "Maximum database connection pool size",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_PASSWORD",
+        "value": null,
+        "description": "Database password",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_PORT",
+        "value": null,
+        "description": "Database port",
+        "type": "DB",
+        "essential": true
+      },
+      {
+        "name": "DB_QUERYTIMEOUT",
+        "value": "2700000",
+        "description": "Database query timeout in milliseconds (45 minutes to accommodate long-running harvest queries)",
+        "type": "DB",
+        "essential": false
+      },
+      {
+        "name": "DB_USERNAME",
+        "value": null,
+        "description": "Database username",
+        "type": "DB",
+        "essential": true
+      },
+
+      {
+        "name": "ENV",
+        "value": null,
+        "description": "Environment",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "JAVA_ARGS",
+        "value": null,
+        "description": "Java arguments",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "JAVA_OPTS",
+        "value": null,
+        "description": "Java options",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "LOG4J_CONFIGURATION_FILE",
+        "value": null,
+        "description": "Log4j configuration file",
+        "type": "CONFIG",
+        "essential": false
+      },
+
+      {
+        "name": "S3_ACCESS_KEY_ID",
+        "value": null,
+        "description": "S3 access key",
+        "type": "S3",
+        "essential": true
+      },
+      {
+        "name": "S3_BUCKET",
+        "value": null,
+        "description": "S3 bucket",
+        "type": "S3",
+        "essential": true
+      },
+      {
+        "name": "S3_IS_AWS",
+        "value": false,
+        "description": "Specify if AWS S3 is used as files storage",
+        "type": "S3",
+        "essential": true
+      },
+      {
+        "name": "S3_REGION",
+        "value": null,
+        "description": "S3 region",
+        "type": "S3",
+        "essential": true
+      },
+      {
+        "name": "S3_SECRET_ACCESS_KEY",
+        "value": null,
+        "description": "S3 secret key",
+        "type": "S3",
+        "essential": true
+      },
+      {
+        "name": "S3_SUB_PATH",
+        "value": "mod-oai-pmh",
+        "description": "S3 subpath for file storage",
+        "type": "S3",
+        "essential": false
+      },
+      {
+        "name": "S3_URL",
+        "value": null,
+        "description": "S3 url",
+        "type": "S3",
+        "essential": true
+      },
+
+      {
+        "name": "CLEAN_UP_ERROR_LOGS_INTERVAL",
+        "value": "30",
+        "description": "Interval in days after which old OAI-PMH error logs are purged",
+        "type": "FUNCTIONAL",
+        "essential": false
+      }
+    ]
+  },
+
+  "sidecarDefaults": {
+    "resources": [
+      {
+        "name": "cpu",
+        "value": "64",
+        "description": "CPU request/limit for container"
+      },
+      {
+        "name": "memory",
+        "value": "1024",
+        "description": "Memory hard limit for container"
+      },
+      {
+        "name": "memoryReservation",
+        "value": "512",
+        "description": "Memory reservation for container"
+      }
+    ],
+    "java": [
+      {
+        "name": "xms",
+        "value": "128m",
+        "description": "Initial Java heap size"
+      },
+      {
+        "name": "xmx",
+        "value": "256m",
+        "description": "Maximum Java heap size"
+      },
+      {
+        "name": "MaxMetaspaceSize",
+        "value": "96m",
+        "description": "Maximum Java metaspace size"
+      }
+    ],
+    "EnvVars": [
+      {
+        "name": "ENV",
+        "value": null,
+        "description": "Environment",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "JAVA_OPTS",
+        "value": null,
+        "description": "Additional JVM options for the sidecar process",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "MODULE_NAME",
+        "value": "mod-oai-pmh",
+        "description": "Name of the backend module the sidecar fronts",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "MODULE_URL",
+        "value": null,
+        "description": "Internal URL (host:port) at which the mod-oai-pmh backend container is reachable from its sidecar",
+        "type": "CONFIG",
+        "essential": true
+      },
+      {
+        "name": "MODULE_VERSION",
+        "value": null,
+        "description": "Version of the mod-oai-pmh module deployed alongside this sidecar",
+        "type": "CONFIG",
+        "essential": true
+      }
+    ]
+  }
+}
