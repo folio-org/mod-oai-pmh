@@ -9,19 +9,19 @@
       },
       {
         "name": "memory",
-        "value": "4096",
+        "value": "3072",
         "description": "Memory hard limit for container"
       },
       {
         "name": "memoryReservation",
-        "value": "3690",
+        "value": "2765",
         "description": "Memory reservation for container"
       }
     ],
     "java": [
       {
         "name": "xmx",
-        "value": "3076m",
+        "value": "2160m",
         "description": "Maximum Java heap size"
       },
       {
