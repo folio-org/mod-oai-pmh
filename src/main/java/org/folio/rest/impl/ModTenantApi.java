@@ -90,7 +90,8 @@ public class ModTenantApi extends TenantAPI {
           job.setError(null);
 
           return delay(context.owner(), RETRY_DELAY_MS)
-            .compose(v -> runAsyncWithRetry(tenantAttributes, file, job, headers, context, retriesLeft - 1));
+            .compose(v -> runAsyncWithRetry(tenantAttributes, file, job, headers,
+              context, retriesLeft - 1));
         }
 
         logger.error("Failed runAsync after all retries. Last error: {}", err.getMessage());
