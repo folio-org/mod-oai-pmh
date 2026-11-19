@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>mod-oai-pmh</artifactId>
-  <version>3.16.5-SNAPSHOT</version>
+  <version>3.16.6-SNAPSHOT</version>
 
   <name>OAI-PMH Repository Business Logic</name>
   <description>Business logic to support the Open Archives Initiative Protocol for Metadata Harvesting</description>
@@ -136,7 +136,7 @@
 
     <aspectj.version>1.9.21.1</aspectj.version>
     <raml-module-builder.version>36.0.0</raml-module-builder.version>
-    <folio-liquibase-util.version>1.10.0</folio-liquibase-util.version>
+    <folio-liquibase-util.version>1.11.1</folio-liquibase-util.version>
     <data-import-utils.version>1.14.0</data-import-utils.version>
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <vertx.version>5.0.5</vertx.version>
@@ -154,7 +154,7 @@
     <postgres.version>42.7.5</postgres.version>
     <lombok.version>1.18.38</lombok.version>
     <log4j.version>2.24.3</log4j.version>
-    <testcontainers.version>1.20.6</testcontainers.version>
+    <testcontainers.version>2.0.5</testcontainers.version>
     <mockito-junit-jupiter.version>5.17.0</mockito-junit-jupiter.version>
     <junit.version>5.12.2</junit.version>
     <mockserver-client-java.version>5.15.0</mockserver-client-java.version>
@@ -309,12 +309,12 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>nginx</artifactId>
+      <artifactId>testcontainers-nginx</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
