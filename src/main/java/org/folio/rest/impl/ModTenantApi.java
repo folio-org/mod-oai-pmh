@@ -46,6 +46,7 @@ public class ModTenantApi extends TenantAPI {
   private static final String QUERY = "module==OAIPMH and configName==%s";
   private static final String CONFIG_PATH_KEY = "configPath";
   private static final int MAX_RETRIES = 5;
+  private static final long RETRY_DELAY_MS = 5_000L;
 
   private ConfigurationHelper configurationHelper;
   private ConfigurationSettingsService configurationSettingsService;
@@ -88,7 +89,9 @@ public class ModTenantApi extends TenantAPI {
 
           job.setError(null);
 
-          return runAsyncWithRetry(tenantAttributes, file, job, headers, context, retriesLeft - 1);
+          return delay(context.owner(), RETRY_DELAY_MS)
+            .compose(v -> runAsyncWithRetry(tenantAttributes, file, job, headers,
+              context, retriesLeft - 1));
         }
 
         logger.error("Failed runAsync after all retries. Last error: {}", err.getMessage());
@@ -253,5 +256,12 @@ public class ModTenantApi extends TenantAPI {
   public void setConfigurationSettingsService(
       ConfigurationSettingsService configurationSettingsService) {
     this.configurationSettingsService = configurationSettingsService;
+  }
+
+  private static Future<Void> delay(Vertx vertx, long delayMs) {
+    Promise<Void> promise = Promise.promise();
+    vertx.setTimer(delayMs, id -> promise.complete());
+
+    return promise.future();
   }
 }
