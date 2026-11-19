@@ -1,5 +1,13 @@
 ## 3.17.0 - Unreleased
 
+## 3.16.5 (Released)
+
+[Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.4...v3.16.5)
+
+### Technical tasks
+* [MODOAIPMH-678](https://folio-org.atlassian.net/browse/MODOAIPMH-678) Deprecate migrations that conflict with Sunflower
+
+
 ## 3.16.4 (Released)
 
 [Full Changelog](https://github.com/folio-org/mod-oai-pmh/compare/v3.16.3...v3.16.4)
