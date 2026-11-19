@@ -136,7 +136,7 @@
 
     <aspectj.version>1.9.21.1</aspectj.version>
     <raml-module-builder.version>36.0.0</raml-module-builder.version>
-    <folio-liquibase-util.version>1.10.0</folio-liquibase-util.version>
+    <folio-liquibase-util.version>1.11.1</folio-liquibase-util.version>
     <data-import-utils.version>1.14.0</data-import-utils.version>
     <folio-di-support.version>3.0.0</folio-di-support.version>
     <vertx.version>5.0.5</vertx.version>
